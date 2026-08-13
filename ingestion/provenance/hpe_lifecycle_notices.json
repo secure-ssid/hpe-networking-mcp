@@ -1,0 +1,33 @@
+{
+  "expected_markers": [
+    "<Desc>",
+    "<ID>",
+    "<LinkA>",
+    "<LinkB>",
+    "<Name>",
+    "<Notes>",
+    "<PubDate>",
+    "<TableA>",
+    "<TableB>",
+    "<TableC>",
+    "<TableD>",
+    "<TableE>",
+    "<TableF>",
+    "<TableG>",
+    "<TableH>",
+    "<TableI>",
+    "<TableJ>",
+    "<Type>"
+  ],
+  "generator": "ingestion/scrape_security_lifecycle.py",
+  "minimum_count": 300,
+  "note": "Historical HPE Networking (legacy HP/H3C/3Com/ProCurve) End of Sale XML archive plus the official Aruba hardware EOS PDF. Ends ~2020; contains no current Aruba-branded lifecycle notices -- see the hpe_aruba_current_lifecycle coverage-gap pin. Structural tag markers are pinned because parse_hpe_lifecycle_xml does not raise on a missing/renamed tag; it would silently parse to zero records instead.",
+  "reviewed_at": "2026-07-25",
+  "schema_version": 1,
+  "source_family": "hpe_lifecycle_notices",
+  "source_urls": [
+    "https://asp-documents.arubanetworks.com/portals/0/el/Aruba-Hardware-End-of-Sale-List.pdf",
+    "https://support.hpe.com/docs/display/public/hpe-networking-eos/data/xml/eos/eos.xml",
+    "https://support.hpe.com/docs/display/public/hpe-networking-eos/information.html"
+  ]
+}

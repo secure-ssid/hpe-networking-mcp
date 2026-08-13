@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "operation_count": 3,
+  "supported_base_paths": [
+    "/"
+  ],
+  "runtime_auth_schemes": [
+    {
+      "name": "configurable_header_token",
+      "type": "apiKey",
+      "in": "header",
+      "parameter_name": "X-Auth-Token"
+    }
+  ]
+}

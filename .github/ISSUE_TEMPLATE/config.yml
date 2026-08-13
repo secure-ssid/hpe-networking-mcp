@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability or credential exposure
+    url: https://github.com/secure-ssid/hpe-networking-mcp/blob/main/SECURITY.md
+    about: Do not open a public issue with exploitable details or real credentials.

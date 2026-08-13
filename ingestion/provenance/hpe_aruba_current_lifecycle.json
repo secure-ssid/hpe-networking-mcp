@@ -1,0 +1,10 @@
+{
+  "expected_markers": [],
+  "generator": "ingestion/scrape_security_lifecycle.py",
+  "minimum_count": 0,
+  "note": "No reliable, reproducible, official machine-readable source exists for current (post-2020) Aruba-branded HPE Networking product lifecycle notices beyond the historical all-product EOS XML archive and the static 2020-05-06 Aruba hardware EOS PDF.",
+  "reviewed_at": "2026-07-25",
+  "schema_version": 1,
+  "source_family": "hpe_aruba_current_lifecycle",
+  "source_urls": []
+}

@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a reproducible hpe-networking-mcp problem using fake or redacted data.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve hpe-networking-mcp. Do not include real credentials,
+        tokens, tenant IDs, customer data, private URLs, or screenshots with
+        sensitive details. For vulnerabilities or accidental credential exposure,
+        follow SECURITY.md instead of opening a public issue.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Setup wizard or doctor
+        - MCP router
+        - Aruba Central tools
+        - GreenLake Platform tools
+        - ArubaOS 8 migration
+        - ClearPass, Mist, Apstra, EdgeConnect, or UXI
+        - Optional product starters
+        - RAG/OpenAPI lookup
+        - API source drift or ingestion
+        - GitHub Pages or documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Use fake hosts, fake IDs, and redacted payloads.
+      placeholder: |
+        1. Run ...
+        2. Configure ...
+        3. Call ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit, release, or branch
+      placeholder: main at abc1234, latest release tag, or another ref
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation already run
+      description: Include targeted tests, doctor output, or release-gate result with secrets removed.
+      placeholder: uv run python scripts/validate_release.py --skip-rag
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed credentials, tokens, tenant IDs, customer data, and private network details.
+          required: true

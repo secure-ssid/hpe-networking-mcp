@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant U as User
+    participant C as MCP client
+    participant R as hpe-networking-mcp
+    participant T as Tool catalog
+    participant B as Backend server
+    participant A as Vendor API
+
+    U->>C: Show critical Central alerts
+    C->>R: find_tool("critical alerts")
+    R->>T: semantic + keyword lookup
+    T-->>R: list_active_alerts (read)
+    R-->>C: compact schema and safety metadata
+    C->>R: invoke_read_tool(...)
+    R->>B: dispatch validated arguments
+    B->>A: bounded API request
+    A-->>B: JSON response
+    B-->>R: normalized result
+    R-->>C: response envelope + rate metadata

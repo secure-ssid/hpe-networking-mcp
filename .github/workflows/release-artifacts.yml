@@ -1,0 +1,262 @@
+name: Release
+
+# Releases are deliberately operator-triggered. The large RAG/OpenAPI/tool
+# index is built and reviewed locally, published under an immutable
+# `indexes-vX.Y.Z` release, and pinned by digest in
+# `.github/index-bundle.json`. This workflow restores that exact bundle,
+# runs the strict release contract, then creates or updates the product
+# release and tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, matching pyproject.toml (for example v0.8.0)
+        required: true
+        type: string
+      draft:
+        description: Leave the GitHub Release as a draft
+        required: true
+        default: false
+        type: boolean
+      prerelease:
+        description: Mark the GitHub Release as a prerelease
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  validate-build-publish:
+    name: Validate, build, attest, and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Validate tag and release-notes version
+        id: release_meta
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import tomllib
+
+          tag = os.environ["TAG"]
+          if not tag.startswith("v"):
+              raise SystemExit("release tag must start with 'v'")
+          version = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"]
+          if tag != f"v{version}":
+              raise SystemExit(f"tag {tag!r} does not match pyproject version v{version}")
+          notes = pathlib.Path(f"docs/release-notes-{version}.md")
+          if not notes.is_file():
+              raise SystemExit(f"missing release notes: {notes}")
+          with pathlib.Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
+              output.write(f"version={version}\n")
+              output.write(f"notes={notes}\n")
+          PY
+
+      - name: Read pinned index metadata
+        id: index_meta
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+
+          manifest = json.loads(pathlib.Path(".github/index-bundle.json").read_text())
+          with pathlib.Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
+              output.write(f"archive={manifest['archive']}\n")
+              output.write(f"sha256={manifest['sha256']}\n")
+          PY
+
+      - name: Restore repository-pinned indexes
+        run: >-
+          uv run python scripts/download_indexes.py
+          --manifest .github/index-bundle.json
+          --archive "dist/indexes/${{ steps.index_meta.outputs.archive }}"
+
+      - name: Run complete strict release validation
+        run: >-
+          uv run python scripts/validate_release.py
+          --strict-rag
+          --strict-tool-index
+          --catalog-products all
+          --min-tools 6703
+
+      - name: Build wheel and source distribution
+        run: uv build
+
+      - name: Build release evidence bundle
+        id: evidence
+        run: |
+          uv run python scripts/build_release_bundle.py \
+            --version "${{ inputs.tag }}" \
+            --output-dir dist \
+            --no-indexes
+          archive=$(ls "dist/hpe-networking-mcp-release-artifacts-${{ inputs.tag }}.tar.gz")
+          echo "archive=${archive}" >> "$GITHUB_OUTPUT"
+          echo "checksum=${archive}.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Restore and smoke-test release evidence bundle
+        run: >-
+          uv run python scripts/restore_release_bundle.py
+          "${{ steps.evidence.outputs.archive }}"
+
+      - name: Prepare versioned and latest index assets
+        id: index_assets
+        run: |
+          archive="dist/indexes/${{ steps.index_meta.outputs.archive }}"
+          digest="${{ steps.index_meta.outputs.sha256 }}"
+          printf '%s  %s\n' "$digest" "$(basename "$archive")" > "${archive}.sha256"
+          latest="dist/indexes/hpe-networking-mcp-rag-index-latest.tar.gz"
+          ln "$archive" "$latest" 2>/dev/null || cp "$archive" "$latest"
+          printf '%s  %s\n' "$digest" "$(basename "$latest")" > "${latest}.sha256"
+          echo "archive=${archive}" >> "$GITHUB_OUTPUT"
+          echo "checksum=${archive}.sha256" >> "$GITHUB_OUTPUT"
+          echo "latest=${latest}" >> "$GITHUB_OUTPUT"
+          echo "latest_checksum=${latest}.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Build release subject checksums
+        id: subjects
+        run: |
+          python - <<'PY'
+          import hashlib
+          import os
+          import pathlib
+
+          paths = {
+              *pathlib.Path("dist").glob("*.whl"),
+              *pathlib.Path("dist").glob("*.tar.gz"),
+              pathlib.Path(os.environ["EVIDENCE_ARCHIVE"]),
+              pathlib.Path(f"dist/{os.environ['TAG']}/sbom.json"),
+              pathlib.Path(f"dist/{os.environ['TAG']}/provenance.json"),
+          }
+
+          def sha256(path: pathlib.Path) -> str:
+              digest = hashlib.sha256()
+              with path.open("rb") as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                      digest.update(chunk)
+              return digest.hexdigest()
+
+          output = pathlib.Path("dist/release-subject-checksums.txt")
+          with output.open("w", encoding="utf-8") as handle:
+              for path in sorted(paths):
+                  handle.write(f"{sha256(path)}  {path.as_posix()}\n")
+          with pathlib.Path(os.environ["GITHUB_OUTPUT"]).open("a") as workflow:
+              workflow.write(f"path={output}\n")
+          PY
+        env:
+          TAG: ${{ inputs.tag }}
+          EVIDENCE_ARCHIVE: ${{ steps.evidence.outputs.archive }}
+
+      - name: Upload release build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ inputs.tag }}
+          path: |
+            dist/*.whl
+            dist/hpe_networking_mcp-*.tar.gz
+            ${{ steps.evidence.outputs.archive }}
+            ${{ steps.evidence.outputs.checksum }}
+            dist/${{ inputs.tag }}/sbom.json
+            dist/${{ inputs.tag }}/provenance.json
+            ${{ steps.subjects.outputs.path }}
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-checksums: ${{ steps.subjects.outputs.path }}
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          NOTES: ${{ steps.release_meta.outputs.notes }}
+          DRAFT: ${{ inputs.draft }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          EVIDENCE_ARCHIVE: ${{ steps.evidence.outputs.archive }}
+          EVIDENCE_CHECKSUM: ${{ steps.evidence.outputs.checksum }}
+          INDEX_ARCHIVE: ${{ steps.index_assets.outputs.archive }}
+          INDEX_CHECKSUM: ${{ steps.index_assets.outputs.checksum }}
+          INDEX_LATEST: ${{ steps.index_assets.outputs.latest }}
+          INDEX_LATEST_CHECKSUM: ${{ steps.index_assets.outputs.latest_checksum }}
+        run: |
+          create_flags=(--draft)
+          if [[ "$PRERELEASE" == "true" ]]; then
+            create_flags+=(--prerelease)
+          fi
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            is_draft=$(
+              gh release view "$TAG" \
+                --repo "$GITHUB_REPOSITORY" \
+                --json isDraft \
+                --jq .isDraft
+            )
+            if [[ "$is_draft" != "true" ]]; then
+              echo "Release $TAG is already published; refusing to replace immutable assets." >&2
+              exit 1
+            fi
+            gh release edit "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "hpe-networking-mcp $TAG" \
+              --notes-file "$NOTES" \
+              --draft=true \
+              --prerelease="$PRERELEASE"
+          else
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "hpe-networking-mcp $TAG" \
+              --notes-file "$NOTES" \
+              "${create_flags[@]}"
+          fi
+
+          gh release upload "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            dist/*.whl \
+            dist/hpe_networking_mcp-*.tar.gz \
+            "$EVIDENCE_ARCHIVE" \
+            "$EVIDENCE_CHECKSUM" \
+            "$INDEX_ARCHIVE" \
+            "$INDEX_CHECKSUM" \
+            "$INDEX_LATEST" \
+            "$INDEX_LATEST_CHECKSUM" \
+            "dist/$TAG/sbom.json" \
+            "dist/$TAG/provenance.json" \
+            dist/release-subject-checksums.txt
+
+          gh release edit "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft="$DRAFT" \
+            --prerelease="$PRERELEASE"

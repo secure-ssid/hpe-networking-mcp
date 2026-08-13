@@ -1,0 +1,409 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+# Least privilege by default; the drift jobs only ever read.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: "3.10"
+          - os: ubuntu-latest
+            python: "3.11"
+          - os: ubuntu-latest
+            python: "3.12"
+          - os: macos-latest
+            python: "3.12"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python }}
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      # Paths are src-layout: the modules moved under
+      # src/hpe_networking_mcp/ during the package rename, so the old
+      # top-level pipeline/*.py arguments made this step fail with
+      # "No such file or directory" instead of linting anything.
+      - name: Ruff lint (release-artifact automation modules)
+        run: |
+          uv run ruff check \
+            src/hpe_networking_mcp/pipeline/sbom.py \
+            src/hpe_networking_mcp/pipeline/release_packaging.py \
+            src/hpe_networking_mcp/pipeline/release_restore.py \
+            src/hpe_networking_mcp/pipeline/artifact_contracts.py \
+            src/hpe_networking_mcp/pipeline/live_test_config.py \
+            src/hpe_networking_mcp/pipeline/clients/lance_client.py \
+            src/hpe_networking_mcp/pipeline/project_facts.py \
+            src/hpe_networking_mcp/mcp_servers/shared.py \
+            scripts/run_v07_validation_matrix.py scripts/build_release_bundle.py \
+            scripts/restore_release_bundle.py scripts/project_facts.py \
+            scripts/package_indexes.py scripts/download_indexes.py \
+            scripts/refresh_rag_sources.py scripts/validate_source_manifest.py \
+            scripts/add_rag_source.py scripts/report_capability_gaps.py \
+            scripts/validate_release.py
+
+      # Matrix jobs stay artifact-free and exercise every unit/protocol test
+      # plus code-derived catalog facts. The separate strict-index job restores
+      # `.github/index-bundle.json` and runs the non-skipping RAG/API/tool-index
+      # contract once per commit.
+      - name: Unit tests and tool catalog gate
+        run: uv run python scripts/validate_release.py --skip-rag
+
+  package:
+    name: Build and install package
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Build wheel and source distribution
+        run: uv build
+
+      - name: Install wheel and smoke-test console scripts
+        run: |
+          uv venv .package-smoke --python 3.12
+          wheel=$(ls dist/*.whl)
+          uv pip install --python .package-smoke/bin/python "$wheel"
+          timeout 10s .package-smoke/bin/hpe-mcp-router --help
+          .package-smoke/bin/hpe-mcp-doctor --help
+          .package-smoke/bin/hpe-mcp-run-pipeline --help
+          .package-smoke/bin/hpe-mcp-run-ssid --help
+          rm -rf .package-smoke
+
+      - name: Upload Python distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-distributions
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  strict-index:
+    name: Strict RAG and tool index
+    needs: test
+    if: >-
+      vars.HPE_MCP_STRICT_INDEX_ENABLED == 'true' &&
+      github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Restore repository-pinned indexes
+        run: >-
+          uv run python scripts/download_indexes.py
+          --manifest .github/index-bundle.json
+
+      - name: Validate strict RAG, exact API, and tool-index contract
+        run: >-
+          uv run python scripts/validate_release.py
+          --skip-tests
+          --strict-rag
+          --strict-tool-index
+          --catalog-products all
+          --min-tools 6703
+
+  # --- Source/API/RAG drift gates -----------------------------------------
+  # One job per check, deliberately never combined into a single shell block:
+  # a failing early check must not hide a later one, and each job uploads its
+  # own machine-readable report so the summary job can classify every result
+  # (fresh / content_drift / source_added / source_removed / pointer_change /
+  # stale_pin / unavailable / parser_error / coverage_gap / not_checked).
+  # Exit codes are per class -- see
+  # src/hpe_networking_mcp/pipeline/drift_taxonomy.py.
+
+  product-spec-freshness:
+    # Fully offline (manifest + on-disk derivation only), so it runs on every
+    # event rather than only on the schedule.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Check api-next product spec manifest freshness
+        run: >-
+          uv run python scripts/check_product_spec_freshness.py
+          --json-artifact outputs/drift/product-spec-freshness.json
+
+      - name: Upload product-spec freshness report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: drift-product-spec-freshness
+          path: outputs/drift/product-spec-freshness.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  rag-source-drift:
+    # Offline: resolves each source's URL inventory and prints the refresh
+    # plan without fetching anything. External source refresh is disabled, so
+    # sources are reported not_checked -- never fresh.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Resolve RAG source inventory (offline)
+        run: >-
+          uv run python ingestion/check_updates.py --offline --dry-run
+          --exit-code-mode classified
+          --json-artifact outputs/drift/rag-source-freshness.json
+
+      - name: Print refresh plan (no execution, no network)
+        run: |
+          mkdir -p outputs/drift
+          uv run python scripts/refresh_rag_sources.py --plan \
+            > outputs/drift/refresh-plan.json
+
+      - name: Upload RAG source drift report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: drift-rag-source
+          path: outputs/drift/
+          if-no-files-found: warn
+          retention-days: 90
+
+  openapi-registry-drift:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Check Aruba developer-portal OpenAPI registries
+        run: >-
+          uv run python scripts/check_openapi_drift.py
+          --json-artifact outputs/drift/openapi-registry-drift.json
+
+      - name: Upload OpenAPI registry drift report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: drift-openapi-registry
+          path: outputs/drift/openapi-registry-drift.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  mist-openapi-drift:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Check official Mist OpenAPI reviewed pin
+        run: >-
+          uv run python scripts/check_mist_openapi_drift.py --verify-pinned-digest
+          --json-artifact outputs/drift/mist-openapi-drift.json
+
+      - name: Upload Mist OpenAPI drift report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: drift-mist-openapi
+          path: outputs/drift/mist-openapi-drift.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  nowireless-community-drift:
+    # Community benchmark/input freshness ONLY. The absent official HPE
+    # GreenLake registry boundary is reported by the same check as a separate
+    # coverage_gap finding -- community freshness is never HPE API freshness.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Check nowireless4u/hpe-networking-mcp community input pins
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          uv run python scripts/check_nowireless_source_drift.py
+          --json-artifact outputs/drift/nowireless-community-input-drift.json
+
+      - name: Upload community-input drift report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: drift-nowireless-community-input
+          path: outputs/drift/nowireless-community-input-drift.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  security-lifecycle-drift:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Check official security and lifecycle sources
+        run: >-
+          uv run python scripts/check_security_lifecycle_drift.py
+          --drift-artifact-path outputs/drift/security-lifecycle-drift.json
+
+      - name: Upload source-freshness artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: source-freshness
+          path: outputs/source-freshness.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Upload security/lifecycle drift report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: drift-security-lifecycle
+          path: outputs/drift/security-lifecycle-drift.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  drift-summary:
+    # Always runs, even when an individual gate failed: the whole point is to
+    # show every check's class, including the ones that produced no artifact.
+    if: always()
+    needs:
+      - product-spec-freshness
+      - rag-source-drift
+      - openapi-registry-drift
+      - mist-openapi-drift
+      - nowireless-community-drift
+      - security-lifecycle-drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Download drift reports
+        uses: actions/download-artifact@v8
+        with:
+          path: outputs/drift
+          pattern: drift-*
+          merge-multiple: true
+
+      - name: Aggregate drift summary
+        run: >-
+          uv run python scripts/summarize_drift_artifacts.py
+          --input-dir outputs/drift
+          --output outputs/drift/summary.json
+          --markdown "$GITHUB_STEP_SUMMARY"
+          --never-fail
+
+      - name: Upload aggregate drift summary
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: drift-summary
+          path: outputs/drift/summary.json
+          if-no-files-found: warn
+          retention-days: 90

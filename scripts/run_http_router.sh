@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+if [[ -f "${ROOT}/.env" ]]; then
+  while IFS= read -r assignment; do
+    export "${assignment}"
+  done < <(python3 - "${ROOT}/.env" <<'PY'
+import re
+import shlex
+import sys
+
+env_key = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+allowed_keys = {
+    "HPE_MCP_PRODUCTS",
+    "HPE_MCP_PRODUCT_ACCESS",
+    "HPE_MCP_ALLOW_LOCAL_PRODUCT_URLS",
+    "HPE_MCP_DIAGRAM_ICON_DIR",
+    "HPE_MCP_DIAGRAM_ALLOW_LARGE_ICONS",
+    "HPE_MCP_ROUTER_MODE",
+    "HPE_MCP_READONLY",
+    "HPE_MCP_TOOLSETS",
+    "HPE_MCP_RAG_BACKEND",
+    "HPE_MCP_BOUND_LISTS",
+    "HPE_MCP_NORMALIZE_MACS",
+    "HPE_MCP_SWITCH_GROUP_NAME",
+    "HPE_MCP_EMBED_PROVIDERS",
+    "HPE_MCP_NOMIC_PREFIXES",
+    "HPE_MCP_ROUTER_RESPONSE_MAX_ITEMS",
+    "HPE_MCP_ROUTER_RESPONSE_MAX_BYTES",
+    "HPE_MCP_ROUTER_BATCH_RESPONSE_MAX_BYTES",
+    "HPE_MCP_ROUTER_CURSOR_TTL_SECONDS",
+    "HPE_MCP_CENTRAL_GENERATED_TOOLS",
+    "HPE_MCP_GLP_GENERATED_TOOLS",
+    "HPE_MCP_AOS8_GENERATED_TOOLS",
+    "HPE_MCP_APSTRA_GENERATED_TOOLS",
+    "HPE_MCP_CLEARPASS_GENERATED_TOOLS",
+    "HPE_MCP_MIST_GENERATED_TOOLS",
+    "HPE_MCP_UXI_GENERATED_TOOLS",
+    "HPE_MCP_AOS8_ROLLBACK_WRITES",
+    "HPE_MCP_AOS8_MIGRATION_STATE_DIR",
+    "HPE_MCP_GLP_V2BETA1_WRITES",
+    "HPE_MCP_CENTRAL_WRITES",
+    "HPE_MCP_AOS8_WRITES",
+    "HPE_MCP_EDGECONNECT_WRITES",
+    "HPE_MCP_APSTRA_WRITES",
+    "HPE_MCP_MIST_WRITES",
+    "HPE_MCP_CLEARPASS_WRITES",
+    "HPE_MCP_UXI_WRITES",
+    "HPE_MCP_AXIS_WRITES",
+    "HPE_MCP_TROUBLESHOOTING_API_VERSION",
+    "HPE_MCP_TOKENIZE_SECRETS",
+    "HPE_MCP_TOKENIZE_PII",
+    "HPE_MCP_AUDIT_LOG",
+    "HPE_MCP_METRICS",
+    "HPE_MCP_METRICS_HTTP",
+    "HPE_MCP_ALLOW_INSECURE_HTTP_BINDING",
+    "MCP_HOST",
+    "MCP_PORT",
+    "MCP_ALLOWED_HOSTS",
+    "MCP_ALLOWED_ORIGINS",
+    "MCP_DNS_REBINDING_PROTECTION",
+    "MCP_HTTP_BEARER_TOKEN",
+    "CLEARPASS_BASE_URL",
+    "CLEARPASS_API_TOKEN",
+    "MIST_HOST",
+    "MIST_API_TOKEN",
+    "APSTRA_BASE_URL",
+    "APSTRA_API_TOKEN",
+    "AOS8_BASE_URL",
+    "AOS8_API_TOKEN",
+    "EDGECONNECT_BASE_URL",
+    "EDGECONNECT_API_TOKEN",
+    "EDGECONNECT_AUTH_HEADER",
+    "UXI_CLIENT_ID",
+    "UXI_CLIENT_SECRET",
+    "UXI_BASE_URL",
+    "UXI_TOKEN_URL",
+    "AXIS_BASE_URL",
+    "AXIS_API_TOKEN",
+    "GLP_GENERATED_REGION",
+}
+for raw_line in open(sys.argv[1]):
+    line = raw_line.strip()
+    if not line or line.startswith("#"):
+        continue
+    try:
+        parts = shlex.split(line, comments=False, posix=True)
+    except ValueError:
+        continue
+    if parts and parts[0] == "export":
+        parts = parts[1:]
+    if len(parts) != 1 or "=" not in parts[0]:
+        continue
+    key, value = parts[0].split("=", 1)
+    if key in allowed_keys and env_key.match(key):
+        print(f"{key}={value}")
+PY
+  )
+fi
+
+export MCP_TRANSPORT="${MCP_TRANSPORT:-streamable-http}"
+export MCP_HOST="${MCP_HOST:-127.0.0.1}"
+export MCP_PORT="${MCP_PORT:-8010}"
+export HPE_MCP_ROUTER_MODE="${HPE_MCP_ROUTER_MODE:-minimal}"
+export HPE_MCP_TOOLSETS="${HPE_MCP_TOOLSETS:-central,glp,rag}"
+export HPE_MCP_PRODUCT_ACCESS="${HPE_MCP_PRODUCT_ACCESS:-read-only}"
+
+case "${MCP_HOST}" in
+  127.0.0.1|localhost|::1) ;;
+  *)
+    {
+      echo "WARNING: MCP_HOST=${MCP_HOST} is not loopback."
+      echo "Credential-backed MCP tools may be reachable from the network; protect with firewall/auth/TLS."
+      echo "The server itself will refuse to start unless MCP_ALLOWED_HOSTS and"
+      echo "MCP_ALLOWED_ORIGINS are both set explicitly (no wildcard) -- see"
+      echo "src/hpe_networking_mcp/mcp_servers/shared.py's UnsafeHttpBindingError. Set MCP_HTTP_BEARER_TOKEN"
+      echo "too if this endpoint is reachable by anything other than a trusted proxy."
+      echo
+    } >&2
+    ;;
+esac
+
+port_is_listening() {
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP:"${MCP_PORT}" -sTCP:LISTEN >/dev/null 2>&1
+    return
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "${MCP_HOST}" "${MCP_PORT}" <<'PY'
+import socket
+import sys
+
+host, port = sys.argv[1], int(sys.argv[2])
+target = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
+for family, socktype, proto, _, sockaddr in socket.getaddrinfo(target, port, type=socket.SOCK_STREAM):
+    with socket.socket(family, socktype, proto) as sock:
+        sock.settimeout(0.25)
+        if sock.connect_ex(sockaddr) == 0:
+            sys.exit(0)
+sys.exit(1)
+PY
+    return
+  fi
+
+  return 1
+}
+
+if port_is_listening; then
+  {
+    echo "Port ${MCP_PORT} is already in use; not starting another router."
+    if command -v lsof >/dev/null 2>&1; then
+      lsof -nP -iTCP:"${MCP_PORT}" -sTCP:LISTEN
+    else
+      echo "A TCP listener accepted connections on ${MCP_HOST}:${MCP_PORT}."
+    fi
+    echo
+    echo "Stop the existing listener with: kill <PID>"
+  } >&2
+  exit 1
+fi
+
+if [[ -n "${MCP_HTTP_BEARER_TOKEN:-}" ]]; then
+  bearer_status="enabled (Authorization: Bearer <token> required on /mcp)"
+else
+  bearer_status="disabled (set MCP_HTTP_BEARER_TOKEN to require a shared secret)"
+fi
+
+cat <<EOF
+Starting hpe-networking-mcp HTTP router
+  endpoint: http://${MCP_HOST}:${MCP_PORT}/mcp
+  health:   http://${MCP_HOST}:${MCP_PORT}/livez, /readyz, /healthz (no auth, no MCP negotiation)
+  mode:     ${HPE_MCP_ROUTER_MODE}
+  toolsets: ${HPE_MCP_TOOLSETS}
+  products: ${HPE_MCP_PRODUCTS:-none}
+  access:   ${HPE_MCP_PRODUCT_ACCESS}
+  bearer:   ${bearer_status}
+  metrics:  ${HPE_MCP_METRICS:-0} (http snapshot: ${HPE_MCP_METRICS_HTTP:-0})
+  audit:    ${HPE_MCP_AUDIT_LOG:-0}
+
+Foreground stop: Ctrl-C
+Background stop:
+  lsof -nP -iTCP:${MCP_PORT} -sTCP:LISTEN
+  kill <PID>
+EOF
+
+cd "${ROOT}"
+exec uv run hpe-mcp-router

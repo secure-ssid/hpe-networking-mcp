@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "platform": "clearpass",
+  "generator": "scripts/build_optional_product_manifests.py",
+  "source_sha256": "63c56e7eca8d2a12909e6f187492623609d2070c8bebb5f168eeec67d6c168c1",
+  "manifest_sha256": "74edd4150b6ccd0414bfde3f8c2018ca981fa0e796a99cebb15b7d1143d47c7e",
+  "operation_count": 816,
+  "registry_ids": [
+    "15btrd12ml85csbt",
+    "15btrd1aeml85c5da",
+    "1ajpg01cml85anrq",
+    "1ajpg031ml85ey7m",
+    "1wxkxoml85duds",
+    "318h42r1cml85e6m3",
+    "318h42r1xml85aa55",
+    "a48hf010ml85fo52",
+    "a48hf01qml85g8pg",
+    "a48hf0fml85elb0",
+    "a48hf0uml85faaa",
+    "at4cgf1qml85bng3",
+    "at4cgf25ml85b3v0",
+    "at4cgf25ml85gob5",
+    "at4cgf38ml85h0ju",
+    "at4cgfzml85da6p"
+  ],
+  "source": {
+    "acquired_from": "Aruba developer portal ReadMe SuperHub API registries",
+    "portal": "https://developer.arubanetworks.com/cppm/reference",
+    "spec_version": "6.12.7"
+  }
+}

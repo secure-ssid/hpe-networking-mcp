@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "hpe-networking-mcp": {
+      "command": "/path/to/hpe-networking-mcp/.venv/bin/python3",
+      "args": [
+        "/path/to/hpe-networking-mcp/src/hpe_networking_mcp/mcp_servers/tool_router.py"
+      ],
+      "cwd": "/path/to/hpe-networking-mcp",
+      "env": {
+        "PYTHONPATH": "/path/to/hpe-networking-mcp/src",
+        "CREDS_PATH": "/path/to/hpe-networking-mcp/config/credentials.yaml",
+        "HPE_MCP_ROUTER_MODE": "minimal",
+        "HPE_MCP_TOOLSETS": "central,glp,rag"
+      }
+    }
+  }
+}

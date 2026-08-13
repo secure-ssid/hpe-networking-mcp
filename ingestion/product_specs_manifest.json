@@ -1,0 +1,754 @@
+{
+  "specs": [
+    {
+      "branch": "6.0",
+      "output_path": "ingestion/sources/product_specs/afc-page.json",
+      "path_count": 211,
+      "project": "aruba-fabric-composer",
+      "section": "afc",
+      "source_url": "https://developer.arubanetworks.com/afc/reference/listapplications",
+      "spec_uri": "/branches/6.0/apis/page.json",
+      "title": "page"
+    },
+    {
+      "branch": "8.0",
+      "output_path": "ingestion/sources/product_specs/aos8-arubaos-json-api-specification.json",
+      "path_count": 168,
+      "project": "aruba-aos",
+      "section": "aos8",
+      "source_url": "https://developer.arubanetworks.com/aos8/reference/get_object-ntp-server-disable",
+      "spec_uri": "/branches/8.0/apis/arubaos-json-api-specification.json",
+      "title": "ArubaOS JSON API Specification"
+    },
+    {
+      "branch": "10.04",
+      "output_path": "ingestion/sources/product_specs/aoscx-arubaos-cx-rest-api.json",
+      "path_count": 476,
+      "project": "aruba-aoscx",
+      "section": "aoscx",
+      "source_url": "https://developer.arubanetworks.com/aoscx/reference/delete_system-aaa-accounting-attributes-session-type",
+      "spec_uri": "/branches/10.04/apis/arubaos-cx-rest-api.json",
+      "title": "ArubaOS-CX REST API"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-acp-audit-trail-4.json",
+      "path_count": 2,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiget_audit_logs",
+      "spec_uri": "/branches/2.5.7/apis/acp-audit-trail-4.json",
+      "title": "ACP Audit Trail"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-acp-ofc-api-handler-4.json",
+      "path_count": 4,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apienable_wildcard_flow",
+      "spec_uri": "/branches/2.5.7/apis/acp-ofc-api-handler-4.json",
+      "title": "ACP OFC Api Handler"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-aiops-4.json",
+      "path_count": 15,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_aiops-v1-connectivity-global-stage-stage-export",
+      "spec_uri": "/branches/2.5.7/apis/aiops-4.json",
+      "title": "AIOps"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-airgroup-4.json",
+      "path_count": 9,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/viewsget_airgroup_traffic_summary",
+      "spec_uri": "/branches/2.5.7/apis/airgroup-4.json",
+      "title": "AirGroup"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-airmatch-4.json",
+      "path_count": 56,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/api_handlerstelemetryget_rep_radio_by_radio_mac",
+      "spec_uri": "/branches/2.5.7/apis/airmatch-4.json",
+      "title": "AirMatch"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-apprf-4.json",
+      "path_count": 10,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/viewsapprf_api_viewapprf_top_n_stats_iap_get",
+      "spec_uri": "/branches/2.5.7/apis/apprf-4.json",
+      "title": "AppRF"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-audit-event-logs-4.json",
+      "path_count": 2,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiget_audits",
+      "spec_uri": "/branches/2.5.7/apis/audit-event-logs-4.json",
+      "title": "Audit Event Logs"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-authentication-policy-4.json",
+      "path_count": 32,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apicloudauthread_auth_air_pass_list",
+      "spec_uri": "/branches/2.5.7/apis/authentication-policy-4.json",
+      "title": "Authentication & Policy"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-ble-beacon-service-4.json",
+      "path_count": 7,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/api_handlerbbs_nbapiretrieve_desire_beacon",
+      "spec_uri": "/branches/2.5.7/apis/ble-beacon-service-4.json",
+      "title": "Ble Beacon Service"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-client-match-4.json",
+      "path_count": 5,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_cm-enabled-v1-tenant-id",
+      "spec_uri": "/branches/2.5.7/apis/client-match-4.json",
+      "title": "Client Match"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-cloud-connect-3.json",
+      "path_count": 11,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/put_aruba_cloud_vpn_connect_config_id1",
+      "spec_uri": "/branches/2.5.7/apis/cloud-connect-3.json",
+      "title": "Cloud Connect"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-configuration-3.json",
+      "path_count": 104,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apigroupsget_groups_v2",
+      "spec_uri": "/branches/2.5.7/apis/configuration-3.json",
+      "title": "Configuration"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-deprecated-device-inventory-4.json",
+      "path_count": 7,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apilicense_apidevice_inventory_v2get_devices",
+      "spec_uri": "/branches/2.5.7/apis/deprecated-device-inventory-4.json",
+      "title": "Deprecated Device Inventory"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-deprecated-licensing-4.json",
+      "path_count": 11,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/acp_servicelicensewebviewsadmin_licenseget_user_subscriptions",
+      "spec_uri": "/branches/2.5.7/apis/deprecated-licensing-4.json",
+      "title": "Deprecated Licensing"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-device-management-4.json",
+      "path_count": 9,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiaction_commandsend_command_to_device",
+      "spec_uri": "/branches/2.5.7/apis/device-management-4.json",
+      "title": "Device Management"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-device-routing-bgp-4.json",
+      "path_count": 6,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_routing-v1-bgp-neighbor",
+      "spec_uri": "/branches/2.5.7/apis/device-routing-bgp-4.json",
+      "title": "Device Routing - BGP"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-device-routing-ospf-4.json",
+      "path_count": 4,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_routing-v1-ospf-area",
+      "spec_uri": "/branches/2.5.7/apis/device-routing-ospf-4.json",
+      "title": "Device Routing - OSPF"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-device-routing-overlay-4.json",
+      "path_count": 6,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_routing-v1-overlay-connection",
+      "spec_uri": "/branches/2.5.7/apis/device-routing-overlay-4.json",
+      "title": "Device Routing - Overlay"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-device-routing-rip-4.json",
+      "path_count": 4,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_routing-v1-rip-interface",
+      "spec_uri": "/branches/2.5.7/apis/device-routing-rip-4.json",
+      "title": "Device Routing - RIP"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-device-routing-routetable-4.json",
+      "path_count": 2,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_routing-v1-route",
+      "spec_uri": "/branches/2.5.7/apis/device-routing-routetable-4.json",
+      "title": "Device Routing - RouteTable"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-dps-monitoring-4.json",
+      "path_count": 7,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apidps_monitoringendpointsdps_monitoring_apigw_endpointsget_dps_policy_stats",
+      "spec_uri": "/branches/2.5.7/apis/dps-monitoring-4.json",
+      "title": "DPS Monitoring"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-firmware-4.json",
+      "path_count": 21,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apifirmwareget_swarms_firmware_details",
+      "spec_uri": "/branches/2.5.7/apis/firmware-4.json",
+      "title": "Firmware"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-gdpr-4.json",
+      "path_count": 2,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apigdpr_external_apiget_gdprs_api",
+      "spec_uri": "/branches/2.5.7/apis/gdpr-4.json",
+      "title": "GDPR"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-guest-4.json",
+      "path_count": 11,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiviewsexternal_apiget_api_portals",
+      "spec_uri": "/branches/2.5.7/apis/guest-4.json",
+      "title": "Guest"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-install-manager-4.json",
+      "path_count": 6,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiinstall_manager_external_apiinvite_installer",
+      "spec_uri": "/branches/2.5.7/apis/install-manager-4.json",
+      "title": "Install Manager"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-iot-app-developer-portal-2.json",
+      "path_count": 12,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/listappspublishedandsuspended",
+      "spec_uri": "/branches/2.5.7/apis/iot-app-developer-portal-2.json",
+      "title": "IoT - App Developer Portal"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-iot-appstore-2.json",
+      "path_count": 18,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/searchappsusingget",
+      "spec_uri": "/branches/2.5.7/apis/iot-appstore-2.json",
+      "title": "IoT - Appstore"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-iot-device-2.json",
+      "path_count": 11,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/getalldevicesusingget",
+      "spec_uri": "/branches/2.5.7/apis/iot-device-2.json",
+      "title": "IoT - Device"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-iot-iotgateway-2.json",
+      "path_count": 8,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/getallgatewaysusingget",
+      "spec_uri": "/branches/2.5.7/apis/iot-iotgateway-2.json",
+      "title": "IoT - Iotgateway"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-iot-transport-profile-2.json",
+      "path_count": 4,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/findtransportprofilesusingget",
+      "spec_uri": "/branches/2.5.7/apis/iot-transport-profile-2.json",
+      "title": "IoT - Transport Profile"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-monitoring-4.json",
+      "path_count": 82,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiexternal_controllerget_networks_v2",
+      "spec_uri": "/branches/2.5.7/apis/monitoring-4.json",
+      "title": "Monitoring"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-msp-4.json",
+      "path_count": 12,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiviewsmsp_apiget_customers",
+      "spec_uri": "/branches/2.5.7/apis/msp-4.json",
+      "title": "MSP"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-network-health-5.json",
+      "path_count": 2,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiviewsexternal_apiget_sites_api",
+      "spec_uri": "/branches/2.5.7/apis/network-health-5.json",
+      "title": "Network Health"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-new-device-inventory-4.json",
+      "path_count": 9,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/acp_servicenb_apiapidevice_inventoryget_devices",
+      "spec_uri": "/branches/2.5.7/apis/new-device-inventory-4.json",
+      "title": "New Device Inventory"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-new-licensing-4.json",
+      "path_count": 11,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/acp_servicelicensewebviewsadmin_licenseget_user_subscriptions-1",
+      "spec_uri": "/branches/2.5.7/apis/new-licensing-4.json",
+      "title": "New Licensing"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-notification-4.json",
+      "path_count": 7,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apinotifications_external_apiget_types_api",
+      "spec_uri": "/branches/2.5.7/apis/notification-4.json",
+      "title": "Notification"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-presence-analytics-4.json",
+      "path_count": 23,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/viewspresenceget_presence_v3_thresholds",
+      "spec_uri": "/branches/2.5.7/apis/presence-analytics-4.json",
+      "title": "Presence Analytics"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-rapids-3.json",
+      "path_count": 8,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_rapids-v1-rogue-aps",
+      "spec_uri": "/branches/2.5.7/apis/rapids-3.json",
+      "title": "RAPIDS"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-refresh-api-token-4.json",
+      "path_count": 1,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/xxxxxx",
+      "spec_uri": "/branches/2.5.7/apis/refresh-api-token-4.json",
+      "title": "Refresh API Token"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-reporting-4.json",
+      "path_count": 5,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiexternal_apischeduled_reports",
+      "spec_uri": "/branches/2.5.7/apis/reporting-4.json",
+      "title": "Reporting"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-service-airgroup-4.json",
+      "path_count": 38,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_aruba_airgroup_service_ids_id1",
+      "spec_uri": "/branches/2.5.7/apis/service-airgroup-4.json",
+      "title": "Service Airgroup"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-service-airmatch-4.json",
+      "path_count": 3,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_aruba_airmatch_system_id1",
+      "spec_uri": "/branches/2.5.7/apis/service-airmatch-4.json",
+      "title": "Service Airmatch"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-service-ids-ips-4.json",
+      "path_count": 5,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_aruba_ids_ips_siem_notification_id1",
+      "spec_uri": "/branches/2.5.7/apis/service-ids-ips-4.json",
+      "title": "Service IDS IPS"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-service-ipms-4.json",
+      "path_count": 6,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_aruba_ipms_ip_range_id1",
+      "spec_uri": "/branches/2.5.7/apis/service-ipms-4.json",
+      "title": "Service IPMS"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-service-overlay-wlan-4.json",
+      "path_count": 6,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_aruba_overlay_wlan_gw_cluster_list_id1",
+      "spec_uri": "/branches/2.5.7/apis/service-overlay-wlan-4.json",
+      "title": "Service Overlay Wlan"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-service-rapids-3.json",
+      "path_count": 13,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_aruba_rapids_ssid_includes_id1",
+      "spec_uri": "/branches/2.5.7/apis/service-rapids-3.json",
+      "title": "Service RAPIDS"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-service-sdwan-4.json",
+      "path_count": 44,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_aruba_sdwan_branch_devices_id1",
+      "spec_uri": "/branches/2.5.7/apis/service-sdwan-4.json",
+      "title": "Service SDWAN"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-service-ucc-4.json",
+      "path_count": 11,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_aruba_ucc_skype4b_id1",
+      "spec_uri": "/branches/2.5.7/apis/service-ucc-4.json",
+      "title": "Service UCC"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-sso-configuration-4.json",
+      "path_count": 4,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/ccsapigwsso_managementsaml_ssoget_metadata",
+      "spec_uri": "/branches/2.5.7/apis/sso-configuration-4.json",
+      "title": "SSO Configuration"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-topology-4.json",
+      "path_count": 9,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiviewstopology_external_api_viewsdisplay_topology",
+      "spec_uri": "/branches/2.5.7/apis/topology-4.json",
+      "title": "Topology"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-troubleshooting-4.json",
+      "path_count": 10,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apitroubleshooting_apiget_commands_list",
+      "spec_uri": "/branches/2.5.7/apis/troubleshooting-4.json",
+      "title": "Troubleshooting"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-unifiedcommunications-4.json",
+      "path_count": 11,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/uc_dshb_viewsget_uc_summary",
+      "spec_uri": "/branches/2.5.7/apis/unifiedcommunications-4.json",
+      "title": "UnifiedCommunications"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-user-management-4.json",
+      "path_count": 9,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apiuserget_user_accounts",
+      "spec_uri": "/branches/2.5.7/apis/user-management-4.json",
+      "title": "User Management"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-vgw-3.json",
+      "path_count": 6,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_vgw_cloud_accounts_for_aws",
+      "spec_uri": "/branches/2.5.7/apis/vgw-3.json",
+      "title": "Vgw"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-visualrf-4.json",
+      "path_count": 15,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/get_visualrf-api-v1-geofence",
+      "spec_uri": "/branches/2.5.7/apis/visualrf-4.json",
+      "title": "VisualRF"
+    },
+    {
+      "branch": "2.5.7",
+      "output_path": "ingestion/sources/product_specs/central-webhook-4.json",
+      "path_count": 4,
+      "project": "aruba-central",
+      "section": "central",
+      "source_url": "https://developer.arubanetworks.com/central/reference/apidispatcher_external_apiget_webhooks_api",
+      "spec_uri": "/branches/2.5.7/apis/webhook-4.json",
+      "title": "Webhook"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-api-operations.json",
+      "path_count": 3,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/tokenendpointpost",
+      "spec_uri": "/branches/6.9.0/apis/api-operations.json",
+      "title": "API Operations"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-certificate-authority.json",
+      "path_count": 14,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/certificateget",
+      "spec_uri": "/branches/6.9.0/apis/certificate-authority.json",
+      "title": "Certificate Authority"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-endpoint-visibility.json",
+      "path_count": 38,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/agentlessonguardsettingssettingsget",
+      "spec_uri": "/branches/6.9.0/apis/endpoint-visibility.json",
+      "title": "Endpoint Visibility"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-global-server-configuration.json",
+      "path_count": 36,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/adminprivilegeget",
+      "spec_uri": "/branches/6.9.0/apis/global-server-configuration.json",
+      "title": "Global Server Configuration"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-guest-actions.json",
+      "path_count": 5,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/generateguestdigitalpassbyguest_idpassbyidget",
+      "spec_uri": "/branches/6.9.0/apis/guest-actions.json",
+      "title": "Guest Actions"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-guest-configuration.json",
+      "path_count": 9,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/digitalpasstemplatepassget",
+      "spec_uri": "/branches/6.9.0/apis/guest-configuration.json",
+      "title": "Guest Configuration"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-identities.json",
+      "path_count": 23,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/apiclientget",
+      "spec_uri": "/branches/6.9.0/apis/identities.json",
+      "title": "Identities"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-integrations.json",
+      "path_count": 32,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/contextserveractionget",
+      "spec_uri": "/branches/6.9.0/apis/integrations.json",
+      "title": "Integrations"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-local-server-configuration.json",
+      "path_count": 18,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/addomainbyserver_uuidget",
+      "spec_uri": "/branches/6.9.0/apis/local-server-configuration.json",
+      "title": "Local Server Configuration"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-logs.json",
+      "path_count": 6,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/endpointinfoendpointmacbymacget",
+      "spec_uri": "/branches/6.9.0/apis/logs.json",
+      "title": "Logs"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-platform-certificates.json",
+      "path_count": 17,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/certsignrequestpost",
+      "spec_uri": "/branches/6.9.0/apis/platform-certificates.json",
+      "title": "Platform Certificates"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-policy-elements.json",
+      "path_count": 51,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/applicationdictionaryget",
+      "spec_uri": "/branches/6.9.0/apis/policy-elements.json",
+      "title": "Policy Elements"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-session-control.json",
+      "path_count": 13,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/activesessionget",
+      "spec_uri": "/branches/6.9.0/apis/session-control.json",
+      "title": "Session Control"
+    },
+    {
+      "branch": "6.9.0",
+      "output_path": "ingestion/sources/product_specs/cppm-tools-and-utilities.json",
+      "path_count": 4,
+      "project": "aruba-cppm",
+      "section": "cppm",
+      "source_url": "https://developer.arubanetworks.com/cppm/reference/emailsendsendpost",
+      "spec_uri": "/branches/6.9.0/apis/tools-and-utilities.json",
+      "title": "Tools And Utilities"
+    },
+    {
+      "branch": "0.0.0",
+      "output_path": "ingestion/sources/product_specs/edgeconnect-orchestrator-rest-apis.json",
+      "path_count": 695,
+      "project": "aruba-edgeconnect",
+      "section": "edgeconnect",
+      "source_url": "https://developer.arubanetworks.com/edgeconnect/reference/acl1",
+      "spec_uri": "/branches/0.0.0/apis/orchestrator-rest-apis.json",
+      "title": "Orchestrator REST APIs"
+    },
+    {
+      "branch": "1.0",
+      "output_path": "ingestion/sources/product_specs/uxi-hpe-networking-uxi-configuration-1.json",
+      "path_count": 18,
+      "project": "aruba-uxi",
+      "section": "uxi",
+      "source_url": "https://developer.arubanetworks.com/uxi/reference/get_sensor_status",
+      "spec_uri": "/branches/1.0/apis/hpe-networking-uxi-configuration-1.json",
+      "title": "HPE Networking UXI Configuration"
+    }
+  ]
+}

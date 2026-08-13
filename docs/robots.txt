@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /hpe-networking-mcp/
+
+Sitemap: https://secure-ssid.github.io/hpe-networking-mcp/sitemap.xml

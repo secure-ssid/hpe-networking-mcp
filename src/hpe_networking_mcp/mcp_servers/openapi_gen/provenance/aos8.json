@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "platform": "aos8",
+  "generator": "scripts/build_optional_product_manifests.py",
+  "source_sha256": "1fca522c51d926f7d199fef74eeb2e24e158b4c235cda0d5087339c0c3d6f9ca",
+  "manifest_sha256": "85082dc7c278c0697c633557688c1a9213003b498822ce08abdfbc994c49bc76",
+  "operation_count": 258,
+  "registry_ids": [
+    "cjpas1kkx7bible"
+  ],
+  "source": {
+    "acquired_from": "Aruba developer portal ReadMe SuperHub API registry",
+    "portal": "https://developer.arubanetworks.com/aos8/reference",
+    "spec_version": "8.0 (ArubaOS JSON API 1.0)"
+  }
+}

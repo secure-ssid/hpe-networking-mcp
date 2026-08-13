@@ -1,0 +1,15 @@
+{
+  "expected_markers": [],
+  "generator": "ingestion/scrape_security_lifecycle.py",
+  "minimum_count": 3,
+  "note": "Reviewed floor of official Juniper Mist/Apstra EOL pages (Juniper Mist Access Points and Mist Edge; Juniper Apstra hardware and software). discover_juniper_lifecycle_urls() additionally derives this same set (and any future addition) from the official EOL index nav at JUNIPER_EOL_INDEX_URL; render_juniper_lifecycle_page already fails closed if a page's expected content sections disappear.",
+  "reviewed_at": "2026-07-25",
+  "schema_version": 1,
+  "source_family": "juniper_lifecycle_pages",
+  "source_urls": [
+    "https://support.juniper.net/support/eol/",
+    "https://support.juniper.net/support/eol/product/apstra/",
+    "https://support.juniper.net/support/eol/product/juniper_ap_series/",
+    "https://support.juniper.net/support/eol/software/apstra/"
+  ]
+}

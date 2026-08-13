@@ -1,0 +1,22 @@
+{
+  "_doc": [
+    "Capability overrides for the generated Mist tools. Keys are operation keys",
+    "('METHOD /path'); values are one of 'read', 'diagnostic', 'write', or",
+    "'destructive'. Use this",
+    "to reclassify POST diagnostics that are effectively read-only, or GETs that",
+    "have side effects. Add entries here with a short justification rather than",
+    "editing the generated manifest directly."
+  ],
+  "capabilities": {
+    "GET /api/v1/installer/sites/{site_name}/optimize": "write",
+    "POST /api/v1/orgs/{org_id}/mist_nac/test_idp": "diagnostic",
+    "POST /api/v1/orgs/{org_id}/webhooks/{webhook_id}/ping": "diagnostic",
+    "POST /api/v1/sites/{site_id}/devices/{device_id}/cable_test": "diagnostic",
+    "POST /api/v1/sites/{site_id}/devices/{device_id}/ping": "diagnostic",
+    "POST /api/v1/sites/{site_id}/devices/{device_id}/service_ping": "diagnostic",
+    "POST /api/v1/sites/{site_id}/devices/{device_id}/synthetic_test": "diagnostic",
+    "POST /api/v1/sites/{site_id}/devices/{device_id}/traceroute": "diagnostic",
+    "POST /api/v1/sites/{site_id}/synthetic_test": "diagnostic",
+    "POST /api/v1/sites/{site_id}/webhooks/{webhook_id}/ping": "diagnostic"
+  }
+}

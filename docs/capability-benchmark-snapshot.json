@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-08-12",
+  "repository": "nowireless4u/hpe-networking-mcp",
+  "repository_url": "https://github.com/nowireless4u/hpe-networking-mcp",
+  "commit": "a1b2afaac11001fa75a9b04bc8a3d0d5c0ffc387",
+  "commit_date": "2026-08-10T08:34:00Z",
+  "commit_url": "https://github.com/nowireless4u/hpe-networking-mcp/commit/a1b2afaac11001fa75a9b04bc8a3d0d5c0ffc387",
+  "license": "MIT",
+  "counts": {
+    "executable_backend_tools": 4109,
+    "indexed_endpoints": 5960,
+    "default_code_mode_surface": 6,
+    "dynamic_mode_surface": 36
+  },
+  "dynamic_mode_breakdown": {
+    "platform_router_tools": 27,
+    "platform_count": 9,
+    "router_tools_per_platform": 3,
+    "direct_cross_platform_tools": 7,
+    "direct_cross_platform_names": [
+      "health",
+      "site_health_check",
+      "site_rf_check",
+      "translate_wlan_preview",
+      "translate_wlan_apply",
+      "translate_config_preview",
+      "translate_config_apply"
+    ],
+    "skills_tools": 2,
+    "skills_tool_names": [
+      "skills_list",
+      "skills_load"
+    ]
+  },
+  "executable_backend_tools_by_platform": {
+    "mist": 1050,
+    "central": 669,
+    "greenlake": 919,
+    "clearpass": 142,
+    "apstra": 19,
+    "axis": 25,
+    "aos8": 48,
+    "uxi": 21,
+    "edgeconnect": 1216
+  },
+  "indexed_endpoint_reproduction": {
+    "source_script": "scripts/build_spec_index.py",
+    "source_url": "https://github.com/nowireless4u/hpe-networking-mcp/blob/a1b2afaac11001fa75a9b04bc8a3d0d5c0ffc387/scripts/build_spec_index.py",
+    "command": "python scripts/build_spec_index.py",
+    "specs": 81,
+    "endpoints": 5960,
+    "responses": 39576,
+    "parameters": 17836,
+    "schemas": 13578,
+    "fields": 63111,
+    "skipped": 6,
+    "notes": [
+      "The index parses vendored OpenAPI documents and is not an executable MCP tool registry.",
+      "The builder excludes non-spec JSON and vendor/aoscx because that platform has no backing tools."
+    ]
+  },
+  "source_evidence": [
+    {
+      "claim": "4,109 underlying executable tools and the code/dynamic exposure modes",
+      "path": "README.md",
+      "url": "https://github.com/nowireless4u/hpe-networking-mcp/blob/a1b2afaac11001fa75a9b04bc8a3d0d5c0ffc387/README.md"
+    },
+    {
+      "claim": "Per-platform executable tool counts",
+      "path": "README.md",
+      "url": "https://github.com/nowireless4u/hpe-networking-mcp/blob/a1b2afaac11001fa75a9b04bc8a3d0d5c0ffc387/README.md#why"
+    },
+    {
+      "claim": "5,960 indexed endpoints, reproduced locally from the pinned tree",
+      "path": "scripts/build_spec_index.py",
+      "url": "https://github.com/nowireless4u/hpe-networking-mcp/blob/a1b2afaac11001fa75a9b04bc8a3d0d5c0ffc387/scripts/build_spec_index.py"
+    }
+  ],
+  "non_equivalence": [
+    "Executable backend tools are registered call targets; indexed endpoints are documentation/spec lookup records.",
+    "The endpoint index can contain operations with no callable wrapper and omits non-spec or unsupported platform material.",
+    "The executable total includes generated wrappers and curated tools, while the top-level MCP surface is intentionally much smaller."
+  ],
+  "count_reconciliation": [
+    "The pinned README's early comparison table shows 10 for GreenLake, but its platform tree and startup examples state 919 generated GreenLake tools.",
+    "Using 919 makes the per-platform sum exactly 4,109; using 10 would produce 3,200. This snapshot records the internally consistent executable registry total.",
+    "The pinned README claims 24 client-visible tools in dynamic mode, but the pinned implementation registers 27 platform routers (nine platforms times three), seven direct cross-platform tools, and two skills tools: 36 total.",
+    "The upstream 24 claim is stale and internally contradictory: it also describes only 21 platform meta-tools and four cross-platform tools despite the pinned nine-platform and seven-direct-tool registrations."
+  ]
+}

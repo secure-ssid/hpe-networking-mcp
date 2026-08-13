@@ -1,0 +1,18 @@
+{
+  "_doc": [
+    "Reviewed ClearPass operations whose POST method is disruptive or irreversible.",
+    "They remain dry-run/confirm gated and are annotated destructive."
+  ],
+  "capabilities": {
+    "POST /certificate/{cert_id}/reject": "destructive",
+    "POST /certificate/{cert_id}/revoke": "destructive",
+    "POST /extension/instance/{id}/restart": "destructive",
+    "POST /extension/instance/{id}/stop": "destructive",
+    "POST /extension/instance/{id}/upgrade": "destructive",
+    "POST /session-action/disconnect": "destructive",
+    "POST /session-action/disconnect/ip/{client_ip_address}": "destructive",
+    "POST /session-action/disconnect/mac/{mac_address}": "destructive",
+    "POST /session-action/disconnect/username/{username}": "destructive",
+    "POST /session/{id}/disconnect": "destructive"
+  }
+}

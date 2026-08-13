@@ -1,0 +1,16 @@
+$ MCP_PORT=8010 bash scripts/run_http_router.sh
+Starting hpe-networking-mcp HTTP router
+  endpoint: http://127.0.0.1:8010/mcp
+  health:   /livez, /readyz, /healthz (no auth needed)
+  mode:     minimal
+  toolsets: central,glp,rag
+  products: none
+  access:   read-only
+  bearer:   disabled (set MCP_HTTP_BEARER_TOKEN to require it)
+  metrics:  0 (http snapshot: 0)
+  audit:    0
+
+Foreground stop: Ctrl-C
+Background stop:
+  lsof -nP -iTCP:8010 -sTCP:LISTEN
+  kill <PID>

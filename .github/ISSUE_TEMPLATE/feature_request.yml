@@ -1,0 +1,60 @@
+name: Feature request
+description: Suggest a focused hpe-networking-mcp improvement or product workflow.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please keep examples fake or redacted. Do not include real credentials,
+        tokens, tenant IDs, customer data, private URLs, or sensitive screenshots.
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What network automation, troubleshooting, docs, or MCP workflow would this improve?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Aruba Central
+        - GreenLake Platform
+        - ClearPass
+        - Juniper Mist
+        - Apstra
+        - ArubaOS 8
+        - EdgeConnect
+        - HPE Aruba UXI
+        - RAG/OpenAPI lookup
+        - AOS8 migration or compatibility mapping
+        - API source ingestion or drift checks
+        - MCP transport, authentication, or safety
+        - Setup wizard or docs
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful behavior or documentation change.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Example prompt or tool flow
+      description: Prefer the low-token router path where possible.
+      placeholder: |
+        find_tool("...")
+        invoke_read_tool("...", {...})
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I used fake or redacted data and did not include secrets or customer details.
+          required: true

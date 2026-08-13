@@ -1,0 +1,18 @@
+{
+  "_comment": "Minimal stdio profile: three router tools (find_tool, invoke_read_tool, invoke_tool) over central,glp,rag plus the always-on credential-free interop-core backend. Replace /path/to/hpe-networking-mcp with your local clone path -- this is a placeholder, never a real user path.",
+  "mcpServers": {
+    "hpe-networking-mcp": {
+      "command": "/path/to/hpe-networking-mcp/.venv/bin/python3",
+      "args": [
+        "/path/to/hpe-networking-mcp/src/hpe_networking_mcp/mcp_servers/tool_router.py"
+      ],
+      "cwd": "/path/to/hpe-networking-mcp",
+      "env": {
+        "PYTHONPATH": "/path/to/hpe-networking-mcp/src",
+        "CREDS_PATH": "/path/to/hpe-networking-mcp/config/credentials.yaml",
+        "HPE_MCP_ROUTER_MODE": "minimal",
+        "HPE_MCP_TOOLSETS": "central,glp,rag"
+      }
+    }
+  }
+}

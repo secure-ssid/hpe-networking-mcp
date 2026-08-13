@@ -1,0 +1,20 @@
+{
+  "_comment": "Full stdio profile: every optional product starter enabled read-only (ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis, Design) alongside the always-on core/glp/rag/interop backends. Router still exposes only find_tool/invoke_read_tool/invoke_tool in minimal mode -- HPE_MCP_PRODUCTS only changes what the router can reach, not the client-visible tool count. Set HPE_MCP_PRODUCT_ACCESS=read-write only for a trusted lab session that needs guarded write tools visible. Replace /path/to/hpe-networking-mcp with your local clone path.",
+  "mcpServers": {
+    "hpe-networking-mcp": {
+      "command": "/path/to/hpe-networking-mcp/.venv/bin/python3",
+      "args": [
+        "/path/to/hpe-networking-mcp/src/hpe_networking_mcp/mcp_servers/tool_router.py"
+      ],
+      "cwd": "/path/to/hpe-networking-mcp",
+      "env": {
+        "PYTHONPATH": "/path/to/hpe-networking-mcp/src",
+        "CREDS_PATH": "/path/to/hpe-networking-mcp/config/credentials.yaml",
+        "HPE_MCP_ROUTER_MODE": "minimal",
+        "HPE_MCP_TOOLSETS": "central,glp,rag",
+        "HPE_MCP_PRODUCTS": "clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design",
+        "HPE_MCP_PRODUCT_ACCESS": "read-only"
+      }
+    }
+  }
+}

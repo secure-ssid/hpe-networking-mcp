@@ -1,0 +1,9 @@
+{
+  "_comment": "Local streamable HTTP profile: your MCP client connects to an already-running router process instead of launching it. Start the server first: MCP_PORT=8010 bash scripts/run_http_router.sh -- then point this config at it. Loopback-only; no bearer token needed on 127.0.0.1.",
+  "mcpServers": {
+    "hpe-networking-mcp-http": {
+      "url": "http://127.0.0.1:8010/mcp",
+      "transport": "streamable-http"
+    }
+  }
+}

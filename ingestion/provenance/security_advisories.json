@@ -1,0 +1,13 @@
+{
+  "expected_markers": [],
+  "generator": "ingestion/scrape_security_lifecycle.py",
+  "minimum_count": 90,
+  "note": "Official HPE Aruba Networking CSAF advisory archive, discovered incrementally via changes.csv. Content grows over time (new advisories); only the endpoint identity is pinned here. changes.csv row-shape validation already fails closed in parse_changes_csv.",
+  "reviewed_at": "2026-07-25",
+  "schema_version": 1,
+  "source_family": "security_advisories",
+  "source_urls": [
+    "https://csaf.arubanetworking.hpe.com/",
+    "https://csaf.arubanetworking.hpe.com/changes.csv"
+  ]
+}

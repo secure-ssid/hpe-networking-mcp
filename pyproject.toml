@@ -1,0 +1,114 @@
+[build-system]
+requires = ["setuptools>=83.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hpe-networking-mcp"
+version = "0.8.0"
+description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,715-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+keywords = [
+    "ai-for-networking",
+    "apstra",
+    "aruba-api",
+    "aruba-central",
+    "aruba-central-mcp",
+    "aruba-mcp",
+    "arubaos8",
+    "aos8-migration",
+    "axis-atmos",
+    "clearpass",
+    "edgeconnect-acl-groups",
+    "edgeconnect-bypass",
+    "edgeconnect",
+    "edgeconnect-interface-labels",
+    "edgeconnect-link-integrity",
+    "edgeconnect-services",
+    "edgeconnect-zones",
+    "mcp-python-sdk",
+    "greenlake",
+    "greenlake-mcp",
+    "greenlake-platform",
+    "greenlake-reporting",
+    "greenlake-service-catalog",
+    "hpe-aruba-uxi",
+    "hpe-aruba-networking",
+    "hpe-greenlake",
+    "hpe-networking",
+    "low-token-router",
+    "mcp-server",
+    "mist",
+    "model-context-protocol",
+    "network-automation",
+    "openapi",
+    "rag",
+    "uxi",
+    "user-experience-insight",
+    "zone-based-firewall",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: System Administrators",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Networking",
+]
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0.0",
+    "rich>=13.0.0",
+    "mcp[cli]>=2.0.0,<3",
+    # RAG
+    "httpx>=0.27.0",
+    "langchain-text-splitters>=0.2.0",
+    "pypdf>=6.14.2",
+    "beautifulsoup4>=4.15.0",
+    "playwright>=1.58.0",
+    "redis>=8.0.1",
+    "numpy>=2.2.6",
+    "lancedb>=0.33.0",
+    "fastembed>=0.8.0",
+    "websockets>=14.0",
+]
+
+[project.scripts]
+hpe-mcp-router = "hpe_networking_mcp.mcp_servers.tool_router:main"
+hpe-mcp-doctor = "hpe_networking_mcp.cli.doctor:main"
+hpe-mcp-run-pipeline = "hpe_networking_mcp.cli.run_pipeline:main"
+hpe-mcp-run-ssid = "hpe_networking_mcp.cli.run_ssid:main"
+
+[project.urls]
+Homepage = "https://secure-ssid.github.io/hpe-networking-mcp/"
+Repository = "https://github.com/secure-ssid/hpe-networking-mcp"
+Documentation = "https://secure-ssid.github.io/hpe-networking-mcp/"
+Issues = "https://github.com/secure-ssid/hpe-networking-mcp/issues"
+Changelog = "https://github.com/secure-ssid/hpe-networking-mcp/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = ["pytest>=9.1.1", "ruff>=0.8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["hpe_networking_mcp*"]
+
+[tool.setuptools.package-data]
+"hpe_networking_mcp.mcp_servers.openapi_gen" = ["manifests/*.json", "overrides/*.json", "provenance/*.json"]
+"hpe_networking_mcp.mcp_servers.skills" = ["*.md"]
+# design icons live under resources/ (not package data)
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: subprocess-based or otherwise expensive tests (several seconds or more); still run by default, but a useful selector via `-m \"not slow\"` for a fast local loop",
+]

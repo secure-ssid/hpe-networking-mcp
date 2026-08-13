@@ -1,0 +1,3 @@
+serial_number,source_type,hardware_series,target_account,target_site,target_group,persona,firmware_target,mac_address,notes,vlan_interface_config_file
+SERIALNUM01,unmanaged,aos_cx,same,Site Name,Switch Group,access_switch,10.16.1006,,AOS-CX 6100 example,
+SERIALNUM02,classic_central,aos_cx,same,Site Name,Switch Group,access_switch,10.16.1006,,,inputs/my_switch_vlan_intfs.cfg

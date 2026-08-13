@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "platform": "apstra",
+    "purpose": "Classify reviewed Apstra query and destructive operations.",
+    "rules": [
+      "POST object-policy query operations read data and execute without write confirmation.",
+      "POST obj-policy-batch-delete is destructive."
+    ]
+  },
+  "capabilities": {
+    "POST /api/blueprints/{blueprint_id}/obj-policy-application-points": "read",
+    "POST /api/blueprints/{blueprint_id}/obj-policy-search": "read",
+    "POST /api/blueprints/{blueprint_id}/experience/web/obj-policies-by-application-points": "read",
+    "POST /api/blueprints/{blueprint_id}/obj-policy-batch-delete": "destructive"
+  }
+}

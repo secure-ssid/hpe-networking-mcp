@@ -1,0 +1,12 @@
+{
+  "expected_markers": [],
+  "generator": "ingestion/scrape_security_lifecycle.py",
+  "minimum_count": 1,
+  "note": "Official Juniper sitemap-index discovery of Mist/Apstra Security Bulletin articles. Only the stable sitemap index URL is pinned; topic-article child sitemap filenames (e.g. sitemap-topicarticle-1.xml) are dynamically discovered and host/scheme/path validated every run by parse_juniper_security_sitemap_index, never pinned directly, since Juniper silently 404ed a previously hardcoded weekly child sitemap. Content grows over time; child sitemap XML is fail-closed parsed.",
+  "reviewed_at": "2026-07-26",
+  "schema_version": 1,
+  "source_family": "juniper_security_advisories",
+  "source_urls": [
+    "https://supportportal.juniper.net/s/sitemap.xml"
+  ]
+}

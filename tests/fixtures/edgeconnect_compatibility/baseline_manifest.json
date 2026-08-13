@@ -1,0 +1,35 @@
+{
+  "schema_version": 2,
+  "platform": "edgeconnect",
+  "source": {
+    "operation_count": 3
+  },
+  "operations": [
+    {
+      "name": "edgeconnect_list_widgets",
+      "key": "GET /widgets",
+      "method": "GET",
+      "path": "/widgets",
+      "operation_id": "listWidgets",
+      "capability": "read",
+      "parameters": []
+    },
+    {
+      "name": "edgeconnect_update_widget",
+      "key": "POST /widgets/{id}",
+      "method": "POST",
+      "path": "/widgets/{id}",
+      "operation_id": "updateWidget",
+      "capability": "write",
+      "parameters": []
+    },
+    {
+      "name": "edgeconnect_delete_legacy",
+      "key": "DELETE /legacy",
+      "method": "DELETE",
+      "path": "/legacy",
+      "capability": "destructive",
+      "parameters": []
+    }
+  ]
+}

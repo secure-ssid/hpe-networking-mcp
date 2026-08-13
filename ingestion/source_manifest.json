@@ -1,0 +1,245 @@
+[
+  {
+    "source": "devhub",
+    "doc_type": "devhub",
+    "purpose": "HPE Aruba Networking DevHub landing, SDK, package, sample, and developer guidance pages for RAG discovery.",
+    "seed_urls": [
+      "https://devhub.arubanetworks.com"
+    ],
+    "output_dir": "ingestion/sources/devhub",
+    "scraper": "ingestion/scrape_devhub.py",
+    "notes": "Crawled by ingestion/scrape_devhub.py. The manifest previously pointed at scrape.py, which hardcodes the developer_docs output directory and its own seeds, so it never produced a DevHub corpus. DevHub publishes no sitemap, so pages are found by breadth-first crawl; content is in #content and query strings are dropped because the catalog filters re-render the same page. Do not commit scraped content; source URLs are preserved in each file."
+  },
+  {
+    "source": "developer_docs",
+    "doc_type": "developer-docs",
+    "purpose": "New Central developer and API how-to pages from the Aruba developer portal.",
+    "seed_urls": [
+      "https://developer.arubanetworks.com/new-central/docs/getting-started-with-rest-apis",
+      "https://developer.arubanetworks.com/new-central/docs/introduction-to-configuration-apis"
+    ],
+    "output_dir": "ingestion/sources/developer_docs",
+    "scraper": "ingestion/scrape.py",
+    "extra_scripts": [
+      "ingestion/scrape_cnac_spec.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/scrape_cnac_spec.py": "post"
+    },
+    "notes": "Refresh with ingestion/scrape.py and scrape_cnac_spec.py, then rebuild data/docs.lance and data/specs.sqlite."
+  },
+  {
+    "source": "tech_docs",
+    "doc_type": "tech-docs",
+    "purpose": "General HPE Aruba technical documentation used by docs RAG retrieval.",
+    "seed_urls": [
+      "https://arubanetworking.hpe.com/techdocs/CLI-Bank/Content/landing-pages/aos10-home.htm",
+      "https://arubanetworking.hpe.com/techdocs/central-on-premises/olh/303x/content/on-prem/whatsnew/3030.htm",
+      "https://arubanetworking.hpe.com/techdocs/AOS-Switch-RN/Content/home.htm",
+      "https://arubanetworking.hpe.com/techdocs/AirWave/8306/webhelp/Content/home.htm"
+    ],
+    "output_dir": "ingestion/sources/tech_docs",
+    "scraper": "ingestion/scrape_techdocs_pw.py",
+    "notes": "Keep generated markdown or HTML under the git-ignored source folder with source URL comments. The doc-portal landing page is a JS doc-browser that exposes no usable book index, and only VSG serves a sitemap.xml, so the WebHelp books are walked breadth-first per book by ingestion/scrape_techdocs_books.py: CLI-Bank (the AOS-10/CoP/ClearPass/SD-Branch CLI command reference), central-on-premises, AOS-Switch-RN and AirWave. hpe-central is handled separately by ingestion/scrape_hpe_central_pw.py under the techdocs_html source. The four books above are the complete set of live WebHelp books: every ArubaDocPortal product category page (including its client-side ?tab=N panes) was enumerated and the only other in-site book root it reaches is /techdocs/Archived/, which holds superseded product versions and is deliberately excluded. /techdocs/new-central/ is only an alias that redirects into hpe-central.",
+    "extra_scripts": [
+      "ingestion/scrape_techdocs_books.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/scrape_techdocs_books.py": "post"
+    }
+  },
+  {
+    "source": "nac_docs",
+    "doc_type": "nac",
+    "purpose": "Network access control, MAC registration, visitor, MPSK, DPP, and certificate reference material.",
+    "seed_urls": [
+      "https://developer.arubanetworks.com/new-central-config/reference/mac-registration"
+    ],
+    "output_dir": "ingestion/sources/nac_docs",
+    "scraper": "ingestion/scrape_nac_docs.py",
+    "extra_scripts": [
+      "ingestion/scrape_cnac_spec.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/scrape_cnac_spec.py": "post"
+    },
+    "notes": "Slugs discovered from the public new-central-config reference index, filtered to the NAC/AAA/security surface (261 pages), then the <article> prose is extracted with pandoc (icons/scripts stripped) at a 1.5s per-request delay. Replaces ingestion/scrape_reference.py, which read a URL list from /tmp files that no longer exist and wrote to ingestion/markdown/ instead of this output_dir \u2014 so nac_docs was silently never populated. Pair prose refreshes with the CNAC OpenAPI extraction when NAC API pages change."
+  },
+  {
+    "source": "vsg_docs",
+    "doc_type": "vsg",
+    "purpose": "Validated Solution Guide pages and design guidance used by architecture and workflow RAG answers.",
+    "seed_urls": [
+      "https://arubanetworking.hpe.com/techdocs/VSG/sitemap.xml"
+    ],
+    "output_dir": "ingestion/sources/vsg_docs",
+    "scraper": "ingestion/scrape_vsg.py",
+    "notes": "Build the URL list with ingestion/discover_vsg_urls.py (reads the guide's sitemap), then refresh with ingestion/scrape_vsg.py. Do not seed from /techdocs/VSG/docs/: Apache returns 403 for that directory listing even though the pages under it serve normally. Requires Playwright with headless=False for Akamai, plus pandoc for HTML->markdown. Japanese translations are excluded by default.",
+    "extra_scripts": [
+      "ingestion/discover_vsg_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_vsg_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/vsg_urls.json"
+  },
+  {
+    "source": "techdocs_html",
+    "doc_type": "techdocs-html",
+    "purpose": "HPE Aruba Networking Central product documentation, feature pages, workflows, and UI terminology.",
+    "seed_urls": [
+      "https://arubanetworking.hpe.com/techdocs/hpe-central/content/index.html"
+    ],
+    "output_dir": "ingestion/sources/techdocs_html",
+    "scraper": "ingestion/scrape_hpe_central_pw.py",
+    "notes": "The techdocs book moved from new-central to hpe-central and is now published as Oxygen WebHelp (GUID-*.html topics). Akamai 403s direct sub-resource requests, so ingestion/scrape_hpe_central_pw.py BFS-crawls topic pages with paced Playwright navigation instead of reading the site's file list. The book is larger than the default --max-pages bound, so re-run with --skip-existing until it reports no new pages (about 2000 topics)."
+  },
+  {
+    "source": "feature_navigator",
+    "doc_type": "feature-navigator",
+    "purpose": "Switching Feature Navigator wired feature/platform/release availability pages for RAG answers about CX feature support.",
+    "seed_urls": [
+      "https://feature-navigator.arubanetworking.hpe.com/wired?mode=explore"
+    ],
+    "output_dir": "ingestion/sources/feature_navigator",
+    "scraper": null,
+    "notes": "Dynamic explorer content should be exported or captured with source URLs before ingesting. No scraper script exists yet \u2014 export manually or build one with scripts/add_rag_source.py."
+  },
+  {
+    "source": "openapi_specs",
+    "doc_type": "openapi",
+    "purpose": "Authoritative OpenAPI specs for exact endpoint, schema, field, and enum lookup.",
+    "seed_urls": [
+      "https://developer.arubanetworks.com/new-central-config/reference/",
+      "https://github.com/mistsys/mist_openapi"
+    ],
+    "output_dir": "ingestion/sources/openapi_specs",
+    "scraper": "ingestion/scrape_openapi.py",
+    "extra_scripts": [
+      "ingestion/scrape_cnac_spec.py",
+      "ingestion/fetch_mist_openapi.py",
+      "ingestion/fetch_manifest_specs.py",
+      "ingestion/fetch_central_apinext_specs.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/scrape_cnac_spec.py": "post",
+      "ingestion/fetch_mist_openapi.py": "post",
+      "ingestion/fetch_manifest_specs.py": "post",
+      "ingestion/fetch_central_apinext_specs.py": "post"
+    },
+    "notes": "JSON specs are parsed into docs chunks and data/specs.sqlite; include CNAC via ingestion/scrape_cnac_spec.py and the pinned official Mist snapshot via ingestion/fetch_mist_openapi.py. ingestion/fetch_manifest_specs.py fetches the 30 registries named in openapi_registry_manifest.json by id. Coverage against the portal was then checked end to end: enumerating the new-central and new-central-config api-next sidebars yields 32 specs holding 2725 operations, of which 2713 were already on disk under registry-suffixed names, so ingestion/fetch_central_apinext_specs.py adds only wholly-new specs and reports the rest as drift. The portal no longer serves the per-slug specs (aaa-profile.json and friends) that the committed Central manifest was built from; both scrape_openapi.py and the api-next sidebar now return consolidated per-area documents, so those 243 files cannot be re-fetched."
+  },
+  {
+    "source": "aos_techdocs",
+    "doc_type": "aos-techdocs",
+    "purpose": "AOS 10 techdocs books for Wi-Fi design, location services, private 5G, and AOS operations.",
+    "seed_urls": [
+      "https://arubanetworking.hpe.com/techdocs/aos/"
+    ],
+    "output_dir": "ingestion/sources/aos_techdocs",
+    "scraper": "ingestion/scrape_aos_pw.py",
+    "extra_scripts": [
+      "ingestion/discover_aos_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_aos_urls.py": "pre"
+    },
+    "notes": "Discover URLs with ingestion/discover_aos_urls.py and refresh with ingestion/scrape_aos_pw.py."
+  },
+  {
+    "source": "security_advisories",
+    "doc_type": "security-advisory",
+    "purpose": "Official HPE Aruba Networking CSAF security advisories across hardware, software, cloud, NAC, SD-WAN, and management products.",
+    "seed_urls": [
+      "https://csaf.arubanetworking.hpe.com/changes.csv",
+      "https://csaf.arubanetworking.hpe.com/index.txt"
+    ],
+    "output_dir": "ingestion/sources/security_advisories",
+    "notes": "Refresh with ingestion/scrape_security_lifecycle.py. The incremental changes.csv feed covers the complete official Aruba advisory archive and preserves advisory IDs, CVEs, severity, affected products, fixed versions, and remediation text."
+  },
+  {
+    "source": "lifecycle_notices",
+    "doc_type": "lifecycle",
+    "purpose": "Official HPE Networking end-of-sale, replacement-product, and support-lifecycle notices across all networking product categories.",
+    "seed_urls": [
+      "https://support.hpe.com/docs/display/public/hpe-networking-eos/data/xml/eos/eos.xml",
+      "https://support.hpe.com/docs/display/public/hpe-networking-eos/information.html",
+      "https://asp-documents.arubanetworks.com/portals/0/el/Aruba-Hardware-End-of-Sale-List.pdf"
+    ],
+    "output_dir": "ingestion/sources/lifecycle_notices",
+    "notes": "Refresh with ingestion/scrape_security_lifecycle.py. The XML feed is the data source behind HPE's historical all-product End of Sale archive (no current Aruba-branded entries; nothing published after 2020); the official hardware PDF adds SKU-level dates and replacements but is a static 2020-05-06 snapshot. HPE does not publish a current crawlable index for every individual modern notice, so answers must cite the notice date and avoid implying the archive is exhaustive beyond its published entries. See docs/source-lifecycle-coverage.md and ingestion.scrape_security_lifecycle.HPE_ARUBA_CURRENT_LIFECYCLE_COVERAGE_GAP for the full evidenced coverage-gap boundary for current Aruba-branded lifecycle notices."
+  },
+  {
+    "source": "juniper_lifecycle",
+    "doc_type": "lifecycle",
+    "purpose": "Official Juniper lifecycle milestone tables for the Mist and Apstra product families exposed by hpe-networking-mcp's optional backends.",
+    "seed_urls": [
+      "https://support.juniper.net/support/eol/product/juniper_ap_series/",
+      "https://support.juniper.net/support/eol/product/apstra/",
+      "https://support.juniper.net/support/eol/software/apstra/",
+      "https://support.juniper.net/support/eol/"
+    ],
+    "output_dir": "ingestion/sources/juniper_lifecycle",
+    "notes": "Refresh with ingestion/scrape_security_lifecycle.py. Juniper publishes these as server-rendered lifecycle tables rather than a public structured feed. discover_juniper_lifecycle_urls() additionally re-derives this same reviewed set (and any future officially-added Mist/Apstra page) from the official EOL index nav at the last seed_urls entry, deduplicated by absolute URL."
+  },
+  {
+    "source": "juniper_security_advisories",
+    "doc_type": "security-advisory",
+    "purpose": "Official Juniper security bulletins for the Mist and Apstra product families exposed by hpe-networking-mcp's optional backends.",
+    "seed_urls": [
+      "https://supportportal.juniper.net/s/sitemap.xml"
+    ],
+    "output_dir": "ingestion/sources/juniper_security_advisories",
+    "notes": "Refresh with ingestion/scrape_security_lifecycle.py. discover_juniper_security_sitemaps() fetches and parses the official sitemap index above into its current topic-article child sitemap URLs (host/scheme/path validated, sitemap-topicarticle-*.xml only); discover_juniper_security_urls() then reads each child sitemap and filters to Mist/Apstra Security Bulletin articles. Playwright renders the Salesforce article body because plain HTTP receives only the application shell."
+  },
+  {
+    "source": "juniper_kb",
+    "doc_type": "juniper-kb",
+    "purpose": "Juniper support-portal knowledge articles for Mist and Apstra: troubleshooting, licensing, and configuration guidance.",
+    "seed_urls": [
+      "https://supportportal.juniper.net/s/sitemap.xml"
+    ],
+    "output_dir": "ingestion/sources/juniper_kb",
+    "scraper": "ingestion/scrape_juniper_kb.py",
+    "notes": "Covers the Mist/Apstra articles that scrape_security_lifecycle.py leaves behind: it keeps only the formal Security Bulletins, which are a tiny fraction of the in-scope articles. The portal is a Salesforce Lightning app whose raw HTML holds no article text, so pages must be rendered with Playwright (headless=False)."
+  },
+  {
+    "source": "mist_docs",
+    "doc_type": "mist-docs",
+    "purpose": "Juniper Mist-family documentation (wireless, wired, WAN, access assurance, Juniper Validated Designs, and the Mist/Marvis-based data center + routing assurance products) for fuzzy howto/concept RAG search.",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/software/mist/",
+      "https://www.juniper.net/documentation/validated-designs/",
+      "https://www.juniper.net/documentation/us/en/software/hpe-mist-networking-data-center-assurance/",
+      "https://www.juniper.net/documentation/us/en/software/juniper-data-center-assurance/",
+      "https://www.juniper.net/documentation/us/en/software/juniper-routing-assurance/"
+    ],
+    "output_dir": "ingestion/sources/mist_docs",
+    "scraper": "ingestion/scrape_mist_docs.py",
+    "notes": "URLs discovered from juniper.net's public sitemap (discover_mist_docs_urls.py matches 5 path prefixes: mist, jvd, hpe-mist-networking-data-center-assurance, juniper-data-center-assurance, juniper-routing-assurance \u2014 all Mist/Marvis-family products; excludes Junos core-OS and unrelated Juniper product lines as out of scope), then scraped via plain urllib + pandoc (server-rendered DITA HTML, no Playwright needed) with a 4-worker pool and a 0.4s per-request delay to avoid rate-limiting/IP bans. 2,014 URLs scraped as of the last full run (2,011 OK, 3 stale sitemap 404s). Excludes /software/mist/api/ (JS widget) \u2014 see mist_openapi_spec in openapi_specs' extra_scripts for the real API spec.",
+    "url_seed_file": "ingestion/mist_docs_urls.json",
+    "extra_scripts": [
+      "ingestion/discover_mist_docs_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_mist_docs_urls.py": "pre"
+    }
+  },
+  {
+    "source": "product_specs",
+    "doc_type": "product-openapi",
+    "purpose": "OpenAPI specs for the non-Central Aruba developer-portal products: AOS-CX, AOS-8, Central 2.x, ClearPass, UXI, Fabric Composer, and EdgeConnect Orchestrator.",
+    "seed_urls": [
+      "https://developer.arubanetworks.com/aoscx/reference",
+      "https://developer.arubanetworks.com/aos8/reference",
+      "https://developer.arubanetworks.com/central/reference",
+      "https://developer.arubanetworks.com/cppm/reference",
+      "https://developer.arubanetworks.com/uxi/reference",
+      "https://developer.arubanetworks.com/afc/reference",
+      "https://developer.arubanetworks.com/edgeconnect/reference"
+    ],
+    "output_dir": "ingestion/sources/product_specs",
+    "scraper": "ingestion/scrape_apinext_specs.py",
+    "notes": "These seven portal sections run ReadMe's api-next v2 API, so they carry no oasPublicUrl pointer for scrape_openapi.py to parse, and the admin /apis listing is 403 for anonymous callers. The public per-page reference endpoint embeds the whole OpenAPI document under data.api.schema, so one fetch per sidebar category recovers every spec. Kept separate from openapi_specs (Central-only) so the generated Central client and manifest are unaffected; these are embedded for semantic search rather than added to the exact SQLite spec index. Discovery manifest: ingestion/product_specs_manifest.json."
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "manifest_sha256": "4fa538c4358a1b3dae7eebdb9bca476849b95f6027af7bc9e61aff1387fe1a43",
+  "operation_count": 1216,
+  "source_sha256": "8f7d90cbd7777e3fac0dc2458249174068f4c373b400d1224f3c3dcc77e34c46",
+  "supported_base_paths": [
+    "/"
+  ],
+  "runtime_auth_schemes": [
+    {
+      "name": "configurable_header_token",
+      "type": "apiKey",
+      "in": "header",
+      "parameter_name": "X-Auth-Token"
+    },
+    {
+      "name": "authorization_bearer",
+      "type": "http",
+      "scheme": "bearer"
+    }
+  ],
+  "provenance": "The digest pins the committed 1,216-operation EdgeConnect manifest. Runtime auth entries document supported local client behavior; they are not claims about an unavailable production Swagger document."
+}

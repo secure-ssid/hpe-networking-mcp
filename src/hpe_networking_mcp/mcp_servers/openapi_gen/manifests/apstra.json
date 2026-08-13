@@ -1,0 +1,2853 @@
+{
+  "schema_version": 2,
+  "platform": "apstra",
+  "source": {
+    "file": "apstra-derived-operations.json",
+    "sha256": "11e8736a06c55e43a690e307313aa42f912037382b67e7b27069073d99d3e242",
+    "openapi": "3.1.0",
+    "title": "HPE Juniper Apstra (derived operation set)",
+    "version": "aos-sdk-api-6.1.2.post1",
+    "license": "Apache-2.0 OR MIT (official Juniper SDK source mapping)",
+    "operation_count": 135
+  },
+  "override_keys_applied": [
+    "POST /api/blueprints/{blueprint_id}/experience/web/obj-policies-by-application-points",
+    "POST /api/blueprints/{blueprint_id}/obj-policy-application-points",
+    "POST /api/blueprints/{blueprint_id}/obj-policy-batch-delete",
+    "POST /api/blueprints/{blueprint_id}/obj-policy-search"
+  ],
+  "override_keys_unmatched": [],
+  "operations": [
+    {
+      "name": "apstra_apstra_login",
+      "key": "POST /api/aaa/login",
+      "method": "POST",
+      "path": "/api/aaa/login",
+      "capability": "write",
+      "operation_id": "apstraLogin",
+      "summary": "Current session login (returns AuthToken).",
+      "tags": [
+        "Auth"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_list_blueprints",
+      "key": "GET /api/blueprints",
+      "method": "GET",
+      "path": "/api/blueprints",
+      "capability": "read",
+      "operation_id": "listBlueprints",
+      "summary": "List Apstra blueprints (ID/name/status).",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_blueprint",
+      "key": "POST /api/blueprints",
+      "method": "POST",
+      "path": "/api/blueprints",
+      "capability": "write",
+      "operation_id": "createBlueprint",
+      "summary": "Create an Apstra blueprint.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_blueprint",
+      "key": "GET /api/blueprints/{blueprint_id}",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}",
+      "capability": "read",
+      "operation_id": "getBlueprint",
+      "summary": "Get one Apstra blueprint.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_delete_blueprint",
+      "key": "DELETE /api/blueprints/{blueprint_id}",
+      "method": "DELETE",
+      "path": "/api/blueprints/{blueprint_id}",
+      "capability": "destructive",
+      "operation_id": "deleteBlueprint",
+      "summary": "Delete one Apstra blueprint.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_blueprint",
+      "key": "PATCH /api/blueprints/{blueprint_id}",
+      "method": "PATCH",
+      "path": "/api/blueprints/{blueprint_id}",
+      "capability": "write",
+      "operation_id": "updateBlueprint",
+      "summary": "Update one Apstra blueprint.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_acknowledge_blueprint_tasks",
+      "key": "POST /api/blueprints/{blueprint_id}/acknowledge-tasks",
+      "method": "POST",
+      "path": "/api/blueprints/{blueprint_id}/acknowledge-tasks",
+      "capability": "write",
+      "operation_id": "acknowledgeBlueprintTasks",
+      "summary": "Acknowledge blueprint tasks.",
+      "tags": [
+        "Tasks"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_list_blueprint_anomalies",
+      "key": "GET /api/blueprints/{blueprint_id}/anomalies",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/anomalies",
+      "capability": "read",
+      "operation_id": "listBlueprintAnomalies",
+      "summary": "List anomalies for one blueprint.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_get_blueprint_configuration_status",
+      "key": "GET /api/blueprints/{blueprint_id}/configuration",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/configuration",
+      "capability": "read",
+      "operation_id": "getBlueprintConfigurationStatus",
+      "summary": "Get blueprint configuration deployment status.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_get_blueprint_deploy_status",
+      "key": "GET /api/blueprints/{blueprint_id}/deploy",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/deploy",
+      "capability": "read",
+      "operation_id": "getBlueprintDeployStatus",
+      "summary": "Get blueprint deployment status.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_deploy_blueprint",
+      "key": "PUT /api/blueprints/{blueprint_id}/deploy",
+      "method": "PUT",
+      "path": "/api/blueprints/{blueprint_id}/deploy",
+      "capability": "write",
+      "operation_id": "deployBlueprint",
+      "summary": "Deploy a blueprint.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_blueprint_diff",
+      "key": "GET /api/blueprints/{blueprint_id}/diff",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/diff",
+      "capability": "read",
+      "operation_id": "getBlueprintDiff",
+      "summary": "Get the staged-versus-deployed blueprint diff.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_get_blueprint_diff_status",
+      "key": "GET /api/blueprints/{blueprint_id}/diff-status",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/diff-status",
+      "capability": "read",
+      "operation_id": "getBlueprintDiffStatus",
+      "summary": "Get staged-vs-committed diff status for one blueprint.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_connectivity_templates",
+      "key": "GET /api/blueprints/{blueprint_id}/endpoint-policies",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/endpoint-policies",
+      "capability": "read",
+      "operation_id": "listConnectivityTemplates",
+      "summary": "List connectivity templates in one blueprint.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_create_connectivity_template",
+      "key": "POST /api/blueprints/{blueprint_id}/endpoint-policies",
+      "method": "POST",
+      "path": "/api/blueprints/{blueprint_id}/endpoint-policies",
+      "capability": "write",
+      "operation_id": "createConnectivityTemplate",
+      "summary": "Create a connectivity template.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_connectivity_template",
+      "key": "GET /api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}",
+      "capability": "read",
+      "operation_id": "getConnectivityTemplate",
+      "summary": "Get one connectivity template by ID.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        },
+        {
+          "name": "policy_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Connectivity template ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_delete_connectivity_template",
+      "key": "DELETE /api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}",
+      "method": "DELETE",
+      "path": "/api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}",
+      "capability": "destructive",
+      "operation_id": "deleteConnectivityTemplate",
+      "summary": "Delete one connectivity template by ID.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        },
+        {
+          "name": "policy_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Connectivity template ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_connectivity_template",
+      "key": "PATCH /api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}",
+      "method": "PATCH",
+      "path": "/api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}",
+      "capability": "write",
+      "operation_id": "updateConnectivityTemplate",
+      "summary": "Update a connectivity template.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        },
+        {
+          "name": "policy_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Connectivity template ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_connectivity_template_application_points",
+      "key": "GET /api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}/application-points",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}/application-points",
+      "capability": "read",
+      "operation_id": "getConnectivityTemplateApplicationPoints",
+      "summary": "Get valid application points for one connectivity template.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        },
+        {
+          "name": "policy_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Connectivity template ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_set_connectivity_template_application_points",
+      "key": "PATCH /api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}/application-points",
+      "method": "PATCH",
+      "path": "/api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}/application-points",
+      "capability": "write",
+      "operation_id": "setConnectivityTemplateApplicationPoints",
+      "summary": "Update one connectivity template's application points.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        },
+        {
+          "name": "policy_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Connectivity template ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_connectivity_template_status",
+      "key": "GET /api/blueprints/{blueprint_id}/experience/web/endpoint-policies",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/experience/web/endpoint-policies",
+      "capability": "read",
+      "operation_id": "getConnectivityTemplateStatus",
+      "summary": "Get UI-oriented connectivity-template status.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_connectivity_templates_by_application_points",
+      "key": "POST /api/blueprints/{blueprint_id}/experience/web/obj-policies-by-application-points",
+      "method": "POST",
+      "path": "/api/blueprints/{blueprint_id}/experience/web/obj-policies-by-application-points",
+      "capability": "read",
+      "operation_id": "listConnectivityTemplatesByApplicationPoints",
+      "summary": "List connectivity templates for supplied application points.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_blueprint_system_info",
+      "key": "GET /api/blueprints/{blueprint_id}/experience/web/system-info",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/experience/web/system-info",
+      "capability": "read",
+      "operation_id": "getBlueprintSystemInfo",
+      "summary": "Get managed system info for one blueprint.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_get_blueprint_iba_anomalous_stages",
+      "key": "GET /api/blueprints/{blueprint_id}/iba/anomalous-stages",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/iba/anomalous-stages",
+      "capability": "read",
+      "operation_id": "getBlueprintIbaAnomalousStages",
+      "summary": "Get IBA stages with anomalies in one blueprint.",
+      "tags": [
+        "IBA"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_blueprint_iba_dashboards",
+      "key": "GET /api/blueprints/{blueprint_id}/iba/dashboards",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/iba/dashboards",
+      "capability": "read",
+      "operation_id": "listBlueprintIbaDashboards",
+      "summary": "List IBA dashboards in one blueprint.",
+      "tags": [
+        "IBA"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_create_blueprint_iba_dashboard",
+      "key": "POST /api/blueprints/{blueprint_id}/iba/dashboards",
+      "method": "POST",
+      "path": "/api/blueprints/{blueprint_id}/iba/dashboards",
+      "capability": "write",
+      "operation_id": "createBlueprintIbaDashboard",
+      "summary": "Create an IBA dashboard in one blueprint.",
+      "tags": [
+        "IBA"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_blueprint_iba_dashboard",
+      "key": "GET /api/blueprints/{blueprint_id}/iba/dashboards/{dashboard_id}",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/iba/dashboards/{dashboard_id}",
+      "capability": "read",
+      "operation_id": "getBlueprintIbaDashboard",
+      "summary": "Get one IBA dashboard in one blueprint.",
+      "tags": [
+        "IBA"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        },
+        {
+          "name": "dashboard_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra IBA dashboard ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_blueprint_iba_predefined_probes",
+      "key": "GET /api/blueprints/{blueprint_id}/iba/predefined-probes",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/iba/predefined-probes",
+      "capability": "read",
+      "operation_id": "listBlueprintIbaPredefinedProbes",
+      "summary": "List IBA predefined probe templates available to one blueprint.",
+      "tags": [
+        "IBA"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_blueprint_iba_probes",
+      "key": "GET /api/blueprints/{blueprint_id}/iba/probes",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/iba/probes",
+      "capability": "read",
+      "operation_id": "listBlueprintIbaProbes",
+      "summary": "List IBA probes in one blueprint.",
+      "tags": [
+        "IBA"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_lock_blueprint",
+      "key": "PUT /api/blueprints/{blueprint_id}/lock-blueprint",
+      "method": "PUT",
+      "path": "/api/blueprints/{blueprint_id}/lock-blueprint",
+      "capability": "write",
+      "operation_id": "lockBlueprint",
+      "summary": "Lock a blueprint.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_get_blueprint_lock_status",
+      "key": "GET /api/blueprints/{blueprint_id}/lock-status",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/lock-status",
+      "capability": "read",
+      "operation_id": "getBlueprintLockStatus",
+      "summary": "Get blueprint lock status.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_application_endpoints",
+      "key": "POST /api/blueprints/{blueprint_id}/obj-policy-application-points",
+      "method": "POST",
+      "path": "/api/blueprints/{blueprint_id}/obj-policy-application-points",
+      "capability": "read",
+      "operation_id": "listApplicationEndpoints",
+      "summary": "List application endpoints (policy application points) - read-only query POST.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_set_application_point_assignment",
+      "key": "PATCH /api/blueprints/{blueprint_id}/obj-policy-batch-apply",
+      "method": "PATCH",
+      "path": "/api/blueprints/{blueprint_id}/obj-policy-batch-apply",
+      "capability": "write",
+      "operation_id": "setApplicationPointAssignment",
+      "summary": "Batch-apply connectivity-template application point assignments.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_connectivity_templates",
+      "key": "POST /api/blueprints/{blueprint_id}/obj-policy-batch-delete",
+      "method": "POST",
+      "path": "/api/blueprints/{blueprint_id}/obj-policy-batch-delete",
+      "capability": "destructive",
+      "operation_id": "deleteConnectivityTemplates",
+      "summary": "Delete a batch of top-level connectivity templates.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_export_obj_policy",
+      "key": "GET /api/blueprints/{blueprint_id}/obj-policy-export",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/obj-policy-export",
+      "capability": "read",
+      "operation_id": "exportObjPolicy",
+      "summary": "Export all connectivity-template definitions.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_export_connectivity_template",
+      "key": "GET /api/blueprints/{blueprint_id}/obj-policy-export/{policy_id}",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/obj-policy-export/{policy_id}",
+      "capability": "read",
+      "operation_id": "exportConnectivityTemplate",
+      "summary": "Export one connectivity-template definition.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        },
+        {
+          "name": "policy_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Connectivity template ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_import_connectivity_templates",
+      "key": "PUT /api/blueprints/{blueprint_id}/obj-policy-import",
+      "method": "PUT",
+      "path": "/api/blueprints/{blueprint_id}/obj-policy-import",
+      "capability": "write",
+      "operation_id": "importConnectivityTemplates",
+      "summary": "Import connectivity-template definitions.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_connectivity_locations_schema",
+      "key": "GET /api/blueprints/{blueprint_id}/obj-policy-locations-schema",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/obj-policy-locations-schema",
+      "capability": "read",
+      "operation_id": "getConnectivityLocationsSchema",
+      "summary": "Get application-point location node types.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_search_connectivity_templates",
+      "key": "POST /api/blueprints/{blueprint_id}/obj-policy-search",
+      "method": "POST",
+      "path": "/api/blueprints/{blueprint_id}/obj-policy-search",
+      "capability": "read",
+      "operation_id": "searchConnectivityTemplates",
+      "summary": "Search connectivity templates.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_list_connectivity_template_types",
+      "key": "GET /api/blueprints/{blueprint_id}/policy-types",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/policy-types",
+      "capability": "read",
+      "operation_id": "listConnectivityTemplateTypes",
+      "summary": "List connectivity-template types.",
+      "tags": [
+        "Connectivity"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_preview_blueprint_configuration",
+      "key": "GET /api/blueprints/{blueprint_id}/preview-config-summary",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/preview-config-summary",
+      "capability": "read",
+      "operation_id": "previewBlueprintConfiguration",
+      "summary": "Preview and summarize generated device configurations.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_protocol_sessions",
+      "key": "GET /api/blueprints/{blueprint_id}/protocol-sessions",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/protocol-sessions",
+      "capability": "read",
+      "operation_id": "listProtocolSessions",
+      "summary": "List protocol (BGP) sessions in one blueprint.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_blueprint_racks",
+      "key": "GET /api/blueprints/{blueprint_id}/racks",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/racks",
+      "capability": "read",
+      "operation_id": "listBlueprintRacks",
+      "summary": "List racks in one blueprint.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_remote_gateways",
+      "key": "GET /api/blueprints/{blueprint_id}/remote_gateways",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/remote_gateways",
+      "capability": "read",
+      "operation_id": "listRemoteGateways",
+      "summary": "List remote gateways in one blueprint.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_revert_blueprint",
+      "key": "POST /api/blueprints/{blueprint_id}/revert",
+      "method": "POST",
+      "path": "/api/blueprints/{blueprint_id}/revert",
+      "capability": "write",
+      "operation_id": "revertBlueprint",
+      "summary": "Revert a blueprint to its latest backup.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_blueprint_revisions",
+      "key": "GET /api/blueprints/{blueprint_id}/revisions",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/revisions",
+      "capability": "read",
+      "operation_id": "listBlueprintRevisions",
+      "summary": "List blueprint revisions.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_rollback_blueprint",
+      "key": "POST /api/blueprints/{blueprint_id}/rollback",
+      "method": "POST",
+      "path": "/api/blueprints/{blueprint_id}/rollback",
+      "capability": "write",
+      "operation_id": "rollbackBlueprint",
+      "summary": "Rollback a blueprint to a selected revision.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_list_routing_zones",
+      "key": "GET /api/blueprints/{blueprint_id}/security-zones",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/security-zones",
+      "capability": "read",
+      "operation_id": "listRoutingZones",
+      "summary": "List routing zones (security-zones) in one blueprint.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_blueprint_tasks",
+      "key": "GET /api/blueprints/{blueprint_id}/tasks",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/tasks",
+      "capability": "read",
+      "operation_id": "listBlueprintTasks",
+      "summary": "List asynchronous blueprint tasks.",
+      "tags": [
+        "Tasks"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_get_blueprint_task",
+      "key": "GET /api/blueprints/{blueprint_id}/tasks/{task_id}",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/tasks/{task_id}",
+      "capability": "read",
+      "operation_id": "getBlueprintTask",
+      "summary": "Get asynchronous blueprint task details.",
+      "tags": [
+        "Tasks"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        },
+        {
+          "name": "task_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint task ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_unlock_blueprint",
+      "key": "PUT /api/blueprints/{blueprint_id}/unlock-blueprint",
+      "method": "PUT",
+      "path": "/api/blueprints/{blueprint_id}/unlock-blueprint",
+      "capability": "write",
+      "operation_id": "unlockBlueprint",
+      "summary": "Unlock a blueprint.",
+      "tags": [
+        "Blueprints"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_virtual_networks",
+      "key": "GET /api/blueprints/{blueprint_id}/virtual-networks",
+      "method": "GET",
+      "path": "/api/blueprints/{blueprint_id}/virtual-networks",
+      "capability": "read",
+      "operation_id": "listVirtualNetworks",
+      "summary": "List virtual networks in one blueprint.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": [
+        {
+          "name": "blueprint_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra blueprint ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_chassis_profile",
+      "key": "GET /api/chassis-profiles",
+      "method": "GET",
+      "path": "/api/chassis-profiles",
+      "capability": "read",
+      "operation_id": "listChassisProfile",
+      "summary": "List Apstra chassis profiles.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_chassis_profile",
+      "key": "POST /api/chassis-profiles",
+      "method": "POST",
+      "path": "/api/chassis-profiles",
+      "capability": "write",
+      "operation_id": "createChassisProfile",
+      "summary": "Create an Apstra chassis profile.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_chassis_profile",
+      "key": "GET /api/chassis-profiles/{chassis_profile_id}",
+      "method": "GET",
+      "path": "/api/chassis-profiles/{chassis_profile_id}",
+      "capability": "read",
+      "operation_id": "getChassisProfile",
+      "summary": "Get one Apstra chassis profile by ID.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "chassis_profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra chassis profile ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_chassis_profile",
+      "key": "PUT /api/chassis-profiles/{chassis_profile_id}",
+      "method": "PUT",
+      "path": "/api/chassis-profiles/{chassis_profile_id}",
+      "capability": "write",
+      "operation_id": "updateChassisProfile",
+      "summary": "Update one Apstra chassis profile.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "chassis_profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra chassis profile ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_chassis_profile",
+      "key": "DELETE /api/chassis-profiles/{chassis_profile_id}",
+      "method": "DELETE",
+      "path": "/api/chassis-profiles/{chassis_profile_id}",
+      "capability": "destructive",
+      "operation_id": "deleteChassisProfile",
+      "summary": "Delete one Apstra chassis profile.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "chassis_profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra chassis profile ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_rack_type",
+      "key": "GET /api/design/rack-types",
+      "method": "GET",
+      "path": "/api/design/rack-types",
+      "capability": "read",
+      "operation_id": "listRackType",
+      "summary": "List Apstra rack types.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_get_rack_type",
+      "key": "GET /api/design/rack-types/{rack_type_id}",
+      "method": "GET",
+      "path": "/api/design/rack-types/{rack_type_id}",
+      "capability": "read",
+      "operation_id": "getRackType",
+      "summary": "Get one Apstra rack type by ID.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "rack_type_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra rack type ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_rack_type",
+      "key": "PUT /api/design/rack-types/{rack_type_id}",
+      "method": "PUT",
+      "path": "/api/design/rack-types/{rack_type_id}",
+      "capability": "write",
+      "operation_id": "updateRackType",
+      "summary": "Update one Apstra rack type.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "rack_type_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra rack type ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_rack_type",
+      "key": "DELETE /api/design/rack-types/{rack_type_id}",
+      "method": "DELETE",
+      "path": "/api/design/rack-types/{rack_type_id}",
+      "capability": "destructive",
+      "operation_id": "deleteRackType",
+      "summary": "Delete one Apstra rack type.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "rack_type_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra rack type ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_design_templates",
+      "key": "GET /api/design/templates",
+      "method": "GET",
+      "path": "/api/design/templates",
+      "capability": "read",
+      "operation_id": "listDesignTemplates",
+      "summary": "List Apstra design templates.",
+      "tags": [
+        "Apstra"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_clone_device_profile",
+      "key": "POST /api/device-profile-clone",
+      "method": "POST",
+      "path": "/api/device-profile-clone",
+      "capability": "write",
+      "operation_id": "cloneDeviceProfile",
+      "summary": "Clone an existing Apstra device profile.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_list_device_profile_digests",
+      "key": "GET /api/device-profile-digests",
+      "method": "GET",
+      "path": "/api/device-profile-digests",
+      "capability": "read",
+      "operation_id": "listDeviceProfileDigests",
+      "summary": "List Apstra device profile digests (computed, read-only).",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_get_device_profile_digest",
+      "key": "GET /api/device-profile-digests/{device_profile_id}",
+      "method": "GET",
+      "path": "/api/device-profile-digests/{device_profile_id}",
+      "capability": "read",
+      "operation_id": "getDeviceProfileDigest",
+      "summary": "Get one Apstra device profile digest (computed, read-only).",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "device_profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra device profile ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_device_profile",
+      "key": "GET /api/device-profiles",
+      "method": "GET",
+      "path": "/api/device-profiles",
+      "capability": "read",
+      "operation_id": "listDeviceProfile",
+      "summary": "List Apstra device profiles.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_device_profile",
+      "key": "POST /api/device-profiles",
+      "method": "POST",
+      "path": "/api/device-profiles",
+      "capability": "write",
+      "operation_id": "createDeviceProfile",
+      "summary": "Create an Apstra device profile.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_device_profile",
+      "key": "GET /api/device-profiles/{device_profile_id}",
+      "method": "GET",
+      "path": "/api/device-profiles/{device_profile_id}",
+      "capability": "read",
+      "operation_id": "getDeviceProfile",
+      "summary": "Get one Apstra device profile by ID.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "device_profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra device profile ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_device_profile",
+      "key": "PUT /api/device-profiles/{device_profile_id}",
+      "method": "PUT",
+      "path": "/api/device-profiles/{device_profile_id}",
+      "capability": "write",
+      "operation_id": "updateDeviceProfile",
+      "summary": "Update one Apstra device profile.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "device_profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra device profile ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_device_profile",
+      "key": "DELETE /api/device-profiles/{device_profile_id}",
+      "method": "DELETE",
+      "path": "/api/device-profiles/{device_profile_id}",
+      "capability": "destructive",
+      "operation_id": "deleteDeviceProfile",
+      "summary": "Delete one Apstra device profile.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "device_profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra device profile ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_linecard_profile",
+      "key": "GET /api/linecard-profiles",
+      "method": "GET",
+      "path": "/api/linecard-profiles",
+      "capability": "read",
+      "operation_id": "listLinecardProfile",
+      "summary": "List Apstra linecard profiles.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_linecard_profile",
+      "key": "POST /api/linecard-profiles",
+      "method": "POST",
+      "path": "/api/linecard-profiles",
+      "capability": "write",
+      "operation_id": "createLinecardProfile",
+      "summary": "Create an Apstra linecard profile.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_linecard_profile",
+      "key": "GET /api/linecard-profiles/{linecard_profile_id}",
+      "method": "GET",
+      "path": "/api/linecard-profiles/{linecard_profile_id}",
+      "capability": "read",
+      "operation_id": "getLinecardProfile",
+      "summary": "Get one Apstra linecard profile by ID.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "linecard_profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra linecard profile ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_linecard_profile",
+      "key": "PUT /api/linecard-profiles/{linecard_profile_id}",
+      "method": "PUT",
+      "path": "/api/linecard-profiles/{linecard_profile_id}",
+      "capability": "write",
+      "operation_id": "updateLinecardProfile",
+      "summary": "Update one Apstra linecard profile.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "linecard_profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra linecard profile ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_linecard_profile",
+      "key": "DELETE /api/linecard-profiles/{linecard_profile_id}",
+      "method": "DELETE",
+      "path": "/api/linecard-profiles/{linecard_profile_id}",
+      "capability": "destructive",
+      "operation_id": "deleteLinecardProfile",
+      "summary": "Delete one Apstra linecard profile.",
+      "tags": [
+        "DeviceProfiles"
+      ],
+      "parameters": [
+        {
+          "name": "linecard_profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra linecard profile ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_asn_pool",
+      "key": "GET /api/resources/asn-pools",
+      "method": "GET",
+      "path": "/api/resources/asn-pools",
+      "capability": "read",
+      "operation_id": "listAsnPool",
+      "summary": "List Apstra ASN resource pools.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_asn_pool",
+      "key": "POST /api/resources/asn-pools",
+      "method": "POST",
+      "path": "/api/resources/asn-pools",
+      "capability": "write",
+      "operation_id": "createAsnPool",
+      "summary": "Create an Apstra ASN resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_asn_pool",
+      "key": "GET /api/resources/asn-pools/{pool_id}",
+      "method": "GET",
+      "path": "/api/resources/asn-pools/{pool_id}",
+      "capability": "read",
+      "operation_id": "getAsnPool",
+      "summary": "Get one Apstra ASN resource pool by ID.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra ASN resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_asn_pool",
+      "key": "PUT /api/resources/asn-pools/{pool_id}",
+      "method": "PUT",
+      "path": "/api/resources/asn-pools/{pool_id}",
+      "capability": "write",
+      "operation_id": "updateAsnPool",
+      "summary": "Update one Apstra ASN resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra ASN resource pool ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_asn_pool",
+      "key": "DELETE /api/resources/asn-pools/{pool_id}",
+      "method": "DELETE",
+      "path": "/api/resources/asn-pools/{pool_id}",
+      "capability": "destructive",
+      "operation_id": "deleteAsnPool",
+      "summary": "Delete one Apstra ASN resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra ASN resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_device_pool",
+      "key": "GET /api/resources/device-pools",
+      "method": "GET",
+      "path": "/api/resources/device-pools",
+      "capability": "read",
+      "operation_id": "listDevicePool",
+      "summary": "List Apstra device resource pools.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_device_pool",
+      "key": "POST /api/resources/device-pools",
+      "method": "POST",
+      "path": "/api/resources/device-pools",
+      "capability": "write",
+      "operation_id": "createDevicePool",
+      "summary": "Create an Apstra device resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_device_pool",
+      "key": "GET /api/resources/device-pools/{pool_id}",
+      "method": "GET",
+      "path": "/api/resources/device-pools/{pool_id}",
+      "capability": "read",
+      "operation_id": "getDevicePool",
+      "summary": "Get one Apstra device resource pool by ID.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra device resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_device_pool",
+      "key": "PUT /api/resources/device-pools/{pool_id}",
+      "method": "PUT",
+      "path": "/api/resources/device-pools/{pool_id}",
+      "capability": "write",
+      "operation_id": "updateDevicePool",
+      "summary": "Update one Apstra device resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra device resource pool ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_device_pool",
+      "key": "DELETE /api/resources/device-pools/{pool_id}",
+      "method": "DELETE",
+      "path": "/api/resources/device-pools/{pool_id}",
+      "capability": "destructive",
+      "operation_id": "deleteDevicePool",
+      "summary": "Delete one Apstra device resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra device resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_integer_pool",
+      "key": "GET /api/resources/integer-pools",
+      "method": "GET",
+      "path": "/api/resources/integer-pools",
+      "capability": "read",
+      "operation_id": "listIntegerPool",
+      "summary": "List Apstra integer resource pools.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_integer_pool",
+      "key": "POST /api/resources/integer-pools",
+      "method": "POST",
+      "path": "/api/resources/integer-pools",
+      "capability": "write",
+      "operation_id": "createIntegerPool",
+      "summary": "Create an Apstra integer resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_integer_pool",
+      "key": "GET /api/resources/integer-pools/{pool_id}",
+      "method": "GET",
+      "path": "/api/resources/integer-pools/{pool_id}",
+      "capability": "read",
+      "operation_id": "getIntegerPool",
+      "summary": "Get one Apstra integer resource pool by ID.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra integer resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_integer_pool",
+      "key": "PUT /api/resources/integer-pools/{pool_id}",
+      "method": "PUT",
+      "path": "/api/resources/integer-pools/{pool_id}",
+      "capability": "write",
+      "operation_id": "updateIntegerPool",
+      "summary": "Update one Apstra integer resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra integer resource pool ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_integer_pool",
+      "key": "DELETE /api/resources/integer-pools/{pool_id}",
+      "method": "DELETE",
+      "path": "/api/resources/integer-pools/{pool_id}",
+      "capability": "destructive",
+      "operation_id": "deleteIntegerPool",
+      "summary": "Delete one Apstra integer resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra integer resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_ip_pool",
+      "key": "GET /api/resources/ip-pools",
+      "method": "GET",
+      "path": "/api/resources/ip-pools",
+      "capability": "read",
+      "operation_id": "listIpPool",
+      "summary": "List Apstra IPv4 resource pools.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_ip_pool",
+      "key": "POST /api/resources/ip-pools",
+      "method": "POST",
+      "path": "/api/resources/ip-pools",
+      "capability": "write",
+      "operation_id": "createIpPool",
+      "summary": "Create an Apstra IPv4 resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_ip_pool",
+      "key": "GET /api/resources/ip-pools/{pool_id}",
+      "method": "GET",
+      "path": "/api/resources/ip-pools/{pool_id}",
+      "capability": "read",
+      "operation_id": "getIpPool",
+      "summary": "Get one Apstra IPv4 resource pool by ID.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra IPv4 resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_ip_pool",
+      "key": "PUT /api/resources/ip-pools/{pool_id}",
+      "method": "PUT",
+      "path": "/api/resources/ip-pools/{pool_id}",
+      "capability": "write",
+      "operation_id": "updateIpPool",
+      "summary": "Update one Apstra IPv4 resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra IPv4 resource pool ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_ip_pool",
+      "key": "DELETE /api/resources/ip-pools/{pool_id}",
+      "method": "DELETE",
+      "path": "/api/resources/ip-pools/{pool_id}",
+      "capability": "destructive",
+      "operation_id": "deleteIpPool",
+      "summary": "Delete one Apstra IPv4 resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra IPv4 resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_ipv6_pool",
+      "key": "GET /api/resources/ipv6-pools",
+      "method": "GET",
+      "path": "/api/resources/ipv6-pools",
+      "capability": "read",
+      "operation_id": "listIpv6Pool",
+      "summary": "List Apstra IPv6 resource pools.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_ipv6_pool",
+      "key": "POST /api/resources/ipv6-pools",
+      "method": "POST",
+      "path": "/api/resources/ipv6-pools",
+      "capability": "write",
+      "operation_id": "createIpv6Pool",
+      "summary": "Create an Apstra IPv6 resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_ipv6_pool",
+      "key": "GET /api/resources/ipv6-pools/{pool_id}",
+      "method": "GET",
+      "path": "/api/resources/ipv6-pools/{pool_id}",
+      "capability": "read",
+      "operation_id": "getIpv6Pool",
+      "summary": "Get one Apstra IPv6 resource pool by ID.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra IPv6 resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_ipv6_pool",
+      "key": "PUT /api/resources/ipv6-pools/{pool_id}",
+      "method": "PUT",
+      "path": "/api/resources/ipv6-pools/{pool_id}",
+      "capability": "write",
+      "operation_id": "updateIpv6Pool",
+      "summary": "Update one Apstra IPv6 resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra IPv6 resource pool ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_ipv6_pool",
+      "key": "DELETE /api/resources/ipv6-pools/{pool_id}",
+      "method": "DELETE",
+      "path": "/api/resources/ipv6-pools/{pool_id}",
+      "capability": "destructive",
+      "operation_id": "deleteIpv6Pool",
+      "summary": "Delete one Apstra IPv6 resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra IPv6 resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_vlan_pool",
+      "key": "GET /api/resources/vlan-pools",
+      "method": "GET",
+      "path": "/api/resources/vlan-pools",
+      "capability": "read",
+      "operation_id": "listVlanPool",
+      "summary": "List Apstra VLAN resource pools.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_vlan_pool",
+      "key": "POST /api/resources/vlan-pools",
+      "method": "POST",
+      "path": "/api/resources/vlan-pools",
+      "capability": "write",
+      "operation_id": "createVlanPool",
+      "summary": "Create an Apstra VLAN resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_vlan_pool",
+      "key": "GET /api/resources/vlan-pools/{pool_id}",
+      "method": "GET",
+      "path": "/api/resources/vlan-pools/{pool_id}",
+      "capability": "read",
+      "operation_id": "getVlanPool",
+      "summary": "Get one Apstra VLAN resource pool by ID.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra VLAN resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_vlan_pool",
+      "key": "PUT /api/resources/vlan-pools/{pool_id}",
+      "method": "PUT",
+      "path": "/api/resources/vlan-pools/{pool_id}",
+      "capability": "write",
+      "operation_id": "updateVlanPool",
+      "summary": "Update one Apstra VLAN resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra VLAN resource pool ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_vlan_pool",
+      "key": "DELETE /api/resources/vlan-pools/{pool_id}",
+      "method": "DELETE",
+      "path": "/api/resources/vlan-pools/{pool_id}",
+      "capability": "destructive",
+      "operation_id": "deleteVlanPool",
+      "summary": "Delete one Apstra VLAN resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra VLAN resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_vni_pool",
+      "key": "GET /api/resources/vni-pools",
+      "method": "GET",
+      "path": "/api/resources/vni-pools",
+      "capability": "read",
+      "operation_id": "listVniPool",
+      "summary": "List Apstra VNI resource pools.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_vni_pool",
+      "key": "POST /api/resources/vni-pools",
+      "method": "POST",
+      "path": "/api/resources/vni-pools",
+      "capability": "write",
+      "operation_id": "createVniPool",
+      "summary": "Create an Apstra VNI resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_vni_pool",
+      "key": "GET /api/resources/vni-pools/{pool_id}",
+      "method": "GET",
+      "path": "/api/resources/vni-pools/{pool_id}",
+      "capability": "read",
+      "operation_id": "getVniPool",
+      "summary": "Get one Apstra VNI resource pool by ID.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra VNI resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_vni_pool",
+      "key": "PUT /api/resources/vni-pools/{pool_id}",
+      "method": "PUT",
+      "path": "/api/resources/vni-pools/{pool_id}",
+      "capability": "write",
+      "operation_id": "updateVniPool",
+      "summary": "Update one Apstra VNI resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra VNI resource pool ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_vni_pool",
+      "key": "DELETE /api/resources/vni-pools/{pool_id}",
+      "method": "DELETE",
+      "path": "/api/resources/vni-pools/{pool_id}",
+      "capability": "destructive",
+      "operation_id": "deleteVniPool",
+      "summary": "Delete one Apstra VNI resource pool.",
+      "tags": [
+        "Resources"
+      ],
+      "parameters": [
+        {
+          "name": "pool_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra VNI resource pool ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_system_agent_active_jobs",
+      "key": "GET /api/system-agent-jobs/active-jobs",
+      "method": "GET",
+      "path": "/api/system-agent-jobs/active-jobs",
+      "capability": "read",
+      "operation_id": "listSystemAgentActiveJobs",
+      "summary": "List active system agent jobs.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_list_system_agent_pending_jobs",
+      "key": "GET /api/system-agent-jobs/pending-jobs",
+      "method": "GET",
+      "path": "/api/system-agent-jobs/pending-jobs",
+      "capability": "read",
+      "operation_id": "listSystemAgentPendingJobs",
+      "summary": "List pending system agent jobs.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_list_system_agent_profile",
+      "key": "GET /api/system-agent-profiles",
+      "method": "GET",
+      "path": "/api/system-agent-profiles",
+      "capability": "read",
+      "operation_id": "listSystemAgentProfile",
+      "summary": "List Apstra system agent profiles.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_system_agent_profile",
+      "key": "POST /api/system-agent-profiles",
+      "method": "POST",
+      "path": "/api/system-agent-profiles",
+      "capability": "write",
+      "operation_id": "createSystemAgentProfile",
+      "summary": "Create an Apstra system agent profile.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_system_agent_profile",
+      "key": "GET /api/system-agent-profiles/{profile_id}",
+      "method": "GET",
+      "path": "/api/system-agent-profiles/{profile_id}",
+      "capability": "read",
+      "operation_id": "getSystemAgentProfile",
+      "summary": "Get one Apstra system agent profile by ID.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": [
+        {
+          "name": "profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra system agent profile ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_system_agent_profile",
+      "key": "PUT /api/system-agent-profiles/{profile_id}",
+      "method": "PUT",
+      "path": "/api/system-agent-profiles/{profile_id}",
+      "capability": "write",
+      "operation_id": "updateSystemAgentProfile",
+      "summary": "Update one Apstra system agent profile.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": [
+        {
+          "name": "profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra system agent profile ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_system_agent_profile",
+      "key": "DELETE /api/system-agent-profiles/{profile_id}",
+      "method": "DELETE",
+      "path": "/api/system-agent-profiles/{profile_id}",
+      "capability": "destructive",
+      "operation_id": "deleteSystemAgentProfile",
+      "summary": "Delete one Apstra system agent profile.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": [
+        {
+          "name": "profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra system agent profile ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_assign_system_agent_profile",
+      "key": "POST /api/system-agent-profiles/{profile_id}/assign",
+      "method": "POST",
+      "path": "/api/system-agent-profiles/{profile_id}/assign",
+      "capability": "write",
+      "operation_id": "assignSystemAgentProfile",
+      "summary": "Assign a system agent profile to one or more system agents.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": [
+        {
+          "name": "profile_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra system agent profile ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_system_agent_manager_config",
+      "key": "GET /api/system-agent/manager-config",
+      "method": "GET",
+      "path": "/api/system-agent/manager-config",
+      "capability": "read",
+      "operation_id": "getSystemAgentManagerConfig",
+      "summary": "Get the local system agent manager configuration.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_update_system_agent_manager_config",
+      "key": "PUT /api/system-agent/manager-config",
+      "method": "PUT",
+      "path": "/api/system-agent/manager-config",
+      "capability": "write",
+      "operation_id": "updateSystemAgentManagerConfig",
+      "summary": "Update the local system agent manager configuration.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_list_system_agent",
+      "key": "GET /api/system-agents",
+      "method": "GET",
+      "path": "/api/system-agents",
+      "capability": "read",
+      "operation_id": "listSystemAgent",
+      "summary": "List Apstra system agents.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_system_agent",
+      "key": "POST /api/system-agents",
+      "method": "POST",
+      "path": "/api/system-agents",
+      "capability": "write",
+      "operation_id": "createSystemAgent",
+      "summary": "Create an Apstra system agent.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_system_agent",
+      "key": "GET /api/system-agents/{agent_id}",
+      "method": "GET",
+      "path": "/api/system-agents/{agent_id}",
+      "capability": "read",
+      "operation_id": "getSystemAgent",
+      "summary": "Get one Apstra system agent by ID.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": [
+        {
+          "name": "agent_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra system agent ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_system_agent",
+      "key": "PUT /api/system-agents/{agent_id}",
+      "method": "PUT",
+      "path": "/api/system-agents/{agent_id}",
+      "capability": "write",
+      "operation_id": "updateSystemAgent",
+      "summary": "Update one Apstra system agent.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": [
+        {
+          "name": "agent_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra system agent ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_system_agent",
+      "key": "DELETE /api/system-agents/{agent_id}",
+      "method": "DELETE",
+      "path": "/api/system-agents/{agent_id}",
+      "capability": "destructive",
+      "operation_id": "deleteSystemAgent",
+      "summary": "Delete one Apstra system agent.",
+      "tags": [
+        "SystemAgents"
+      ],
+      "parameters": [
+        {
+          "name": "agent_id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra system agent ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_telemetry_service_registry_entry",
+      "key": "GET /api/telemetry-service-registry",
+      "method": "GET",
+      "path": "/api/telemetry-service-registry",
+      "capability": "read",
+      "operation_id": "listTelemetryServiceRegistryEntry",
+      "summary": "List Apstra telemetry service registry entrys.",
+      "tags": [
+        "Telemetry"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_telemetry_service_registry_entry",
+      "key": "POST /api/telemetry-service-registry",
+      "method": "POST",
+      "path": "/api/telemetry-service-registry",
+      "capability": "write",
+      "operation_id": "createTelemetryServiceRegistryEntry",
+      "summary": "Create an Apstra telemetry service registry entry.",
+      "tags": [
+        "Telemetry"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_telemetry_service_registry_entry",
+      "key": "GET /api/telemetry-service-registry/{service_name}",
+      "method": "GET",
+      "path": "/api/telemetry-service-registry/{service_name}",
+      "capability": "read",
+      "operation_id": "getTelemetryServiceRegistryEntry",
+      "summary": "Get one Apstra telemetry service registry entry by ID.",
+      "tags": [
+        "Telemetry"
+      ],
+      "parameters": [
+        {
+          "name": "service_name",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra telemetry service registry entry ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_telemetry_service_registry_entry",
+      "key": "PUT /api/telemetry-service-registry/{service_name}",
+      "method": "PUT",
+      "path": "/api/telemetry-service-registry/{service_name}",
+      "capability": "write",
+      "operation_id": "updateTelemetryServiceRegistryEntry",
+      "summary": "Update one Apstra telemetry service registry entry.",
+      "tags": [
+        "Telemetry"
+      ],
+      "parameters": [
+        {
+          "name": "service_name",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra telemetry service registry entry ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_delete_telemetry_service_registry_entry",
+      "key": "DELETE /api/telemetry-service-registry/{service_name}",
+      "method": "DELETE",
+      "path": "/api/telemetry-service-registry/{service_name}",
+      "capability": "destructive",
+      "operation_id": "deleteTelemetryServiceRegistryEntry",
+      "summary": "Delete one Apstra telemetry service registry entry.",
+      "tags": [
+        "Telemetry"
+      ],
+      "parameters": [
+        {
+          "name": "service_name",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra telemetry service registry entry ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_list_telemetry_collector",
+      "key": "GET /api/telemetry/collectors",
+      "method": "GET",
+      "path": "/api/telemetry/collectors",
+      "capability": "read",
+      "operation_id": "listTelemetryCollector",
+      "summary": "List Apstra telemetry collectors.",
+      "tags": [
+        "Telemetry"
+      ],
+      "parameters": []
+    },
+    {
+      "name": "apstra_create_telemetry_collector",
+      "key": "POST /api/telemetry/collectors",
+      "method": "POST",
+      "path": "/api/telemetry/collectors",
+      "capability": "write",
+      "operation_id": "createTelemetryCollector",
+      "summary": "Create an Apstra telemetry collector.",
+      "tags": [
+        "Telemetry"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_get_telemetry_collector",
+      "key": "GET /api/telemetry/collectors/{service_name}",
+      "method": "GET",
+      "path": "/api/telemetry/collectors/{service_name}",
+      "capability": "read",
+      "operation_id": "getTelemetryCollector",
+      "summary": "Get one Apstra telemetry collector by ID.",
+      "tags": [
+        "Telemetry"
+      ],
+      "parameters": [
+        {
+          "name": "service_name",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra telemetry collector ID."
+        }
+      ]
+    },
+    {
+      "name": "apstra_update_telemetry_collector",
+      "key": "PUT /api/telemetry/collectors/{service_name}",
+      "method": "PUT",
+      "path": "/api/telemetry/collectors/{service_name}",
+      "capability": "write",
+      "operation_id": "updateTelemetryCollector",
+      "summary": "Update one Apstra telemetry collector.",
+      "tags": [
+        "Telemetry"
+      ],
+      "parameters": [
+        {
+          "name": "service_name",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "Apstra telemetry collector ID."
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    },
+    {
+      "name": "apstra_apstra_login_legacy",
+      "key": "POST /api/user/login",
+      "method": "POST",
+      "path": "/api/user/login",
+      "capability": "write",
+      "operation_id": "apstraLoginLegacy",
+      "summary": "Older-release session login (returns AuthToken).",
+      "tags": [
+        "Auth"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object"
+      }
+    }
+  ],
+  "provenance": {
+    "acquired_from": "Pinned official Juniper aos-sdk-api 6.1.2.post1 endpoint mappings.",
+    "note": "No distributable full Apstra OpenAPI spec is available; this reviewed SDK-derived operation set is reproducible but is not full API coverage.",
+    "source_url": "https://pypi.org/project/aos-sdk-api/6.1.2.post1/",
+    "source_sha256": "11e8736a06c55e43a690e307313aa42f912037382b67e7b27069073d99d3e242",
+    "reviewed_operation_count": 135,
+    "auth_endpoints_not_registered": [
+      "POST /api/aaa/login",
+      "POST /api/user/login"
+    ],
+    "auth_model": "AuthToken header session (see mcp_servers/apstra.py _get_apstra_token).",
+    "v07_optional_depth_additions": "Added top-level resource pools (ip/ipv6/vlan/asn/vni/integer/device), device/rack profiles (device/linecard/chassis profiles, device-profile digests+clone, rack-types), system agents (agents, manager-config, jobs, profiles+assign), telemetry (service registry, collectors), and blueprint-scoped IBA (dashboards, anomalous-stages, probes, predefined-probes), all confirmed against the same pinned aos-sdk-api 6.1.2.post1 wheel (`RestResources`/`RestResource` class definitions in `aos/sdk/api/_client.py`).",
+    "coverage_gaps": [
+      "Device profile digests are computed/read-only (get_schema/collection_schema only, no post_schema/put_schema in the pinned SDK): no create/update/delete operations are modeled.",
+      "Rack-type creation has no post_schema in the pinned SDK: only list/get/update/delete are modeled for rack-types.",
+      "Telemetry collector deletion has no confirmed schema for the per-collector resource in the pinned SDK: only list/create/get/update are modeled.",
+      "IBA dashboard import/export and widget/predefined-probe instantiation are not modeled (the SDK exposes them as bespoke sub-actions rather than the plain list/get/create surface reviewed here); only dashboards (list/get/create), anomalous-stages, probes, and predefined-probes (list) are modeled.",
+      "The streaming-telemetry-schema endpoint returns a binary protobuf descriptor, not JSON, and is not modeled as a tool."
+    ]
+  }
+}

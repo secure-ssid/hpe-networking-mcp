@@ -1,0 +1,1208 @@
+{
+  "schema_version": 2,
+  "platform": "uxi",
+  "source": {
+    "file": "uxi-2j1jmli8l514.json",
+    "sha256": "839d8a939e2820fee5e1becc991b5fa803d9b17f8f59d3fa419d0c4781104951",
+    "openapi": "3.1.0",
+    "title": "HPE Networking UXI Configuration",
+    "version": "6.7.0",
+    "license": "",
+    "operation_count": 25
+  },
+  "override_keys_applied": [],
+  "override_keys_unmatched": [],
+  "operations": [
+    {
+      "name": "uxi_agent_group_assignments_get",
+      "key": "GET /networking-uxi/v1alpha1/agent-group-assignments",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/agent-group-assignments",
+      "capability": "read",
+      "operation_id": "agent_group_assignments_get",
+      "summary": "Agent Group Assignments Get",
+      "description": "Get a list of agent group assignments",
+      "tags": [
+        "agent-group-assignments"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The ID of the resource."
+        },
+        {
+          "name": "next",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The next cursor for pagination."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of items returned in the response.",
+          "default": 50
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_agent_group_assignment_post",
+      "key": "POST /networking-uxi/v1alpha1/agent-group-assignments",
+      "method": "POST",
+      "path": "/networking-uxi/v1alpha1/agent-group-assignments",
+      "capability": "write",
+      "operation_id": "agent_group_assignment_post",
+      "summary": "Agent Group Assignment Post",
+      "description": "Create an agent group assignment",
+      "tags": [
+        "agent-group-assignments"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object",
+        "properties": [
+          "agentId",
+          "groupId"
+        ],
+        "required_properties": [
+          "agentId",
+          "groupId"
+        ]
+      },
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "409",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_agent_group_assignment_delete",
+      "key": "DELETE /networking-uxi/v1alpha1/agent-group-assignments/{id}",
+      "method": "DELETE",
+      "path": "/networking-uxi/v1alpha1/agent-group-assignments/{id}",
+      "capability": "destructive",
+      "operation_id": "agent_group_assignment_delete",
+      "summary": "Agent Group Assignment Delete",
+      "description": "Delete the specified agent group assignment",
+      "tags": [
+        "agent-group-assignments"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "The unique identifier of the assignment"
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "204",
+        "400",
+        "401",
+        "403",
+        "404",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_agents_get",
+      "key": "GET /networking-uxi/v1alpha1/agents",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/agents",
+      "capability": "read",
+      "operation_id": "agents_get",
+      "summary": "Agents Get",
+      "description": "Get a list of agents",
+      "tags": [
+        "agents"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The ID of the resource."
+        },
+        {
+          "name": "next",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The next cursor for pagination."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of items returned in the response.",
+          "default": 50
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_agent_delete",
+      "key": "DELETE /networking-uxi/v1alpha1/agents/{id}",
+      "method": "DELETE",
+      "path": "/networking-uxi/v1alpha1/agents/{id}",
+      "capability": "destructive",
+      "operation_id": "agent_delete",
+      "summary": "Agent Delete",
+      "description": "Delete the specified agent",
+      "tags": [
+        "agents"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "The unique identifier of the agent"
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "204",
+        "400",
+        "401",
+        "403",
+        "404",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_agent_patch",
+      "key": "PATCH /networking-uxi/v1alpha1/agents/{id}",
+      "method": "PATCH",
+      "path": "/networking-uxi/v1alpha1/agents/{id}",
+      "capability": "write",
+      "operation_id": "agent_patch",
+      "summary": "Agent Patch",
+      "description": "Patch the specified agent",
+      "tags": [
+        "agents"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "The unique identifier of the agent"
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/merge-patch+json",
+        "schema_type": "object",
+        "properties": [
+          "name",
+          "notes",
+          "pcapMode"
+        ]
+      },
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_groups_get",
+      "key": "GET /networking-uxi/v1alpha1/groups",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/groups",
+      "capability": "read",
+      "operation_id": "groups_get",
+      "summary": "Groups Get",
+      "description": "Get a list of groups",
+      "tags": [
+        "groups"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The ID of the resource."
+        },
+        {
+          "name": "next",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The next cursor for pagination."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of items returned in the response.",
+          "default": 50
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_group_post",
+      "key": "POST /networking-uxi/v1alpha1/groups",
+      "method": "POST",
+      "path": "/networking-uxi/v1alpha1/groups",
+      "capability": "write",
+      "operation_id": "group_post",
+      "summary": "Group Post",
+      "description": "Create a new group with the specified name as a child group of the specified parent group. When `parentId` is omitted, the new group is created as a child of the root group.",
+      "tags": [
+        "groups"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object",
+        "properties": [
+          "name",
+          "parentId"
+        ],
+        "required_properties": [
+          "name"
+        ]
+      },
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "409",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_group_delete",
+      "key": "DELETE /networking-uxi/v1alpha1/groups/{id}",
+      "method": "DELETE",
+      "path": "/networking-uxi/v1alpha1/groups/{id}",
+      "capability": "destructive",
+      "operation_id": "group_delete",
+      "summary": "Group Delete",
+      "description": "Delete an existing group. Deleting a group will also delete all child groups and resource assignments to any deleted group.",
+      "tags": [
+        "groups"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "The unique identifier of the group."
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "204",
+        "400",
+        "401",
+        "403",
+        "404",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_group_patch",
+      "key": "PATCH /networking-uxi/v1alpha1/groups/{id}",
+      "method": "PATCH",
+      "path": "/networking-uxi/v1alpha1/groups/{id}",
+      "capability": "write",
+      "operation_id": "group_patch",
+      "summary": "Group Patch",
+      "description": "Update the properties of a group.",
+      "tags": [
+        "groups"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "The unique identifier of the group"
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/merge-patch+json",
+        "schema_type": "object",
+        "properties": [
+          "name"
+        ]
+      },
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_network_group_assignments_get",
+      "key": "GET /networking-uxi/v1alpha1/network-group-assignments",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/network-group-assignments",
+      "capability": "read",
+      "operation_id": "network_group_assignments_get",
+      "summary": "Network Group Assignments Get",
+      "description": "Get a list of network group assignments.",
+      "tags": [
+        "network-group-assignments"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The ID of the resource."
+        },
+        {
+          "name": "next",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The next cursor for pagination."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of items returned in the response.",
+          "default": 50
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_network_group_assignment_post",
+      "key": "POST /networking-uxi/v1alpha1/network-group-assignments",
+      "method": "POST",
+      "path": "/networking-uxi/v1alpha1/network-group-assignments",
+      "capability": "write",
+      "operation_id": "network_group_assignment_post",
+      "summary": "Network Group Assignment Post",
+      "description": "Create a network group assignment.",
+      "tags": [
+        "network-group-assignments"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object",
+        "properties": [
+          "groupId",
+          "networkId"
+        ],
+        "required_properties": [
+          "groupId",
+          "networkId"
+        ]
+      },
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "409",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_network_group_assignment_delete",
+      "key": "DELETE /networking-uxi/v1alpha1/network-group-assignments/{id}",
+      "method": "DELETE",
+      "path": "/networking-uxi/v1alpha1/network-group-assignments/{id}",
+      "capability": "destructive",
+      "operation_id": "network_group_assignment_delete",
+      "summary": "Network Group Assignment Delete",
+      "description": "Delete the specified network group assignment",
+      "tags": [
+        "network-group-assignments"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "The unique identifier of the network group assignment"
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "204",
+        "400",
+        "401",
+        "403",
+        "404",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_sensor_group_assignments_get",
+      "key": "GET /networking-uxi/v1alpha1/sensor-group-assignments",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/sensor-group-assignments",
+      "capability": "read",
+      "operation_id": "sensor_group_assignments_get",
+      "summary": "Sensor Group Assignments Get",
+      "description": "Get a list of sensor group assignments.",
+      "tags": [
+        "sensor-group-assignments"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The ID of the resource."
+        },
+        {
+          "name": "next",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The next cursor for pagination."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of items returned in the response.",
+          "default": 50
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_sensor_group_assignment_post",
+      "key": "POST /networking-uxi/v1alpha1/sensor-group-assignments",
+      "method": "POST",
+      "path": "/networking-uxi/v1alpha1/sensor-group-assignments",
+      "capability": "write",
+      "operation_id": "sensor_group_assignment_post",
+      "summary": "Sensor Group Assignment Post",
+      "description": "Create a sensor group assignment.",
+      "tags": [
+        "sensor-group-assignments"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object",
+        "properties": [
+          "groupId",
+          "sensorId"
+        ],
+        "required_properties": [
+          "groupId",
+          "sensorId"
+        ]
+      },
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "409",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_sensor_group_assignment_delete",
+      "key": "DELETE /networking-uxi/v1alpha1/sensor-group-assignments/{id}",
+      "method": "DELETE",
+      "path": "/networking-uxi/v1alpha1/sensor-group-assignments/{id}",
+      "capability": "destructive",
+      "operation_id": "sensor_group_assignment_delete",
+      "summary": "Sensor Group Assignment Delete",
+      "description": "Delete the specified sensor group assignment",
+      "tags": [
+        "sensor-group-assignments"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "The unique identifier of the sensor group assignment"
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "204",
+        "400",
+        "401",
+        "403",
+        "404",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_sensors_get",
+      "key": "GET /networking-uxi/v1alpha1/sensors",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/sensors",
+      "capability": "read",
+      "operation_id": "sensors_get",
+      "summary": "Sensors Get",
+      "description": "List of sensors",
+      "tags": [
+        "sensors"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The ID of the resource."
+        },
+        {
+          "name": "next",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The next cursor for pagination."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of items returned in the response.",
+          "default": 50
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_sensor_patch",
+      "key": "PATCH /networking-uxi/v1alpha1/sensors/{id}",
+      "method": "PATCH",
+      "path": "/networking-uxi/v1alpha1/sensors/{id}",
+      "capability": "write",
+      "operation_id": "sensor_patch",
+      "summary": "Sensor Patch",
+      "description": "Update the properties of a sensor.",
+      "tags": [
+        "sensors"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "The unique identifier of the sensor"
+        }
+      ],
+      "request_body": {
+        "required": true,
+        "content_type": "application/merge-patch+json",
+        "schema_type": "object",
+        "properties": [
+          "addressNote",
+          "name",
+          "notes",
+          "pcapMode"
+        ]
+      },
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_get_sensor_status",
+      "key": "GET /networking-uxi/v1alpha1/sensors/{id}/status",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/sensors/{id}/status",
+      "capability": "read",
+      "operation_id": "get_sensor_status",
+      "summary": "Get Sensor Status",
+      "description": "Get a sensors status.",
+      "tags": [
+        "sensor_status"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "The unique identifier of the sensor",
+          "format": "uuid"
+        }
+      ],
+      "response_codes": [
+        "200",
+        "403",
+        "404",
+        "500"
+      ]
+    },
+    {
+      "name": "uxi_service_test_group_assignments_get",
+      "key": "GET /networking-uxi/v1alpha1/service-test-group-assignments",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/service-test-group-assignments",
+      "capability": "read",
+      "operation_id": "service_test_group_assignments_get",
+      "summary": "Service Test Group Assignments Get",
+      "description": "Get a list of service test group assignments.",
+      "tags": [
+        "service-test-group-assignments"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The ID of the resource."
+        },
+        {
+          "name": "next",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The next cursor for pagination."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of items returned in the response.",
+          "default": 50
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_service_test_group_assignment_post",
+      "key": "POST /networking-uxi/v1alpha1/service-test-group-assignments",
+      "method": "POST",
+      "path": "/networking-uxi/v1alpha1/service-test-group-assignments",
+      "capability": "write",
+      "operation_id": "service_test_group_assignment_post",
+      "summary": "Service Test Group Assignment Post",
+      "description": "Create a service-test group assignment.",
+      "tags": [
+        "service-test-group-assignments"
+      ],
+      "parameters": [],
+      "request_body": {
+        "required": true,
+        "content_type": "application/json",
+        "schema_type": "object",
+        "properties": [
+          "groupId",
+          "serviceTestId"
+        ],
+        "required_properties": [
+          "groupId",
+          "serviceTestId"
+        ]
+      },
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "409",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_service_test_group_assignment_delete",
+      "key": "DELETE /networking-uxi/v1alpha1/service-test-group-assignments/{id}",
+      "method": "DELETE",
+      "path": "/networking-uxi/v1alpha1/service-test-group-assignments/{id}",
+      "capability": "destructive",
+      "operation_id": "service_test_group_assignment_delete",
+      "summary": "Service Test Group Assignment Delete",
+      "description": "Delete the specified service test group assignment",
+      "tags": [
+        "service-test-group-assignments"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string",
+          "description": "The unique identifier of the service test group assignment"
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "204",
+        "400",
+        "401",
+        "403",
+        "404",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_service_tests_get",
+      "key": "GET /networking-uxi/v1alpha1/service-tests",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/service-tests",
+      "capability": "read",
+      "operation_id": "service_tests_get",
+      "summary": "Service Tests Get",
+      "description": "Lists service-tests matching provided criteria",
+      "tags": [
+        "service-tests"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The ID of the resource."
+        },
+        {
+          "name": "next",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The next cursor for pagination."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of items returned in the response.",
+          "default": 50
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_wired_networks_get",
+      "key": "GET /networking-uxi/v1alpha1/wired-networks",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/wired-networks",
+      "capability": "read",
+      "operation_id": "wired_networks_get",
+      "summary": "Wired Networks Get",
+      "description": "Get a list of wired networks",
+      "tags": [
+        "wired-networks"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The ID of the resource."
+        },
+        {
+          "name": "next",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The next cursor for pagination."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of items returned in the response.",
+          "default": 50
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    },
+    {
+      "name": "uxi_wireless_networks_get",
+      "key": "GET /networking-uxi/v1alpha1/wireless-networks",
+      "method": "GET",
+      "path": "/networking-uxi/v1alpha1/wireless-networks",
+      "capability": "read",
+      "operation_id": "wireless_networks_get",
+      "summary": "Wireless Networks Get",
+      "description": "Get a list of wireless networks",
+      "tags": [
+        "wireless-networks"
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The ID of the resource."
+        },
+        {
+          "name": "next",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "The next cursor for pagination."
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of items returned in the response.",
+          "default": 50
+        }
+      ],
+      "security": [
+        {
+          "HTTPBearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "405",
+        "415",
+        "422",
+        "429",
+        "500",
+        "5XX"
+      ]
+    }
+  ],
+  "provenance": {
+    "acquired_from": "Aruba developer portal ReadMe SuperHub API registry",
+    "portal": "https://developer.arubanetworks.com/uxi/reference",
+    "registry_id": "2j1jmli8l514",
+    "registry_url": "https://dash.readme.com/api/v1/api-registry/2j1jmli8l514",
+    "spec_version": "6.7.0",
+    "spec_title": "HPE Networking UXI Configuration",
+    "note": "Derived operation metadata only; raw proprietary specs are not committed."
+  }
+}

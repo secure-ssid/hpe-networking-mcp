@@ -1,0 +1,86 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Fixture Orchestrator API",
+    "version": "9.3.1"
+  },
+  "basePath": "/",
+  "consumes": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "token": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-Auth-Token"
+    }
+  },
+  "security": [
+    {
+      "token": []
+    }
+  ],
+  "parameters": {
+    "WidgetId": {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "type": "string"
+    }
+  },
+  "paths": {
+    "/legacy": {
+      "delete": {
+        "operationId": "deleteLegacy",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/widgets": {
+      "get": {
+        "operationId": "listWidgets",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/widgets/{id}": {
+      "post": {
+        "operationId": "updateWidget",
+        "parameters": [
+          {
+            "$ref": "#/parameters/WidgetId"
+          },
+          {
+            "name": "widget",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Widget"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Widget": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

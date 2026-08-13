@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "platform": "uxi",
+  "generator": "scripts/build_optional_product_manifests.py",
+  "source_sha256": "839d8a939e2820fee5e1becc991b5fa803d9b17f8f59d3fa419d0c4781104951",
+  "manifest_sha256": "14e8a9346f877e217c48c8b4c1e4a61aa42e8bdf63d3bc79806f0d4f13c948a0",
+  "operation_count": 25,
+  "registry_ids": [
+    "2j1jmli8l514"
+  ],
+  "source": {
+    "acquired_from": "Aruba developer portal ReadMe SuperHub API registry",
+    "portal": "https://developer.arubanetworks.com/uxi/reference",
+    "spec_version": "6.7.0"
+  }
+}

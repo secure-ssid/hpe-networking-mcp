@@ -1,0 +1,13 @@
+{
+  "_doc": [
+    "Capability overrides for the generated Aruba Central tools. Keys are",
+    "operation keys ('METHOD /path' against the normalized full path, e.g.",
+    "'GET /network-config/v1alpha1/bgp'); values are one of 'read', 'write',",
+    "'destructive'. Use this to reclassify a POST that is effectively read-only",
+    "(a diagnostic/query) or a GET with side effects. Add entries with a short",
+    "justification rather than editing the generated manifest directly.",
+    "Central writes are additionally gated at runtime by HPE_MCP_CENTRAL_WRITES",
+    "and every generated write defaults to dry_run=True."
+  ],
+  "capabilities": {}
+}

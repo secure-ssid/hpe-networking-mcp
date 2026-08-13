@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "hpe-networking-mcp": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/.venv/bin/python3",
+      "args": ["${workspaceFolder}/src/hpe_networking_mcp/mcp_servers/tool_router.py"],
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src",
+        "CREDS_PATH": "${workspaceFolder}/config/credentials.yaml",
+        "HPE_MCP_ROUTER_MODE": "minimal",
+        "HPE_MCP_TOOLSETS": "central,glp,rag"
+      }
+    }
+  }
+}

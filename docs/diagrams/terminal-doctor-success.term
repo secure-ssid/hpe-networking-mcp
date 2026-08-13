@@ -1,0 +1,18 @@
+$ uv run hpe-mcp-doctor
+hpe-networking-mcp local doctor
+
+[OK] Python version: 3.11.6 detected; hpe-networking-mcp requires >=3.10
+[OK] uv: uv is available
+[OK] Python module httpx: httpx import spec found
+[OK] Python module mcp: mcp import spec found
+[OK] Project metadata: pyproject.toml exists
+[WARN] Credentials: config/credentials.yaml missing; copy
+  config/credentials.yaml.example and fill in credentials
+[OK] stdio MCP example: .mcp.json.example exists
+[OK] Router tool index: data/tools.lance exists
+[OK] RAG source manifest: 13 sources match ingestion
+  SOURCE_META
+... additional local checks passed
+... one additional expected setup warning
+
+Summary: 0 fail, 2 warn, 23 ok

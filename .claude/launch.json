@@ -1,0 +1,75 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hpe-networking-mcp MCP server (minimal)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "hpe_networking_mcp.mcp_servers.tool_router"
+      ],
+      "env": {
+        "HPE_MCP_ROUTER_MODE": "minimal",
+        "HPE_MCP_TOOLSETS": "central,glp,rag"
+      }
+    },
+    {
+      "name": "central-monitoring MCP server",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "hpe_networking_mcp.mcp_servers.monitoring"
+      ]
+    },
+    {
+      "name": "central-config MCP server",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "hpe_networking_mcp.mcp_servers.config"
+      ]
+    },
+    {
+      "name": "central-ops MCP server",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "hpe_networking_mcp.mcp_servers.ops"
+      ]
+    },
+    {
+      "name": "central-nac MCP server",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "hpe_networking_mcp.mcp_servers.nac"
+      ]
+    },
+    {
+      "name": "glp-core MCP server",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "hpe_networking_mcp.mcp_servers.glp"
+      ]
+    },
+    {
+      "name": "Migration pipeline (CLI)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "hpe_networking_mcp.cli.run_pipeline",
+        "--input",
+        "inputs/migration_example.csv"
+      ]
+    },
+    {
+      "name": "SSID builder (CLI)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "hpe_networking_mcp.cli.run_ssid"
+      ]
+    }
+  ]
+}

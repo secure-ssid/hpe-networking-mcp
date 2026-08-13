@@ -1,0 +1,16 @@
+$ python3 scripts/setup_wizard.py --yes --skip-credentials
+Repository: ~/hpe-networking-mcp
+This wizard writes only local git-ignored config files.
+
+Setup summary
+[OK] .mcp.json: created from .mcp.json.example
+[OK] .mcp.json: added optional product selector
+[OK] .mcp.http.json: created from .mcp.http.json.example
+[OK] doctor: completed
+
+Next steps
+1. Review config/credentials.yaml and .env before any API call.
+2. Start the HTTP router:
+   MCP_HOST=127.0.0.1 MCP_PORT=8010 bash scripts/run_http_router.sh
+3. Router exposure mode: minimal.
+4. Optional products stayed disabled; enable with --products.

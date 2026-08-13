@@ -1,0 +1,76 @@
+# Credentials — never commit
+.env
+config/credentials.yaml
+.token_cache_*.json
+
+# Claude local settings (may contain credentials in allowed commands)
+.claude/settings.local.json
+
+# Local MCP client configs (often include absolute paths/secrets)
+# Keep shared settings in .mcp.json.example and editor-specific *.example files only.
+.mcp.json
+.mcp.http.json
+.claude/mcp.json
+.vscode/mcp.json
+
+# Internal runbook PDFs
+*.pdf
+
+# Postman collections (large binary-like files — download via resources/README.md)
+resources/*.json
+
+# Real device input files (use inputs/*_example.csv as templates instead)
+inputs/*.csv
+inputs/*.cfg
+!inputs/*_example.csv
+!inputs/*_template.csv
+
+# macOS metadata
+.DS_Store
+
+# Runtime output
+state/
+outputs/
+!state/.gitkeep
+!outputs/.gitkeep
+
+# Node (orphan lockfiles from Claude worktree sessions)
+package-lock.json
+package.json
+node_modules/
+
+# Scraped doc sources (regenerate with ingestion scrapers)
+ingestion/sources/
+ingestion/markdown/
+ingestion/markdown_techdocs/
+ingestion/markdown_vsg/
+ingestion/techdocs_urls.json
+
+# Historical local Docker bind-mount dirs from older Compose files
+redis_data/
+ollama_data/
+
+# Built indexes — regenerate (python -m pipeline.clients.specs_index --build)
+# or download prebuilt from GitHub Releases
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local vendored GreenLake OpenAPI specs (proprietary; fetch via scripts/generate_glp_tools.py --fetch)
+ingestion/greenlake_specs/
+
+# Local-only vendor diagram packs (VisioCafe/HPE stencils — do not redistribute)
+resources/diagram_icons/private/
+resources/diagram_icons/vendors/**
+!resources/diagram_icons/vendors/.gitkeep

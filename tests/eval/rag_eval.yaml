@@ -1,0 +1,256 @@
+# RAG evaluation set for hpe-networking-mcp — run before/after any backend or retrieval change.
+# type: api-lookup      -> expects an exact field/enum/endpoint (ideally via lookup_api over the specs)
+#       howto           -> expects a relevant prose chunk (via search_docs)
+#       advisory        -> exact structured lookup via lookup_advisory
+#       lifecycle       -> exact structured lookup via check_product_lifecycle
+#       list-advisories -> bounded/paginated exact filtering via list_advisories
+#       list-lifecycle  -> bounded/paginated exact filtering via list_lifecycle_events
+#       correlate       -> exact-only advisory<->lifecycle linking via correlate_advisory_lifecycle
+#       diagnostics     -> bounded RAG index diagnostics via rag_diagnostics
+# expect_sources    -> substrings; at least one must appear in a top-k result's file_path/source.
+#                       For the four structured types above, the whole returned
+#                       dict is treated as one hit, so this may match any
+#                       nested field (e.g. a pagination or correlation key),
+#                       not just file_path/source.
+# expect_keywords   -> substrings; at least one must appear in the returned text (case-insensitive)
+# expect_empty      -> true asserts the tool correctly found *nothing* in these
+#                       official sources (negative query / documented
+#                       coverage gap) — a non-empty fabricated answer would be
+#                       scored as a failure, not a fabricated pass.
+# See docs/architecture/RAG-ARCHITECTURE.md and docs/source-lifecycle-coverage.md.
+
+questions:
+  - id: dot1x-auth-type
+    type: api-lookup
+    query: "What auth-type value does a CDA 802.1X (dot1x) auth profile use?"
+    # Aruba Central Config API content now ships as per-category bundles
+    # (ingestion/scrape_config_reference_specs.py) rather than one file per
+    # reference-page slug, since the original per-slug internal host
+    # (internal-ui.central.arubanetworks.com) is unreachable from this
+    # environment. "config-wireless"/"config-interfaces"/"config-security"
+    # are the real bundle names that carry this content now.
+    expect_sources: ["cda-auth-profile", "auth-profile", "config-wireless", "config-interfaces", "config-security"]
+    expect_keywords: ["EAP"]
+
+  - id: auth-type-enum
+    type: api-lookup
+    query: "What are the valid auth-type enum values for an auth profile?"
+    expect_sources: ["cda-auth-profile", "auth-profile", "config-wireless", "config-interfaces", "config-security", "config-central-nac"]
+    expect_keywords: ["MPSK", "EAP", "CAPTIVE_PORTAL", "MAB", "AIRPASS"]
+
+  - id: passpoint-list-key
+    type: api-lookup
+    query: "What is the response list key for the passpoint profiles GET endpoint?"
+    expect_sources: ["passpoint"]
+    expect_keywords: ["profile"]
+
+  - id: firmware-compliance-endpoint
+    type: api-lookup
+    query: "Which endpoint sets firmware compliance in New Central and what HTTP method?"
+    expect_sources: ["firmware-compliance"]
+    expect_keywords: ["firmware-compliance", "PATCH"]
+
+  - id: sites-client-health-exact-path
+    type: api-lookup
+    query: "GET /network-monitoring/v1/sites-client-health"
+    expect_sources: ["monitoring-7wjo8aumqq.json#GET /network-monitoring/v1/sites-client-health"]
+    expect_keywords: ["sites-client-health", "GET"]
+
+  - id: sites-client-health-operation-id
+    type: api-lookup
+    query: "listSitesClientHealthV1"
+    expect_sources: ["monitoring-7wjo8aumqq.json#GET /network-monitoring/v1/sites-client-health"]
+    expect_keywords: ["sites-client-health", "GET"]
+
+  - id: firmware-no-upgrade-path
+    type: api-lookup
+    query: "Is there a device-firmware-upgrade endpoint in the New Central config API?"
+    # Now served by the "Config Management"/firmware-policy category bundle
+    # rather than a per-slug firmware-management/firmware-compliance file
+    # (see note on dot1x-auth-type above).
+    expect_sources: ["firmware-management", "firmware-compliance", "config-firmware-policy", "config-miscellaneous"]
+    expect_keywords: ["device-firmware"]
+
+  - id: ssid-security-enum
+    type: api-lookup
+    query: "What WPA security enum values are available for an SSID (personal/enterprise)?"
+    expect_sources: ["ssid", "wlan"]
+    expect_keywords: ["WPA3", "WPA2"]
+
+  - id: mac-reg-update-url
+    type: api-lookup
+    query: "What URL and method updates a CNAC MAC registration?"
+    expect_sources: ["mac-reg", "cnac"]
+    expect_keywords: ["cnac-mac-reg", "PUT"]
+
+  - id: scope-levels
+    type: api-lookup
+    query: "What scope levels exist when assigning a profile (global, site, group)?"
+    # Now served by the "Assignments" category bundle (see note above).
+    expect_sources: ["scope", "profile", "config-assignments"]
+    expect_keywords: ["scope"]
+
+  - id: vlan-create-fields
+    type: api-lookup
+    query: "What fields are required to create a layer2 VLAN?"
+    expect_sources: ["vlan", "layer2"]
+    expect_keywords: ["vlan"]
+
+  - id: igmp-lookup-enum
+    type: api-lookup
+    query: "What are the valid values for the IGMP forwarding lookup mode field?"
+    expect_sources: ["mgmd", "igmp"]
+    expect_keywords: ["LOOKUP_MAC", "LOOKUP_IP", "LOOKUP_NONE"]
+
+  - id: howto-create-ssid
+    type: howto
+    query: "How do I create a wireless SSID with WPA3 personal security in New Central?"
+    expect_sources: ["ssid", "wlan", "developer", "tech"]
+    expect_keywords: ["SSID", "WPA3"]
+
+  - id: howto-onboard-device
+    type: howto
+    query: "How do I onboard a device into a group and assign it to a site?"
+    expect_sources: ["developer", "tech", "scope", "device"]
+    expect_keywords: ["group", "site"]
+
+  - id: howto-passpoint
+    type: howto
+    query: "How does Passpoint / Hotspot 2.0 work and how is an identity profile assigned?"
+    expect_sources: ["passpoint", "tech", "vsg"]
+    expect_keywords: ["passpoint"]
+
+  - id: howto-nac-mpsk
+    type: howto
+    query: "How do I register an MPSK device for client onboarding?"
+    expect_sources: ["mpsk", "nac", "tech"]
+    expect_keywords: ["MPSK"]
+
+  - id: howto-firmware-compliance
+    type: howto
+    query: "How do I set a firmware compliance policy for access points?"
+    expect_sources: ["firmware", "tech", "developer"]
+    expect_keywords: ["firmware", "compliance"]
+
+  - id: howto-proxy-profile
+    type: howto
+    query: "How do I assign a proxy profile to a scope?"
+    expect_sources: ["proxy", "techdocs"]
+    expect_keywords: ["proxy", "scope"]
+
+  - id: howto-gateway-cluster
+    type: howto
+    query: "How do I configure a gateway cluster in New Central?"
+    expect_sources: ["gateway", "cluster", "tech", "vsg"]
+    expect_keywords: ["gateway", "cluster"]
+
+  - id: howto-port-profile
+    type: howto
+    query: "How do I create a switch port profile and apply it to an interface?"
+    expect_sources: ["port", "profile", "switch"]
+    expect_keywords: ["port", "profile"]
+
+  - id: howto-aaa-server
+    type: howto
+    query: "How do I add a RADIUS authentication server for AAA?"
+    expect_sources: ["aaa", "auth-server", "radius", "nac"]
+    expect_keywords: ["RADIUS"]
+
+  - id: howto-vsg-design
+    type: howto
+    query: "What is the recommended VLAN/overlay design for a campus wireless deployment?"
+    expect_sources: ["vsg"]
+    expect_keywords: ["VLAN", "overlay"]
+
+  - id: advisory-hpesbnw04987
+    type: advisory
+    query: "Look up advisory HPESBNW04987"
+    arguments:
+      advisory_id: "HPESBNW04987"
+    expect_sources: ["security_advisories"]
+    expect_keywords: ["HPESBNW04987", "CVE-2025-37168"]
+
+  - id: advisory-apstra-cve
+    type: advisory
+    query: "Which Apstra advisory covers CVE-2025-13914?"
+    arguments:
+      cve: "CVE-2025-13914"
+    expect_sources: ["juniper_security_advisories"]
+    expect_keywords: ["Apstra", "CVE-2025-13914"]
+
+  - id: lifecycle-mist-edge
+    type: lifecycle
+    query: "Show lifecycle milestones for Mist Edge"
+    arguments:
+      product: "Mist Edge"
+    expect_sources: ["juniper_lifecycle"]
+    expect_keywords: ["Mist Edge", "milestone"]
+
+  - id: lifecycle-aruba-hardware
+    type: lifecycle
+    query: "Find lifecycle records for HP 7500 Switch Chassis"
+    arguments:
+      product: "HP 7500 Switch Chassis"
+    expect_sources: ["lifecycle_notices"]
+    expect_keywords: ["HP 7500", "Product SKU"]
+
+  - id: negative-advisory-bogus-cve
+    type: advisory
+    query: "Look up advisory for a CVE that does not exist"
+    arguments:
+      cve: "CVE-1999-00001"
+    expect_empty: true
+
+  - id: negative-lifecycle-bogus-sku
+    type: lifecycle
+    query: "Find lifecycle records for a SKU that was never issued"
+    arguments:
+      product: "ZZZ-NONEXISTENT-SKU-000"
+    expect_empty: true
+
+  - id: lifecycle-current-aruba-coverage-gap
+    type: lifecycle
+    query: "Show the lifecycle record for the Aruba AP-635 access point"
+    arguments:
+      product: "AP-635"
+    # AP-635 is a current (post-2020) Aruba-branded AP. There is no
+    # reliable official machine-readable current-Aruba-lifecycle source
+    # (docs/source-lifecycle-coverage.md); an empty result here is the
+    # correct, honest answer -- not "still supported".
+    expect_empty: true
+
+  - id: list-advisories-critical-security-family
+    type: list-advisories
+    query: "List critical HPE Aruba Networking security advisories"
+    arguments:
+      source_family: "security_advisories"
+      min_severity: "critical"
+      limit: 5
+    expect_sources: ["security_advisories"]
+    expect_keywords: ["Critical", "total_matched"]
+
+  - id: list-lifecycle-switches-category
+    type: list-lifecycle
+    query: "List lifecycle notices in the Switches category"
+    arguments:
+      category: "Switches"
+      source_family: "lifecycle_notices"
+      limit: 3
+    expect_sources: ["lifecycle_notices"]
+    expect_keywords: ["Switches"]
+
+  - id: correlate-apstra-cve-exact-labeling
+    type: correlate
+    query: "Correlate the Apstra SSH host-key CVE with any lifecycle records"
+    arguments:
+      cve: "CVE-2025-13914"
+    expect_sources: ["not a fuzzy or semantic match"]
+    expect_keywords: ["match_basis", "unresolved_products"]
+
+  - id: diagnostics-citation-completeness
+    type: diagnostics
+    query: "Report RAG advisory/lifecycle citation completeness"
+    arguments:
+      include_ingestion_delta: false
+    expect_sources: ["citation_completeness"]
+    expect_keywords: ["security_advisories", "lifecycle_events"]

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">hpe-networking-mcp platform and tool coverage</title>
+  <desc id="desc">The low-token router searches 6,715 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071426"/>
+      <stop offset="1" stop-color="#12304d"/>
+    </linearGradient>
+    <style>
+      .heading { font: 700 43px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #f5fbff; }
+      .sub { font: 500 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #9fc1df; }
+      .boxTitle { font: 700 23px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #ffffff; }
+      .boxText { font: 500 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #b8d2e8; }
+      .count { font: 700 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #69e2d7; }
+      .router { font: 700 25px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #061724; }
+    </style>
+  </defs>
+  <rect width="1200" height="720" rx="30" fill="url(#bg)"/>
+  <text x="60" y="78" class="heading">One low-token router, nine platform surfaces</text>
+  <text x="60" y="112" class="sub">find_tool -> invoke_read_tool -> guarded invoke_tool</text>
+
+  <g transform="translate(60 150)">
+    <rect width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
+    <text x="22" y="38" class="boxTitle">Aruba Central</text>
+    <text x="22" y="72" class="count">1,924 tools</text>
+    <text x="22" y="101" class="boxText">config, monitoring, NAC, ops</text>
+    <text x="22" y="124" class="boxText">routing, rollback, diagnostics</text>
+
+    <rect x="275" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
+    <text x="297" y="38" class="boxTitle">GreenLake Platform</text>
+    <text x="297" y="72" class="count">1,011 tools</text>
+    <text x="297" y="101" class="boxText">devices, grouping, audit, users</text>
+    <text x="297" y="124" class="boxText">RBAC, events, locations, SCIM</text>
+
+    <rect x="550" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
+    <text x="572" y="38" class="boxTitle">RAG + OpenAPI</text>
+    <text x="572" y="72" class="count">11 tools</text>
+    <text x="572" y="101" class="boxText">96,256 prose chunks</text>
+    <text x="572" y="124" class="boxText">4,106 exact API endpoints</text>
+
+    <rect x="825" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
+    <text x="847" y="38" class="boxTitle">ArubaOS 8</text>
+    <text x="847" y="72" class="count">311 tools</text>
+    <text x="847" y="101" class="boxText">session auth, export, parsing</text>
+    <text x="847" y="124" class="boxText">resumable migration execution</text>
+
+    <rect y="165" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
+    <text x="22" y="203" class="boxTitle">Juniper Mist</text>
+    <text x="22" y="237" class="count">1,080 tools</text>
+    <text x="22" y="266" class="boxText">NAC, Marvis, inventory</text>
+    <text x="22" y="289" class="boxText">Wired/WAN + WebSocket diag</text>
+
+    <rect x="275" y="165" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
+    <text x="297" y="203" class="boxTitle">Apstra</text>
+    <text x="297" y="237" class="count">155 tools</text>
+    <text x="297" y="266" class="boxText">AuthToken sessions</text>
+    <text x="297" y="289" class="boxText">blueprints and connectivity</text>
+
+    <rect x="550" y="165" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
+    <text x="572" y="203" class="boxTitle">ClearPass</text>
+    <text x="572" y="237" class="count">845 tools</text>
+    <text x="572" y="266" class="boxText">endpoints, guest, Insight</text>
+    <text x="572" y="289" class="boxText">OnGuard activity workflows</text>
+
+    <rect x="825" y="165" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
+    <text x="847" y="203" class="boxTitle">EdgeConnect</text>
+    <text x="847" y="237" class="count">1,270 tools</text>
+    <text x="847" y="266" class="boxText">Swagger diagnostics</text>
+    <text x="847" y="289" class="boxText">legacy API fails closed</text>
+
+    <rect y="330" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
+    <text x="22" y="368" class="boxTitle">Axis Atmos Cloud</text>
+    <text x="22" y="402" class="count">47 tools</text>
+    <text x="22" y="431" class="boxText">apps, connectors, tunnels</text>
+    <text x="22" y="454" class="boxText">locations, policies, commits</text>
+
+    <rect x="275" y="330" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
+    <text x="297" y="368" class="boxTitle">HPE Aruba UXI</text>
+    <text x="297" y="402" class="count">49 tools</text>
+    <text x="297" y="431" class="boxText">sensors, agents, groups</text>
+    <text x="297" y="454" class="boxText">guarded CRUD + assignments</text>
+
+    <rect x="550" y="330" width="525" height="140" rx="18" fill="#69e2d7"/>
+    <text x="580" y="372" class="router">Catalog tiers</text>
+    <text x="580" y="408" class="router">6,144 generated | 6,715 backend | 6,722 direct-all</text>
+    <text x="580" y="444" class="router">Writes remain dry-run and confirmation gated</text>
+  </g>
+</svg>

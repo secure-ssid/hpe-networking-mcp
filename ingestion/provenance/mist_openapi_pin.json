@@ -1,0 +1,17 @@
+{
+  "source": "mist_openapi",
+  "repository": "mistsys/mist_openapi",
+  "path": "mist.openapi.json",
+  "reviewed_ref": "f374cffdd5a275c7954645a306fcab7f1227e7a3",
+  "reviewed_sha256": "db47f2f4ed809fa83ef429807d80adf097d2610300acb435e500df4a0f062739",
+  "reviewed_at": null,
+  "review_status": "review_needed",
+  "refresh_policy": "frozen",
+  "authority": "official_vendor_openapi",
+  "notes": [
+    "Source of truth for the ref/path/digest remains ingestion/fetch_mist_openapi.py; this file records the *review* state of that pin and is cross-checked against those module constants on every run.",
+    "review_status is 'review_needed' because external source refresh is disabled for the current change: the pin has NOT been re-verified against mistsys/mist_openapi, so the gate reports stale_pin rather than fresh. Do not flip this to 'reviewed' without actually re-fetching, diffing, and re-pinning.",
+    "reviewed_at is null because no review timestamp was recorded when the pin was originally introduced; record one when the pin is next genuinely reviewed.",
+    "refresh_policy 'frozen' means: never auto-advance reviewed_ref/reviewed_sha256 from a drift run. Advancing the pin is a reviewed, committed change to this file and ingestion/fetch_mist_openapi.py together."
+  ]
+}
