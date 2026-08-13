@@ -88,6 +88,19 @@ allowed_keys = {
 }
 inherited_keys = set(os.environ)
 load_dotenv(sys.argv[1], override=False)
+legacy_prefix = "CENTRALMCP_"
+legacy_keys = set()
+with open(sys.argv[1], encoding="utf-8") as env_file:
+    for line in env_file:
+        match = re.match(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=", line)
+        if match and match.group(1).startswith(legacy_prefix):
+            legacy_keys.add(match.group(1))
+if legacy_keys:
+    print(
+        "WARNING: ignored legacy environment keys in .env; use the HPE_MCP_* "
+        "prefix: " + ", ".join(sorted(legacy_keys)),
+        file=sys.stderr,
+    )
 for key in sorted(allowed_keys):
     value = os.environ.get(key)
     if (

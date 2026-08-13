@@ -84,6 +84,30 @@ def test_http_router_env_loader_uses_dotenv_comment_semantics(tmp_path):
     assert "MIST_API_TOKEN=abc#def" in result.stdout
 
 
+def test_http_router_env_loader_warns_on_legacy_prefix(tmp_path):
+    dotenv = tmp_path / ".env"
+    dotenv.write_text(
+        "CENTRALMCP_ROUTER_MODE=minimal\n"
+        "HPE_MCP_ROUTER_MODE=minimal\n"
+    )
+    env = os.environ.copy()
+    env.pop("CENTRALMCP_ROUTER_MODE", None)
+    env.pop("HPE_MCP_ROUTER_MODE", None)
+
+    result = subprocess.run(
+        [sys.executable, "-", str(dotenv)],
+        input=_http_env_loader_source(),
+        capture_output=True,
+        text=True,
+        check=True,
+        env=env,
+    )
+
+    assert "CENTRALMCP_ROUTER_MODE=" not in result.stdout
+    assert "CENTRALMCP_ROUTER_MODE" in result.stderr
+    assert "HPE_MCP_*" in result.stderr
+
+
 def test_http_router_env_loader_uses_exported_values_for_interpolation(tmp_path):
     dotenv = tmp_path / ".env"
     dotenv.write_text(

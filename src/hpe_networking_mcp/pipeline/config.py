@@ -106,7 +106,9 @@ def load_credentials(creds_path: str = "config/credentials.yaml") -> dict[str, A
     }
 
 
-def build_account_contexts(creds_path: str = "config/credentials.yaml") -> tuple[AccountContext, AccountContext]:
+def build_account_contexts(
+    creds_path: str = "config/credentials.yaml",
+) -> tuple[AccountContext, AccountContext]:
     """Build source and target AccountContext from credentials.
 
     Returns:

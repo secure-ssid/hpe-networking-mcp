@@ -390,6 +390,7 @@ class TestStandaloneWriteGate:
     def test_safe_profile_blocks_writes_on_ungated_standalone_server(
         self, monkeypatch
     ):
+        monkeypatch.delenv("HPE_MCP_PRODUCT_ACCESS", raising=False)
         monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
         server = _gated_backend("rag-core")
 

@@ -8,6 +8,7 @@ import ast
 import importlib.util
 import json
 import os
+import re
 import shutil
 import socket
 import stat
@@ -50,6 +51,10 @@ READ_WRITE_PRODUCT_ACCESS_VALUES = {"read-write", "readwrite", "read_write", "rw
 VALID_ACCESS_PROFILES = {"safe-read-only", "custom", "full-read-write"}
 TRUTHY_WRITE_VALUES = {"1", "true", "yes", "on"}
 FALSY_WRITE_VALUES = {"0", "false", "no", "off"}
+LEGACY_ENV_PREFIX = "CENTRALMCP_"
+_ENV_ASSIGNMENT_RE = re.compile(
+    r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*="
+)
 
 # Mirrors hpe_networking_mcp.mcp_servers.tool_router's toolset/backend maps and
 # hpe_networking_mcp.mcp_servers.shared.resolve_rag_backend's valid set.
@@ -192,6 +197,43 @@ def _load_local_env(path: Path) -> None:
     if not path.exists():
         return
     load_dotenv(dotenv_path=path, override=False)
+
+
+def _legacy_env_keys(path: Path) -> list[str]:
+    """Return legacy environment names without reading values into diagnostics."""
+    if not path.exists():
+        return []
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+
+    keys = {
+        match.group(1)
+        for line in text.splitlines()
+        if (match := _ENV_ASSIGNMENT_RE.match(line))
+        and match.group(1).startswith(LEGACY_ENV_PREFIX)
+    }
+    return sorted(keys)
+
+
+def _legacy_env_check(path: Path) -> Check:
+    """Warn when a local dotenv file still contains the pre-rename prefix."""
+    if not path.exists():
+        return Check("OK", "Legacy environment prefix", "active .env not present")
+
+    legacy_keys = _legacy_env_keys(path)
+    if not legacy_keys:
+        return Check(
+            "OK",
+            "Legacy environment prefix",
+            "no CENTRALMCP_* assignments found in active .env",
+        )
+    return Check(
+        "WARN",
+        "Legacy environment prefix",
+        "ignored legacy keys; rename or remove: " + ", ".join(legacy_keys),
+    )
 
 
 def _server_map(data: dict[str, object]) -> dict[str, object] | None:
@@ -475,6 +517,7 @@ def _config_checks() -> list[Check]:
             "Project metadata",
             missing_detail="pyproject.toml missing; run from a hpe-networking-mcp checkout",
         ),
+        _legacy_env_check(ROOT / ".env"),
         credentials_check,
         _path_check(
             ROOT / ".mcp.json.example",

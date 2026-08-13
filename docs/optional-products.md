@@ -482,6 +482,9 @@ enforce a 20 MiB decoded-file limit.
 Product base URLs must use HTTPS and public hostnames by default. For local lab
 testing against localhost or private IPs, set
 `HPE_MCP_ALLOW_LOCAL_PRODUCT_URLS=1` only in that trusted lab environment.
+Remove that opt-in again before normal operation; leaving it unset keeps the
+private/loopback URL guard enabled. The launcher and local doctor warn about
+retired `CENTRALMCP_*` environment names because those values are ignored.
 
 ## What the wizard writes
 

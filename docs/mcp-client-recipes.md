@@ -245,7 +245,9 @@ HTTP helper safely loads expected local `.env` assignments first, so optional
 products selected in the wizard are available to the router process. Its
 startup banner prints `HPE_MCP_ACCESS_PROFILE`, selected products, and
 `HPE_MCP_PRODUCT_ACCESS` so write visibility is obvious before connecting a
-client. If the
+client. It warns if the local `.env` still contains the retired
+`CENTRALMCP_*` prefix; rename those assignments to `HPE_MCP_*` or remove them.
+If the
 port is already in use, `scripts/run_http_router.sh` exits before starting
 another router and prints the listener details:
 
@@ -253,6 +255,15 @@ another router and prints the listener details:
 lsof -nP -iTCP:8010 -sTCP:LISTEN
 kill <PID>
 ```
+
+### Reconnect after a router restart
+
+Streamable HTTP session handles belong to the running router process. Restarting
+the router invalidates handles held by an existing MCP client, so requests made
+with the old handle can return `404 Session expired` or `404 Invalid or expired
+session ID` even while `/livez` is healthy. Refresh or restart the MCP client
+connection, then let it perform a new `initialize` request; do not reuse the
+old session handle.
 
 <div class="docs-callout docs-callout--danger" markdown="1">
 
