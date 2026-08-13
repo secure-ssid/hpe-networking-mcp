@@ -98,6 +98,18 @@ PRODUCT_ENV = {
 }
 PLACEHOLDER_MARKERS = ("YOUR_", "REPLACE_ME", "PLACEHOLDER")
 SECRET_ENV_SUFFIXES = ("_TOKEN", "_SECRET", "_PASSWORD", "_API_KEY")
+PLATFORM_WRITE_ENV_VARS = (
+    "HPE_MCP_CENTRAL_WRITES",
+    "HPE_MCP_GLP_V2BETA1_WRITES",
+    "HPE_MCP_AOS8_WRITES",
+    "HPE_MCP_EDGECONNECT_WRITES",
+    "HPE_MCP_APSTRA_WRITES",
+    "HPE_MCP_MIST_WRITES",
+    "HPE_MCP_CLEARPASS_WRITES",
+    "HPE_MCP_UXI_WRITES",
+    "HPE_MCP_AXIS_WRITES",
+)
+PROFILE_WRITE_ENV_VARS = ("HPE_MCP_READONLY", *PLATFORM_WRITE_ENV_VARS)
 
 
 @dataclass
@@ -187,9 +199,29 @@ def _selected_products(args: argparse.Namespace) -> list[str]:
 
 
 def _product_access(args: argparse.Namespace, selected_products: list[str]) -> str:
+    profile = getattr(args, "access_profile", "custom")
+    value = getattr(args, "product_access", None)
+    if profile == "safe-read-only":
+        if value == "read-write":
+            raise SystemExit(
+                "--product-access read-write conflicts with "
+                "--access-profile safe-read-only"
+            )
+        return "read-only"
+    if profile == "full-read-write":
+        if value == "read-only":
+            raise SystemExit(
+                "--product-access read-only conflicts with "
+                "--access-profile full-read-write"
+            )
+        return "read-write"
+    if profile != "custom":
+        raise SystemExit(
+            "--access-profile must be one of: safe-read-only, custom, full-read-write"
+        )
     if not selected_products:
         return "read-only"
-    value = args.product_access
+    value = value or "read-only"
     if value not in {"read-only", "read-write"}:
         raise SystemExit("--product-access must be one of: read-only, read-write")
     return value
@@ -235,6 +267,26 @@ def _env_assignment_key(line: str) -> str | None:
     return key if key else None
 
 
+def _env_assignment_value(line: str) -> str | None:
+    line = line.strip()
+    if not line or line.startswith("#"):
+        return None
+    if line.startswith("export "):
+        line = line[len("export ") :].strip()
+    _, sep, value = line.partition("=")
+    if not sep:
+        return None
+    try:
+        parsed = shlex.split(value, comments=True, posix=True)
+    except ValueError:
+        return None
+    return parsed[0] if len(parsed) == 1 else None
+
+
+def _normalized_access_profile(value: object) -> str:
+    return value.strip().lower() if isinstance(value, str) else ""
+
+
 def _is_placeholder_value(value: str) -> bool:
     return any(marker in value for marker in PLACEHOLDER_MARKERS)
 
@@ -243,7 +295,12 @@ def _should_replace_env_assignment(line: str, env: dict[str, str]) -> bool:
     key = _env_assignment_key(line)
     if key not in env:
         return False
-    if key in {"HPE_MCP_PRODUCTS", "HPE_MCP_PRODUCT_ACCESS"}:
+    if key in {
+        "HPE_MCP_ACCESS_PROFILE",
+        "HPE_MCP_PRODUCTS",
+        "HPE_MCP_PRODUCT_ACCESS",
+        *PROFILE_WRITE_ENV_VARS,
+    }:
         return True
     return _is_placeholder_value(line) and not _is_placeholder_value(env[key])
 
@@ -378,8 +435,22 @@ def _product_env(
     *,
     assume_yes: bool,
     product_access: str = "read-only",
+    access_profile: str = "custom",
 ) -> dict[str, str]:
-    env: dict[str, str] = {}
+    env: dict[str, str] = {
+        "HPE_MCP_ACCESS_PROFILE": access_profile,
+        "HPE_MCP_PRODUCTS": "",
+    }
+    if access_profile == "safe-read-only":
+        env["HPE_MCP_READONLY"] = "1"
+        env["HPE_MCP_PRODUCT_ACCESS"] = "read-only"
+        env.update({name: "0" for name in PLATFORM_WRITE_ENV_VARS})
+    elif access_profile == "full-read-write":
+        env["HPE_MCP_READONLY"] = "0"
+        env["HPE_MCP_PRODUCT_ACCESS"] = "read-write"
+        env.update({name: "1" for name in PLATFORM_WRITE_ENV_VARS})
+    else:
+        env["HPE_MCP_PRODUCT_ACCESS"] = product_access
     if not selected_products:
         return env
 
@@ -400,18 +471,40 @@ def _product_env(
 
 def _write_env_file(target: Path, env: dict[str, str], *, force: bool) -> Step:
     if not env:
-        return Step(_rel(target), "SKIP", "no optional products selected")
+        return Step(_rel(target), "SKIP", "no runtime environment updates requested")
     if target.exists() and not force:
         lines = target.read_text().splitlines()
         existing = {key for line in lines if (key := _env_assignment_key(line))}
-        update_keys = {"HPE_MCP_PRODUCTS", "HPE_MCP_PRODUCT_ACCESS"}
-        updated_lines = [
-            _shell_line(key, env[key])
-            if (key := _env_assignment_key(line)) in env
-            and (key in update_keys or _should_replace_env_assignment(line, env))
-            else line
-            for line in lines
-        ]
+        existing_profile = next(
+            (
+                _env_assignment_value(line)
+                for line in lines
+                if _env_assignment_key(line) == "HPE_MCP_ACCESS_PROFILE"
+            ),
+            None,
+        )
+        clear_aggregate_gates = (
+            env.get("HPE_MCP_ACCESS_PROFILE") == "custom"
+            and _normalized_access_profile(existing_profile)
+            in {"safe-read-only", "full-read-write"}
+        )
+        update_keys = {
+            "HPE_MCP_ACCESS_PROFILE",
+            "HPE_MCP_PRODUCTS",
+            "HPE_MCP_PRODUCT_ACCESS",
+            *PROFILE_WRITE_ENV_VARS,
+        }
+        updated_lines = []
+        for line in lines:
+            key = _env_assignment_key(line)
+            if clear_aggregate_gates and key in PROFILE_WRITE_ENV_VARS:
+                continue
+            if key in env and (
+                key in update_keys or _should_replace_env_assignment(line, env)
+            ):
+                updated_lines.append(_shell_line(key, env[key]))
+            else:
+                updated_lines.append(line)
         additions = [
             _shell_line(name, value)
             for name, value in env.items()
@@ -423,9 +516,9 @@ def _write_env_file(target: Path, env: dict[str, str], *, force: bool) -> Step:
             updated_lines.extend(additions)
         _write_secret_file(target, "\n".join([*updated_lines, ""]))
         detail = (
-            "merged optional product settings; existing token values preserved"
+            "merged runtime settings; existing token values preserved"
             if additions or updated_lines != lines
-            else "already contains optional product settings"
+            else "already contains requested runtime settings"
         )
         return Step(_rel(target), "OK", detail)
     lines = [
@@ -435,7 +528,7 @@ def _write_env_file(target: Path, env: dict[str, str], *, force: bool) -> Step:
         "",
     ]
     _write_secret_file(target, "\n".join(lines))
-    return Step(_rel(target), "OK", "created optional product environment file")
+    return Step(_rel(target), "OK", "created runtime environment file")
 
 
 def _merge_json_env(target: Path, server_name: str, env: dict[str, str]) -> Step:
@@ -444,9 +537,11 @@ def _merge_json_env(target: Path, server_name: str, env: dict[str, str]) -> Step
     mcp_env = {
         name: env[name]
         for name in (
+            "HPE_MCP_ACCESS_PROFILE",
             "HPE_MCP_ROUTER_MODE",
             "HPE_MCP_PRODUCTS",
             "HPE_MCP_PRODUCT_ACCESS",
+            *PROFILE_WRITE_ENV_VARS,
         )
         if name in env
     }
@@ -464,6 +559,13 @@ def _merge_json_env(target: Path, server_name: str, env: dict[str, str]) -> Step
     server_env = server.setdefault("env", {})
     if not isinstance(server_env, dict):
         return Step(_rel(target), "WARN", f"{server_name} env is not an object")
+    if (
+        mcp_env.get("HPE_MCP_ACCESS_PROFILE") == "custom"
+        and _normalized_access_profile(server_env.get("HPE_MCP_ACCESS_PROFILE"))
+        in {"safe-read-only", "full-read-write"}
+    ):
+        for name in PROFILE_WRITE_ENV_VARS:
+            server_env.pop(name, None)
     server_env.update(mcp_env)
     target.write_text(json.dumps(data, indent=2) + "\n")
     return Step(_rel(target), "OK", "added optional product selector")
@@ -472,7 +574,12 @@ def _merge_json_env(target: Path, server_name: str, env: dict[str, str]) -> Step
 def _catalog_env(env: dict[str, str]) -> dict[str, str]:
     return {
         name: env[name]
-        for name in ("HPE_MCP_PRODUCTS", "HPE_MCP_PRODUCT_ACCESS")
+        for name in (
+            "HPE_MCP_ACCESS_PROFILE",
+            "HPE_MCP_PRODUCTS",
+            "HPE_MCP_PRODUCT_ACCESS",
+            *PROFILE_WRITE_ENV_VARS,
+        )
         if name in env
     }
 
@@ -530,12 +637,21 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--access-profile",
+        choices=("safe-read-only", "custom", "full-read-write"),
+        default="custom",
+        help=(
+            "aggregate write-access profile (default: custom, preserving the "
+            "existing per-platform gates)"
+        ),
+    )
+    parser.add_argument(
         "--product-access",
         choices=("read-only", "read-write"),
-        default="read-only",
+        default=None,
         help=(
-            "optional product access mode for generated local configs "
-            "(default: read-only; use read-write for lab write workflows)"
+            "optional-product access used by the custom profile "
+            "(default: read-only)"
         ),
     )
     parser.add_argument(
@@ -583,6 +699,7 @@ def main() -> int:
         selected_products,
         assume_yes=args.yes,
         product_access=product_access,
+        access_profile=args.access_profile,
     )
     runtime_env = {"HPE_MCP_ROUTER_MODE": args.router_mode, **product_env}
 
@@ -604,8 +721,14 @@ def main() -> int:
             )
         )
 
-    if selected_products or args.router_mode != "minimal":
-        steps.append(_write_env_file(ROOT / ".env", runtime_env, force=args.force))
+    env_path = ROOT / ".env"
+    if (
+        selected_products
+        or args.router_mode != "minimal"
+        or args.access_profile != "custom"
+        or env_path.exists()
+    ):
+        steps.append(_write_env_file(env_path, runtime_env, force=args.force))
 
     if not args.skip_stdio and _ask(
         "Create .mcp.json for stdio MCP clients?", True, assume_yes=args.yes
@@ -662,7 +785,11 @@ def main() -> int:
             _run(
                 ["uv", "run", "python", "scripts/doctor.py"],
                 "doctor",
-                env={"MCP_HOST": args.host, "MCP_PORT": str(args.port)},
+                env={
+                    **runtime_env,
+                    "MCP_HOST": args.host,
+                    "MCP_PORT": str(args.port),
+                },
             )
         )
 
@@ -674,12 +801,13 @@ def main() -> int:
         f"MCP_HOST={args.host} MCP_PORT={args.port} bash scripts/run_http_router.sh"
     )
     print(f"3. Router exposure mode: {args.router_mode}.")
+    print(f"4. Aggregate access profile: {args.access_profile}.")
     if selected_products:
-        print(f"4. Optional products enabled locally: {', '.join(selected_products)}.")
-        print(f"5. Optional product access mode: {product_access}.")
+        print(f"5. Optional products enabled locally: {', '.join(selected_products)}.")
+        print(f"6. Optional product access mode: {product_access}.")
     else:
         print(
-            "4. Optional products stayed disabled; enable them later with "
+            "5. Optional products stayed disabled; enable them later with "
             "--products or --with-products."
         )
 

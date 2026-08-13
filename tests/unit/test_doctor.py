@@ -1,6 +1,48 @@
 from __future__ import annotations
 
+import os
+
 from hpe_networking_mcp.cli import doctor
+
+
+def test_doctor_loads_dotenv_values_with_runtime_comment_semantics(
+    monkeypatch,
+    tmp_path,
+):
+    path = tmp_path / ".env"
+    path.write_text(
+        "HPE_MCP_ACCESS_PROFILE=full-read-write # safety profile\n"
+        "MIST_API_TOKEN=abc#def\n"
+    )
+    monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "__restore_after_test__")
+    monkeypatch.setenv("MIST_API_TOKEN", "__restore_after_test__")
+    monkeypatch.delenv("HPE_MCP_ACCESS_PROFILE", raising=False)
+    monkeypatch.delenv("MIST_API_TOKEN", raising=False)
+
+    doctor._load_local_env(path)
+
+    assert os.environ["HPE_MCP_ACCESS_PROFILE"] == "full-read-write"
+    assert os.environ["MIST_API_TOKEN"] == "abc#def"
+    checks = {check.name: check for check in doctor._runtime_checks()}
+    assert checks["Access profile"].status == "OK"
+
+
+def test_doctor_uses_exported_values_for_dotenv_interpolation(
+    monkeypatch,
+    tmp_path,
+):
+    path = tmp_path / ".env"
+    path.write_text(
+        "MIST_ROOT=https://stale.example\n"
+        "MIST_HOST=${MIST_ROOT}\n"
+    )
+    monkeypatch.setenv("MIST_ROOT", "https://api.mist.com")
+    monkeypatch.setenv("MIST_HOST", "__restore_after_test__")
+    monkeypatch.delenv("MIST_HOST")
+
+    doctor._load_local_env(path)
+
+    assert os.environ["MIST_HOST"] == "https://api.mist.com"
 
 
 def test_doctor_recognizes_uxi_optional_product(monkeypatch):
@@ -31,15 +73,16 @@ def test_doctor_warns_on_uxi_placeholder_credentials(monkeypatch):
     )
 
 
-def test_doctor_warns_on_invalid_product_access(monkeypatch):
+def test_doctor_fails_on_invalid_product_access(monkeypatch):
     monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-wrtie")
     monkeypatch.delenv("HPE_MCP_PRODUCTS", raising=False)
     monkeypatch.delenv("HPE_MCP_TOOLSETS", raising=False)
 
     checks = {check.name: check for check in doctor._runtime_checks()}
 
-    assert checks["Optional product access"].status == "WARN"
-    assert "optional writes fail closed" in checks["Optional product access"].detail
+    assert checks["Optional product access"].status == "FAIL"
+    assert "refuse to start" in checks["Optional product access"].detail
+    assert checks["Access profile"].status == "FAIL"
 
 
 def test_doctor_reports_unset_product_access_as_read_only(monkeypatch):
@@ -51,11 +94,12 @@ def test_doctor_reports_unset_product_access_as_read_only(monkeypatch):
 
     assert checks["Optional product access"].status == "OK"
     assert checks["Optional product access"].detail == (
-        "unset; optional product writes default to read-only"
+        "unset; custom defaults optional-product writes to read-only"
     )
 
 
 def test_doctor_accepts_direct_full_catalog_mode(monkeypatch):
+    monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "full-read-write")
     monkeypatch.setenv("HPE_MCP_ROUTER_MODE", "direct")
     monkeypatch.setenv("HPE_MCP_TOOLSETS", "all")
     monkeypatch.setenv("HPE_MCP_PRODUCTS", "mist")
@@ -65,6 +109,65 @@ def test_doctor_accepts_direct_full_catalog_mode(monkeypatch):
     assert checks["Router mode"].status == "OK"
     assert checks["Router toolsets"].status == "OK"
     assert checks["Optional products"].status == "OK"
+    assert checks["Access profile"].status == "OK"
+
+
+def test_doctor_rejects_contradictory_full_profile(monkeypatch):
+    monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "full-read-write")
+    monkeypatch.setenv("HPE_MCP_READONLY", "1")
+
+    checks = {check.name: check for check in doctor._runtime_checks()}
+
+    assert checks["Access profile"].status == "FAIL"
+    assert "HPE_MCP_READONLY" in checks["Access profile"].detail
+
+
+def test_doctor_rejects_contradictory_stdio_profile():
+    checks = {
+        check.name: check
+        for check in doctor._router_env_checks(
+            {
+                "mcpServers": {
+                    "hpe-networking-mcp": {
+                        "env": {
+                            "HPE_MCP_ROUTER_MODE": "minimal",
+                            "HPE_MCP_TOOLSETS": "central,glp,rag",
+                            "HPE_MCP_ACCESS_PROFILE": "full-read-write",
+                            "HPE_MCP_READONLY": "1",
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    check = checks["Local stdio access profile"]
+    assert check.status == "FAIL"
+    assert "HPE_MCP_READONLY" in check.detail
+
+
+def test_doctor_merges_inherited_access_settings_for_stdio(monkeypatch):
+    monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-write")
+    checks = {
+        check.name: check
+        for check in doctor._router_env_checks(
+            {
+                "mcpServers": {
+                    "hpe-networking-mcp": {
+                        "env": {
+                            "HPE_MCP_ROUTER_MODE": "minimal",
+                            "HPE_MCP_TOOLSETS": "central,glp,rag",
+                            "HPE_MCP_ACCESS_PROFILE": "safe-read-only",
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    check = checks["Local stdio access profile"]
+    assert check.status == "FAIL"
+    assert "HPE_MCP_PRODUCT_ACCESS" in check.detail
 
 
 def test_doctor_source_manifest_matches_ingest_sources():

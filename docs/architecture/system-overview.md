@@ -57,9 +57,10 @@ Use `invoke_read_tool` for normal investigations. Use `invoke_tool` only when th
 </figure>
 
 <div class="docs-callout docs-callout--safe" markdown="1">
-**Fail-safe default:** optional products start read-only. Set
-`HPE_MCP_READONLY=1` to hide and block writes globally, regardless of an
-individual platform's write setting.
+**Access profiles:** `custom` preserves the existing mixed platform gates,
+`safe-read-only` blocks writes globally, and `full-read-write` enables ordinary
+writes on every loaded platform. Dry-run, confirmation, elicitation, and
+dedicated destructive safeguards remain in force.
 </div>
 
 ## Documentation and index flow

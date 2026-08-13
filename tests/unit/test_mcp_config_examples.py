@@ -1,7 +1,9 @@
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CLIENT_CONFIGS = [
@@ -45,6 +47,7 @@ def test_committed_mcp_client_configs_use_low_token_router_profile():
 
         assert env.get("HPE_MCP_ROUTER_MODE") == "minimal"
         assert env.get("HPE_MCP_TOOLSETS") == "central,glp,rag"
+        assert env.get("HPE_MCP_ACCESS_PROFILE") == "custom"
         assert "HPE_MCP_PRODUCTS" not in env
 
 
@@ -111,6 +114,7 @@ def test_claude_launch_includes_low_token_router_profile():
     assert router.get("runtimeArgs") == ["-m", "hpe_networking_mcp.mcp_servers.tool_router"]
     assert router.get("env", {}).get("HPE_MCP_ROUTER_MODE") == "minimal"
     assert router.get("env", {}).get("HPE_MCP_TOOLSETS") == "central,glp,rag"
+    assert router.get("env", {}).get("HPE_MCP_ACCESS_PROFILE") == "custom"
     assert "HPE_MCP_PRODUCTS" not in router.get("env", {})
 
 
@@ -161,9 +165,14 @@ def test_every_committed_and_example_config_uses_valid_router_selections():
     updated -- only a genuinely invalid example fails it.
     """
     from hpe_networking_mcp.mcp_servers import tool_router
+    from hpe_networking_mcp.mcp_servers.shared import (
+        InvalidRuntimeConfigError,
+        validate_access_profile_environment,
+    )
 
     valid_modes = {"minimal", "default", "direct"}
     valid_access = {"read-only", "read-write"}
+    valid_profiles = {"safe-read-only", "custom", "full-read-write"}
     problems = []
 
     configs = [*COMMITTED_CONFIGS, *sorted((REPO_ROOT / "examples").rglob("*.json"))]
@@ -182,5 +191,44 @@ def test_every_committed_and_example_config_uses_valid_router_selections():
             access = env.get("HPE_MCP_PRODUCT_ACCESS")
             if access is not None and access not in valid_access:
                 problems.append(f"{name}: invalid HPE_MCP_PRODUCT_ACCESS {access!r}")
+            profile = env.get("HPE_MCP_ACCESS_PROFILE")
+            if profile is not None and profile not in valid_profiles:
+                problems.append(f"{name}: invalid HPE_MCP_ACCESS_PROFILE {profile!r}")
+            with patch.dict(os.environ, env, clear=True):
+                try:
+                    validate_access_profile_environment()
+                except InvalidRuntimeConfigError as exc:
+                    problems.append(f"{name}: {exc}")
 
     assert problems == []
+
+
+def test_aggregate_stdio_profiles_override_every_legacy_write_gate():
+    expected = {
+        "full.mcp.json": ("safe-read-only", "1", "read-only", "0"),
+        "full-read-write.mcp.json": (
+            "full-read-write",
+            "0",
+            "read-write",
+            "1",
+        ),
+    }
+    platform_vars = (
+        "HPE_MCP_CENTRAL_WRITES",
+        "HPE_MCP_GLP_V2BETA1_WRITES",
+        "HPE_MCP_AOS8_WRITES",
+        "HPE_MCP_EDGECONNECT_WRITES",
+        "HPE_MCP_APSTRA_WRITES",
+        "HPE_MCP_MIST_WRITES",
+        "HPE_MCP_CLEARPASS_WRITES",
+        "HPE_MCP_UXI_WRITES",
+        "HPE_MCP_AXIS_WRITES",
+    )
+
+    for filename, (profile, readonly, product_access, platform_value) in expected.items():
+        path = REPO_ROOT / "examples" / "mcp-clients" / "stdio" / filename
+        env = _env_blocks(path)[0]
+        assert env["HPE_MCP_ACCESS_PROFILE"] == profile
+        assert env["HPE_MCP_READONLY"] == readonly
+        assert env["HPE_MCP_PRODUCT_ACCESS"] == product_access
+        assert all(env[name] == platform_value for name in platform_vars)

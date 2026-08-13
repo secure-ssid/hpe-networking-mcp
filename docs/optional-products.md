@@ -42,9 +42,9 @@ before it touches a real vendor API.
 
 | | Read-only / diagnostic tools | Write / destructive tools |
 |---|---|---|
-| Discovery | Always listed by `find_tool` | Hidden while `HPE_MCP_PRODUCT_ACCESS=read-only` (default) |
+| Discovery | Always listed by `find_tool` | Hidden under `safe-read-only`, or under `custom` while `HPE_MCP_PRODUCT_ACCESS=read-only` |
 | Dispatch | Reads use `invoke_read_tool`; diagnostics use `invoke_tool` | `invoke_tool` returns a `blocked` error until access is opened |
-| To open | Nothing to do | `HPE_MCP_PRODUCT_ACCESS=read-write`, or a single platform's `HPE_MCP_<PLATFORM>_WRITES=1` |
+| To open | Nothing to do | `HPE_MCP_ACCESS_PROFILE=full-read-write`, or `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / one `HPE_MCP_<PLATFORM>_WRITES=1` |
 | Per-call guardrail | Server-side pagination/byte bounds | Also requires `dry_run=False` **and** `confirm=True` in the same call |
 | Blast radius | Bounded reads or non-mutating diagnostics | Real vendor mutation once both gates above are satisfied |
 
@@ -53,9 +53,11 @@ before it touches a real vendor API.
 A platform-specific override (`HPE_MCP_MIST_WRITES=1`,
 `HPE_MCP_UXI_WRITES=1`, `HPE_MCP_AXIS_WRITES=1`, `HPE_MCP_APSTRA_WRITES=1`,
 `HPE_MCP_CLEARPASS_WRITES=1`, `HPE_MCP_AOS8_WRITES=1`,
-`HPE_MCP_EDGECONNECT_WRITES=1`) always takes precedence over
-`HPE_MCP_PRODUCT_ACCESS`, so you can open one lab backend for writes without
-exposing every optional product. Unrecognized values fail closed to read-only.
+`HPE_MCP_EDGECONNECT_WRITES=1`) takes precedence over
+`HPE_MCP_PRODUCT_ACCESS` only under the `custom` profile, so you can open one
+lab backend for writes without exposing every optional product. Under
+`safe-read-only` or `full-read-write`, legacy gates must align with the
+aggregate profile. Invalid or contradictory values refuse startup.
 
 ## Try one safely
 
@@ -534,16 +536,18 @@ want write tools visible and still guarded by `dry_run=False` plus
 `confirm=True`:
 
 ```bash
-python3 scripts/setup_wizard.py --products clearpass,mist --product-access read-write
+python3 scripts/setup_wizard.py --products clearpass,mist --access-profile full-read-write
 ```
 
-Omit `--product-access read-write` if you want generated local configs to keep
-the safer read-only operating posture.
+Use `--access-profile safe-read-only` for a globally read-only generated
+profile, or `--access-profile custom --product-access read-write` for the
+legacy optional-product-only write mode.
 
 For manual shell setup:
 
 ```bash
 export HPE_MCP_PRODUCTS=clearpass,mist
+export HPE_MCP_ACCESS_PROFILE=custom
 export HPE_MCP_PRODUCT_ACCESS=read-only
 export CLEARPASS_BASE_URL=https://clearpass.example.com
 export CLEARPASS_API_TOKEN=...
@@ -552,8 +556,12 @@ export MIST_API_TOKEN=...
 uv run python scripts/ingest_tools.py --products clearpass,mist
 ```
 
-Set `HPE_MCP_PRODUCT_ACCESS=read-write` in the same shell only when you want
-lab write tools indexed and visible.
+For every loaded lab write tool, rerun
+`python3 scripts/setup_wizard.py --products clearpass,mist --access-profile full-read-write`;
+the wizard aligns the aggregate profile and every legacy gate together. Do not
+change only `HPE_MCP_ACCESS_PROFILE` in a shell that still exports custom or
+safe-profile gates. Use `custom` plus `HPE_MCP_PRODUCT_ACCESS=read-write` for
+the legacy optional-product-only mode.
 
 For streamable HTTP, `scripts/run_http_router.sh` safely loads expected local
 `.env` assignments before starting the router, including the product selector,

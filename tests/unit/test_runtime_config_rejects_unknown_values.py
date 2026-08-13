@@ -20,8 +20,10 @@ import hpe_networking_mcp.mcp_servers.rag as rag_module
 import hpe_networking_mcp.mcp_servers.tool_router as router
 from hpe_networking_mcp.mcp_servers.shared import (
     InvalidRuntimeConfigError,
+    access_profile,
     reject_unknown_env_choices,
     resolve_rag_backend,
+    validate_access_profile_environment,
 )
 
 
@@ -74,6 +76,23 @@ class TestResolveRagBackend:
         assert "sqlite" in message
         assert "lancedb" in message
         assert "redis" in message
+
+
+class TestAccessProfileValidation:
+    def test_unset_preserves_custom_compatibility_profile(self, monkeypatch):
+        monkeypatch.delenv("HPE_MCP_ACCESS_PROFILE", raising=False)
+        assert access_profile() == "custom"
+
+    def test_invalid_profile_is_rejected(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "read-mostly")
+        with pytest.raises(InvalidRuntimeConfigError, match="safe-read-only"):
+            access_profile()
+
+    def test_full_profile_conflict_is_rejected_before_startup(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "full-read-write")
+        monkeypatch.setenv("HPE_MCP_READONLY", "1")
+        with pytest.raises(InvalidRuntimeConfigError, match="conflicts"):
+            validate_access_profile_environment()
 
 
 class TestToolRouterBuildBackendsRejectsUnknown:

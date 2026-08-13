@@ -23,6 +23,7 @@ from pathlib import Path
 import pytest
 
 from hpe_networking_mcp.pipeline import drift_taxonomy as taxonomy
+from hpe_networking_mcp.pipeline import project_facts
 from scripts import refresh_rag_sources as refresh
 
 
@@ -554,10 +555,7 @@ class TestStepEnvironment:
             s for s in plan["steps"] if s["kind"] == refresh.STEP_TOOL_INDEX_REBUILD
         )
 
-        assert step["env"] == {
-            "HPE_MCP_PRODUCT_ACCESS": "read-write",
-            "HPE_MCP_GLP_GENERATED_TOOLS": "1",
-        }
+        assert step["env"] == refresh.STRICT_CATALOG_ENV
 
     def test_declared_env_survives_plan_serialization(self, manifest):
         plan = json.loads(
@@ -567,7 +565,10 @@ class TestStepEnvironment:
             s for s in refresh.plan_steps(plan) if s.kind == refresh.STEP_TOOL_INDEX_REBUILD
         )
 
-        assert step.env["HPE_MCP_GLP_GENERATED_TOOLS"] == "1"
+        assert all(
+            step.env[name] == "1"
+            for name in project_facts.GENERATED_TOOL_ENV
+        )
 
     def test_environ_merges_declared_env_over_the_ambient_one(self):
         step = refresh.Step(
@@ -595,6 +596,8 @@ class TestStepEnvironment:
 
     def test_default_runner_passes_the_declared_env_to_the_subprocess(self, monkeypatch):
         captured = {}
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "0")
 
         class _Result:
             returncode = 0
@@ -613,8 +616,13 @@ class TestStepEnvironment:
         )
 
         assert refresh.default_runner(step) == 0
+        assert captured["env"]["HPE_MCP_ACCESS_PROFILE"] == "full-read-write"
+        assert captured["env"]["HPE_MCP_CENTRAL_WRITES"] == "1"
         assert captured["env"]["HPE_MCP_PRODUCT_ACCESS"] == "read-write"
-        assert captured["env"]["HPE_MCP_GLP_GENERATED_TOOLS"] == "1"
+        assert all(
+            captured["env"][name] == "1"
+            for name in project_facts.GENERATED_TOOL_ENV
+        )
         assert "PATH" in captured["env"]
 
 

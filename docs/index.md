@@ -174,9 +174,9 @@ them before dispatch:
 
 <div class="docs-callout docs-callout--safe" markdown="1">
 **Default-safe:** `invoke_read_tool` only dispatches tools annotated READ.
-DIAGNOSTIC tools use `invoke_tool`, while optional product writes stay blocked until
-`HPE_MCP_PRODUCT_ACCESS=read-write` or a narrower
-`HPE_MCP_<PLATFORM>_WRITES=1` override is set.
+DIAGNOSTIC tools use `invoke_tool`, while writes follow
+`HPE_MCP_ACCESS_PROFILE`: `safe-read-only`, compatibility-preserving `custom`,
+or `full-read-write`.
 </div>
 
 <div class="docs-callout docs-callout--warning" markdown="1">
@@ -217,8 +217,8 @@ Available starters:
 | Network design diagrams (Draw.io / Graphviz / NeXt) | none required; optional `HPE_MCP_DIAGRAM_ICON_DIR` |
 
 See the [optional product matrix](optional-products.md) for the full setup
-and safety model. Optional product writes default to blocked; use the global
-`HPE_MCP_PRODUCT_ACCESS=read-write` lab mode or a narrower
+and safety model. Use `HPE_MCP_ACCESS_PROFILE=full-read-write` for every loaded
+platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 `HPE_MCP_<PLATFORM>_WRITES=1` override.
 
 ## Project snapshot

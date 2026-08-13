@@ -269,11 +269,29 @@ instead of leaving a partially created resource.
 
 ## Safety gates
 
+### Aggregate access profiles
+
+`HPE_MCP_ACCESS_PROFILE` provides one end-to-end switch for the router,
+direct-mode registration, standalone backends, stdio, and streamable HTTP:
+
+| Profile | Behavior |
+|---|---|
+| `custom` | Compatibility default; preserves the existing Central, GLP, optional-product, and per-platform gates |
+| `safe-read-only` | Hides writes from router discovery/direct registration and blocks every write/destructive dispatch while leaving reads and diagnostics available |
+| `full-read-write` | Enables ordinary writes for every loaded platform |
+
+Full read/write mode changes availability only. It never bypasses tool-level
+`dry_run`, `confirm`, MCP elicitation, capability annotations, or dedicated
+guards such as `HPE_MCP_AOS8_ROLLBACK_WRITES`. Invalid profile names and
+contradictory settings refuse server startup; use `custom` for intentionally
+mixed platform access.
+
 <div class="docs-callout docs-callout--danger" markdown="1">
 <h3>Global read-only kill switch</h3>
 
-Set `HPE_MCP_READONLY=1` for a server-wide write kill switch, independent
-of every other gate below. Every `write`/`destructive` tool on **every**
+Set `HPE_MCP_READONLY=1` for a server-wide write kill switch under `custom`
+or `safe-read-only` (`full-read-write` rejects that contradictory setting).
+Every `write`/`destructive` tool on **every**
 backend is hidden from `find_tool`, skipped in `direct`-mode registration,
 and refused at dispatch -- before the backend is ever reached:
 
@@ -294,9 +312,10 @@ fully read-only while `HPE_MCP_READONLY` is set.
 <div class="docs-callout docs-callout--warning" markdown="1">
 <h3>Per-platform write gates</h3>
 
-Central defaults to writes **enabled** (`HPE_MCP_CENTRAL_WRITES=0` opts
-out); GLP defaults to writes **disabled** (`HPE_MCP_GLP_V2BETA1_WRITES=1`
-opts in). A blocked GLP write looks like this:
+Under `custom`, Central defaults to writes **enabled**
+(`HPE_MCP_CENTRAL_WRITES=0` opts out), while GLP defaults to writes
+**disabled** (`HPE_MCP_GLP_V2BETA1_WRITES=1` opts in). A blocked GLP write
+looks like this:
 
 ```json
 {
@@ -316,7 +335,8 @@ opts in). A blocked GLP write looks like this:
 }
 ```
 
-Unrecognized manual gate values fail closed as disabled/read-only.
+Unrecognized or contradictory manual gate values fail closed and refuse
+server startup.
 </div>
 
 <div class="docs-callout docs-callout--warning" markdown="1">
@@ -326,8 +346,9 @@ The optional starters (`clearpass`, `mist`, `apstra`, `aos8`,
 `edgeconnect`, `uxi`, `axis`, `design`) share `HPE_MCP_PRODUCT_ACCESS`, which
 defaults to `read-only`. That hides optional write tools from `find_tool` and
 blocks direct dispatch through `invoke_tool`. Set
-`HPE_MCP_PRODUCT_ACCESS=read-write` for lab workflows that need guarded
-writes -- those write tools still default to `dry_run=True`. Use
+`HPE_MCP_ACCESS_PROFILE=full-read-write` to open every loaded platform, or
+keep `custom` and set `HPE_MCP_PRODUCT_ACCESS=read-write` for optional-product
+lab workflows. Those write tools still default to `dry_run=True`. Use
 `HPE_MCP_<PLATFORM>_WRITES=1` (e.g. `HPE_MCP_AXIS_WRITES=1`) for a
 narrower per-platform override instead of opening every optional write at
 once. See [optional-products.md](optional-products.md) for the full matrix.

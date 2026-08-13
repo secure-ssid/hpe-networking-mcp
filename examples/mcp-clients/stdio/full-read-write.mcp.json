@@ -1,0 +1,32 @@
+{
+  "_comment": "Full read/write stdio profile: loads every core and optional backend and enables all ordinary platform write gates. Write tools still retain dry_run defaults, confirm/elicitation requirements, capability annotations, and dedicated safeguards such as the separate AOS8 rollback gate. Use only in a trusted environment. Replace /path/to/hpe-networking-mcp with your local clone path.",
+  "mcpServers": {
+    "hpe-networking-mcp": {
+      "command": "/path/to/hpe-networking-mcp/.venv/bin/python3",
+      "args": [
+        "/path/to/hpe-networking-mcp/src/hpe_networking_mcp/mcp_servers/tool_router.py"
+      ],
+      "cwd": "/path/to/hpe-networking-mcp",
+      "env": {
+        "PYTHONPATH": "/path/to/hpe-networking-mcp/src",
+        "CREDS_PATH": "/path/to/hpe-networking-mcp/config/credentials.yaml",
+        "HPE_MCP_ACCESS_PROFILE": "full-read-write",
+        "HPE_MCP_READONLY": "0",
+        "HPE_MCP_ROUTER_MODE": "minimal",
+        "HPE_MCP_TOOLSETS": "all",
+        "HPE_MCP_PRODUCTS": "clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design",
+        "HPE_MCP_PRODUCT_ACCESS": "read-write",
+        "HPE_MCP_CENTRAL_WRITES": "1",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "1",
+        "HPE_MCP_AOS8_WRITES": "1",
+        "HPE_MCP_EDGECONNECT_WRITES": "1",
+        "HPE_MCP_APSTRA_WRITES": "1",
+        "HPE_MCP_MIST_WRITES": "1",
+        "HPE_MCP_CLEARPASS_WRITES": "1",
+        "HPE_MCP_UXI_WRITES": "1",
+        "HPE_MCP_AXIS_WRITES": "1",
+        "HPE_MCP_GLP_GENERATED_TOOLS": "1"
+      }
+    }
+  }
+}

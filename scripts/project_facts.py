@@ -16,11 +16,10 @@ Usage:
         # fast: skip the ~15s router-mode probe
     uv run python scripts/project_facts.py --print              # dump derived facts
 
-The complete tool catalog is only reproducible with every guarded write
-registered and the generated GLP surface enabled, so this script pins
-``HPE_MCP_PRODUCT_ACCESS=read-write`` and ``HPE_MCP_GLP_GENERATED_TOOLS=1``
-before importing any backend, and clears ``HPE_MCP_PRODUCTS`` so a developer
-``.env`` cannot change the answer.
+The complete tool catalog is only reproducible with every guarded write and
+generated operation registered, so this script applies the canonical
+``project_facts.CATALOG_ENV`` before importing any backend and clears
+``HPE_MCP_PRODUCTS`` so a developer ``.env`` cannot change the answer.
 """
 
 from __future__ import annotations
@@ -37,14 +36,13 @@ if str(ROOT) not in sys.path:
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
-# Pinned before importing the backends: hpe_networking_mcp.mcp_servers.shared
-# runs load_dotenv() at import time, and glp.py reads the generated-tools flag
-# while registering, so a late override would silently change the counts.
-os.environ["HPE_MCP_PRODUCT_ACCESS"] = "read-write"
-os.environ["HPE_MCP_GLP_GENERATED_TOOLS"] = "1"
-os.environ.pop("HPE_MCP_PRODUCTS", None)
-
 from hpe_networking_mcp.pipeline import project_facts  # noqa: E402
+
+# Pinned before importing the backends: hpe_networking_mcp.mcp_servers.shared
+# runs load_dotenv() at import time, and generated backends read their feature
+# flags while registering, so a late override would silently change counts.
+os.environ.update(project_facts.CATALOG_ENV)
+os.environ.pop("HPE_MCP_PRODUCTS", None)
 
 
 def _build_parser() -> argparse.ArgumentParser:

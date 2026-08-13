@@ -1,11 +1,12 @@
 """Unit tests for the per-platform write-gate helpers in hpe_networking_mcp.mcp_servers.shared.
 
 Covers:
-- Central defaults enabled (preserves the historical "no gate" behavior).
+- The custom compatibility profile preserves Central's historical default.
 - GLP defaults disabled (preserves the historical fail-closed behavior).
+- Safe-read-only blocks every platform; full-read-write opens every platform.
 - The optional-product backends fall back to HPE_MCP_PRODUCT_ACCESS
   by default (unchanged legacy behavior) but can be overridden per-platform.
-- Ambiguous/ambivalent override values fail closed.
+- Invalid and contradictory startup values are rejected clearly.
 - Unknown platform names raise instead of silently allowing/denying.
 """
 
@@ -16,18 +17,27 @@ import importlib
 import pytest
 
 from hpe_networking_mcp.mcp_servers.shared import (
+    ACCESS_PROFILES,
     PLATFORM_WRITE_GATE_NAMES,
+    InvalidRuntimeConfigError,
+    access_profile,
     build_write_execution_contract,
     enforce_platform_write,
+    global_readonly_enabled,
+    global_write_blocked,
     platform_write_blocked,
+    platform_write_enable_instruction,
     platform_write_gate_state,
     platform_writes_allowed,
+    validate_access_profile_environment,
 )
 
 
 class TestDefaults:
     def test_central_defaults_enabled(self, monkeypatch):
+        monkeypatch.delenv("HPE_MCP_ACCESS_PROFILE", raising=False)
         monkeypatch.delenv("HPE_MCP_CENTRAL_WRITES", raising=False)
+        assert access_profile() == "custom"
         assert platform_writes_allowed("central") is True
 
     def test_glp_defaults_disabled(self, monkeypatch):
@@ -48,6 +58,42 @@ class TestDefaults:
 
         monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-write")
         assert platform_writes_allowed(platform) is True
+
+    def test_safe_read_only_blocks_every_platform(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
+        monkeypatch.delenv("HPE_MCP_READONLY", raising=False)
+        monkeypatch.delenv("HPE_MCP_PRODUCT_ACCESS", raising=False)
+        for platform in PLATFORM_WRITE_GATE_NAMES:
+            gate = platform_write_gate_state(platform)
+            assert gate["enabled"] is False
+            assert gate["source"] == "HPE_MCP_ACCESS_PROFILE"
+        assert global_readonly_enabled() is True
+
+    def test_safe_profile_blocked_guidance_coordinates_legacy_gates(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
+
+        global_error = global_write_blocked("write_tool")["error"]
+        platform_hint = platform_write_enable_instruction(
+            "mist",
+            "HPE_MCP_MIST_WRITES",
+        )
+
+        assert "scripts/setup_wizard.py --access-profile full-read-write" in global_error
+        assert "HPE_MCP_READONLY=0" in global_error
+        assert "HPE_MCP_MIST_WRITES=1" in platform_hint
+        assert "HPE_MCP_READONLY=0" in platform_hint
+
+    def test_full_read_write_opens_every_platform(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "full-read-write")
+        monkeypatch.delenv("HPE_MCP_READONLY", raising=False)
+        monkeypatch.delenv("HPE_MCP_PRODUCT_ACCESS", raising=False)
+        for platform in PLATFORM_WRITE_GATE_NAMES:
+            monkeypatch.delenv(
+                platform_write_gate_state(platform)["env_var"], raising=False
+            )
+        assert validate_access_profile_environment() == "full-read-write"
+        assert all(platform_writes_allowed(name) for name in PLATFORM_WRITE_GATE_NAMES)
+        assert global_readonly_enabled() is False
 
 
 class TestOverrides:
@@ -97,6 +143,42 @@ class TestOverrides:
 
 
 class TestValidation:
+    def test_access_profile_values_are_stable(self):
+        assert ACCESS_PROFILES == {
+            "safe-read-only",
+            "custom",
+            "full-read-write",
+        }
+
+    def test_unknown_access_profile_raises(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "full-ish")
+        with pytest.raises(InvalidRuntimeConfigError, match="HPE_MCP_ACCESS_PROFILE"):
+            access_profile()
+
+    def test_safe_profile_rejects_write_enable_overrides(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
+        with pytest.raises(InvalidRuntimeConfigError, match="conflicts"):
+            validate_access_profile_environment()
+
+    def test_full_profile_rejects_read_only_overrides(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "full-read-write")
+        monkeypatch.setenv("HPE_MCP_GLP_V2BETA1_WRITES", "0")
+        with pytest.raises(InvalidRuntimeConfigError, match="conflicts"):
+            validate_access_profile_environment()
+
+    def test_custom_profile_accepts_mixed_platform_overrides(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "custom")
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "0")
+        monkeypatch.setenv("HPE_MCP_GLP_V2BETA1_WRITES", "1")
+        assert validate_access_profile_environment() == "custom"
+
+    def test_invalid_boolean_gate_is_rejected_at_startup(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "custom")
+        monkeypatch.setenv("HPE_MCP_MIST_WRITES", "sometimes")
+        with pytest.raises(InvalidRuntimeConfigError, match="HPE_MCP_MIST_WRITES"):
+            validate_access_profile_environment()
+
     def test_unknown_platform_raises(self):
         with pytest.raises(ValueError, match="unknown platform"):
             platform_writes_allowed("does-not-exist")

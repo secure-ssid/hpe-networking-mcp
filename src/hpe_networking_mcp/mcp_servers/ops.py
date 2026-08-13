@@ -17,9 +17,6 @@ from mcp.server.mcpserver import Context, MCPServer
 from pydantic import BaseModel
 
 from hpe_networking_mcp.mcp_servers.shared import (
-    _AOS_S_BASE,
-    _CX_TROUBLESHOOTING_BASE,
-    _GATEWAY_BASE,
     DESTRUCTIVE,
     DIAGNOSTIC,
     IDEMPOTENT_WRITE,
@@ -45,12 +42,19 @@ async def _arequest_troubleshooting(
     segment: str,
     serial_number: str,
     action: str,
+    *,
+    diagnostic: bool = False,
     **kwargs: Any,
 ) -> tuple[Any, str]:
     candidates = troubleshooting_endpoint_candidates(segment, serial_number, action)
     client = get_client()
     for index, endpoint in enumerate(candidates):
-        response = await client._arequest(method, endpoint, **kwargs)
+        response = await client._arequest(
+            method,
+            endpoint,
+            diagnostic=diagnostic,
+            **kwargs,
+        )
         if response.status_code != 404 or index == len(candidates) - 1:
             return response, endpoint
     raise RuntimeError("no troubleshooting endpoint candidates provided")
@@ -80,6 +84,7 @@ async def _cx_show_commands(serial_number: str, commands: list[str]) -> dict[str
         troubleshooting_endpoint_candidates("cx", serial_number, "showCommands"),
         {"commands": commands},
         errors,
+        diagnostic=True,
     )
 
 
@@ -112,6 +117,7 @@ async def cx_ping(
         troubleshooting_endpoint_candidates("cx", serial_number, "ping"),
         payload,
         errors,
+        diagnostic=True,
     )
 
 
@@ -136,6 +142,7 @@ async def cx_traceroute(
         troubleshooting_endpoint_candidates("cx", serial_number, "traceroute"),
         payload,
         errors,
+        diagnostic=True,
     )
 
 
@@ -168,6 +175,7 @@ async def aos_s_ping(serial_number: str, destination: str) -> dict[str, Any]:
         troubleshooting_endpoint_candidates("aos-s", serial_number, "ping"),
         {"destination": destination},
         errors,
+        diagnostic=True,
     )
 
 
@@ -181,6 +189,7 @@ async def aos_s_traceroute(serial_number: str, destination: str) -> dict[str, An
         troubleshooting_endpoint_candidates("aos-s", serial_number, "traceroute"),
         {"destination": destination},
         errors,
+        diagnostic=True,
     )
 
 
@@ -199,6 +208,7 @@ async def aos_s_show(serial_number: str, commands: list[str]) -> dict[str, Any]:
         troubleshooting_endpoint_candidates("aos-s", serial_number, "showCommands"),
         {"commands": commands},
         errors,
+        diagnostic=True,
     )
 
 
@@ -217,6 +227,7 @@ async def gateway_show(serial_number: str, commands: list[str]) -> dict[str, Any
         troubleshooting_endpoint_candidates("gateways", serial_number, "showCommands"),
         {"commands": commands},
         errors,
+        diagnostic=True,
     )
 
 
@@ -230,6 +241,7 @@ async def aos_s_arp(serial_number: str) -> dict[str, Any]:
         troubleshooting_endpoint_candidates("aos-s", serial_number, "getArpTable"),
         {},
         errors,
+        diagnostic=True,
     )
 
 
@@ -352,6 +364,7 @@ async def cable_test(
         troubleshooting_endpoint_candidates(dtype, serial_number, "cableTest"),
         {"ports": ports},
         errors,
+        diagnostic=True,
     )
 
 
@@ -629,6 +642,7 @@ async def run_speed_test(serial_number: str) -> dict[str, Any]:
         troubleshooting_endpoint_candidates("aps", serial_number, "speedtest"),
         {},
         errors,
+        diagnostic=True,
     )
 
 
@@ -806,6 +820,7 @@ async def gateway_iperf(
         troubleshooting_endpoint_candidates("gateways", serial_number, "iperf"),
         payload,
         errors,
+        diagnostic=True,
     )
 
 
@@ -838,6 +853,7 @@ async def gateway_ping_sweep(
         troubleshooting_endpoint_candidates("gateways", serial_number, "pingSweep"),
         payload,
         errors,
+        diagnostic=True,
     )
 
 
@@ -923,6 +939,7 @@ async def ap_ping(
         troubleshooting_endpoint_candidates("aps", serial_number, "ping"),
         payload,
         errors,
+        diagnostic=True,
     )
 
 
@@ -945,6 +962,7 @@ async def ap_traceroute(
         troubleshooting_endpoint_candidates("aps", serial_number, "traceroute"),
         payload,
         errors,
+        diagnostic=True,
     )
 
 
@@ -965,6 +983,7 @@ async def ap_tcp(
         troubleshooting_endpoint_candidates("aps", serial_number, "tcp"),
         payload,
         errors,
+        diagnostic=True,
     )
 
 
@@ -984,6 +1003,7 @@ async def ap_nslookup(
         troubleshooting_endpoint_candidates("aps", serial_number, "nslookup"),
         payload,
         errors,
+        diagnostic=True,
     )
 
 
@@ -999,6 +1019,7 @@ async def ap_http(serial_number: str, url: str, timeout: int | None = None) -> d
         troubleshooting_endpoint_candidates("aps", serial_number, "http"),
         payload,
         errors,
+        diagnostic=True,
     )
 
 
@@ -1014,6 +1035,7 @@ async def ap_https(serial_number: str, url: str, timeout: int | None = None) -> 
         troubleshooting_endpoint_candidates("aps", serial_number, "https"),
         payload,
         errors,
+        diagnostic=True,
     )
 
 
@@ -1038,6 +1060,7 @@ async def ap_show(serial_number: str, commands: list[str]) -> dict[str, Any]:
         troubleshooting_endpoint_candidates("aps", serial_number, "showCommands"),
         {"commands": commands},
         errors,
+        diagnostic=True,
     )
 
 
@@ -1086,7 +1109,12 @@ def list_show_commands(
 
 async def _locate_device(segment: str, serial_number: str) -> dict[str, Any]:
     response, endpoint = await _arequest_troubleshooting(
-        "POST", segment, serial_number, "locate", json={}
+        "POST",
+        segment,
+        serial_number,
+        "locate",
+        diagnostic=True,
+        json={},
     )
     if response.status_code not in (200, 201, 202):
         return {"error": compact_http_error(response, endpoint), "endpoint_used": endpoint}

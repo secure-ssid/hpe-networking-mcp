@@ -41,8 +41,7 @@ relevant ingestion/eval commands instead of relying only on `--skip-rag`.
 For a complete release/index change, use:
 
 ```bash
-HPE_MCP_PRODUCT_ACCESS=read-write HPE_MCP_GLP_GENERATED_TOOLS=1 \
-  uv run python scripts/ingest_tools.py --products all
+uv run python scripts/ingest_tools.py --complete-catalog
 uv run python scripts/package_indexes.py --write-local-manifests
 uv run python scripts/project_facts.py --write
 uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6703
@@ -50,9 +49,9 @@ uv run python scripts/check_openapi_drift.py
 uv run python scripts/check_mist_openapi_drift.py
 ```
 
-`HPE_MCP_GLP_GENERATED_TOOLS=1` is required: strict validation compares the
-tool index against the complete catalog, which includes the generated GLP
-surface. `--min-tools 6703` is the platform API compatibility floor (the
+`--complete-catalog` pins every write gate and generated-tool flag before
+loading the backends, so stale shell or `.env` values cannot silently shrink
+the index. `--min-tools 6703` is the platform API compatibility floor (the
 6,703 vendor-facing platform API tools), not the complete registered backend
 total of 6,715 — validation passes at or above the floor; see
 [`docs/tool-catalog.md`](docs/tool-catalog.md) for both totals.

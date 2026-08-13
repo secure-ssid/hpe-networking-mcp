@@ -138,7 +138,7 @@ Legacy `source_account` / `target_account` names are still accepted for the cros
    - generic read-only GET tools must use `bound_collection_response()`.
 5. Docstring: what it does, key args, pagination behavior, and any gotchas.
 6. Update the tool count in the module docstring.
-7. Rebuild/check the router catalog with `HPE_MCP_PRODUCT_ACCESS=read-write HPE_MCP_GLP_GENERATED_TOOLS=1 uv run python scripts/ingest_tools.py --products all`, reconcile manifests/facts (`scripts/package_indexes.py --write-local-manifests`, `scripts/project_facts.py --write`), then run `uv run python scripts/validate_release.py`.
+7. Rebuild/check the router catalog with `uv run python scripts/ingest_tools.py --complete-catalog`, reconcile manifests/facts (`scripts/package_indexes.py --write-local-manifests`, `scripts/project_facts.py --write`), then run `uv run python scripts/validate_release.py`.
 
 **Before editing:** use `Grep` to find the line, then `Read` only that slice.
 

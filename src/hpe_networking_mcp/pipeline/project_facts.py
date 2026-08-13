@@ -60,11 +60,41 @@ SPECS_TABLES = ("endpoints", "schemas", "fields", "advisories", "lifecycle_event
 #: "platform backend catalog" total, matching docs/capability-gap-matrix.md.
 CREDENTIAL_FREE_LOCAL_SERVERS = ("design-core", "interop-core")
 
+FULL_WRITE_GATE_ENV = {
+    "HPE_MCP_READONLY": "0",
+    "HPE_MCP_CENTRAL_WRITES": "1",
+    "HPE_MCP_GLP_V2BETA1_WRITES": "1",
+    "HPE_MCP_AOS8_WRITES": "1",
+    "HPE_MCP_EDGECONNECT_WRITES": "1",
+    "HPE_MCP_APSTRA_WRITES": "1",
+    "HPE_MCP_MIST_WRITES": "1",
+    "HPE_MCP_CLEARPASS_WRITES": "1",
+    "HPE_MCP_UXI_WRITES": "1",
+    "HPE_MCP_AXIS_WRITES": "1",
+}
+
+GENERATED_TOOL_PLATFORMS = (
+    "CENTRAL",
+    "GLP",
+    "AOS8",
+    "EDGECONNECT",
+    "APSTRA",
+    "MIST",
+    "CLEARPASS",
+    "UXI",
+)
+GENERATED_TOOL_ENV = {
+    f"HPE_MCP_{platform}_GENERATED_TOOLS": "1"
+    for platform in GENERATED_TOOL_PLATFORMS
+}
+
 #: Environment the tool catalog must be collected under so the count is
-#: reproducible: every guarded write registered, generated GLP surface on.
+#: reproducible: every guarded write and generated operation registered.
 CATALOG_ENV = {
+    "HPE_MCP_ACCESS_PROFILE": "full-read-write",
     "HPE_MCP_PRODUCT_ACCESS": "read-write",
-    "HPE_MCP_GLP_GENERATED_TOOLS": "1",
+    **FULL_WRITE_GATE_ENV,
+    **GENERATED_TOOL_ENV,
 }
 
 #: Environment router-mode tool counts are measured under: every toolset
@@ -72,17 +102,13 @@ CATALOG_ENV = {
 #: toolset-only value, see ``_VALID_PRODUCTS`` in tool_router.py), every
 #: guarded write/generated surface open. This is the same "complete write
 #: catalog" scenario CATALOG_ENV pins for ``tool_facts()``, plus the
-#: additional GLP v2beta1 write gate: without it, direct mode hides
-#: GLP write tools from its client-visible list even though they are still
-#: *registered* backend identities, which would make
-#: ``direct_all - registered_total`` an inconsistent, gate-dependent number
-#: instead of the fixed "+7 router-native tools" identity documented
-#: throughout the tool catalog.
+#: aligned legacy write gates. Pinning those gates prevents an exported
+#: per-platform override or repository ``.env`` from contradicting the
+#: aggregate profile, keeping ``direct_all - registered_total`` at the fixed
+#: "+7 router-native tools" identity documented throughout the tool catalog.
 ROUTER_MODE_ENV = {
+    **CATALOG_ENV,
     "HPE_MCP_TOOLSETS": "all",
-    "HPE_MCP_PRODUCT_ACCESS": "read-write",
-    "HPE_MCP_GLP_GENERATED_TOOLS": "1",
-    "HPE_MCP_GLP_V2BETA1_WRITES": "1",
 }
 
 #: The documented, recommended default client profile (``.mcp.json.example``,
@@ -96,6 +122,7 @@ ROUTER_MODE_ENV = {
 #: gated on some other backend could make them diverge, and the actually
 #: documented client profile is this one, not ``HPE_MCP_TOOLSETS=all``.
 RECOMMENDED_PROFILE_ENV = {
+    "HPE_MCP_ACCESS_PROFILE": "custom",
     "HPE_MCP_TOOLSETS": "central,glp,rag",
 }
 

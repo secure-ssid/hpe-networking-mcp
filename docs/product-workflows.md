@@ -305,5 +305,6 @@ vendor specifications and live target behavior remain authoritative.
 3. Keep outputs compact and paginated.
 4. Require explicit write/destructive annotations and confirmation for writes.
 5. Keep product tokens in `.env`; do not duplicate them into MCP client configs.
-6. Honor `HPE_MCP_PRODUCT_ACCESS=read-only` by hiding/blocking optional
+6. Honor `safe-read-only` globally and the `custom`
+   `HPE_MCP_PRODUCT_ACCESS=read-only` default by hiding/blocking optional
    product write tools.

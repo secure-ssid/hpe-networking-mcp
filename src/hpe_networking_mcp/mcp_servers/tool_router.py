@@ -61,11 +61,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from hpe_networking_mcp.mcp_servers.prompts import register_router_prompts
 from hpe_networking_mcp.mcp_servers.shared import (
+    ACCESS_PROFILE_ENV_VAR,
     DESTRUCTIVE,
     DIAGNOSTIC,
     MAX_LIST_LIMIT,
     PLATFORM_WRITE_GATE_NAMES,
     READ_ONLY,
+    access_profile,
     bound_collection_response,
     build_write_execution_contract,
     global_readonly_enabled,
@@ -76,6 +78,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
     platform_writes_allowed,
     reject_unknown_env_choices,
     resolve_rag_backend,
+    validate_access_profile_environment,
 )
 from hpe_networking_mcp.pipeline import artifact_contracts as _artifact_contracts
 from hpe_networking_mcp.pipeline import compliance as _compliance
@@ -244,12 +247,12 @@ def _write_is_enabled(server: str | None, capability: str) -> bool:
 
 
 def _readonly_blocks(tool: Any) -> bool:
-    """True when the global HPE_MCP_READONLY kill switch hides/blocks ``tool``.
+    """True when an aggregate read-only gate hides/blocks ``tool``.
 
     Blocks only ``write``/``destructive`` capabilities on any backend; ``read``
-    and ``diagnostic`` tools are always allowed. Layers on top of (and is
-    independent of) the per-platform write gates: a platform whose writes are
-    enabled is still fully read-only while HPE_MCP_READONLY is set.
+    and ``diagnostic`` tools are always allowed. A platform whose own gate is
+    enabled is still read-only under ``safe-read-only`` or
+    ``HPE_MCP_READONLY=1``.
     """
     return global_readonly_enabled() and _tool_capability(tool) in {
         "write",
@@ -304,6 +307,12 @@ def _contract_next_action(
             if supports_dry_run
             else "retry invoke_tool after explicit user approval"
         )
+        if access_profile() == "safe-read-only":
+            return (
+                f"Set {ACCESS_PROFILE_ENV_VAR}=full-read-write, or set "
+                f"{ACCESS_PROFILE_ENV_VAR}=custom and {gate['env_var']}=1, "
+                f"then {retry}."
+            )
         return f"Set {gate['env_var']}=1, then {retry}."
 
     if isinstance(result, dict):
@@ -575,6 +584,7 @@ def _load_all_backends() -> None:
     and, because staging happens first, it raises without leaving any partial
     state behind.
     """
+    validate_access_profile_environment()
     if _tool_index:
         return
 
@@ -645,8 +655,8 @@ def _register_direct_backend_tools(target: MCPServer | None = None) -> list[str]
             continue
         if not _write_is_enabled(_tool_backend_names.get(name), _tool_capability(tool)):
             continue
-        # HPE_MCP_READONLY hides write/destructive tools from the direct-mode
-        # tool list entirely, exactly as it does from find_tool discovery.
+        # Aggregate read-only gates hide write/destructive tools from the
+        # direct-mode list exactly as they do from find_tool discovery.
         if _readonly_blocks(tool):
             continue
         tools[name] = tool
@@ -1397,9 +1407,9 @@ async def _dispatch_tool(
     server = _tool_backend_names.get(name)
     schema = tool.parameters if isinstance(tool.parameters, dict) else {}
     capability = _tool_capability(tool)
-    # HPE_MCP_READONLY overrides every per-platform gate: refuse a
-    # write/destructive dispatch before charging the rate gate, and say the
-    # kill switch is why. read/diagnostic tools are unaffected.
+    # Aggregate read-only gates override every per-platform gate. Refuse a
+    # write/destructive dispatch before charging the rate gate; read and
+    # diagnostic tools are unaffected.
     if capability in {"write", "destructive"} and global_readonly_enabled():
         return global_write_blocked(name)
     contract = _execution_contract(tool, server, schema, arguments=args)

@@ -8,7 +8,10 @@ import pytest
 from mcp.server.mcpserver import MCPServer
 
 import hpe_networking_mcp.mcp_servers.tool_router as router
-from hpe_networking_mcp.mcp_servers.shared import IDEMPOTENT_WRITE
+from hpe_networking_mcp.mcp_servers.shared import (
+    IDEMPOTENT_WRITE,
+    InvalidRuntimeConfigError,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -149,7 +152,7 @@ def test_load_all_backends_exposes_optional_writes_when_read_write(monkeypatch):
     [
         ("read-only", "1", True),
         ("read-write", "0", False),
-        ("read-write", "invalid", False),
+        ("read-write", "invalid", None),
     ],
 )
 def test_load_all_backends_honors_platform_override_precedence(
@@ -176,8 +179,12 @@ def test_load_all_backends_honors_platform_override_precedence(
         lambda path: SimpleNamespace(mcp=backend),
     )
 
-    router._load_all_backends()
+    if expected is None:
+        with pytest.raises(InvalidRuntimeConfigError, match="HPE_MCP_AXIS_WRITES"):
+            router._load_all_backends()
+        return
 
+    router._load_all_backends()
     assert ("axis_update_widget" in router._tool_index) is expected
 
 

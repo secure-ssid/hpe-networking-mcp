@@ -10,10 +10,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import re
 import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Optional
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -21,6 +23,53 @@ from hpe_networking_mcp.pipeline.clients.http_retry import parse_retry_after as 
 from hpe_networking_mcp.pipeline.clients.token_manager import TokenManager
 
 logger = logging.getLogger(__name__)
+
+_DIAGNOSTIC_TROUBLESHOOTING_ACTIONS = frozenset(
+    {
+        "aaa",
+        "cableTest",
+        "getArpTable",
+        "http",
+        "https",
+        "iperf",
+        "locate",
+        "nslookup",
+        "ping",
+        "pingSweep",
+        "showCommands",
+        "speedtest",
+        "tcp",
+        "traceroute",
+    }
+)
+_TROUBLESHOOTING_DEVICE_SEGMENTS = frozenset({"aps", "cx", "aos-s", "gateways"})
+_TROUBLESHOOTING_SERIAL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
+
+
+def _is_allowed_diagnostic_request(method: str, endpoint: str) -> bool:
+    if method.upper() != "POST":
+        return False
+    try:
+        parsed = urlsplit(endpoint)
+    except ValueError:
+        return False
+    if (
+        parsed.scheme
+        or parsed.netloc
+        or parsed.query
+        or parsed.fragment
+        or not parsed.path.startswith("/")
+    ):
+        return False
+    parts = parsed.path.strip("/").split("/")
+    return (
+        len(parts) == 5
+        and parts[0] == "network-troubleshooting"
+        and parts[1] in {"v1", "v1alpha1"}
+        and parts[2] in _TROUBLESHOOTING_DEVICE_SEGMENTS
+        and bool(_TROUBLESHOOTING_SERIAL_RE.fullmatch(parts[3]))
+        and parts[4] in _DIAGNOSTIC_TROUBLESHOOTING_ACTIONS
+    )
 
 
 def _post_error(response: httpx.Response) -> Exception:
@@ -223,13 +272,34 @@ class CentralClient:
         self.last_deprecation: Optional[DeprecationStatus] = None
         self._refresh_auth_header()
 
-    def _enforce_write_gate(self, method: str) -> None:
+    def _enforce_write_gate(
+        self,
+        method: str,
+        endpoint: str,
+        *,
+        diagnostic: bool = False,
+    ) -> None:
         """Raise ``PermissionError`` if this transport's platform write gate
         is closed. The message names the platform and *its own* env var, so a
-        blocked GLP write never tells the operator to flip a Central flag."""
+        blocked GLP write never tells the operator to flip a Central flag.
+
+        ``diagnostic=True`` is reserved for trusted, explicitly annotated
+        non-mutating POST operations and is honored only for the allowlisted
+        Central troubleshooting action paths above.
+        """
         if method.upper() in ("GET", "HEAD", "OPTIONS"):
             return
-        from hpe_networking_mcp.mcp_servers.shared import platform_write_gate_state, platform_writes_allowed
+        if (
+            self.write_platform == "central"
+            and diagnostic
+            and _is_allowed_diagnostic_request(method, endpoint)
+        ):
+            return
+        from hpe_networking_mcp.mcp_servers.shared import (
+            platform_write_enable_instruction,
+            platform_write_gate_state,
+            platform_writes_allowed,
+        )
 
         platform = self.write_platform
         if platform_writes_allowed(platform):
@@ -239,7 +309,8 @@ class CentralClient:
         raise PermissionError(
             f"{display} write requests are disabled "
             f"({gate['env_var']} resolved to {gate['state']!r} via {gate['source']}). "
-            f"Set {gate['env_var']}=1 to enable {display} writes. "
+            f"{platform_write_enable_instruction(platform, gate['env_var'])} "
+            f"to enable {display} writes. "
             "This gate is independent of the other platforms' write gates."
         )
 
@@ -308,6 +379,8 @@ class CentralClient:
         method: str,
         endpoint: str,
         max_retries: int = 3,
+        *,
+        diagnostic: bool = False,
         **kwargs: Any,
     ) -> httpx.Response:
         """Issue an HTTP request, honoring Retry-After on 429 and backing
@@ -325,7 +398,7 @@ class CentralClient:
         Central gateway rejects before the handler runs) and on 5xx the
         caller opts in with ``retry_5xx=True``.
         """
-        self._enforce_write_gate(method)
+        self._enforce_write_gate(method, endpoint, diagnostic=diagnostic)
 
         # Caller opt-in to retry 5xx on non-GET verbs. GET/HEAD retry 5xx
         # unconditionally because they're safe.
@@ -410,10 +483,12 @@ class CentralClient:
         method: str,
         endpoint: str,
         max_retries: int = 3,
+        *,
+        diagnostic: bool = False,
         **kwargs: Any,
     ) -> httpx.Response:
         """Async counterpart to ``_request`` for MCP tools running on an event loop."""
-        self._enforce_write_gate(method)
+        self._enforce_write_gate(method, endpoint, diagnostic=diagnostic)
 
         retry_5xx = kwargs.pop("retry_5xx", None)
         if retry_5xx is None:

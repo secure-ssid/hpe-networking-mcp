@@ -47,7 +47,10 @@ def test_aaa_uses_async_troubleshooting_helper(monkeypatch, kwargs, expected_end
     calls = []
     client = object()
 
-    async def fake_atroubleshoot_async(received_client, endpoint, payload, errors):
+    async def fake_atroubleshoot_async(
+        received_client, endpoint, payload, errors, *, diagnostic=False
+    ):
+        assert diagnostic is True
         calls.append((received_client, endpoint, payload, errors))
         return {"status": "COMPLETED", "errors": errors}
 

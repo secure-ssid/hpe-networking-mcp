@@ -247,8 +247,7 @@ def _artifact_manifest(version: str) -> dict[str, object]:
         "restore": "tar -xzf hpe-networking-mcp-rag-index-<version>.tar.gz",
         "rebuild": (
             "uv run python ingestion/ingest_docs.py && "
-            "HPE_MCP_PRODUCT_ACCESS=read-write HPE_MCP_GLP_GENERATED_TOOLS=1 "
-            "uv run python scripts/ingest_tools.py --products all"
+            "uv run python scripts/ingest_tools.py --complete-catalog"
         ),
     }
 

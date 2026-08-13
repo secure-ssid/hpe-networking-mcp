@@ -9,8 +9,35 @@
         "hpe_networking_mcp.mcp_servers.tool_router"
       ],
       "env": {
+        "HPE_MCP_ACCESS_PROFILE": "custom",
         "HPE_MCP_ROUTER_MODE": "minimal",
         "HPE_MCP_TOOLSETS": "central,glp,rag"
+      }
+    },
+    {
+      "name": "hpe-networking-mcp MCP server (full read/write)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "hpe_networking_mcp.mcp_servers.tool_router"
+      ],
+      "env": {
+        "HPE_MCP_ACCESS_PROFILE": "full-read-write",
+        "HPE_MCP_READONLY": "0",
+        "HPE_MCP_ROUTER_MODE": "minimal",
+        "HPE_MCP_TOOLSETS": "all",
+        "HPE_MCP_PRODUCTS": "clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design",
+        "HPE_MCP_PRODUCT_ACCESS": "read-write",
+        "HPE_MCP_CENTRAL_WRITES": "1",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "1",
+        "HPE_MCP_AOS8_WRITES": "1",
+        "HPE_MCP_EDGECONNECT_WRITES": "1",
+        "HPE_MCP_APSTRA_WRITES": "1",
+        "HPE_MCP_MIST_WRITES": "1",
+        "HPE_MCP_CLEARPASS_WRITES": "1",
+        "HPE_MCP_UXI_WRITES": "1",
+        "HPE_MCP_AXIS_WRITES": "1",
+        "HPE_MCP_GLP_GENERATED_TOOLS": "1"
       }
     },
     {

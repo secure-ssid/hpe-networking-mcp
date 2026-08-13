@@ -169,10 +169,11 @@ JSON.
   phase names a script that is not in `extra_scripts`.
 * **Declared step environment.** A step's required environment is declared
   next to its command, not inherited from whatever the shell exported: the
-  tool-catalog rebuild carries `HPE_MCP_PRODUCT_ACCESS=read-write` and
-  `HPE_MCP_GLP_GENERATED_TOOLS=1`, without which the index is built from a
-  strictly smaller selection and `validate_release.py --strict-tool-index`
-  correctly reports it stale against the registered catalog.
+  tool-catalog rebuild carries the canonical complete-catalog environment,
+  including every aligned write gate and generated-tool flag. Without those
+  pins the index can be built from a strictly smaller selection and
+  `validate_release.py --strict-tool-index` correctly reports it stale
+  against the registered catalog.
 * **Downstream chain derived last.** Whether the rebuild/gate chain is planned
   is decided after *all* mutating steps are known -- including
   source-triggered structured steps. A scraperless source such as

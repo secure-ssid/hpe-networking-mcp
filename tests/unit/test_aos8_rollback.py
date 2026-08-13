@@ -12,7 +12,12 @@ from hpe_networking_mcp.pipeline.aos8_rollback import (
     reverse_dependency_order,
     rollback_writes_enabled,
 )
-from hpe_networking_mcp.pipeline.aos8_target_adapters import AdapterError, CandidateAction, Operation, WriteGateError
+from hpe_networking_mcp.pipeline.aos8_target_adapters import (
+    AdapterError,
+    CandidateAction,
+    Operation,
+    WriteGateError,
+)
 
 
 def _delete_op(name: str) -> Operation:
@@ -365,6 +370,12 @@ def test_execute_rollback_plan_resumes_multi_operation_step_after_partial_succes
 
 
 def test_rollback_writes_enabled_defaults_to_disabled(monkeypatch):
+    monkeypatch.delenv(ROLLBACK_WRITE_GATE_ENV_VAR, raising=False)
+    assert rollback_writes_enabled() is False
+
+
+def test_full_access_profile_does_not_bypass_rollback_gate(monkeypatch):
+    monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "full-read-write")
     monkeypatch.delenv(ROLLBACK_WRITE_GATE_ENV_VAR, raising=False)
     assert rollback_writes_enabled() is False
 

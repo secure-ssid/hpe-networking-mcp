@@ -7,13 +7,16 @@ ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 if [[ -f "${ROOT}/.env" ]]; then
   while IFS= read -r assignment; do
     export "${assignment}"
-  done < <(python3 - "${ROOT}/.env" <<'PY'
+  done < <(uv run --project "${ROOT}" python - "${ROOT}/.env" <<'PY'
+import os
 import re
-import shlex
 import sys
+
+from dotenv import load_dotenv
 
 env_key = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 allowed_keys = {
+    "HPE_MCP_ACCESS_PROFILE",
     "HPE_MCP_PRODUCTS",
     "HPE_MCP_PRODUCT_ACCESS",
     "HPE_MCP_ALLOW_LOCAL_PRODUCT_URLS",
@@ -39,6 +42,7 @@ allowed_keys = {
     "HPE_MCP_CLEARPASS_GENERATED_TOOLS",
     "HPE_MCP_MIST_GENERATED_TOOLS",
     "HPE_MCP_UXI_GENERATED_TOOLS",
+    "HPE_MCP_EDGECONNECT_GENERATED_TOOLS",
     "HPE_MCP_AOS8_ROLLBACK_WRITES",
     "HPE_MCP_AOS8_MIGRATION_STATE_DIR",
     "HPE_MCP_GLP_V2BETA1_WRITES",
@@ -82,31 +86,43 @@ allowed_keys = {
     "AXIS_API_TOKEN",
     "GLP_GENERATED_REGION",
 }
-for raw_line in open(sys.argv[1]):
-    line = raw_line.strip()
-    if not line or line.startswith("#"):
-        continue
-    try:
-        parts = shlex.split(line, comments=False, posix=True)
-    except ValueError:
-        continue
-    if parts and parts[0] == "export":
-        parts = parts[1:]
-    if len(parts) != 1 or "=" not in parts[0]:
-        continue
-    key, value = parts[0].split("=", 1)
-    if key in allowed_keys and env_key.match(key):
+inherited_keys = set(os.environ)
+load_dotenv(sys.argv[1], override=False)
+for key in sorted(allowed_keys):
+    value = os.environ.get(key)
+    if (
+        value is not None
+        and "\n" not in value
+        and "\r" not in value
+        and env_key.match(key)
+        and key not in inherited_keys
+    ):
         print(f"{key}={value}")
 PY
   )
 fi
+
+normalize_access_profile() {
+  printf '%s' "$1" \
+    | LC_ALL=C tr '[:upper:]' '[:lower:]' \
+    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
 
 export MCP_TRANSPORT="${MCP_TRANSPORT:-streamable-http}"
 export MCP_HOST="${MCP_HOST:-127.0.0.1}"
 export MCP_PORT="${MCP_PORT:-8010}"
 export HPE_MCP_ROUTER_MODE="${HPE_MCP_ROUTER_MODE:-minimal}"
 export HPE_MCP_TOOLSETS="${HPE_MCP_TOOLSETS:-central,glp,rag}"
-export HPE_MCP_PRODUCT_ACCESS="${HPE_MCP_PRODUCT_ACCESS:-read-only}"
+HPE_MCP_ACCESS_PROFILE="$(
+  normalize_access_profile "${HPE_MCP_ACCESS_PROFILE:-custom}"
+)"
+export HPE_MCP_ACCESS_PROFILE="${HPE_MCP_ACCESS_PROFILE:-custom}"
+if [[ "${HPE_MCP_ACCESS_PROFILE}" == "full-read-write" ]]; then
+  default_product_access="read-write"
+else
+  default_product_access="read-only"
+fi
+export HPE_MCP_PRODUCT_ACCESS="${HPE_MCP_PRODUCT_ACCESS:-${default_product_access}}"
 
 case "${MCP_HOST}" in
   127.0.0.1|localhost|::1) ;;
@@ -176,7 +192,8 @@ Starting hpe-networking-mcp HTTP router
   mode:     ${HPE_MCP_ROUTER_MODE}
   toolsets: ${HPE_MCP_TOOLSETS}
   products: ${HPE_MCP_PRODUCTS:-none}
-  access:   ${HPE_MCP_PRODUCT_ACCESS}
+  profile:  ${HPE_MCP_ACCESS_PROFILE}
+  optional: ${HPE_MCP_PRODUCT_ACCESS}
   bearer:   ${bearer_status}
   metrics:  ${HPE_MCP_METRICS:-0} (http snapshot: ${HPE_MCP_METRICS_HTTP:-0})
   audit:    ${HPE_MCP_AUDIT_LOG:-0}

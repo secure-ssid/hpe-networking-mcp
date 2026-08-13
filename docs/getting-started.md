@@ -217,7 +217,8 @@ Starting hpe-networking-mcp HTTP router
   mode:     minimal
   toolsets: central,glp,rag
   products: none
-  access:   read-only
+  profile:  custom
+  optional: read-only
   bearer:   disabled (set MCP_HTTP_BEARER_TOKEN to require a shared secret)
   metrics:  0 (http snapshot: 0)
   audit:    0
@@ -397,18 +398,20 @@ The safe default hides optional write tools. Build all 6,715 backend tools only
 for an intentional lab read/write profile:
 
 ```bash
-HPE_MCP_PRODUCT_ACCESS=read-write HPE_MCP_GLP_GENERATED_TOOLS=1 uv run python scripts/ingest_tools.py --products all
+uv run python scripts/ingest_tools.py --complete-catalog
 ```
 
 Or let the wizard enable only the products you want:
 
 ```bash
-python3 scripts/setup_wizard.py --products clearpass,mist --product-access read-write
+python3 scripts/setup_wizard.py --products clearpass,mist --access-profile full-read-write
 ```
 
-Optional products default to read-only. Explicit read/write mode is lab-friendly:
-write tools are exposed, but they dry-run by default and require `confirm=True`
-to execute.
+`custom` preserves the existing Central, GLP, optional-product, and
+per-platform gates. `safe-read-only` blocks every write. `full-read-write`
+enables ordinary write tools on every loaded platform, but they still dry-run
+by default and retain `confirm=True`, elicitation, and dedicated destructive
+safeguards.
 
 ## 6. Make your first successful call
 
@@ -523,6 +526,7 @@ index with 4,106 endpoints, 8,890 schemas, 50,675 fields,
 Optional product backends are disabled by default.
 
 ```env
+HPE_MCP_ACCESS_PROFILE=custom
 HPE_MCP_PRODUCTS=clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design
 HPE_MCP_PRODUCT_ACCESS=read-only
 ```
@@ -551,8 +555,11 @@ python3 scripts/setup_wizard.py --products clearpass
 
 </div>
 
-Set `HPE_MCP_PRODUCT_ACCESS=read-write` only for trusted lab writes, or
-enable a single platform with `HPE_MCP_<PLATFORM>_WRITES=1`.
+For trusted write sessions, rerun the wizard with
+`--access-profile full-read-write` so the aggregate profile and legacy gates
+stay aligned. For mixed access, keep `custom` and use
+`HPE_MCP_PRODUCT_ACCESS=read-write` or a single
+`HPE_MCP_<PLATFORM>_WRITES=1` override.
 
 Mist device diagnostic result collection (`mist_collect_diagnostic_results`)
 requires the `websockets>=14.0` dependency installed by `uv sync` and connects
@@ -583,9 +590,12 @@ router enforces them at dispatch time, not just in documentation:
 
 - Use `invoke_read_tool` for read-only dispatch. Diagnostic tools use
   `invoke_tool` because they are not annotated read-only.
-- GLP writes are disabled unless `HPE_MCP_GLP_V2BETA1_WRITES=1`.
-- Central and optional writes can be independently disabled/enabled with the
-  per-platform `HPE_MCP_<PLATFORM>_WRITES` variables.
+- `HPE_MCP_ACCESS_PROFILE` accepts `safe-read-only`, `custom`, or
+  `full-read-write`; contradictory legacy gate values refuse startup.
+- Under `custom`, GLP writes are disabled unless
+  `HPE_MCP_GLP_V2BETA1_WRITES=1`; `full-read-write` enables them.
+- Under `custom`, Central and optional writes can be independently
+  disabled/enabled with the per-platform `HPE_MCP_<PLATFORM>_WRITES` variables.
 - Token caches are stored in `~/.cache/hpe-networking-mcp/` by default with `0600` permissions.
 
 </div>

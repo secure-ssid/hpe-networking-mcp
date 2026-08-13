@@ -32,6 +32,22 @@ _DEFAULT_MIN_TOOLS = 204
 _BOUNDED_PREVIEW_LIMIT = 10
 
 
+def _canonical_catalog_env() -> dict[str, str]:
+    src = str(ROOT / "src")
+    if src not in sys.path:
+        sys.path.insert(0, src)
+    from hpe_networking_mcp.pipeline import project_facts
+
+    return dict(project_facts.CATALOG_ENV)
+
+
+_FULL_CATALOG_ENV = _canonical_catalog_env()
+_STANDARD_CATALOG_ENV = {
+    **_FULL_CATALOG_ENV,
+    "HPE_MCP_GLP_GENERATED_TOOLS": "0",
+}
+
+
 def _positive_int(value: str) -> int:
     try:
         parsed = int(value)
@@ -54,8 +70,7 @@ def _run(command: list[str], label: str) -> None:
 def _strict_env() -> dict[str, str]:
     """Environment that pins the reproducible complete-catalog selection."""
     env = os.environ.copy()
-    env["HPE_MCP_PRODUCT_ACCESS"] = "read-write"
-    env["HPE_MCP_GLP_GENERATED_TOOLS"] = "1"
+    env.update(_FULL_CATALOG_ENV)
     env.pop("HPE_MCP_PRODUCTS", None)
     return env
 
@@ -71,8 +86,8 @@ def _registered_tool_identities(products: str | None) -> set[str]:
     """
     if products and products.strip().lower() == "all":
         env = os.environ.copy()
-        env["HPE_MCP_PRODUCT_ACCESS"] = "read-write"
-        env["HPE_MCP_GLP_GENERATED_TOOLS"] = "1"
+        env.update(_FULL_CATALOG_ENV)
+        env.pop("HPE_MCP_PRODUCTS", None)
         completed = subprocess.run(
             [
                 sys.executable,
@@ -101,9 +116,11 @@ def _registered_tool_identities(products: str | None) -> set[str]:
     sys.path.insert(0, str(ROOT / "src"))
     from scripts import ingest_tools
 
-    previous_access = os.environ.get("HPE_MCP_PRODUCT_ACCESS")
+    previous_catalog_env = {
+        name: os.environ.get(name) for name in _STANDARD_CATALOG_ENV
+    }
     previous_products = os.environ.get("HPE_MCP_PRODUCTS")
-    os.environ["HPE_MCP_PRODUCT_ACCESS"] = "read-write"
+    os.environ.update(_STANDARD_CATALOG_ENV)
     # products=None must mean "core servers only". _server_specs() falls back to
     # $HPE_MCP_PRODUCTS when products is None, and importing the backends
     # runs hpe_networking_mcp.mcp_servers.shared's load_dotenv() — so a developer .env enabling
@@ -114,10 +131,11 @@ def _registered_tool_identities(products: str | None) -> set[str]:
     try:
         pairs = ingest_tools._collect(products)
     finally:
-        if previous_access is None:
-            os.environ.pop("HPE_MCP_PRODUCT_ACCESS", None)
-        else:
-            os.environ["HPE_MCP_PRODUCT_ACCESS"] = previous_access
+        for name, previous in previous_catalog_env.items():
+            if previous is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = previous
         if previous_products is None:
             os.environ.pop("HPE_MCP_PRODUCTS", None)
         else:
@@ -190,8 +208,7 @@ def _validate_tool_index_fresh(indexed: set[str], registered: set[str]) -> None:
         )
     raise SystemExit(
         "Tool index is stale: " + "; ".join(details) + ". "
-        "Rebuild with `HPE_MCP_PRODUCT_ACCESS=read-write "
-        "uv run python scripts/ingest_tools.py --products all`."
+        "Rebuild with `uv run python scripts/ingest_tools.py --complete-catalog`."
     )
 
 

@@ -91,7 +91,7 @@ uv run python ingestion/scrape_security_lifecycle.py
 uv run python scripts/check_openapi_drift.py
 uv run python scripts/check_mist_openapi_drift.py
 uv run python ingestion/ingest_docs.py
-HPE_MCP_PRODUCT_ACCESS=read-write HPE_MCP_GLP_GENERATED_TOOLS=1 uv run python scripts/ingest_tools.py --products all
+uv run python scripts/ingest_tools.py --complete-catalog
 ```
 
 Package them:
