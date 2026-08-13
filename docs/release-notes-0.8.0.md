@@ -53,8 +53,11 @@ identities.
   skills/runbook execution model.
 - Adds `interop-core` with Central-to-Mist and Mist-to-Central WLAN/site
   translation plus bounded vendor-neutral trend normalization.
-- Keeps write-capable dispatch explicitly destructive and optional-product
-  writes fail closed until enabled.
+- Adds `HPE_MCP_ACCESS_PROFILE` with `safe-read-only`, compatibility-preserving
+  `custom`, and `full-read-write` modes across router, direct, stdio, HTTP, and
+  standalone backend execution.
+- Full read/write mode keeps write-capable dispatch explicitly destructive and
+  preserves dry-run, confirmation, elicitation, and dedicated rollback guards.
 
 ### GLP Reporting and Service Catalog
 

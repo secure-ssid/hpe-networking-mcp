@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Mapping
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 
 from dotenv import load_dotenv
 from mcp.types import ToolAnnotations
@@ -143,12 +143,36 @@ def redact_sensitive(value: Any) -> Any:
 
 _READ_ONLY_ACCESS_VALUES = {"read-only", "readonly", "read_only", "ro"}
 _READ_WRITE_ACCESS_VALUES = {"read-write", "readwrite", "read_write", "rw"}
+ACCESS_PROFILE_ENV_VAR = "HPE_MCP_ACCESS_PROFILE"
+ACCESS_PROFILES = frozenset({"safe-read-only", "custom", "full-read-write"})
+
+
+def access_profile() -> str:
+    """Return the validated aggregate write-access profile.
+
+    ``custom`` is the compatibility default and preserves the existing
+    per-platform gate behavior. The two explicit aggregate profiles override
+    those defaults without bypassing tool-level dry-run or confirmation gates.
+    """
+    value = os.getenv(ACCESS_PROFILE_ENV_VAR, "").strip().lower()
+    if not value:
+        return "custom"
+    if value not in ACCESS_PROFILES:
+        raise InvalidRuntimeConfigError(
+            f"{ACCESS_PROFILE_ENV_VAR}={value!r}; expected one of "
+            f"{sorted(ACCESS_PROFILES)!r}."
+        )
+    return value
 
 
 def optional_product_access_mode() -> str:
+    profile = access_profile()
+    if profile == "safe-read-only":
+        return "read-only"
+
     raw = os.getenv("HPE_MCP_PRODUCT_ACCESS")
     if raw is None:
-        return "read-only"
+        return "read-write" if profile == "full-read-write" else "read-only"
     value = raw.strip().lower()
     if value in _READ_WRITE_ACCESS_VALUES:
         return "read-write"
@@ -161,12 +185,33 @@ def optional_product_writes_allowed() -> bool:
     return optional_product_access_mode() == "read-write"
 
 
+def _safe_profile_transition_instruction(env_var: str | None = None) -> str:
+    selective_gate = (
+        f"{env_var}=1"
+        if env_var is not None
+        else "the relevant HPE_MCP_<PLATFORM>_WRITES gate to 1"
+    )
+    return (
+        "Switch the complete coordinated configuration to full-read-write "
+        "(for wizard-managed configs, rerun "
+        "`python3 scripts/setup_wizard.py --access-profile full-read-write`), "
+        "or use custom with HPE_MCP_READONLY=0 and "
+        f"{selective_gate}"
+    )
+
+
 def optional_product_write_blocked(tool_name: str) -> dict[str, Any]:
+    if access_profile() == "safe-read-only":
+        enable_instruction = _safe_profile_transition_instruction()
+    else:
+        enable_instruction = (
+            "Set HPE_MCP_PRODUCT_ACCESS=read-write under custom, or switch the "
+            "complete coordinated configuration to full-read-write"
+        )
     return {
         "error": (
-            f"Tool '{tool_name}' is disabled because HPE_MCP_PRODUCT_ACCESS=read-only "
-            "or invalid. "
-            "Set HPE_MCP_PRODUCT_ACCESS=read-write for lab write workflows."
+            f"Tool '{tool_name}' is disabled because optional-product writes are "
+            f"read-only or invalid. {enable_instruction}."
         ),
         "tool": tool_name,
         "status": "blocked",
@@ -182,25 +227,31 @@ def env_flag(name: str) -> bool:
 
 
 def global_readonly_enabled() -> bool:
-    """Server-wide write kill switch (``HPE_MCP_READONLY``).
+    """Return whether the aggregate or emergency read-only gate is active.
 
-    Independent of, and composed with, the per-product
-    ``HPE_MCP_PRODUCT_ACCESS`` gate and the per-platform write gates: when
-    set it blocks every ``write``/``destructive`` tool on every backend (core
-    or optional), while leaving ``read`` and ``diagnostic`` tools untouched.
-    Off (writes allowed, subject to the per-platform gates) unless explicitly
-    enabled -- for demo/dashboard deployments that must never reach a write.
+    ``safe-read-only`` and ``HPE_MCP_READONLY=1`` both block every
+    ``write``/``destructive`` tool while leaving read and diagnostic tools
+    available. The environment kill switch remains authoritative even if a
+    contradictory full-read-write profile reaches this low-level check before
+    startup validation rejects it.
     """
-    return env_flag("HPE_MCP_READONLY")
+    return access_profile() == "safe-read-only" or env_flag("HPE_MCP_READONLY")
 
 
 def global_write_blocked(tool_name: str) -> dict[str, Any]:
-    """Blocked-write response for a tool refused by ``HPE_MCP_READONLY``."""
+    """Build the blocked response for an aggregate read-only gate."""
+    if access_profile() == "safe-read-only":
+        reason = (
+            f"{ACCESS_PROFILE_ENV_VAR}=safe-read-only. "
+            f"{_safe_profile_transition_instruction()} to allow guarded write tools."
+        )
+    else:
+        reason = (
+            "HPE_MCP_READONLY is set. Unset HPE_MCP_READONLY to allow "
+            "write/destructive tools."
+        )
     return {
-        "error": (
-            f"Tool '{tool_name}' is disabled because HPE_MCP_READONLY is set. "
-            "Unset HPE_MCP_READONLY to allow write/destructive tools."
-        ),
+        "error": f"Tool '{tool_name}' is disabled because {reason}",
         "tool": tool_name,
         "status": "blocked",
     }
@@ -210,8 +261,8 @@ def global_write_blocked(tool_name: str) -> dict[str, Any]:
 # Per-platform write gates
 # ---------------------------------------------------------------------------
 #
-# Central and GLP are the two primary managed products and keep their
-# existing, independently-audited gates as the *default* behavior:
+# Under the compatibility-preserving ``custom`` profile, Central and GLP keep
+# their existing, independently-audited gates as the default behavior:
 #   - Central (ops/config tools): writes have always been enabled with no
 #     gate. That default is preserved; HPE_MCP_CENTRAL_WRITES=0 is a new,
 #     opt-*out* safety valve for anyone who wants a read-only Central MCP
@@ -279,12 +330,55 @@ def _platform_gate(platform: str) -> PlatformWriteGate:
 def platform_write_gate_state(platform: str) -> dict[str, Any]:
     """Resolve a platform write gate, including override precedence.
 
-    Explicit platform values win over defaults and the shared optional-product
-    fallback. Invalid explicit values are reported as ``invalid`` and fail
-    closed.
+    The aggregate safe/full profiles take precedence. ``custom`` preserves the
+    existing platform override/default/shared-fallback behavior. Contradictory
+    explicit values fail closed here and are rejected by
+    :func:`validate_access_profile_environment` during server startup.
     """
     gate = _platform_gate(platform)
+    profile = access_profile()
     raw = os.environ.get(gate.env_var)
+
+    if profile == "safe-read-only":
+        return {
+            "env_var": gate.env_var,
+            "state": "disabled",
+            "enabled": False,
+            "source": ACCESS_PROFILE_ENV_VAR,
+        }
+
+    if profile == "full-read-write":
+        if gate.default_enabled is None:
+            shared_raw = os.environ.get("HPE_MCP_PRODUCT_ACCESS")
+            if shared_raw is not None:
+                shared_value = shared_raw.strip().lower()
+                if shared_value not in _READ_WRITE_ACCESS_VALUES:
+                    return {
+                        "env_var": gate.env_var,
+                        "state": (
+                            "disabled"
+                            if shared_value in _READ_ONLY_ACCESS_VALUES
+                            else "invalid"
+                        ),
+                        "enabled": False,
+                        "source": "HPE_MCP_PRODUCT_ACCESS",
+                    }
+        if raw is not None:
+            value = raw.strip().lower()
+            if value not in _TRUTHY_ENV_VALUES:
+                return {
+                    "env_var": gate.env_var,
+                    "state": "disabled" if value in _FALSY_ENV_VALUES else "invalid",
+                    "enabled": False,
+                    "source": "platform_override",
+                }
+        return {
+            "env_var": gate.env_var,
+            "state": "enabled",
+            "enabled": True,
+            "source": ACCESS_PROFILE_ENV_VAR,
+        }
+
     if raw is not None:
         value = raw.strip().lower()
         if value in _TRUTHY_ENV_VALUES:
@@ -343,6 +437,12 @@ def platform_writes_allowed(platform: str) -> bool:
     return bool(platform_write_gate_state(platform)["enabled"])
 
 
+def platform_write_enable_instruction(platform: str, env_var: str) -> str:
+    if access_profile() == "safe-read-only":
+        return _safe_profile_transition_instruction(env_var)
+    return f"Set {env_var}=1"
+
+
 def build_write_execution_contract(
     platform: str,
     capability: str,
@@ -359,7 +459,8 @@ def build_write_execution_contract(
     if next_action is None:
         if not gate["enabled"]:
             next_action = (
-                f"Set {gate['env_var']}=1, then retry only after explicit user approval."
+                f"{platform_write_enable_instruction(platform, gate['env_var'])}, "
+                "then retry only after explicit user approval."
             )
         elif supports_dry_run:
             next_action = "Call invoke_tool with dry_run=true to preview the change."
@@ -402,16 +503,17 @@ def platform_write_blocked(
 ) -> dict[str, Any]:
     """Build the standard blocked-write response for ``tool_name`` on ``platform``."""
     gate = _platform_gate(platform)
+    enable_instruction = platform_write_enable_instruction(platform, gate.env_var)
     shared_hint = (
         " The shared fallback also blocks writes when "
         "HPE_MCP_PRODUCT_ACCESS=read-only or invalid."
-        if gate.default_enabled is None
+        if gate.default_enabled is None and access_profile() == "custom"
         else ""
     )
     return {
         "error": (
             f"Tool '{tool_name}' is disabled because {platform} writes are not enabled. "
-            f"Set {gate.env_var}=1 to allow {platform} write workflows."
+            f"{enable_instruction} to allow {platform} write workflows."
             f"{shared_hint}"
         ),
         "tool": tool_name,
@@ -507,10 +609,9 @@ def _env_bool(name: str, default: bool) -> bool:
 
 class InvalidRuntimeConfigError(RuntimeError):
     """Raised when a HPE_MCP_* runtime-selection env var names an
-    unrecognized, non-empty value (HPE_MCP_TOOLSETS, HPE_MCP_PRODUCTS,
-    HPE_MCP_RAG_BACKEND). Carries the offending env var name plus the
-    requested-vs-valid values in the message so an operator can fix the
-    config without reading source."""
+    unrecognized or contradictory value. Carries the offending env var name
+    plus enough context for an operator to fix the config without reading
+    source."""
 
 
 def reject_unknown_env_choices(
@@ -539,6 +640,73 @@ def reject_unknown_env_choices(
             f"{env_var} requested unrecognized value(s) {unknown!r} "
             f"(requested={requested!r}); valid values are {sorted(valid)!r}."
         )
+
+
+def validate_access_profile_environment() -> str:
+    """Validate aggregate and legacy write-access settings as one contract."""
+    profile = access_profile()
+    invalid: list[str] = []
+    conflicts: list[str] = []
+
+    product_raw = os.environ.get("HPE_MCP_PRODUCT_ACCESS")
+    product_mode: str | None = None
+    if product_raw is not None:
+        value = product_raw.strip().lower()
+        if value in _READ_ONLY_ACCESS_VALUES:
+            product_mode = "read-only"
+        elif value in _READ_WRITE_ACCESS_VALUES:
+            product_mode = "read-write"
+        else:
+            invalid.append(f"HPE_MCP_PRODUCT_ACCESS={product_raw!r}")
+
+    readonly_raw = os.environ.get("HPE_MCP_READONLY")
+    readonly_enabled = False
+    if readonly_raw is not None:
+        value = readonly_raw.strip().lower()
+        if value in _TRUTHY_ENV_VALUES:
+            readonly_enabled = True
+        elif value not in _FALSY_ENV_VALUES:
+            invalid.append(f"HPE_MCP_READONLY={readonly_raw!r}")
+
+    platform_values: dict[str, bool] = {}
+    for gate in _PLATFORM_WRITE_GATES.values():
+        raw = os.environ.get(gate.env_var)
+        if raw is None:
+            continue
+        value = raw.strip().lower()
+        if value in _TRUTHY_ENV_VALUES:
+            platform_values[gate.env_var] = True
+        elif value in _FALSY_ENV_VALUES:
+            platform_values[gate.env_var] = False
+        else:
+            invalid.append(f"{gate.env_var}={raw!r}")
+
+    if invalid:
+        raise InvalidRuntimeConfigError(
+            "Invalid write-access setting(s): "
+            + ", ".join(sorted(invalid))
+            + ". Boolean gates accept 1/0, true/false, yes/no, or on/off; "
+            "HPE_MCP_PRODUCT_ACCESS accepts read-only or read-write."
+        )
+
+    if profile == "safe-read-only":
+        if product_mode == "read-write":
+            conflicts.append("HPE_MCP_PRODUCT_ACCESS=read-write")
+        conflicts.extend(name for name, enabled in platform_values.items() if enabled)
+    elif profile == "full-read-write":
+        if readonly_enabled:
+            conflicts.append("HPE_MCP_READONLY=1")
+        if product_mode == "read-only":
+            conflicts.append("HPE_MCP_PRODUCT_ACCESS=read-only")
+        conflicts.extend(name for name, enabled in platform_values.items() if not enabled)
+
+    if conflicts:
+        raise InvalidRuntimeConfigError(
+            f"{ACCESS_PROFILE_ENV_VAR}={profile!r} conflicts with "
+            f"{sorted(conflicts)!r}. Use {ACCESS_PROFILE_ENV_VAR}=custom for "
+            "mixed per-platform settings, or remove the contradictory values."
+        )
+    return profile
 
 
 _VALID_RAG_BACKENDS = frozenset({"lancedb", "redis"})
@@ -1035,17 +1203,18 @@ def tool_write_capability(tool: Any) -> str:
 
 
 def install_platform_write_gate(mcp_instance: Any) -> bool:
-    """Enforce this server's platform write gate on every tool call.
+    """Enforce aggregate and platform write gates on every backend tool call.
 
     Wraps ``mcp_instance._tool_manager.call_tool`` so any tool whose
     annotations classify it as ``write``/``destructive`` is refused *before*
-    the tool body runs whenever either (a) the global ``HPE_MCP_READONLY``
-    kill switch is set -- returning :func:`global_write_blocked` -- or (b) the
-    server's platform gate is disabled -- returning
+    the tool body runs whenever either (a) an aggregate read-only gate is
+    active -- returning :func:`global_write_blocked` -- or (b) the server's
+    platform gate is disabled -- returning
     :func:`platform_write_blocked`. Read-only and diagnostic tools are never
-    affected, and a server whose name maps to no gated platform (e.g.
-    ``rag-core`` or the router ``hpe-networking-mcp``) is left completely
-    untouched (the router enforces both gates itself before dispatch).
+    affected. Aggregate read-only mode also protects standalone servers that
+    have no platform gate. The router itself remains untouched because it
+    enforces both gates after resolving the backend tool; wrapping its generic
+    destructive dispatcher would also block diagnostic calls.
 
     Idempotent: installing twice replaces the wrapper rather than stacking it,
     and composes safely with :func:`hpe_networking_mcp.mcp_servers._middleware.install_middleware`
@@ -1053,10 +1222,14 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
 
     Returns:
         ``True`` if a gate was installed (or refreshed), ``False`` if this
-        server has no gated platform.
+        server needs no standalone gate.
     """
-    platform = platform_for_server_name(getattr(mcp_instance, "name", None))
-    if platform is None:
+    validate_access_profile_environment()
+    server_name = str(getattr(mcp_instance, "name", "")).strip().lower()
+    platform = platform_for_server_name(server_name)
+    if server_name == "hpe-networking-mcp":
+        return False
+    if platform is None and not global_readonly_enabled():
         return False
 
     manager = mcp_instance._tool_manager
@@ -1068,17 +1241,21 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
         tool = manager.get_tool(name)
         if tool is not None:
             capability = tool_write_capability(tool)
+            platform_blocked = (
+                platform is not None and not platform_writes_allowed(platform)
+            )
             if capability in ("write", "destructive") and (
-                global_readonly_enabled() or not platform_writes_allowed(platform)
+                global_readonly_enabled() or platform_blocked
             ):
-                # HPE_MCP_READONLY overrides an otherwise-open platform gate
-                # and reports itself as the reason; the per-platform gate is
-                # preserved for every other case.
-                blocked = (
-                    global_write_blocked(name)
-                    if global_readonly_enabled()
-                    else platform_write_blocked(platform, name, capability=capability)
-                )
+                if global_readonly_enabled():
+                    blocked = global_write_blocked(name)
+                else:
+                    assert platform is not None
+                    blocked = platform_write_blocked(
+                        platform,
+                        name,
+                        capability=capability,
+                    )
                 if convert_result:
                     try:
                         return tool.fn_metadata.convert_result(blocked)
@@ -1123,6 +1300,7 @@ def run_server(mcp_instance, default_port: int | None = None) -> None:
     standalone fails write/destructive calls closed exactly like the router
     does. This is idempotent and a no-op for servers with no gated platform.
     """
+    validate_access_profile_environment()
     install_platform_write_gate(mcp_instance)
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
     if transport == "stdio":
@@ -1294,9 +1472,32 @@ def troubleshooting_endpoint_candidates(
     404 on the preferred version automatically retries the fallback
     version -- no further shared.py changes needed to adopt it.
     """
+    def path_segment(value: str, label: str) -> str:
+        normalized = str(value).strip()
+        if (
+            not normalized
+            or len(normalized) > 128
+            or normalized in {".", ".."}
+            or any(
+                char in "/\\?#%"
+                or char.isspace()
+                or ord(char) < 0x20
+                or ord(char) == 0x7F
+                for char in normalized
+            )
+        ):
+            raise ValueError(f"{label} contains invalid URL path characters")
+        return quote(normalized, safe="-._~")
+
+    safe_segment = path_segment(segment, "segment")
+    safe_serial = path_segment(serial_number, "serial_number")
+    safe_action = path_segment(action, "action")
     seen: list[str] = []
     for version in troubleshooting_version_order():
-        path = f"/network-troubleshooting/{version}/{segment}/{serial_number}/{action}"
+        path = (
+            f"/network-troubleshooting/{version}/"
+            f"{safe_segment}/{safe_serial}/{safe_action}"
+        )
         if path not in seen:
             seen.append(path)
     return seen
@@ -1682,6 +1883,8 @@ async def atroubleshoot_async(
     endpoint: str | list[str],
     payload: dict[str, Any],
     errors: list[str],
+    *,
+    diagnostic: bool = False,
 ) -> dict[str, Any]:
     """Start and poll a Central troubleshooting task without blocking the event loop.
 
@@ -1692,6 +1895,9 @@ async def atroubleshoot_async(
             treated as "this tenant doesn't serve that API version" and
             the next candidate is tried; a non-404 failure or the last
             candidate's failure is returned immediately.
+        diagnostic: allow this explicitly non-mutating troubleshooting POST
+            through a closed platform write gate. Destructive actions must
+            leave this false so the transport remains a defense-in-depth gate.
     """
     candidates = [endpoint] if isinstance(endpoint, str) else list(endpoint)
     if not candidates:
@@ -1702,7 +1908,14 @@ async def atroubleshoot_async(
     for index, candidate in enumerate(candidates):
         is_last = index == len(candidates) - 1
         try:
-            resp = await client._arequest("POST", candidate, json=payload)
+            request_kwargs: dict[str, Any] = {"json": payload}
+            if diagnostic:
+                request_kwargs["diagnostic"] = True
+            resp = await client._arequest(
+                "POST",
+                candidate,
+                **request_kwargs,
+            )
         except Exception as exc:
             errors.append(str(exc))
             return {"status": None, "errors": errors}

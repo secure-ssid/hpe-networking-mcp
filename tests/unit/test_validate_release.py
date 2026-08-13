@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 
+from hpe_networking_mcp.pipeline import project_facts
 from scripts import ingest_tools, validate_release
 
 README = validate_release.ROOT / "README.md"
@@ -100,13 +101,14 @@ def test_release_tool_catalog_count_uses_read_write_catalog(monkeypatch):
     assert os.environ["HPE_MCP_PRODUCT_ACCESS"] == "read-only"
 
 
-def test_release_all_catalog_includes_generated_glp_and_restores_env(monkeypatch):
-    monkeypatch.setenv("HPE_MCP_GLP_GENERATED_TOOLS", "0")
+def test_release_all_catalog_pins_generated_tools_and_restores_env(monkeypatch):
+    for name in project_facts.GENERATED_TOOL_ENV:
+        monkeypatch.setenv(name, "0")
 
     release_count = validate_release._tool_catalog_count("all")
 
-    assert release_count > len(ingest_tools._collect("all"))
-    assert os.environ["HPE_MCP_GLP_GENERATED_TOOLS"] == "0"
+    assert release_count == project_facts.load()["tools"]["registered_total"]
+    assert all(os.environ[name] == "0" for name in project_facts.GENERATED_TOOL_ENV)
 
 
 def test_public_docs_tool_counts_match_catalog():
@@ -221,7 +223,7 @@ def test_validate_tool_index_fresh_rejects_missing_tools():
     except SystemExit as exc:
         assert "Tool index is stale" in str(exc)
         assert "missing from the index" in str(exc)
-        assert "scripts/ingest_tools.py --products all" in str(exc)
+        assert "scripts/ingest_tools.py --complete-catalog" in str(exc)
     else:
         raise AssertionError("expected SystemExit")
 
@@ -272,14 +274,21 @@ def test_strict_rag_cannot_be_silently_skipped(monkeypatch, capsys):
 
 
 def test_strict_env_pins_the_reproducible_catalog_selection(monkeypatch):
+    monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
     monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-only")
-    monkeypatch.setenv("HPE_MCP_GLP_GENERATED_TOOLS", "0")
+    for name in project_facts.GENERATED_TOOL_ENV:
+        monkeypatch.setenv(name, "0")
+    monkeypatch.setenv("HPE_MCP_READONLY", "1")
+    monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "0")
     monkeypatch.setenv("HPE_MCP_PRODUCTS", "clearpass")
 
     env = validate_release._strict_env()
 
+    assert env["HPE_MCP_ACCESS_PROFILE"] == "full-read-write"
     assert env["HPE_MCP_PRODUCT_ACCESS"] == "read-write"
-    assert env["HPE_MCP_GLP_GENERATED_TOOLS"] == "1"
+    assert all(env[name] == "1" for name in project_facts.GENERATED_TOOL_ENV)
+    assert env["HPE_MCP_READONLY"] == "0"
+    assert env["HPE_MCP_CENTRAL_WRITES"] == "1"
     assert "HPE_MCP_PRODUCTS" not in env
     assert os.environ["HPE_MCP_PRODUCTS"] == "clearpass"
 

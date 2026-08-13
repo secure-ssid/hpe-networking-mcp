@@ -78,7 +78,8 @@ call only reaches the local RAG index, never Central or GLP.
 - `invoke_read_tool` blocks any backend tool that is not annotated read-only.
 - `invoke_tool` is deliberately marked destructive because it can also dispatch write/destructive backend tools — use it only when a write is intended.
 - Use `dry_run=True` first when supported; real execution then requires either `confirm=True` or MCP elicitation, depending on the tool schema.
-- Optional product writes stay blocked by default (`HPE_MCP_PRODUCT_ACCESS=read-only`); a global or per-platform override is required for lab read-write access.
+- `HPE_MCP_ACCESS_PROFILE=custom` preserves the current per-platform behavior; use `safe-read-only` to block every write or `full-read-write` to enable ordinary writes on every loaded platform.
+- Full read/write mode does not bypass dry-run, confirmation, elicitation, or dedicated safeguards such as the separate AOS8 rollback gate.
 - Credentials stay in `config/credentials.yaml` or environment variables and are never committed.
 
 See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write-safety model.
@@ -138,9 +139,15 @@ HPE_MCP_TOOLSETS=central,glp,rag
 Enable optional products only when needed:
 
 ```env
+HPE_MCP_ACCESS_PROFILE=custom
 HPE_MCP_PRODUCTS=clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design
 HPE_MCP_PRODUCT_ACCESS=read-only
 ```
+
+For a trusted, fully write-capable session, use
+`python3 scripts/setup_wizard.py --access-profile full-read-write` so all
+legacy gates are aligned, or use the self-contained
+[`examples/mcp-clients/stdio/full-read-write.mcp.json`](examples/mcp-clients/stdio/full-read-write.mcp.json).
 
 `.claude/launch.json` ships a matching minimal `hpe-networking-mcp` launch
 profile for daily use. `find_tool` omits full JSON schemas by default; request

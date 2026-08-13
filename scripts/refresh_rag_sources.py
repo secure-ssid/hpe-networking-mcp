@@ -56,6 +56,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
 from hpe_networking_mcp.pipeline import drift_taxonomy as taxonomy  # noqa: E402
+from hpe_networking_mcp.pipeline import project_facts  # noqa: E402
 
 DATA_DIR = ROOT / "data"
 DOCS_LANCE = DATA_DIR / "docs.lance"
@@ -96,10 +97,7 @@ EXTRA_SCRIPT_PHASES = (PHASE_PRE, PHASE_POST)
 
 #: The only environment a planned step may require, declared explicitly so a
 #: plan never depends on whatever happened to be exported in the shell.
-STRICT_CATALOG_ENV: dict[str, str] = {
-    "HPE_MCP_PRODUCT_ACCESS": "read-write",
-    "HPE_MCP_GLP_GENERATED_TOOLS": "1",
-}
+STRICT_CATALOG_ENV: dict[str, str] = dict(project_facts.CATALOG_ENV)
 
 #: Structured (non-``scraper``) steps, declared once instead of hard-coded
 #: mid-flow. ``sources`` is the set of manifest sources whose drift triggers

@@ -11,7 +11,10 @@ def test_cx_ping_uses_async_troubleshooting_helper(monkeypatch):
     calls = []
     client = object()
 
-    async def fake_atroubleshoot_async(received_client, endpoint, payload, errors):
+    async def fake_atroubleshoot_async(
+        received_client, endpoint, payload, errors, *, diagnostic=False
+    ):
+        assert diagnostic is True
         calls.append((received_client, endpoint, payload, errors))
         return {"status": "COMPLETED", "errors": errors}
 
@@ -50,7 +53,10 @@ def test_cx_traceroute_uses_async_troubleshooting_helper(monkeypatch):
     calls = []
     client = object()
 
-    async def fake_atroubleshoot_async(received_client, endpoint, payload, errors):
+    async def fake_atroubleshoot_async(
+        received_client, endpoint, payload, errors, *, diagnostic=False
+    ):
+        assert diagnostic is True
         calls.append((received_client, endpoint, payload, errors))
         return {"status": "COMPLETED", "errors": errors}
 
@@ -102,7 +108,10 @@ def test_cx_show_uses_async_troubleshooting_helper(monkeypatch):
     calls = []
     client = object()
 
-    async def fake_atroubleshoot_async(received_client, endpoint, payload, errors):
+    async def fake_atroubleshoot_async(
+        received_client, endpoint, payload, errors, *, diagnostic=False
+    ):
+        assert diagnostic is True
         calls.append((received_client, endpoint, payload, errors))
         return {"status": "COMPLETED", "errors": errors}
 
@@ -265,7 +274,10 @@ def test_non_cx_diagnostic_tools_use_async_troubleshooting_helper(
     calls = []
     client = object()
 
-    async def fake_atroubleshoot_async(received_client, endpoint, payload, errors):
+    async def fake_atroubleshoot_async(
+        received_client, endpoint, payload, errors, *, diagnostic=False
+    ):
+        assert diagnostic is True
         calls.append((received_client, endpoint, payload, errors))
         return {"status": "COMPLETED", "errors": errors}
 
@@ -316,7 +328,10 @@ def test_cable_test_uses_async_troubleshooting_helper(monkeypatch):
     calls = []
     client = object()
 
-    async def fake_atroubleshoot_async(received_client, endpoint, payload, errors):
+    async def fake_atroubleshoot_async(
+        received_client, endpoint, payload, errors, *, diagnostic=False
+    ):
+        assert diagnostic is True
         calls.append((received_client, endpoint, payload, errors))
         return {"status": "COMPLETED", "errors": errors}
 

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import ast
+import os
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 from scripts import setup_wizard
@@ -17,8 +20,104 @@ def _http_helper_allowed_keys() -> set[str]:
     text = _script_text()
     prefix = "allowed_keys = "
     start = text.index(prefix) + len(prefix)
-    end = text.index("}\nfor raw_line", start) + 1
+    end = text.index("}\ninherited_keys", start) + 1
     return set(ast.literal_eval(text[start:end]))
+
+
+def _http_env_loader_source() -> str:
+    text = _script_text()
+    start_marker = "<<'PY'\n"
+    start = text.index(start_marker) + len(start_marker)
+    end = text.index("\nPY\n", start)
+    return text[start:end]
+
+
+def _shell_function_source(name: str) -> str:
+    text = _script_text()
+    start = text.index(f"{name}() {{")
+    end = text.index("\n}\n", start) + 2
+    return text[start:end]
+
+
+def test_http_router_env_loader_preserves_exported_values(tmp_path):
+    dotenv = tmp_path / ".env"
+    dotenv.write_text(
+        "HPE_MCP_ACCESS_PROFILE=full-read-write\n"
+        "MCP_PORT=8123\n"
+    )
+    env = os.environ.copy()
+    env["HPE_MCP_ACCESS_PROFILE"] = "safe-read-only"
+
+    result = subprocess.run(
+        [sys.executable, "-", str(dotenv)],
+        input=_http_env_loader_source(),
+        capture_output=True,
+        text=True,
+        check=True,
+        env=env,
+    )
+
+    assert "HPE_MCP_ACCESS_PROFILE=" not in result.stdout
+    assert "MCP_PORT=8123" in result.stdout
+
+
+def test_http_router_env_loader_uses_dotenv_comment_semantics(tmp_path):
+    dotenv = tmp_path / ".env"
+    dotenv.write_text(
+        "HPE_MCP_ACCESS_PROFILE=full-read-write # safety profile\n"
+        "MIST_API_TOKEN=abc#def\n"
+    )
+    env = os.environ.copy()
+    env.pop("HPE_MCP_ACCESS_PROFILE", None)
+    env.pop("MIST_API_TOKEN", None)
+
+    result = subprocess.run(
+        [sys.executable, "-", str(dotenv)],
+        input=_http_env_loader_source(),
+        capture_output=True,
+        text=True,
+        check=True,
+        env=env,
+    )
+
+    assert "HPE_MCP_ACCESS_PROFILE=full-read-write" in result.stdout
+    assert "MIST_API_TOKEN=abc#def" in result.stdout
+
+
+def test_http_router_env_loader_uses_exported_values_for_interpolation(tmp_path):
+    dotenv = tmp_path / ".env"
+    dotenv.write_text(
+        "MIST_ROOT=https://stale.example\n"
+        "MIST_HOST=${MIST_ROOT}\n"
+    )
+    env = os.environ.copy()
+    env["MIST_ROOT"] = "https://api.mist.com"
+    env.pop("MIST_HOST", None)
+
+    result = subprocess.run(
+        [sys.executable, "-", str(dotenv)],
+        input=_http_env_loader_source(),
+        capture_output=True,
+        text=True,
+        check=True,
+        env=env,
+    )
+
+    assert "MIST_HOST=https://api.mist.com" in result.stdout
+    assert "stale.example" not in result.stdout
+
+
+def test_http_router_normalizes_access_profile_like_runtime():
+    source = _shell_function_source("normalize_access_profile")
+
+    result = subprocess.run(
+        ["bash", "-c", f"{source}\nnormalize_access_profile '  FULL-READ-WRITE  '"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert result.stdout == "full-read-write"
 
 
 def test_http_router_loads_wizard_optional_product_env_keys():
@@ -30,6 +129,7 @@ def test_http_router_loads_wizard_optional_product_env_keys():
     }
 
     assert wizard_product_keys <= allowed_keys
+    assert "HPE_MCP_ACCESS_PROFILE" in allowed_keys
     assert "HPE_MCP_PRODUCTS" in allowed_keys
     assert "HPE_MCP_PRODUCT_ACCESS" in allowed_keys
 
@@ -41,11 +141,13 @@ def test_http_router_loads_lab_safety_flags():
     assert "HPE_MCP_GLP_V2BETA1_WRITES" in allowed_keys
 
 
-def test_http_router_banner_shows_product_access_mode():
+def test_http_router_banner_shows_access_profile_and_product_mode():
     text = _script_text()
 
-    assert 'export HPE_MCP_PRODUCT_ACCESS="${HPE_MCP_PRODUCT_ACCESS:-read-only}"' in text
-    assert "access:   ${HPE_MCP_PRODUCT_ACCESS}" in text
+    assert 'normalize_access_profile "${HPE_MCP_ACCESS_PROFILE:-custom}"' in text
+    assert 'export HPE_MCP_ACCESS_PROFILE="${HPE_MCP_ACCESS_PROFILE:-custom}"' in text
+    assert "profile:  ${HPE_MCP_ACCESS_PROFILE}" in text
+    assert "optional: ${HPE_MCP_PRODUCT_ACCESS}" in text
 
 
 def test_http_router_loads_http_hardening_env_keys():
@@ -189,7 +291,16 @@ def test_http_router_allowlist_includes_router_response_budget_keys():
 def test_http_router_allowlist_includes_generated_tool_opt_ins():
     allowed_keys = _http_helper_allowed_keys()
 
-    for platform in ("CENTRAL", "GLP", "AOS8", "APSTRA", "CLEARPASS", "MIST", "UXI"):
+    for platform in (
+        "CENTRAL",
+        "GLP",
+        "AOS8",
+        "EDGECONNECT",
+        "APSTRA",
+        "CLEARPASS",
+        "MIST",
+        "UXI",
+    ):
         assert f"HPE_MCP_{platform}_GENERATED_TOOLS" in allowed_keys
 
 

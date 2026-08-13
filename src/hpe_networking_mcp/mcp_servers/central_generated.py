@@ -51,7 +51,9 @@ _CENTRAL_ALLOWED_PREFIXES: tuple[str, ...] = ("/network-config/",)
 
 _EXECUTE_HINT = (
     "Re-run with dry_run=False and confirm=True to execute this Central write "
-    "(requires HPE_MCP_CENTRAL_WRITES=1)."
+    "(requires HPE_MCP_ACCESS_PROFILE=full-read-write or "
+    "HPE_MCP_ACCESS_PROFILE=custom; Central writes default to enabled under "
+    "custom and HPE_MCP_CENTRAL_WRITES=0 opts out)."
 )
 
 # Auth header/cookie names that must never be forwarded from model-supplied

@@ -387,6 +387,16 @@ class TestStandaloneWriteGate:
         assert not hasattr(server._tool_manager, _WRITE_GATE_INSTALLED_ATTR)
         assert _call(server, "destroy_thing") == {"destroyed": True}
 
+    def test_safe_profile_blocks_writes_on_ungated_standalone_server(
+        self, monkeypatch
+    ):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
+        server = _gated_backend("rag-core")
+
+        assert install_platform_write_gate(server) is True
+        assert _call(server, "destroy_thing")["status"] == "blocked"
+        assert _call(server, "read_thing") == {"ok": True}
+
     def test_installation_is_idempotent(self, monkeypatch):
         monkeypatch.delenv("HPE_MCP_GLP_V2BETA1_WRITES", raising=False)
         server = _gated_backend("glp-core")

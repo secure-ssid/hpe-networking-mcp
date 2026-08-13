@@ -30,6 +30,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 
 from hpe_networking_mcp.mcp_servers.shared import (
     BearerAuthASGIMiddleware,
+    InvalidRuntimeConfigError,
     UnsafeHttpBindingError,
     _configure_http_transport,
     _http_bearer_token,
@@ -123,6 +124,19 @@ def test_run_server_stdio_keeps_default_run(monkeypatch):
     run_server(server)
 
     assert server.run_calls == [{}]
+
+
+@pytest.mark.parametrize("transport", ["stdio", "streamable-http"])
+def test_run_server_rejects_contradictory_access_profile(monkeypatch, transport):
+    server = _DummyMCP()
+    monkeypatch.setenv("MCP_TRANSPORT", transport)
+    monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "full-read-write")
+    monkeypatch.setenv("HPE_MCP_READONLY", "1")
+
+    with pytest.raises(InvalidRuntimeConfigError, match="conflicts"):
+        run_server(server)
+
+    assert server.run_calls == []
 
 
 # ---------------------------------------------------------------------------

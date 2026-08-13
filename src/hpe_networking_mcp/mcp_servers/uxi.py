@@ -18,7 +18,8 @@ applies — so this cap holds even when the router's own limiter is looser.
 
 Writes: create/update/delete for groups, sensors, and agents, plus group
 assignment/unassignment for sensors, agents, networks, and service tests, are
-all gated behind `HPE_MCP_PRODUCT_ACCESS=read-write` and a `dry_run`
+all gated behind `HPE_MCP_ACCESS_PROFILE=full-read-write` (or custom with
+`HPE_MCP_PRODUCT_ACCESS=read-write`) and a `dry_run`
 (default `True`) + `confirm` (required for execution) preview-first contract,
 matching every other optional product backend in this repo. Write path/ID
 shapes extend the already-confirmed read collection paths with the standard
@@ -591,7 +592,7 @@ async def uxi_create_group(
     dry_run: bool = True,
     confirm: bool = False,
 ) -> dict[str, Any]:
-    """Create a UXI group; requires `HPE_MCP_PRODUCT_ACCESS=read-write`."""
+    """Create a UXI group; requires full-read-write or custom UXI write access."""
     body: dict[str, Any] = {"name": name}
     if parent is not None:
         body["parentId"] = parent

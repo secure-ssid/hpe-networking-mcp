@@ -110,8 +110,8 @@ uv run python scripts/ingest_tools.py
 # Include optional product starters in the tool catalog
 uv run python scripts/ingest_tools.py --products all
 
-# Include every guarded optional write tool (6,715 backend tools)
-HPE_MCP_PRODUCT_ACCESS=read-write HPE_MCP_GLP_GENERATED_TOOLS=1 uv run python scripts/ingest_tools.py --products all
+# Include every guarded write tool (6,715 backend tools)
+uv run python scripts/ingest_tools.py --complete-catalog
 
 # Start the model-agnostic HTTP MCP router
 MCP_PORT=8010 bash scripts/run_http_router.sh

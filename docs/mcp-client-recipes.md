@@ -43,8 +43,9 @@ run one MCP call to confirm the connection works.
 
 The root-level committed configs above are all the **minimal** router
 profile (`HPE_MCP_ROUTER_MODE=minimal`, `HPE_MCP_TOOLSETS=central,glp,rag`,
-no optional products) -- the recommended default for every client. For the
-**full** profile (every optional product starter enabled read-only), a
+`HPE_MCP_ACCESS_PROFILE=custom`, no optional products) -- the recommended
+default for every client. For the **full safe-read-only** profile, the
+separate **full read/write** profile, a
 non-loopback **bearer-protected HTTP** profile, and a Copilot CLI/app
 example, see the tested configs and full client/transport/profile matrix in
 [`examples/README.md`](../examples/README.md). `cwd`/`PYTHONPATH`/
@@ -242,8 +243,9 @@ http://127.0.0.1:8010/mcp
 If you change `MCP_HOST` or `MCP_PORT`, update `.mcp.http.json` to match. The
 HTTP helper safely loads expected local `.env` assignments first, so optional
 products selected in the wizard are available to the router process. Its
-startup banner prints the selected products and `HPE_MCP_PRODUCT_ACCESS`
-mode so lab write visibility is obvious before connecting a client. If the
+startup banner prints `HPE_MCP_ACCESS_PROFILE`, selected products, and
+`HPE_MCP_PRODUCT_ACCESS` so write visibility is obvious before connecting a
+client. If the
 port is already in use, `scripts/run_http_router.sh` exits before starting
 another router and prints the listener details:
 
@@ -280,8 +282,9 @@ python3 scripts/setup_wizard.py --products clearpass,mist
 ```
 
 Use `--with-products` only when you want every starter backend enabled. Add
-`--product-access read-write` only for trusted lab sessions that need guarded
-write tools visible.
+`--access-profile full-read-write` only for trusted sessions that need all
+loaded write tools visible. Use `--access-profile custom --product-access
+read-write` for the legacy mixed-gate behavior.
 
 ## Verify local setup
 

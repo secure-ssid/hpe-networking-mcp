@@ -186,7 +186,8 @@ exposes 6,722 tools including the router itself. The current 33-question eval
 set (expanded from 24 to add structured list/correlate/diagnostics and
 negative coverage-gap questions) resolves 32 of 33 questions from an expected
 source, 30 of them at rank 1 (`source_hit@k` 0.97, `mrr` 0.923). Standard catalog
-profiles contain 368 core tools / 2829 read-only optional starters / 5809 read-write optional starters; the complete index also enables generated GLP.
+profiles contain 368 core tools / 2829 read-only optional starters / 5809 read-write optional starters; those optional profiles now map to
+`safe-read-only` and `full-read-write`, respectively. The complete index also enables generated GLP.
 
 Tracked RAG refresh targets live in `ingestion/source_manifest.json`. The
 current manifest covers 16 rebuild sources, including DevHub, Switching Feature

@@ -703,7 +703,13 @@ async def test_aaa(
         }
 
     client = get_client()
-    return await atroubleshoot_async(client, endpoints, payload, errors)
+    return await atroubleshoot_async(
+        client,
+        endpoints,
+        payload,
+        errors,
+        diagnostic=True,
+    )
 
 
 # ── Authz Policies ────────────────────────────────────────────────────────────

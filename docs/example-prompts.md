@@ -202,6 +202,7 @@ and repeat the identical call to actually send the invite.</p>
 configured, then list the first 10 Apstra blueprints."</p>
 
 ```env
+HPE_MCP_ACCESS_PROFILE=custom
 HPE_MCP_PRODUCTS=mist,apstra
 HPE_MCP_PRODUCT_ACCESS=read-only
 ```
@@ -219,7 +220,8 @@ invoke_read_tool("apstra_list_blueprints", {"limit": 10})
 blueprint records. Optional products stay disabled unless
 <code>HPE_MCP_PRODUCTS</code>/<code>HPE_MCP_TOOLSETS</code> enables
 them, and their write tools stay hidden while
-<code>HPE_MCP_PRODUCT_ACCESS=read-only</code> (the default).</p>
+<code>HPE_MCP_PRODUCT_ACCESS=read-only</code> under the <code>custom</code>
+compatibility profile.</p>
 <p><strong>Variation:</strong> swap in UXI --
 <code>invoke_read_tool("uxi_list_sensors", {"page_size": 10})</code> then
 <code>invoke_read_tool("uxi_get_sensor_status", {"sensor_id": "SENSOR_ID"})</code>.</p>

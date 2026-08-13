@@ -3,14 +3,12 @@
 Usage: uv run python scripts/ingest_tools.py                  # LanceDB (embedded, default)
        uv run python scripts/ingest_tools.py --backend redis  # optional Redis Stack
        uv run python scripts/ingest_tools.py --products clearpass,mist
+       uv run python scripts/ingest_tools.py --complete-catalog
 
 For the complete catalog that `scripts/validate_release.py --strict-tool-index`
-compares against, both env vars matter -- without them the index is built from a
-strictly smaller catalog (read-only optional tools, curated-only GLP) and the
-strict gate correctly reports it as stale:
-
-       HPE_MCP_PRODUCT_ACCESS=read-write HPE_MCP_GLP_GENERATED_TOOLS=1 \
-         uv run python scripts/ingest_tools.py --products all
+compares against, use ``--complete-catalog``. It applies the same canonical,
+fully pinned environment as the release gates and includes every optional
+product without inheriting stale product or generated-tool settings.
 
 Reconcile data/INDEX-MANIFEST.json and docs/project-facts.json afterwards
 (`scripts/package_indexes.py --write-local-manifests`,
@@ -33,8 +31,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from hpe_networking_mcp.mcp_servers.shared import optional_product_access_mode  # noqa: E402
 
 SERVERS = [
     ("central-config", "hpe_networking_mcp.mcp_servers.config"),
@@ -65,7 +61,17 @@ def _csv(value: str | None) -> list[str]:
 
 
 def _product_access() -> str:
+    from hpe_networking_mcp.mcp_servers.shared import optional_product_access_mode
+
     return optional_product_access_mode()
+
+
+def _configure_complete_catalog() -> str:
+    from hpe_networking_mcp.pipeline import project_facts
+
+    os.environ.update(project_facts.CATALOG_ENV)
+    os.environ.pop("HPE_MCP_PRODUCTS", None)
+    return "all"
 
 
 def _is_read_only_tool(tool) -> bool:
@@ -206,7 +212,8 @@ def main_redis(products: str | None = None) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--backend", choices=("lancedb", "redis"), default="lancedb")
-    ap.add_argument(
+    selection = ap.add_mutually_exclusive_group()
+    selection.add_argument(
         "--products",
         default=None,
         help=(
@@ -215,8 +222,14 @@ def main() -> int:
             "Defaults to HPE_MCP_PRODUCTS."
         ),
     )
+    selection.add_argument(
+        "--complete-catalog",
+        action="store_true",
+        help="pin the canonical full release environment and include all products",
+    )
     args = ap.parse_args()
-    return main_redis(args.products) if args.backend == "redis" else main_lancedb(args.products)
+    products = _configure_complete_catalog() if args.complete_catalog else args.products
+    return main_redis(products) if args.backend == "redis" else main_lancedb(products)
 
 
 if __name__ == "__main__":

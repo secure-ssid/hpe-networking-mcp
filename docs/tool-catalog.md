@@ -134,8 +134,16 @@ For full direct introspection:
 ```env
 HPE_MCP_ROUTER_MODE=direct
 HPE_MCP_TOOLSETS=all
+HPE_MCP_ACCESS_PROFILE=full-read-write
 HPE_MCP_PRODUCT_ACCESS=read-write
+HPE_MCP_CENTRAL_GENERATED_TOOLS=1
 HPE_MCP_GLP_GENERATED_TOOLS=1
+HPE_MCP_AOS8_GENERATED_TOOLS=1
+HPE_MCP_EDGECONNECT_GENERATED_TOOLS=1
+HPE_MCP_APSTRA_GENERATED_TOOLS=1
+HPE_MCP_MIST_GENERATED_TOOLS=1
+HPE_MCP_CLEARPASS_GENERATED_TOOLS=1
+HPE_MCP_UXI_GENERATED_TOOLS=1
 HPE_MCP_GLP_V2BETA1_WRITES=1
 ```
 
@@ -150,11 +158,12 @@ raises `InvalidRuntimeConfigError` at startup.
 
 ```bash
 uv run python scripts/ingest_tools.py
-HPE_MCP_PRODUCT_ACCESS=read-write HPE_MCP_GLP_GENERATED_TOOLS=1 uv run python scripts/ingest_tools.py --products all
+uv run python scripts/ingest_tools.py --complete-catalog
 uv run python scripts/check_generated_tool_manifests.py
 uv run python scripts/report_capability_gaps.py --check
 ```
 
-Optional product writes are hidden and blocked in read-only mode. Generated
-writes are platform-gated and preview-first. `invoke_tool` remains annotated
-destructive because it can dispatch any enabled write-capable backend.
+Optional product writes are hidden and blocked under `safe-read-only` and under
+the default optional-product settings in `custom`. Generated writes remain
+platform-gated and preview-first. `invoke_tool` remains annotated destructive
+because it can dispatch any enabled write-capable backend.

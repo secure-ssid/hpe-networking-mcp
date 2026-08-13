@@ -22,7 +22,12 @@ import pytest
 from mcp.server.mcpserver import Context, MCPServer
 
 import hpe_networking_mcp.mcp_servers.tool_router as router
-from hpe_networking_mcp.mcp_servers.shared import DESTRUCTIVE, DIAGNOSTIC, IDEMPOTENT_WRITE, READ_ONLY
+from hpe_networking_mcp.mcp_servers.shared import (
+    DESTRUCTIVE,
+    DIAGNOSTIC,
+    IDEMPOTENT_WRITE,
+    READ_ONLY,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +138,18 @@ class TestWrapperRateExemption:
 # Fix 7: HPE_MCP_READONLY kill switch
 # ---------------------------------------------------------------------------
 class TestReadonlyKillSwitch:
+    def test_safe_profile_blocks_write_discovery_and_dispatch(
+        self, wired_router, monkeypatch
+    ):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
+        names = {hit["name"] for hit in router._keyword_hits("tool", limit=10)}
+        assert "read_tool" in names
+        assert "write_tool" not in names
+
+        blocked = _dispatch("write_tool", {})
+        assert blocked["status"] == "blocked"
+        assert "HPE_MCP_ACCESS_PROFILE=safe-read-only" in blocked["error"]
+
     def test_readonly_blocks_only_writes(self, wired_router, monkeypatch):
         monkeypatch.setenv("HPE_MCP_READONLY", "1")
         idx = router._tool_index
@@ -262,11 +279,22 @@ class TestStandaloneGateReadonly:
         # central writes are enabled by default -> the write runs.
         assert self._call(mcp_obj, "w") == {"ran": "w"}
 
-    def test_router_server_is_not_gated(self):
+    def test_full_profile_allows_standalone_central_write(self, monkeypatch):
+        import hpe_networking_mcp.mcp_servers.shared as sh
+
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "full-read-write")
+        monkeypatch.delenv("HPE_MCP_READONLY", raising=False)
+        monkeypatch.delenv("HPE_MCP_CENTRAL_WRITES", raising=False)
+        mcp_obj = self._backend()
+        assert sh.install_platform_write_gate(mcp_obj) is True
+        assert self._call(mcp_obj, "w") == {"ran": "w"}
+
+    def test_router_server_is_not_gated(self, monkeypatch):
         import hpe_networking_mcp.mcp_servers.shared as sh
 
         # The router must NOT be gated (platform None), or its DESTRUCTIVE-
         # annotated invoke_tool dispatcher would be wholesale-blocked and could
         # no longer dispatch read/diagnostic tools.
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
         router_mcp = _GateMCP("hpe-networking-mcp", {})
         assert sh.install_platform_write_gate(router_mcp) is False

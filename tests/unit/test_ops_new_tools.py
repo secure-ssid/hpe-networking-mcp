@@ -83,7 +83,8 @@ def test_delete_device_notes_sends_empty_string(monkeypatch):
 def test_gateway_iperf_uses_async_helper(monkeypatch):
     calls = []
 
-    async def fake_async(client, endpoint, payload, errors):
+    async def fake_async(client, endpoint, payload, errors, *, diagnostic=False):
+        assert diagnostic is True
         calls.append((endpoint, payload))
         return {"status": "COMPLETED", "errors": errors}
 
@@ -117,7 +118,8 @@ def test_gateway_ping_sweep_validates_packet_size_range():
 def test_gateway_ping_sweep_uses_async_helper(monkeypatch):
     calls = []
 
-    async def fake_async(client, endpoint, payload, errors):
+    async def fake_async(client, endpoint, payload, errors, *, diagnostic=False):
+        assert diagnostic is True
         calls.append((endpoint, payload))
         return {"status": "COMPLETED", "errors": errors}
 
@@ -184,7 +186,8 @@ def test_reboot_ap_swarm_requires_confirmation(monkeypatch):
 def test_ap_ping_uses_async_helper(monkeypatch):
     calls = []
 
-    async def fake_async(client, endpoint, payload, errors):
+    async def fake_async(client, endpoint, payload, errors, *, diagnostic=False):
+        assert diagnostic is True
         calls.append((endpoint, payload))
         return {"status": "COMPLETED", "errors": errors}
 
@@ -204,7 +207,8 @@ def test_ap_ping_uses_async_helper(monkeypatch):
 def test_ap_tcp_uses_async_helper(monkeypatch):
     calls = []
 
-    async def fake_async(client, endpoint, payload, errors):
+    async def fake_async(client, endpoint, payload, errors, *, diagnostic=False):
+        assert diagnostic is True
         calls.append((endpoint, payload))
         return {"status": "COMPLETED", "errors": errors}
 
@@ -239,7 +243,8 @@ def test_ap_show_validates_commands(monkeypatch):
 
 
 def test_ap_show_runs_when_valid(monkeypatch):
-    async def fake_async(client, endpoint, payload, errors):
+    async def fake_async(client, endpoint, payload, errors, *, diagnostic=False):
+        assert diagnostic is True
         return {"status": "COMPLETED", "errors": errors}
 
     monkeypatch.setattr(ops, "get_client", lambda: object())

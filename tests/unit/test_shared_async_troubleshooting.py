@@ -55,6 +55,7 @@ def test_atroubleshoot_async_uses_async_client_methods(monkeypatch):
             "/network-troubleshooting/v1alpha1/cx/CX1/ping",
             {"destination": "8.8.8.8"},
             [],
+            diagnostic=True,
         )
     )
 
@@ -67,7 +68,10 @@ def test_atroubleshoot_async_uses_async_client_methods(monkeypatch):
         (
             "POST",
             "/network-troubleshooting/v1alpha1/cx/CX1/ping",
-            {"json": {"destination": "8.8.8.8"}},
+            {
+                "json": {"destination": "8.8.8.8"},
+                "diagnostic": True,
+            },
         )
     ]
     assert client.get_calls == [

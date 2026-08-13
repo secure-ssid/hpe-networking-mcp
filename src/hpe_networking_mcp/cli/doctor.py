@@ -8,13 +8,14 @@ import ast
 import importlib.util
 import json
 import os
-import shlex
 import shutil
 import socket
 import stat
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 
 def _resolve_root() -> Path:
@@ -46,6 +47,9 @@ OPTIONAL_PRODUCT_ENVS = {
 PLACEHOLDER_MARKERS = ("YOUR_", "REPLACE_ME", "PLACEHOLDER")
 READ_ONLY_PRODUCT_ACCESS_VALUES = {"read-only", "readonly", "read_only", "ro"}
 READ_WRITE_PRODUCT_ACCESS_VALUES = {"read-write", "readwrite", "read_write", "rw"}
+VALID_ACCESS_PROFILES = {"safe-read-only", "custom", "full-read-write"}
+TRUTHY_WRITE_VALUES = {"1", "true", "yes", "on"}
+FALSY_WRITE_VALUES = {"0", "false", "no", "off"}
 
 # Mirrors hpe_networking_mcp.mcp_servers.tool_router's toolset/backend maps and
 # hpe_networking_mcp.mcp_servers.shared.resolve_rag_backend's valid set.
@@ -187,23 +191,7 @@ def _load_json(path: Path) -> tuple[dict[str, object] | None, str | None]:
 def _load_local_env(path: Path) -> None:
     if not path.exists():
         return
-    for raw_line in path.read_text().splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.startswith("export "):
-            line = line[len("export ") :].strip()
-        key, sep, value = line.partition("=")
-        if not sep:
-            continue
-        key = key.strip()
-        if not key or key in os.environ:
-            continue
-        try:
-            parsed = shlex.split(value, posix=True)
-        except ValueError:
-            continue
-        os.environ[key] = parsed[0] if len(parsed) == 1 else value.strip()
+    load_dotenv(dotenv_path=path, override=False)
 
 
 def _server_map(data: dict[str, object]) -> dict[str, object] | None:
@@ -238,6 +226,24 @@ def _router_env_checks(data: dict[str, object]) -> list[Check]:
     toolsets = env.get("HPE_MCP_TOOLSETS")
     products = env.get("HPE_MCP_PRODUCTS")
     valid_modes = {"minimal", "default", "direct"}
+    access_env_names = {
+        "HPE_MCP_ACCESS_PROFILE",
+        "HPE_MCP_PRODUCT_ACCESS",
+        "HPE_MCP_READONLY",
+        *_PLATFORM_WRITE_ENV_VARS,
+    }
+    effective_access_env: dict[str, object] = {
+        name: os.environ[name]
+        for name in access_env_names
+        if name in os.environ
+    }
+    effective_access_env.update(
+        {
+            name: value
+            for name, value in env.items()
+            if name in access_env_names
+        }
+    )
     checks = [
         Check(
             "OK" if mode in valid_modes else "WARN",
@@ -252,6 +258,11 @@ def _router_env_checks(data: dict[str, object]) -> list[Check]:
             f"HPE_MCP_TOOLSETS is {toolsets}"
             if toolsets in {"central,glp,rag", "all"}
             else "set HPE_MCP_TOOLSETS=central,glp,rag or all",
+        ),
+        _access_profile_check(
+            effective_access_env,
+            check_name="Local stdio access profile",
+            require_explicit=True,
         ),
     ]
     if products:
@@ -358,10 +369,17 @@ def _csv_values(value: str | None) -> list[str]:
 
 def _product_access_check(value: str | None) -> Check:
     if value is None:
+        profile = os.getenv("HPE_MCP_ACCESS_PROFILE", "custom").strip().lower()
+        if profile == "full-read-write":
+            detail = "unset; full-read-write enables loaded optional-product writes"
+        elif profile == "safe-read-only":
+            detail = "unset; safe-read-only blocks optional-product writes"
+        else:
+            detail = "unset; custom defaults optional-product writes to read-only"
         return Check(
             "OK",
             "Optional product access",
-            "unset; optional product writes default to read-only",
+            detail,
         )
     normalized = value.strip().lower()
     if normalized in READ_ONLY_PRODUCT_ACCESS_VALUES:
@@ -369,9 +387,9 @@ def _product_access_check(value: str | None) -> Check:
     if normalized in READ_WRITE_PRODUCT_ACCESS_VALUES:
         return Check("OK", "Optional product access", "read-write")
     return Check(
-        "WARN",
+        "FAIL",
         "Optional product access",
-        f"unrecognized HPE_MCP_PRODUCT_ACCESS={value!r}; optional writes fail closed",
+        f"unrecognized HPE_MCP_PRODUCT_ACCESS={value!r}; the server will refuse to start",
     )
 
 
@@ -667,6 +685,7 @@ def _runtime_checks() -> list[Check]:
             if not products
             else f"HPE_MCP_PRODUCTS={products!r}",
         ),
+        _access_profile_check(),
         _product_access_check(product_access),
         Check(
             # Same escalation as toolsets above: the router rejects an
@@ -740,6 +759,103 @@ _PLATFORM_WRITE_ENV_VARS = (
 _LOOPBACK_HOST_VALUES = {"127.0.0.1", "localhost", "::1", "[::1]"}
 
 
+def _access_profile_check(
+    env: dict[str, object] | None = None,
+    *,
+    check_name: str = "Access profile",
+    require_explicit: bool = False,
+) -> Check:
+    def env_value(name: str) -> str | None:
+        raw_value = os.getenv(name) if env is None else env.get(name)
+        return None if raw_value is None else str(raw_value)
+
+    raw = env_value("HPE_MCP_ACCESS_PROFILE")
+    profile = (raw or "custom").strip().lower()
+    if profile not in VALID_ACCESS_PROFILES:
+        return Check(
+            "FAIL",
+            check_name,
+            f"HPE_MCP_ACCESS_PROFILE={raw!r} is not recognized; expected "
+            "safe-read-only, custom, or full-read-write",
+        )
+
+    invalid: list[str] = []
+    conflicts: list[str] = []
+    product_raw = env_value("HPE_MCP_PRODUCT_ACCESS")
+    product_mode: str | None = None
+    if product_raw is not None:
+        value = product_raw.strip().lower()
+        if value in READ_ONLY_PRODUCT_ACCESS_VALUES:
+            product_mode = "read-only"
+        elif value in READ_WRITE_PRODUCT_ACCESS_VALUES:
+            product_mode = "read-write"
+        else:
+            invalid.append("HPE_MCP_PRODUCT_ACCESS")
+
+    readonly_raw = env_value("HPE_MCP_READONLY")
+    readonly_enabled = False
+    if readonly_raw is not None:
+        value = readonly_raw.strip().lower()
+        if value in TRUTHY_WRITE_VALUES:
+            readonly_enabled = True
+        elif value not in FALSY_WRITE_VALUES:
+            invalid.append("HPE_MCP_READONLY")
+
+    platform_values: dict[str, bool] = {}
+    for name in _PLATFORM_WRITE_ENV_VARS:
+        raw_value = env_value(name)
+        if raw_value is None:
+            continue
+        value = raw_value.strip().lower()
+        if value in TRUTHY_WRITE_VALUES:
+            platform_values[name] = True
+        elif value in FALSY_WRITE_VALUES:
+            platform_values[name] = False
+        else:
+            invalid.append(name)
+
+    if invalid:
+        return Check(
+            "FAIL",
+            check_name,
+            "invalid write-access value(s) will refuse startup: "
+            + ", ".join(sorted(invalid)),
+        )
+
+    if profile == "safe-read-only":
+        if product_mode == "read-write":
+            conflicts.append("HPE_MCP_PRODUCT_ACCESS")
+        conflicts.extend(name for name, enabled in platform_values.items() if enabled)
+    elif profile == "full-read-write":
+        if readonly_enabled:
+            conflicts.append("HPE_MCP_READONLY")
+        if product_mode == "read-only":
+            conflicts.append("HPE_MCP_PRODUCT_ACCESS")
+        conflicts.extend(name for name, enabled in platform_values.items() if not enabled)
+
+    if conflicts:
+        return Check(
+            "FAIL",
+            check_name,
+            f"{profile} conflicts with: {', '.join(sorted(conflicts))}; "
+            "use custom for mixed per-platform settings",
+        )
+
+    if require_explicit and not (raw or "").strip():
+        return Check(
+            "WARN",
+            check_name,
+            "HPE_MCP_ACCESS_PROFILE is missing; runtime will use custom",
+        )
+
+    detail = (
+        "custom (compatibility default; existing per-platform gates apply)"
+        if raw is None and profile == "custom"
+        else profile
+    )
+    return Check("OK", check_name, detail)
+
+
 def _http_security_checks() -> list[Check]:
     """Env-only checks for the streamable-HTTP hardening in hpe_networking_mcp.mcp_servers.shared
     (host/origin allow-lists, optional bearer token, per-platform write
@@ -809,15 +925,25 @@ def _http_security_checks() -> list[Check]:
         )
 
     set_platform_gates = sorted(
-        name for name in _PLATFORM_WRITE_ENV_VARS if os.getenv(name, "").strip()
+        name for name in _PLATFORM_WRITE_ENV_VARS if os.getenv(name) is not None
+    )
+    invalid_platform_gates = sorted(
+        name
+        for name in set_platform_gates
+        if os.getenv(name, "").strip().lower()
+        not in (TRUTHY_WRITE_VALUES | FALSY_WRITE_VALUES)
     )
     checks.append(
         Check(
-            "OK",
+            "FAIL" if invalid_platform_gates else "OK",
             "Per-platform write gates",
-            "none overridden (Central/optional-product defaults apply)"
+            "none overridden (the selected access profile applies)"
             if not set_platform_gates
-            else f"overridden: {', '.join(set_platform_gates)}",
+            else (
+                f"invalid values: {', '.join(invalid_platform_gates)}"
+                if invalid_platform_gates
+                else f"overridden: {', '.join(set_platform_gates)}"
+            ),
         )
     )
 

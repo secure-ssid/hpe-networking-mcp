@@ -1,5 +1,5 @@
 {
-  "_comment": "Full stdio profile: every optional product starter enabled read-only (ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis, Design) alongside the always-on core/glp/rag/interop backends. Router still exposes only find_tool/invoke_read_tool/invoke_tool in minimal mode -- HPE_MCP_PRODUCTS only changes what the router can reach, not the client-visible tool count. Set HPE_MCP_PRODUCT_ACCESS=read-write only for a trusted lab session that needs guarded write tools visible. Replace /path/to/hpe-networking-mcp with your local clone path.",
+  "_comment": "Full safe-read-only stdio profile: every optional product starter enabled alongside the core/glp/rag/interop backends, with all write and destructive tools blocked. Router still exposes only find_tool/invoke_read_tool/invoke_tool in minimal mode. Use full-read-write.mcp.json only for a trusted session that intentionally needs guarded writes. Replace /path/to/hpe-networking-mcp with your local clone path.",
   "mcpServers": {
     "hpe-networking-mcp": {
       "command": "/path/to/hpe-networking-mcp/.venv/bin/python3",
@@ -10,10 +10,21 @@
       "env": {
         "PYTHONPATH": "/path/to/hpe-networking-mcp/src",
         "CREDS_PATH": "/path/to/hpe-networking-mcp/config/credentials.yaml",
+        "HPE_MCP_ACCESS_PROFILE": "safe-read-only",
+        "HPE_MCP_READONLY": "1",
         "HPE_MCP_ROUTER_MODE": "minimal",
         "HPE_MCP_TOOLSETS": "central,glp,rag",
         "HPE_MCP_PRODUCTS": "clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design",
-        "HPE_MCP_PRODUCT_ACCESS": "read-only"
+        "HPE_MCP_PRODUCT_ACCESS": "read-only",
+        "HPE_MCP_CENTRAL_WRITES": "0",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "0",
+        "HPE_MCP_AOS8_WRITES": "0",
+        "HPE_MCP_EDGECONNECT_WRITES": "0",
+        "HPE_MCP_APSTRA_WRITES": "0",
+        "HPE_MCP_MIST_WRITES": "0",
+        "HPE_MCP_CLEARPASS_WRITES": "0",
+        "HPE_MCP_UXI_WRITES": "0",
+        "HPE_MCP_AXIS_WRITES": "0"
       }
     }
   }

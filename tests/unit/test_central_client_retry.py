@@ -90,10 +90,14 @@ def _make_token_manager(token: str = "fake-token", generation: int = 0):
     return tm
 
 
-def _make_client(responses, token_manager=None):
+def _make_client(responses, token_manager=None, *, write_platform="central"):
     """Build a CentralClient whose session yields ``responses`` in sequence."""
     tm = token_manager if token_manager is not None else _make_token_manager()
-    client = CentralClient(base_url="https://test.example.com", token_manager=tm)
+    client = CentralClient(
+        base_url="https://test.example.com",
+        token_manager=tm,
+        write_platform=write_platform,
+    )
     # Replace session with one that returns our scripted responses.
     client.session = MagicMock()
     client.session.headers = {}
@@ -234,6 +238,70 @@ class TestCentralWriteGate:
 
         with pytest.raises(PermissionError, match="Central write requests are disabled"):
             client._request("POST", "/x")
+
+        client.session.request.assert_not_called()
+
+    def test_diagnostic_post_is_allowed_when_writes_are_disabled(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
+        client = _make_client([_make_response(202)])
+
+        response = client._request(
+            "POST",
+            "/network-troubleshooting/v1/cx/CX1/ping",
+            diagnostic=True,
+        )
+
+        assert response.status_code == 202
+        client.session.request.assert_called_once()
+
+    def test_diagnostic_post_cannot_bypass_glp_transport_gate(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
+        client = _make_client(
+            [_make_response(202)],
+            write_platform="glp",
+        )
+
+        with pytest.raises(PermissionError, match="GLP write requests are disabled"):
+            client._request(
+                "POST",
+                "/network-troubleshooting/v1/cx/CX1/ping",
+                diagnostic=True,
+            )
+
+        client.session.request.assert_not_called()
+
+    def test_diagnostic_flag_cannot_bypass_for_destructive_action(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
+        client = _make_client([_make_response(202)])
+
+        with pytest.raises(PermissionError, match="Central write requests are disabled"):
+            client._request(
+                "POST",
+                "/network-troubleshooting/v1/cx/CX1/portBounce",
+                diagnostic=True,
+            )
+
+        client.session.request.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "endpoint",
+        [
+            "/network-troubleshooting/v1/cx/../ping",
+            "/network-troubleshooting/v1/cx/%2e%2e/ping",
+            "/network-troubleshooting/v1/cx/CX1/ping?next=/network-config/v1",
+            "https://example.invalid/network-troubleshooting/v1/cx/CX1/ping",
+        ],
+    )
+    def test_diagnostic_flag_rejects_noncanonical_paths(
+        self,
+        monkeypatch,
+        endpoint,
+    ):
+        monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
+        client = _make_client([_make_response(202)])
+
+        with pytest.raises(PermissionError, match="Central write requests are disabled"):
+            client._request("POST", endpoint, diagnostic=True)
 
         client.session.request.assert_not_called()
 

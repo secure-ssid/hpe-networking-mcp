@@ -22,6 +22,22 @@ from scripts import ingest_tools
 TRACKED = project_facts.load()
 
 
+def test_complete_catalog_pins_every_generated_tool_flag():
+    expected = {
+        "HPE_MCP_CENTRAL_GENERATED_TOOLS",
+        "HPE_MCP_GLP_GENERATED_TOOLS",
+        "HPE_MCP_AOS8_GENERATED_TOOLS",
+        "HPE_MCP_EDGECONNECT_GENERATED_TOOLS",
+        "HPE_MCP_APSTRA_GENERATED_TOOLS",
+        "HPE_MCP_MIST_GENERATED_TOOLS",
+        "HPE_MCP_CLEARPASS_GENERATED_TOOLS",
+        "HPE_MCP_UXI_GENERATED_TOOLS",
+    }
+
+    assert set(project_facts.GENERATED_TOOL_ENV) == expected
+    assert project_facts.GENERATED_TOOL_ENV.items() <= project_facts.CATALOG_ENV.items()
+
+
 def test_tracked_facts_use_current_schema_version():
     assert TRACKED["schema_version"] == project_facts.SCHEMA_VERSION
 
@@ -115,7 +131,10 @@ def test_tracked_default_recommended_profile_matches_documented_client_configs()
 
     assert tools["default_recommended_profile"] == 18
     assert tools["default_recommended_profile"] == tools["default"]
-    assert router_modes["recommended_profile_env"] == {"HPE_MCP_TOOLSETS": "central,glp,rag"}
+    assert router_modes["recommended_profile_env"] == {
+        "HPE_MCP_ACCESS_PROFILE": "custom",
+        "HPE_MCP_TOOLSETS": "central,glp,rag",
+    }
 
 
 @pytest.mark.slow
@@ -144,6 +163,10 @@ def test_tracked_router_modes_match_a_fresh_probe():
         capture_output=True,
         text=True,
         timeout=120,
+        env={
+            **os.environ,
+            **{name: "0" for name in project_facts.GENERATED_TOOL_ENV},
+        },
     )
 
     assert result.returncode == 0, result.stderr

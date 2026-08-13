@@ -58,6 +58,23 @@ class TestCandidates:
             "/network-troubleshooting/v1/aos-s/SW1/traceroute",
         ]
 
+    @pytest.mark.parametrize(
+        "serial_number",
+        [
+            "CX1/portBounce?",
+            "CX1%2FportBounce",
+            "CX1#fragment",
+            "../CX1",
+        ],
+    )
+    def test_rejects_path_injection_in_serial_number(self, serial_number):
+        with pytest.raises(ValueError, match="serial_number"):
+            shared.troubleshooting_endpoint_candidates(
+                "cx",
+                serial_number,
+                "cableTest",
+            )
+
 
 class _Response:
     def __init__(self, status_code, location=""):

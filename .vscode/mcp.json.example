@@ -7,6 +7,7 @@
       "env": {
         "PYTHONPATH": "${workspaceFolder}/src",
         "CREDS_PATH": "${workspaceFolder}/config/credentials.yaml",
+        "HPE_MCP_ACCESS_PROFILE": "custom",
         "HPE_MCP_ROUTER_MODE": "minimal",
         "HPE_MCP_TOOLSETS": "central,glp,rag"
       }

@@ -17,7 +17,8 @@ install steps that come before any of these configs matter.
 | Client | Transport | Profile | Example |
 |---|---|---|---|
 | Generic stdio | stdio | minimal (`central,glp,rag`) | [`mcp-clients/stdio/minimal.mcp.json`](mcp-clients/stdio/minimal.mcp.json) |
-| Generic stdio | stdio | full (all optional products, read-only) | [`mcp-clients/stdio/full.mcp.json`](mcp-clients/stdio/full.mcp.json) |
+| Generic stdio | stdio | full (all products, safe read-only) | [`mcp-clients/stdio/full.mcp.json`](mcp-clients/stdio/full.mcp.json) |
+| Generic stdio | stdio | full read/write (all products, guarded writes enabled) | [`mcp-clients/stdio/full-read-write.mcp.json`](mcp-clients/stdio/full-read-write.mcp.json) |
 | Generic HTTP | streamable HTTP | local loopback | [`mcp-clients/http/local.mcp.http.json`](mcp-clients/http/local.mcp.http.json) |
 | Generic HTTP | streamable HTTP | non-loopback, bearer-protected | [`mcp-clients/http/bearer.mcp.http.json`](mcp-clients/http/bearer.mcp.http.json) + [`bearer.server.env`](mcp-clients/http/bearer.server.env) |
 | Copilot CLI / app | stdio | minimal | [`mcp-clients/copilot-cli.mcp-config.json`](mcp-clients/copilot-cli.mcp-config.json) |
@@ -41,11 +42,13 @@ documented low-token router profile.
   router still reaches `central`, `glp`, and `rag` plus the always-on
   credential-free `interop-core` backend.
 - **full** — adds every optional product starter
-  (`clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design`) read-only. Use
-  this only when you actually need one of those platforms in the current
-  session; it costs more router-reachable surface, though the client-visible
-  tool count is unchanged (the router profile still gates what
-  `find_tool`/`invoke_tool` can dispatch to).
+  (`clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design`) under
+  `safe-read-only`. Use this only when you actually need one of those
+  platforms in the current session.
+- **full-read-write** — loads the same full backend set with ordinary platform
+  writes enabled. Dry-run, confirmation, elicitation, and dedicated destructive
+  gates remain active. The client-visible tool count is still three because
+  both examples keep `HPE_MCP_ROUTER_MODE=minimal`.
 
 ## Which HTTP config should I copy?
 

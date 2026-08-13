@@ -2790,10 +2790,11 @@ def build_vsf_template(
     is bound directly to scope_id + device_function (object-type=LOCAL) —
     this *is* the assignment step; there is no separate assignment call.
     dry_run=True (default) returns the request preview with no network
-    call. Set dry_run=False and confirm=True to execute — this also
-    requires HPE_MCP_CENTRAL_WRITES=1 (enabled by default). On success
-    the response is validated (raises WriteResultError on a non-2xx or
-    error-shaped result) and a GET read-back is attached under
+    call. Set dry_run=False and confirm=True to execute — this also requires
+    full-read-write or custom access; Central writes default to enabled under
+    custom and HPE_MCP_CENTRAL_WRITES=0 opts out. On success the response is
+    validated (raises WriteResultError on a non-2xx or error-shaped result)
+    and a GET read-back is attached under
     result["read_back"] to confirm what Central actually stored.
     Cleanup: call delete_vsf_template(name, scope_id=..., device_function=...,
     dry_run=False, confirm=True) to remove a disposable/lab template.
@@ -2854,10 +2855,11 @@ def delete_vsf_template(
     """Delete a LOCAL-scoped VSF stacking template, then read back to confirm removal.
 
     dry_run=True (default) returns the request preview with no network
-    call. Set dry_run=False and confirm=True to execute — this also
-    requires HPE_MCP_CENTRAL_WRITES=1 (enabled by default). On success
-    the response is validated (raises WriteResultError on a non-2xx or
-    error-shaped result) and a read-back GET is attached under
+    call. Set dry_run=False and confirm=True to execute — this also requires
+    full-read-write or custom access; Central writes default to enabled under
+    custom and HPE_MCP_CENTRAL_WRITES=0 opts out. On success the response is
+    validated (raises WriteResultError on a non-2xx or error-shaped result)
+    and a read-back GET is attached under
     result["read_back"]; an HTTP 404 on read-back confirms the template no
     longer exists (surfaced as read_back={"deleted_confirmed": True}).
     """
@@ -2931,10 +2933,10 @@ def delete_sites_bulk(
 
     DELETE /network-config/v1/sites/bulk (manifest-confirmed). dry_run=True
     (default) returns the payload preview with no network call. Set
-    dry_run=False and confirm=True to execute — requires
-    HPE_MCP_CENTRAL_WRITES=1 (enabled by default). Irreversible: there is
-    no undo/read-back for a deleted site — verify site_ids with list_sites
-    first.
+    dry_run=False and confirm=True to execute — requires full-read-write or
+    custom access; Central writes default to enabled under custom and
+    HPE_MCP_CENTRAL_WRITES=0 opts out. Irreversible: there is no undo/read-back
+    for a deleted site — verify site_ids with list_sites first.
     """
     ids = _bulk_delete_ids(site_ids, "site_ids")
     endpoint = "/network-config/v1/sites/bulk"
@@ -2968,8 +2970,9 @@ def delete_site_collections_bulk(
     DELETE /network-config/v1/site-collections/bulk (manifest-confirmed).
     dry_run=True (default) returns the payload preview with no network
     call. Set dry_run=False and confirm=True to execute — requires
-    HPE_MCP_CENTRAL_WRITES=1 (enabled by default). Irreversible: there is
-    no undo/read-back for a deleted site collection.
+    full-read-write or custom access; Central writes default to enabled under
+    custom and HPE_MCP_CENTRAL_WRITES=0 opts out. Irreversible: there is no
+    undo/read-back for a deleted site collection.
     """
     ids = _bulk_delete_ids(site_collection_ids, "site_collection_ids")
     endpoint = "/network-config/v1/site-collections/bulk"
@@ -3024,11 +3027,12 @@ def run_firmware_compliance_campaign(
     flow as set_firmware_compliance — one HTTP call per target; this tool
     does not invent a bulk-firmware endpoint. dry_run=True (default) returns
     every target's payload preview with no network calls. Set dry_run=False
-    and confirm=True to execute — requires HPE_MCP_CENTRAL_WRITES=1
-    (enabled by default). Every target is attempted even if an earlier one
-    fails (see result["targets_failed"] / each entry's "error"); after a
-    successful write each target is read back via get_firmware_compliance
-    into that entry's "read_back". Cleanup/rollback: call
+    and confirm=True to execute — requires full-read-write or custom access;
+    Central writes default to enabled under custom and
+    HPE_MCP_CENTRAL_WRITES=0 opts out. Every target is attempted even if an
+    earlier one fails (see result["targets_failed"] / each entry's "error");
+    after a successful write each target is read back via
+    get_firmware_compliance into that entry's "read_back". Cleanup/rollback: call
     set_firmware_compliance again per target with the prior firmware
     version.
     """
