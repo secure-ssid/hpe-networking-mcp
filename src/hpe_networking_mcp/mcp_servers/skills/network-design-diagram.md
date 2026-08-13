@@ -49,6 +49,13 @@ Graphviz/NeXt exports. Prefer live Central topology when a site is known.
 
 ## Procedure
 
+### Step 0 — Confirm operator preferences
+
+If not specified by the user, ask for their preferences:
+- **Output format**: Draw.io (`.drawio` XML - default), Graphviz (PNG/SVG image), or NeXt UI (web).
+- **Icon style**: Generic role shapes vs. vendor-specific icons (Aruba, HPE, Cisco, Juniper/Mist, ClearPass).
+- **Topology source**: Live Central site inventory (`list_sites` -> `get_topology`) or custom hand-built model.
+
 ### Step 1 — Gather topology input
 
 **Tool:** `list_sites` → `get_topology` (monitoring), when a live site is in scope.

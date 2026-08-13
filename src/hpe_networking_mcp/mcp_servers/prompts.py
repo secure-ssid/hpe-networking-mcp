@@ -207,6 +207,7 @@ Prefer the skill path when available:
 2. Follow that runbook exactly.
 
 Otherwise use `find_tool` + `invoke_read_tool` (all design tools are read-only):
+0. If preferences are unstated, ask the operator for format (Draw.io/Graphviz/NeXt), icon style (generic vs vendor icons), and target site/scope.
 1. If a live site is in scope (`{site_name or "unspecified"}`), resolve the site and call
    monitoring `get_topology` for nodes/links.
 2. Or build a structured model: nodes[{{id,label,role,vendor}}], links[{{source,target}}],
