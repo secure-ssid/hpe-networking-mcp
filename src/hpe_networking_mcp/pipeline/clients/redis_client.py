@@ -5,6 +5,7 @@ LanceDB + SQLite + fastembed.
 """
 
 import os
+import re
 
 import numpy as np
 import redis
@@ -17,10 +18,27 @@ REDIS_URL = os.getenv("REDIS_URL", DEFAULT_REDIS_URL)
 DOCS_INDEX = "network_docs"
 EMBEDDING_DIMS = 768  # nomic-embed-text
 MAX_SEARCH_TOP_K = 200
+SourceFilter = str | tuple[str, ...] | list[str] | None
+
+_SOURCE_RE = re.compile(r"^[a-z0-9_]+$")
 
 
 def _clamp_top_k(top_k: int) -> int:
     return max(1, min(top_k, MAX_SEARCH_TOP_K))
+
+
+def _source_tag_filter(source_filter: SourceFilter) -> str:
+    if not source_filter:
+        return "*"
+    values = (source_filter,) if isinstance(source_filter, str) else tuple(source_filter)
+    # `source` reaches here straight from the ask_docs/search_docs tool
+    # parameter, so reject anything that could break out of the tag filter
+    # (`}`, `|`, whitespace) instead of interpolating it into the query.
+    if not values or any(
+        not isinstance(value, str) or not _SOURCE_RE.match(value) for value in values
+    ):
+        raise ValueError(f"invalid source filter: {source_filter!r}")
+    return "@source:{" + "|".join(values) + "}"
 
 
 def get_redis_url() -> str:
@@ -101,7 +119,7 @@ def vector_search(
     client: redis.Redis,
     query_vector: list[float],
     top_k: int = 15,
-    source_filter: str | None = None,
+    source_filter: SourceFilter = None,
     index_name: str = DOCS_INDEX,
 ) -> list[dict]:
     """Search for similar documents using vector similarity.
@@ -111,9 +129,7 @@ def vector_search(
     top_k = _clamp_top_k(top_k)
     vec_bytes = np.array(query_vector, dtype=np.float32).tobytes()
 
-    filter_str = "*"
-    if source_filter:
-        filter_str = f"@source:{{{source_filter}}}"
+    filter_str = _source_tag_filter(source_filter)
 
     q = (
         Query(f"({filter_str})=>[KNN {top_k} @embedding $vec AS score]")

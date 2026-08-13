@@ -921,3 +921,72 @@ def test_find_client_wrapper_forwards_backend_mac_arg(monkeypatch):
     assert calls == [
         (calls[0][0], "find_client", {"mac_or_ip": "aa:bb:cc:dd:ee:ff"})
     ]
+
+
+def test_generated_record_for_collision_alias_keeps_provenance_on_generated_tool(
+    monkeypatch,
+):
+    """A generated tool renamed on collision keeps its manifest provenance, and
+    the curated tool that kept the plain name is not reported as generated.
+
+    ``register_generated_tools`` renames a generated operation to
+    ``<name>_g<digest>`` when a curated tool already owns ``<name>``. The
+    provenance lookup must follow the tool that was actually registered.
+    """
+    record = {
+        "operation_id": "get_sensor_status",
+        "operation_key": "GET /sensors/{id}/status",
+        "manifest_platform": "uxi",
+        "_collision_alias": "uxi_get_sensor_status_gdeadbeef",
+    }
+    monkeypatch.setattr(
+        router,
+        "_generated_tool_records",
+        {
+            "uxi_get_sensor_status": record,
+            "uxi_get_sensor_status_gdeadbeef": record,
+        },
+    )
+    # Both names registered => the plain name is the curated tool.
+    monkeypatch.setattr(
+        router,
+        "_tool_index",
+        {
+            "uxi_get_sensor_status": object(),
+            "uxi_get_sensor_status_gdeadbeef": object(),
+        },
+    )
+
+    curated = router._generated_record_for("uxi_get_sensor_status")
+    generated = router._generated_record_for("uxi_get_sensor_status_gdeadbeef")
+
+    assert curated is None
+    assert generated == {
+        "operation_id": "get_sensor_status",
+        "operation_key": "GET /sensors/{id}/status",
+        "manifest_platform": "uxi",
+    }
+    assert "_collision_alias" not in generated
+
+
+def test_generated_record_for_uncollided_name_is_generated(monkeypatch):
+    """Without a collision, the manifest name itself is the generated tool."""
+    record = {
+        "operation_id": "get_sensors",
+        "operation_key": "GET /sensors",
+        "manifest_platform": "uxi",
+        "_collision_alias": "uxi_sensors_get_gdeadbeef",
+    }
+    monkeypatch.setattr(
+        router,
+        "_generated_tool_records",
+        {"uxi_sensors_get": record, "uxi_sensors_get_gdeadbeef": record},
+    )
+    monkeypatch.setattr(router, "_tool_index", {"uxi_sensors_get": object()})
+
+    assert router._generated_record_for("uxi_sensors_get") == {
+        "operation_id": "get_sensors",
+        "operation_key": "GET /sensors",
+        "manifest_platform": "uxi",
+    }
+    assert router._generated_record_for("not_generated_at_all") is None

@@ -18,6 +18,13 @@ Covers:
   tool name as part of a plan.
 - Neither tool ever calls ``invoke_tool``/``invoke_read_tool`` itself (no
   live dispatch happens as a side effect of planning).
+
+Router mode is deliberately *not* forced in this module. Mutating
+``os.environ`` at test-module import time made the suite order-dependent
+(it only worked when this module happened to be imported before
+``tool_router``). The autouse scrub in ``tests/unit/conftest.py`` clears
+the whole ``HPE_MCP_*`` namespace before any test module is imported, so a
+developer ``.env`` pinning ``HPE_MCP_ROUTER_MODE=minimal`` no longer leaks in.
 """
 
 from __future__ import annotations
@@ -28,14 +35,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 from mcp.server.mcpserver import Context, MCPServer
-
-import os
-
-# Prefer default router mode so planner tools register even when developer
-# .env pins HPE_MCP_ROUTER_MODE=minimal for interactive clients.
-os.environ.setdefault("HPE_MCP_ROUTER_MODE", "default")
-if os.environ.get("HPE_MCP_ROUTER_MODE", "").strip().lower() == "minimal":
-    os.environ["HPE_MCP_ROUTER_MODE"] = "default"
 
 import hpe_networking_mcp.mcp_servers.tool_router as router
 from hpe_networking_mcp.mcp_servers.shared import DESTRUCTIVE, IDEMPOTENT_WRITE, READ_ONLY

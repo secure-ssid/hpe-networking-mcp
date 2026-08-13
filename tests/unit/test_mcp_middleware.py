@@ -417,6 +417,9 @@ class TestResponseEnvelope:
             ("confirmation_required", 409),
             ("not_found", 404),
             ("failed", 500),
+            ("unknown_tool", 404),
+            ("invalid_cursor", 400),
+            ("invalid_call", 400),
         ],
     )
     def test_named_status_precedes_generic_error_fallback(self, status, expected):
@@ -431,6 +434,52 @@ class TestResponseEnvelope:
         assert result is not None
         assert result["ok"] is False
         assert result["status"] == expected
+
+    @pytest.mark.parametrize(
+        ("message", "expected"),
+        [
+            ("Client error '404 Not Found' for url 'https://x/y'", 404),
+            ("Client error '422 Unprocessable Entity' for url 'https://x/y'", 422),
+            ("Client error '429 Too Many Requests' for url 'https://x/y'", 429),
+            ("Server error '503 Service Unavailable' for url 'https://x/y'", 503),
+        ],
+    )
+    def test_upstream_http_code_recovered_from_message(self, message, expected):
+        result = ResponseEnvelopeMiddleware().after_call("read_tool", {}, {"error": message})
+
+        assert result is not None
+        assert result["ok"] is False
+        assert result["status"] == expected
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "connection refused",
+            "returned 404 devices",
+            "timed out after 30 seconds on port 443",
+            "Client error '999 Nonsense' for url 'https://x/y'",
+        ],
+    )
+    def test_unparseable_message_still_falls_back_to_500(self, message):
+        result = ResponseEnvelopeMiddleware().after_call("read_tool", {}, {"error": message})
+
+        assert result is not None
+        assert result["status"] == 500
+
+    def test_backend_status_code_field_beats_message_and_fallback(self):
+        result = ResponseEnvelopeMiddleware().after_call(
+            "read_tool",
+            {},
+            {"status_code": 403, "error": "Client error '404 Not Found' for url 'https://x/y'"},
+        )
+
+        assert result is not None
+        assert result["status"] == 403
+
+    def test_successful_status_code_does_not_envelope_without_error(self):
+        assert ResponseEnvelopeMiddleware().after_call(
+            "read_tool", {}, {"status_code": 200, "data": {"items": []}}
+        ) is None
 
     def test_bare_blocked_status_is_enveloped_as_forbidden(self):
         result = ResponseEnvelopeMiddleware().after_call(

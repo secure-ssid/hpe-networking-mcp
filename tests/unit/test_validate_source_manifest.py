@@ -17,9 +17,17 @@ def _write_source_meta(path: Path, pairs: dict[str, str]) -> None:
     path.write_text(f"SOURCE_META = {{\n{body}\n}}\n", encoding="utf-8")
 
 
-def _write_doc_type_map(path: Path, pairs: dict[str, str]) -> None:
-    body = ",\n".join(f'    "{k}": "{v}"' for k, v in pairs.items())
-    path.write_text(f'_DOC_TYPE_TO_SOURCE: dict[str, str] = {{\n{body}\n}}\n', encoding="utf-8")
+def _write_doc_type_map(path: Path, pairs: dict[str, str | tuple[str, ...]]) -> None:
+    def render(value: str | tuple[str, ...]) -> str:
+        if isinstance(value, str):
+            return f'"{value}"'
+        return "(" + ", ".join(f'"{item}"' for item in value) + ")"
+
+    body = ",\n".join(f'    "{k}": {render(v)}' for k, v in pairs.items())
+    path.write_text(
+        f'_DOC_TYPE_TO_SOURCE: dict[str, str | tuple[str, ...]] = {{\n{body}\n}}\n',
+        encoding="utf-8",
+    )
 
 
 def _good_entry(root: Path, source: str, scraper_name: str) -> dict:
@@ -115,7 +123,7 @@ def test_missing_source_meta_entry_fails(tmp_path: Path, monkeypatch):
     assert any("SOURCE_META" in c.name for c in fails)
 
 
-def test_missing_doc_type_to_source_is_warn_not_fail(tmp_path: Path, monkeypatch):
+def test_missing_doc_type_to_source_fails(tmp_path: Path, monkeypatch):
     _patch_paths(monkeypatch, tmp_path)
     entry = _good_entry(tmp_path, "my_docs", "scrape_my_docs")
     _write_manifest(vsm.MANIFEST_PATH, [entry])
@@ -125,9 +133,79 @@ def test_missing_doc_type_to_source_is_warn_not_fail(tmp_path: Path, monkeypatch
 
     checks = vsm.validate()
     fails = [c for c in checks if c.status == "FAIL"]
-    warns = [c for c in checks if c.status == "WARN"]
-    assert not any("_DOC_TYPE_TO_SOURCE" in c.name for c in fails)
-    assert any("_DOC_TYPE_TO_SOURCE" in c.name for c in warns)
+    assert any("_DOC_TYPE_TO_SOURCE" in c.name for c in fails)
+
+
+def test_doc_type_to_multiple_sources_passes_for_each_source(tmp_path: Path, monkeypatch):
+    _patch_paths(monkeypatch, tmp_path)
+    first = _good_entry(tmp_path, "security_advisories", "scrape_security")
+    second = _good_entry(tmp_path, "juniper_security_advisories", "scrape_security")
+    first["doc_type"] = second["doc_type"] = "security-advisory"
+    _write_manifest(vsm.MANIFEST_PATH, [first, second])
+    vsm.RAG_PY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _write_source_meta(
+        vsm.INGEST_DOCS_PATH,
+        {
+            "security_advisories": "security-advisory",
+            "juniper_security_advisories": "security-advisory",
+        },
+    )
+    _write_doc_type_map(
+        vsm.RAG_PY_PATH,
+        {"security-advisory": ("security_advisories", "juniper_security_advisories")},
+    )
+
+    checks = vsm.validate()
+
+    assert [c for c in checks if c.status == "FAIL"] == []
+
+
+def test_unallowlisted_missing_scraper_fails(tmp_path: Path, monkeypatch):
+    _patch_paths(monkeypatch, tmp_path)
+    entry = _good_entry(tmp_path, "my_docs", "scrape_my_docs")
+    entry["scraper"] = None
+    _write_manifest(vsm.MANIFEST_PATH, [entry])
+    vsm.RAG_PY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _write_source_meta(vsm.INGEST_DOCS_PATH, {"my_docs": "my-docs"})
+    _write_doc_type_map(vsm.RAG_PY_PATH, {"my-docs": "my_docs"})
+
+    checks = vsm.validate()
+
+    assert any("no scraper registered" in c.detail for c in checks if c.status == "FAIL")
+
+
+def test_allowlisted_pending_scraper_is_ok(tmp_path: Path, monkeypatch):
+    _patch_paths(monkeypatch, tmp_path)
+    entry = _good_entry(tmp_path, "feature_navigator", "scrape_feature_navigator")
+    entry["scraper"] = None
+    _write_manifest(vsm.MANIFEST_PATH, [entry])
+    vsm.RAG_PY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _write_source_meta(vsm.INGEST_DOCS_PATH, {"feature_navigator": "feature-navigator"})
+    _write_doc_type_map(vsm.RAG_PY_PATH, {"feature-navigator": "feature_navigator"})
+
+    checks = vsm.validate()
+
+    assert [c for c in checks if c.status == "FAIL"] == []
+    assert any(c.name == "feature_navigator: scraper pending" for c in checks)
+
+
+def test_shared_scraper_source_is_ok_when_script_exists(tmp_path: Path, monkeypatch):
+    _patch_paths(monkeypatch, tmp_path)
+    shared = tmp_path / "ingestion" / "scrape_security_lifecycle.py"
+    shared.parent.mkdir(parents=True, exist_ok=True)
+    shared.write_text("# shared scraper\n", encoding="utf-8")
+    entry = _good_entry(tmp_path, "security_advisories", "unused")
+    entry["doc_type"] = "security-advisory"
+    entry["scraper"] = None
+    _write_manifest(vsm.MANIFEST_PATH, [entry])
+    vsm.RAG_PY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _write_source_meta(vsm.INGEST_DOCS_PATH, {"security_advisories": "security-advisory"})
+    _write_doc_type_map(vsm.RAG_PY_PATH, {"security-advisory": "security_advisories"})
+
+    checks = vsm.validate()
+
+    assert [c for c in checks if c.status == "FAIL"] == []
+    assert any(c.name == "security_advisories: shared scraper exists" for c in checks)
 
 
 def test_invalid_json_fails_gracefully(tmp_path: Path, monkeypatch):

@@ -123,7 +123,9 @@ _VENDOR_HINTS: dict[str, frozenset[str]] = {
 # and Aruba docs legitimately reference each other in migration material).
 _CROSS_VENDOR_PENALTY = 0.12
 
-_DOC_TYPE_TO_SOURCE: dict[str, str] = {
+SourceFilter = str | tuple[str, ...] | None
+
+_DOC_TYPE_TO_SOURCE: dict[str, str | tuple[str, ...]] = {
     "developer-docs": "developer_docs",
     "tech-docs": "tech_docs",
     "techdocs-html": "techdocs_html",
@@ -135,6 +137,9 @@ _DOC_TYPE_TO_SOURCE: dict[str, str] = {
     "mist-docs": "mist_docs",
     "juniper-kb": "juniper_kb",
     "devhub": "devhub",
+    "feature-navigator": "feature_navigator",
+    "security-advisory": ("security_advisories", "juniper_security_advisories"),
+    "lifecycle": ("lifecycle_notices", "juniper_lifecycle"),
 }
 _API_QUERY_HINTS = {
     "api",
@@ -233,7 +238,7 @@ def _boost_sources(hits: list[dict[str, Any]], query: str = "") -> list[dict[str
     return hits
 
 
-def _search_lancedb(query: str, top_k: int, source_filter: str | None) -> list[dict[str, Any]]:
+def _search_lancedb(query: str, top_k: int, source_filter: SourceFilter) -> list[dict[str, Any]]:
     try:
         db = lance_client.connect()
         query_vector = _embedder.embed_query(query)
@@ -249,7 +254,7 @@ def _search_lancedb(query: str, top_k: int, source_filter: str | None) -> list[d
     return _shape(_boost_sources(hits, query), top_k)
 
 
-def _search_redis(query: str, top_k: int, source_filter: str | None) -> list[dict[str, Any]]:
+def _search_redis(query: str, top_k: int, source_filter: SourceFilter) -> list[dict[str, Any]]:
     if _redis is None:
         return [{"error": "Redis not available — is the Redis Stack server running?"}]
 

@@ -106,9 +106,44 @@ def _temp_repo_root_dotenv():
     ``tmp_path`` -- so an end-to-end test of "is .env actually read" has to
     use that real location. ``.env`` is git-ignored; any pre-existing local
     file is restored afterward.
+
+    Swapping a *real* developer file is inherently dangerous, so two
+    failure modes are guarded explicitly. Both have destroyed a populated
+    local ``.env`` in practice:
+
+    1. **Crash safety.** The original contents are copied to an on-disk
+       sidecar *before* the marker is written, not just held in memory. If
+       the interpreter dies mid-test the sidecar survives, and the next run
+       restores from it instead of treating the leftover marker file as the
+       developer's real config.
+    2. **Concurrency safety.** Two pytest sessions running at once used to
+       interleave as snapshot(real) -> snapshot(marker) -> restore(real) ->
+       restore(marker), permanently leaving the one-line marker in place.
+       An exclusive lock file serializes the swap; if another session holds
+       it, the test skips rather than clobbering.
     """
     dotenv_path = REPO_ROOT / ".env"
+    sidecar = REPO_ROOT / ".env.pytest-backup"
+    lock_path = REPO_ROOT / ".env.pytest-lock"
+
+    try:
+        lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        pytest.skip(
+            "another pytest session is swapping the repo-root .env "
+            f"({lock_path.name} exists); skipping rather than risk clobbering it"
+        )
+    os.close(lock_fd)
+
+    # A leftover sidecar means a previous run died before restoring; its
+    # contents are the developer's real file, not the marker now on disk.
+    if sidecar.exists():
+        dotenv_path.write_text(sidecar.read_text(encoding="utf-8"), encoding="utf-8")
+        sidecar.unlink(missing_ok=True)
+
     pre_existing = dotenv_path.read_text(encoding="utf-8") if dotenv_path.exists() else None
+    if pre_existing is not None:
+        sidecar.write_text(pre_existing, encoding="utf-8")
 
     def _write(marker: str, value: str) -> None:
         dotenv_path.write_text(f"{marker}={value}\n", encoding="utf-8")
@@ -120,6 +155,8 @@ def _temp_repo_root_dotenv():
             dotenv_path.unlink(missing_ok=True)
         else:
             dotenv_path.write_text(pre_existing, encoding="utf-8")
+        sidecar.unlink(missing_ok=True)
+        lock_path.unlink(missing_ok=True)
 
 
 def _run_subprocess(code: str, *, env: dict[str, str]) -> str:
@@ -205,3 +242,65 @@ class TestSharedDotenvLocation:
         output = _run_subprocess(code, env=env)
 
         assert output == "process-env-value"
+
+
+class TestRepoRootDotenvFixtureSafety:
+    """The fixture swaps a real developer file; these guard that swap.
+
+    A concurrent-session race previously left the one-line marker file in
+    place permanently, destroying a populated local ``.env``.
+    """
+
+    def test_lock_is_released_so_consecutive_tests_can_run(self, _temp_repo_root_dotenv):
+        _temp_repo_root_dotenv("SOURCE_CLIENT_ID", "x")
+        assert (REPO_ROOT / ".env.pytest-lock").exists()
+
+    def test_second_session_skips_instead_of_clobbering(self):
+        lock_path = REPO_ROOT / ".env.pytest-lock"
+        dotenv_path = REPO_ROOT / ".env"
+        sentinel = "REAL_LOCAL_VALUE=do-not-destroy\n"
+
+        had_dotenv = dotenv_path.exists()
+        original = dotenv_path.read_text(encoding="utf-8") if had_dotenv else None
+        dotenv_path.write_text(sentinel, encoding="utf-8")
+        # Simulate another pytest session mid-swap.
+        os.close(os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+        try:
+            gen = _temp_repo_root_dotenv.__wrapped__()
+            # pytest.skip raises Skipped, which derives from BaseException.
+            with pytest.raises(BaseException, match="another pytest session"):
+                next(gen)
+            assert dotenv_path.read_text(encoding="utf-8") == sentinel
+        finally:
+            lock_path.unlink(missing_ok=True)
+            if original is None:
+                dotenv_path.unlink(missing_ok=True)
+            else:
+                dotenv_path.write_text(original, encoding="utf-8")
+
+    def test_leftover_sidecar_from_a_crashed_run_is_restored(self):
+        dotenv_path = REPO_ROOT / ".env"
+        sidecar = REPO_ROOT / ".env.pytest-backup"
+        real = "REAL_LOCAL_VALUE=recovered\n"
+
+        had_dotenv = dotenv_path.exists()
+        original = dotenv_path.read_text(encoding="utf-8") if had_dotenv else None
+        # State a crashed run leaves behind: marker on disk, real file in sidecar.
+        dotenv_path.write_text("SOURCE_CLIENT_ID=from-dotenv\n", encoding="utf-8")
+        sidecar.write_text(real, encoding="utf-8")
+        try:
+            gen = _temp_repo_root_dotenv.__wrapped__()
+            write = next(gen)
+            # The crashed run's real contents win over the leftover marker.
+            assert dotenv_path.read_text(encoding="utf-8") == real
+            write("SOURCE_CLIENT_ID", "from-dotenv")
+            list(gen)
+            assert dotenv_path.read_text(encoding="utf-8") == real
+            assert not sidecar.exists()
+        finally:
+            sidecar.unlink(missing_ok=True)
+            (REPO_ROOT / ".env.pytest-lock").unlink(missing_ok=True)
+            if original is None:
+                dotenv_path.unlink(missing_ok=True)
+            else:
+                dotenv_path.write_text(original, encoding="utf-8")

@@ -45,6 +45,33 @@ OPTIONAL_PRODUCT_ENVS = {
     "axis": ("AXIS_BASE_URL", "AXIS_API_TOKEN"),
     "design": (),  # local diagram generation; no vendor credentials
 }
+# Env vars carrying each optional product's base/API host, checked against
+# the same placeholder-host rules the servers enforce
+# (pipeline.url_validation.placeholder_host_reason). UXI and design are
+# absent on purpose: UXI derives its API/token hosts from documented
+# defaults (UXI_BASE_URL/UXI_TOKEN_URL are optional overrides, covered
+# below), and design is local-only with no vendor host at all.
+OPTIONAL_PRODUCT_URL_ENVS = {
+    "clearpass": ("CLEARPASS_BASE_URL",),
+    "mist": ("MIST_HOST",),
+    "apstra": ("APSTRA_BASE_URL",),
+    "aos8": ("AOS8_BASE_URL",),
+    "edgeconnect": ("EDGECONNECT_BASE_URL",),
+    "axis": ("AXIS_BASE_URL",),
+    "uxi": ("UXI_BASE_URL", "UXI_TOKEN_URL"),
+}
+# Token/secret env var per product, used only to decide *how loudly* to
+# report a placeholder host. Values are never read into a message -- only
+# `bool(value)` is used -- so no secret can reach the doctor's output.
+OPTIONAL_PRODUCT_TOKEN_ENVS = {
+    "clearpass": ("CLEARPASS_API_TOKEN",),
+    "mist": ("MIST_API_TOKEN",),
+    "apstra": ("APSTRA_API_TOKEN", "APSTRA_PASSWORD"),
+    "aos8": ("AOS8_API_TOKEN", "AOS8_PASSWORD"),
+    "edgeconnect": ("EDGECONNECT_API_TOKEN",),
+    "axis": ("AXIS_API_TOKEN",),
+    "uxi": ("UXI_CLIENT_SECRET",),
+}
 PLACEHOLDER_MARKERS = ("YOUR_", "REPLACE_ME", "PLACEHOLDER")
 READ_ONLY_PRODUCT_ACCESS_VALUES = {"read-only", "readonly", "read_only", "ro"}
 READ_WRITE_PRODUCT_ACCESS_VALUES = {"read-write", "readwrite", "read_write", "rw"}
@@ -435,6 +462,94 @@ def _product_access_check(value: str | None) -> Check:
     )
 
 
+def _placeholder_url_env_vars(product: str) -> list[str]:
+    """Env var names for ``product`` whose URL is still a doc placeholder.
+
+    Returns names only -- never a value -- so this is safe to interpolate
+    straight into doctor output. Uses the exact same rule the servers
+    enforce at request time
+    (:func:`hpe_networking_mcp.pipeline.url_validation.placeholder_host_reason`)
+    so the doctor can never disagree with the runtime.
+    """
+    from urllib.parse import urlsplit
+
+    from hpe_networking_mcp.pipeline.url_validation import placeholder_host_reason
+
+    flagged: list[str] = []
+    for env_var in OPTIONAL_PRODUCT_URL_ENVS.get(product, ()):
+        value = os.getenv(env_var, "").strip()
+        if not value:
+            continue
+        host = (urlsplit(value).hostname or "").strip()
+        if host and placeholder_host_reason(host):
+            flagged.append(env_var)
+    return flagged
+
+
+def _placeholder_product_checks(enabled: set[str]) -> list[Check]:
+    """Report optional products whose base URL is still a doc placeholder.
+
+    Two severities, because the risk differs:
+      - the product is *enabled* -- the server would refuse the tool call
+        outright, so this is a FAIL: the product is advertised but unusable.
+      - the product is not enabled but a token/secret *is* configured
+        alongside the placeholder host -- a real credential sitting next to
+        a host the operator does not control, which becomes live the moment
+        the product is added to HPE_MCP_PRODUCTS. WARN.
+
+    Only env var names and product names are printed; no value is ever read
+    into a message.
+    """
+    checks: list[Check] = []
+
+    # The bypass is itself worth reporting: it silently restores the old
+    # "ship the token at whatever host is configured" behavior, and nothing
+    # else in the output would hint that the guard is off.
+    bypass = os.getenv("HPE_MCP_ALLOW_PLACEHOLDER_URLS", "").strip().lower()
+    if bypass and bypass not in FALSY_WRITE_VALUES:
+        checks.append(
+            Check(
+                "WARN",
+                "Placeholder URL guard",
+                "HPE_MCP_ALLOW_PLACEHOLDER_URLS is set, so example/placeholder "
+                "product hosts are accepted and credentials will be sent to them; "
+                "unset it outside automated tests",
+            )
+        )
+
+    for product in sorted(OPTIONAL_PRODUCT_URL_ENVS):
+        flagged = _placeholder_url_env_vars(product)
+        if not flagged:
+            continue
+        has_credential = any(
+            os.getenv(name, "").strip()
+            for name in OPTIONAL_PRODUCT_TOKEN_ENVS.get(product, ())
+        )
+        if product in enabled:
+            checks.append(
+                Check(
+                    "FAIL",
+                    f"{product} base URL",
+                    f"{', '.join(flagged)} still points at an example/placeholder "
+                    "host from the setup docs; this product is enabled, so every "
+                    "call to it is refused before any request is sent. Replace it "
+                    "with the real hostname.",
+                )
+            )
+        elif has_credential:
+            checks.append(
+                Check(
+                    "WARN",
+                    f"{product} base URL",
+                    f"{', '.join(flagged)} is an example/placeholder host but a "
+                    "credential is configured alongside it; the credential would "
+                    "target a host you do not control if this product is added to "
+                    "HPE_MCP_PRODUCTS. Replace the URL or remove the credential.",
+                )
+            )
+    return checks
+
+
 def _enabled_optional_products(products: str, toolsets: str | None) -> set[str]:
     product_values = set(_csv_values(products))
     toolset_values = set(_csv_values(toolsets))
@@ -767,13 +882,21 @@ def _runtime_checks() -> list[Check]:
         ),
     ]
 
-    for product in sorted(_enabled_optional_products(products, toolsets)):
+    enabled_products = _enabled_optional_products(products, toolsets)
+    for product in sorted(enabled_products):
         required = OPTIONAL_PRODUCT_ENVS[product]
+        # A base URL that is still an RFC 2606 example host counts as
+        # "placeholder" here too, not just the YOUR_/REPLACE_ME markers --
+        # otherwise a product wired to `*.example.com` reported as
+        # "required env vars are set" while every one of its tool calls is
+        # refused at request time.
+        placeholder_urls = set(_placeholder_url_env_vars(product))
         missing = [
             name
             for name in required
             if not (value := os.getenv(name, "").strip())
             or _is_placeholder_value(value)
+            or name in placeholder_urls
         ]
         checks.append(
             Check(
@@ -784,6 +907,8 @@ def _runtime_checks() -> list[Check]:
                 else f"missing or placeholder: {', '.join(missing)}",
             )
         )
+
+    checks.extend(_placeholder_product_checks(enabled_products))
 
     return checks
 

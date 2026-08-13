@@ -68,9 +68,25 @@ class TestHybridSearch:
                                 source_filter="tech_docs")
         assert hits and all(h["source"] == "tech_docs" for h in hits)
 
+    def test_multi_source_filter_narrows_to_any_allowed_source(self, db):
+        hits = lc.hybrid_search(
+            db,
+            "SSID VLAN Passpoint",
+            _vec(99),
+            top_k=3,
+            source_filter=("developer_docs", "vsg_docs"),
+        )
+        assert hits
+        assert {h["source"] for h in hits} <= {"developer_docs", "vsg_docs"}
+        assert {h["source"] for h in hits} == {"developer_docs", "vsg_docs"}
+
     def test_malformed_source_filter_raises(self, db):
         with pytest.raises(ValueError, match="invalid source filter"):
             lc.hybrid_search(db, "x", _vec(99), source_filter="bad'; DROP--")
+
+    def test_malformed_multi_source_filter_raises(self, db):
+        with pytest.raises(ValueError, match="invalid source filter"):
+            lc.hybrid_search(db, "x", _vec(99), source_filter=("tech_docs", "bad'}"))
 
     def test_missing_table_raises_with_build_instructions(self, tmp_path):
         empty = lc.connect(tmp_path / "empty")

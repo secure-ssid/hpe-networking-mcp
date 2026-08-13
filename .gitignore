@@ -1,5 +1,10 @@
 # Credentials — never commit
 .env
+# Any .env sidecar: wizard/doctor backups, pytest swap artifacts, incident
+# copies. These hold the same secrets as .env, so match them by prefix
+# rather than listing each suffix.
+.env.*
+!.env.example
 config/credentials.yaml
 .token_cache_*.json
 

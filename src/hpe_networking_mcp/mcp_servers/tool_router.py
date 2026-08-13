@@ -389,7 +389,7 @@ def _execution_contract(
 
 def _discovery_metadata(tool: Any, server: str | None, schema: dict[str, Any]) -> dict[str, Any]:
     capability = _tool_capability(tool)
-    generated = _generated_records().get(str(getattr(tool, "name", "")))
+    generated = _generated_record_for(str(getattr(tool, "name", "")))
     properties = schema.get("properties") or {}
     supports_confirm = "confirm" in properties
     metadata = {
@@ -545,6 +545,7 @@ def _generated_records() -> dict[str, dict[str, Any]]:
     if _generated_tool_records is not None:
         return _generated_tool_records
     from hpe_networking_mcp.mcp_servers.openapi_gen.manifest import MANIFEST_DIR
+    from hpe_networking_mcp.mcp_servers.openapi_gen.naming import digest
 
     records: dict[str, dict[str, Any]] = {}
     for path in sorted(MANIFEST_DIR.glob("*.json")):
@@ -555,13 +556,47 @@ def _generated_records() -> dict[str, dict[str, Any]]:
         for operation in manifest.get("operations") or []:
             if not isinstance(operation, dict) or not operation.get("name"):
                 continue
-            records[str(operation["name"])] = {
+            name = str(operation["name"])
+            # ``register_generated_tools`` renames a generated tool to
+            # ``<name>_g<digest>`` when a *curated* tool already owns
+            # ``<name>`` (openapi_gen/runtime.py). Index that collision alias
+            # too, and remember it, so provenance follows the tool that was
+            # actually registered instead of being pinned to the manifest
+            # name the curated tool kept.
+            op_digest = digest(
+                str(operation.get("method") or ""), str(operation.get("path") or "")
+            )
+            alias = f"{name}_g{op_digest}"
+            record = {
                 "operation_id": operation.get("operation_id"),
                 "operation_key": operation.get("key"),
                 "manifest_platform": path.stem,
+                "_collision_alias": alias,
             }
+            records[name] = record
+            records[alias] = record
     _generated_tool_records = records
     return records
+
+
+def _generated_record_for(name: str) -> dict[str, Any] | None:
+    """Manifest provenance for ``name``, or None when ``name`` is curated.
+
+    A generated operation whose preferred name collides with a curated tool
+    is registered under ``<name>_g<digest>``; the curated tool keeps the
+    plain manifest name. Matching on the manifest name alone therefore
+    reports the curated tool as "generated" (with the generated
+    operation_id) and the real generated tool as "curated". When the
+    collision alias is itself registered, the plain name belongs to the
+    curated tool and carries no generated provenance.
+    """
+    record = _generated_records().get(name)
+    if record is None:
+        return None
+    alias = record.get("_collision_alias")
+    if alias and alias != name and alias in _tool_index:
+        return None
+    return {key: value for key, value in record.items() if key != "_collision_alias"}
 
 
 def _load_all_backends() -> None:

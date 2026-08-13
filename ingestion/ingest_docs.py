@@ -25,7 +25,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from bs4 import BeautifulSoup
 
-from ingestion.chunking import chunk_text
 from hpe_networking_mcp.pipeline.clients.ollama_client import OllamaClient
 from hpe_networking_mcp.pipeline.clients.redis_client import (
     DOCS_INDEX,
@@ -33,12 +32,15 @@ from hpe_networking_mcp.pipeline.clients.redis_client import (
     get_client,
     upsert_docs,
 )
+from ingestion.chunking import chunk_text
 
 SOURCES_DIR = Path(__file__).parent / "sources"
 
 # Maps source folder name → doc_type tag.
-# Each source has a distinct doc_type so provenance survives filtering.
 # `doc_type` is kept for back-compat; new code should filter by `source`.
+# Some legacy doc_types are intentionally shared across vendor-specific
+# sources, so provenance and precise filtering depend on the separate source
+# field emitted for every chunk.
 SOURCE_META = {
     "devhub": "devhub",
     "developer_docs": "developer-docs",

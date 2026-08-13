@@ -70,6 +70,44 @@ def test_vector_search_negative_top_k_clamped_to_one():
     assert query._num == 1
 
 
+def test_vector_search_accepts_multi_source_filter():
+    client = _fake_client_returning(0.0)
+    redis_client.vector_search(
+        client,
+        query_vector=[0.0] * 768,
+        source_filter=("security_advisories", "juniper_security_advisories"),
+    )
+
+    query = client.ft.return_value.search.call_args.args[0]
+    assert "@source:{security_advisories|juniper_security_advisories}" in query._query_string
+
+
+@pytest.mark.parametrize(
+    "malicious",
+    ["bad}|*", "a b", "UPPER", "semi;colon", ("ok_source", "bad}|*")],
+)
+def test_vector_search_rejects_injectable_source_filter(malicious):
+    client = _fake_client_returning(0.0)
+
+    with pytest.raises(ValueError, match="invalid source filter"):
+        redis_client.vector_search(
+            client,
+            query_vector=[0.0] * 768,
+            source_filter=malicious,
+        )
+
+    client.ft.return_value.search.assert_not_called()
+
+
+@pytest.mark.parametrize("empty", [None, "", (), []])
+def test_vector_search_treats_empty_source_filter_as_unfiltered(empty):
+    client = _fake_client_returning(0.0)
+    redis_client.vector_search(client, query_vector=[0.0] * 768, source_filter=empty)
+
+    query = client.ft.return_value.search.call_args.args[0]
+    assert "@source:" not in query._query_string
+
+
 def test_search_tools_negative_top_k_clamped_to_one():
     client = _fake_client_returning(0.0)
     redis_client.search_tools(client, query_vector=[0.0] * 768, top_k=-5)

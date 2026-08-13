@@ -7,6 +7,7 @@ small models get a reliable `ok=false` signal when something did not happen.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 
@@ -25,6 +26,13 @@ _BLOCKED_STATUS_HTTP = {
     # key and would escape as an un-enveloped implicit success.
     "failed": 500,
     "failure": 500,
+    # Router-emitted caller-error statuses (tool_router dispatch helpers).
+    # Without these they fall through to the generic 500 fallback, reporting a
+    # caller mistake -- typo'd tool name, stale cursor, malformed batch entry --
+    # as a retryable server fault.
+    "unknown_tool": 404,
+    "invalid_cursor": 400,
+    "invalid_call": 400,
 }
 
 
@@ -34,6 +42,25 @@ def _status_code(value: Any) -> int | None:
     if isinstance(value, str) and value.isdigit():
         return int(value)
     return None
+
+
+# httpx renders raised transport errors as:
+#   "Client error '404 Not Found' for url 'https://...'"
+#   "Server error '503 Service Unavailable' for url 'https://...'"
+# Backends surface that string verbatim in `error`, so the real upstream code
+# is recoverable. Anchoring on the httpx prefix keeps unrelated digits in a
+# message (counts, IDs, ports) from being mistaken for a status.
+_HTTPX_STATUS_RE = re.compile(r"\b(?:Client|Server) error '(\d{3})\b")
+
+
+def _status_from_message(message: str | None) -> int | None:
+    if not message:
+        return None
+    match = _HTTPX_STATUS_RE.search(message)
+    if not match:
+        return None
+    code = int(match.group(1))
+    return code if 400 <= code <= 599 else None
 
 
 def _is_already_enveloped(result: dict[str, Any]) -> bool:
@@ -60,12 +87,21 @@ def _blocked_status(result: dict[str, Any]) -> tuple[bool, int | None]:
         normalized = status.strip().lower()
         if normalized in _BLOCKED_STATUS_HTTP:
             return True, _BLOCKED_STATUS_HTTP[normalized]
-    if "error" in result:
-        return True, 500
+    has_error = "error" in result
     errors = result.get("errors")
-    if isinstance(errors, list) and errors:
-        return True, 500
-    return False, None
+    has_errors = isinstance(errors, list) and bool(errors)
+    if not (has_error or has_errors):
+        return False, None
+    # Prefer the backend's own upstream code, then any code recoverable from
+    # the message, before falling back to 500. Reporting an upstream 404/422 as
+    # 500 tells clients a caller mistake is a retryable server fault.
+    upstream = _status_code(result.get("status_code"))
+    if upstream is not None and 400 <= upstream <= 599:
+        return True, upstream
+    from_message = _status_from_message(_message_from(result))
+    if from_message is not None:
+        return True, from_message
+    return True, 500
 
 
 class ResponseEnvelopeMiddleware:

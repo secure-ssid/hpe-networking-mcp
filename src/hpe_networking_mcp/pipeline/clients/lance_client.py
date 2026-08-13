@@ -35,6 +35,7 @@ MAX_SEARCH_TOP_K = 200
 
 _SOURCE_RE = re.compile(r"^[a-z0-9_]+$")
 _DOC_ID_RE = re.compile(r"^[0-9a-f-]{36}$")
+SourceFilter = str | tuple[str, ...] | list[str] | None
 
 
 def _clamp_top_k(top_k: int) -> int:
@@ -163,12 +164,24 @@ def build_fts_index(table) -> None:
     table.create_index("text", config=FTS(), replace=True)
 
 
+def _source_where_clause(source_filter: SourceFilter) -> str | None:
+    if not source_filter:
+        return None
+    values = (source_filter,) if isinstance(source_filter, str) else tuple(source_filter)
+    if not values or any(
+        not isinstance(value, str) or not _SOURCE_RE.match(value) for value in values
+    ):
+        raise ValueError(f"invalid source filter: {source_filter!r}")
+    quoted = ", ".join(f"'{value}'" for value in values)
+    return f"source IN ({quoted})" if len(values) > 1 else f"source = '{values[0]}'"
+
+
 def hybrid_search(
     db,
     query_text: str,
     query_vector: list[float],
     top_k: int = 15,
-    source_filter: str | None = None,
+    source_filter: SourceFilter = None,
     table_name: str = DOCS_TABLE,
 ) -> list[dict[str, Any]]:
     """Hybrid (vector + BM25, RRF-fused) search over the docs table.
@@ -184,8 +197,7 @@ def hybrid_search(
             "index from the GitHub Release."
         )
     top_k = _clamp_top_k(top_k)
-    if source_filter and not _SOURCE_RE.match(source_filter):
-        raise ValueError(f"invalid source filter: {source_filter!r}")
+    source_where = _source_where_clause(source_filter)
     # limit() truncates EACH leg (vector, FTS) before RRF fusion — fetch deep
     # so fusion sees real overlap, then slice to top_k after.
     q = (
@@ -194,8 +206,8 @@ def hybrid_search(
         .text(query_text)
         .limit(max(top_k * 3, 15))
     )
-    if source_filter:
-        q = q.where(f"source = '{source_filter}'", prefilter=True)
+    if source_where:
+        q = q.where(source_where, prefilter=True)
     try:
         rows = q.to_list()
         score_key = "_relevance_score"
@@ -213,8 +225,8 @@ def hybrid_search(
             table_name,
         )
         vq = table.search(query_vector).limit(max(top_k * 3, 15))
-        if source_filter:
-            vq = vq.where(f"source = '{source_filter}'", prefilter=True)
+        if source_where:
+            vq = vq.where(source_where, prefilter=True)
         rows = vq.to_list()
         score_key = None
     hits = []

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from hpe_networking_mcp.mcp_servers import rag
 
 
@@ -72,6 +74,54 @@ def test_search_docs_clamps_negative_top_k_to_one(monkeypatch):
     rag.search_docs("wlan", top_k=-5)
 
     assert calls == [("wlan", 1, None)]
+
+
+@pytest.mark.parametrize(
+    ("doc_type", "expected_filter"),
+    [
+        ("feature-navigator", "feature_navigator"),
+        ("security-advisory", ("security_advisories", "juniper_security_advisories")),
+        ("lifecycle", ("lifecycle_notices", "juniper_lifecycle")),
+    ],
+)
+def test_search_docs_legacy_doc_type_filters_new_sources(monkeypatch, doc_type, expected_filter):
+    calls = []
+
+    def fake_search(query, top_k, source_filter):
+        calls.append((query, top_k, source_filter))
+        source = expected_filter[0] if isinstance(expected_filter, tuple) else expected_filter
+        return [
+            {
+                "text": "result",
+                "source": source,
+                "doc_type": doc_type,
+                "file_path": "source/file.md",
+                "score": 1.0,
+            }
+        ]
+
+    monkeypatch.setattr(rag, "_BACKEND", "lancedb")
+    monkeypatch.setattr(rag, "_search_lancedb", fake_search)
+
+    results = rag.search_docs("query", doc_type=doc_type)
+
+    assert calls == [("query", 5, expected_filter)]
+    assert results[0]["doc_type"] == doc_type
+
+
+def test_search_docs_source_filter_overrides_ambiguous_legacy_doc_type(monkeypatch):
+    calls = []
+
+    def fake_search(query, top_k, source_filter):
+        calls.append((query, top_k, source_filter))
+        return []
+
+    monkeypatch.setattr(rag, "_BACKEND", "lancedb")
+    monkeypatch.setattr(rag, "_search_lancedb", fake_search)
+
+    rag.search_docs("query", source="juniper_lifecycle", doc_type="lifecycle")
+
+    assert calls == [("query", 5, "juniper_lifecycle")]
 
 
 def test_lookup_api_clamps_negative_top_k_to_one(monkeypatch):

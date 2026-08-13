@@ -98,14 +98,40 @@ _SENSITIVE_KEY_SUFFIXES = (
     "token",
 )
 _REDACTED = "******"
+# Auth header names an operator can *rename* via env. EdgeConnect sends its
+# API token under whatever `EDGECONNECT_AUTH_HEADER` names, so the static
+# rules above stop covering it the moment that name no longer looks like a
+# secret: the default "X-Auth-Token" normalizes to "x_auth_token" and is
+# caught by the "token" suffix, but a custom "X-Ec-Session" normalizes to
+# "x_ec_session" -- in no exact set, matching no suffix -- and would be
+# echoed verbatim if an upstream error body or debug endpoint reflected the
+# request headers back. Resolved at call time (not import time) so a
+# runtime env change takes effect immediately.
+_CONFIGURABLE_SENSITIVE_HEADER_ENV_VARS = ("EDGECONNECT_AUTH_HEADER",)
+
+
+def _normalize_key(key: Any) -> str:
+    """Fold a dict key/header name to a comparable ``snake_case`` token."""
+    key_text = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(key).strip())
+    return re.sub(r"[^a-z0-9]+", "_", key_text.lower()).strip("_")
+
+
+def _configured_sensitive_keys() -> frozenset[str]:
+    """Normalized key names contributed by operator-renamable auth headers."""
+    return frozenset(
+        normalized
+        for env_var in _CONFIGURABLE_SENSITIVE_HEADER_ENV_VARS
+        if (normalized := _normalize_key(os.environ.get(env_var, "")))
+    )
 
 
 def _is_sensitive_key(key: Any) -> bool:
-    key_text = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(key).strip())
-    normalized = re.sub(r"[^a-z0-9]+", "_", key_text.lower()).strip("_")
-    return normalized in _SENSITIVE_KEY_EXACT or any(
+    normalized = _normalize_key(key)
+    if normalized in _SENSITIVE_KEY_EXACT or any(
         normalized.endswith(suffix) for suffix in _SENSITIVE_KEY_SUFFIXES
-    )
+    ):
+        return True
+    return normalized in _configured_sensitive_keys()
 
 
 def redact_sensitive(value: Any) -> Any:
