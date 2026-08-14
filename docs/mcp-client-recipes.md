@@ -17,6 +17,46 @@ By the end of this page you will have picked the right transport for your
 client, copied an accurate config for it, started the router if needed, and
 run one MCP call to confirm the connection works.
 
+## Native CLI (`hpe-mcp`)
+
+This repo also ships a standalone client that does **not** require Copilot
+CLI. It speaks MCP over stdio (launches the local router) or streamable HTTP
+(connects to an already-running router), defaults to read-only dispatch, and
+prints a project banner on interactive starts.
+
+```bash
+# offline
+hpe-mcp version
+hpe-mcp profiles
+hpe-mcp skills list
+hpe-mcp docs add ./notes.md --collection personal
+
+# connected (stdio → local-router profile)
+hpe-mcp tools list
+hpe-mcp tools find "wireless client health"
+hpe-mcp rag ask "How do I configure WPA3?" --source mist_docs
+hpe-mcp api lookup "create WLAN on Mist"
+hpe-mcp invoke-read ask_docs --args '{"question":"Mist site config","source":"mist_docs"}'
+
+# interactive REPL
+hpe-mcp shell
+```
+
+Useful flags:
+
+- `--json` — stable machine-readable envelope for scripts/CI
+- `--profile local-http` — attach to `http://127.0.0.1:8010/mcp` (or
+  `HPE_MCP_HTTP_URL`)
+- `--allow-writes --yes` — required together before any write/destructive tool
+- `--quiet` / `-q` — suppress the boot banner
+
+Config discovery order: built-in profiles → `~/.config/hpe-mcp/config.json`
+(or `$XDG_CONFIG_HOME/hpe-mcp/`) → repo `.hpe-mcp/config.json` /
+`.mcp.json` → `HPE_MCP_CLIENT_CONFIG`. Personal document collections live
+under `~/.config/hpe-mcp/collections/` and stay outside the git tree.
+
+`hpe-mcp-client` is an alias of the same entry point.
+
 ## Choose a transport: stdio vs streamable HTTP
 
 <figure class="docs-figure">
