@@ -25,22 +25,41 @@ CLI. It speaks MCP over stdio (launches the local router) or streamable HTTP
 prints a project banner on interactive starts.
 
 ```bash
-# offline
+# easiest: activate once, then just `hpe-mcp`
+source .venv/bin/activate
+hpe-mcp                 # no args → interactive shell + boot logo
+
+# or from repo root without activating
+./hpe-mcp
+./hpe-mcp version
+./hpe-mcp tools list
+
+# offline helpers
 hpe-mcp version
 hpe-mcp profiles
 hpe-mcp skills list
 hpe-mcp docs add ./notes.md --collection personal
 
-# connected (stdio → local-router profile)
+# connected one-shots (stdio → local-router profile)
 hpe-mcp tools list
 hpe-mcp tools find "wireless client health"
 hpe-mcp rag ask "How do I configure WPA3?" --source mist_docs
 hpe-mcp api lookup "create WLAN on Mist"
 hpe-mcp invoke-read ask_docs --args '{"question":"Mist site config","source":"mist_docs"}'
-
-# interactive REPL
-hpe-mcp shell
 ```
+
+Inside the shell, short commands work:
+
+```text
+ask How do I configure WPA3?
+api create WLAN
+find wireless client
+tools
+help
+exit
+```
+
+This is a **CLI + REPL**, not a full-screen TUI (TUI is deferred).
 
 Useful flags:
 

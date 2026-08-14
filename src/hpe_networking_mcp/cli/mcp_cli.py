@@ -44,7 +44,10 @@ from hpe_networking_mcp.cli_client.sessions import SessionManager
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="hpe-mcp",
-        description="Standalone client for hpe-networking-mcp (and other MCP servers).",
+        description=(
+            "Standalone client for hpe-networking-mcp (and other MCP servers). "
+            "Run with no arguments to open the interactive shell."
+        ),
     )
     p.add_argument(
         "--profile",
@@ -67,7 +70,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Confirm write operations non-interactively",
     )
 
-    sub = p.add_subparsers(dest="command", required=True)
+    # Not required: bare `hpe-mcp` opens the interactive shell.
+    sub = p.add_subparsers(dest="command", required=False)
 
     # tools
     tools = sub.add_parser("tools", help="List or search tools")
@@ -316,8 +320,9 @@ async def run_repl(
         quiet=quiet,
     )
     console.print(
-        "[dim]commands:[/] tools list|find, rag ask, api lookup, invoke-read, "
-        "skills list|show, docs list|add|search, profiles, help, exit"
+        "[dim]shortcuts:[/] ask <q> · api <q> · find <q> · tools · help · exit\n"
+        "[dim]full:[/] rag ask · tools list|find · api lookup · invoke-read · "
+        "skills · docs · profiles · connect"
     )
 
     async with SessionManager.create(namespace=True) as mgr:
@@ -343,10 +348,15 @@ async def run_repl(
                 break
             if line in {"help", "?"}:
                 console.print(
-                    "tools list [q] | tools find <q> | rag ask <q> [--source s]\n"
-                    "api lookup <q> | invoke-read <tool> [json-args]\n"
-                    "skills list|show <name> | docs list|add|search …\n"
-                    "connect [profile] | profiles | exit"
+                    "[bold]shortcuts[/]\n"
+                    "  ask <question> [--source mist_docs]   RAG / docs Q&A\n"
+                    "  api <query>                           OpenAPI lookup\n"
+                    "  find <query>                          find tools\n"
+                    "  tools                                 list tools\n"
+                    "[bold]also[/]\n"
+                    "  rag ask | tools list|find | api lookup | invoke-read\n"
+                    "  skills list|show | docs list|add|search\n"
+                    "  connect [profile] | profiles | exit"
                 )
                 continue
 
@@ -402,7 +412,47 @@ async def run_repl(
                     )
                     continue
                 if head == "api" and len(argv) >= 3 and argv[1] == "lookup":
-                    await cmd_api_lookup(mgr, safety, query=" ".join(argv[2:]), json_mode=json_mode)
+                    await cmd_api_lookup(
+                        mgr,
+                        safety,
+                        query=" ".join(argv[2:]),
+                        json_mode=json_mode,
+                    )
+                    continue
+                # Short aliases for common actions
+                if head in {"ask", "q"} and len(argv) >= 2:
+                    source = None
+                    rest = argv[1:]
+                    if "--source" in rest:
+                        i = rest.index("--source")
+                        source = rest[i + 1]
+                        rest = rest[:i] + rest[i + 2 :]
+                    await cmd_rag_ask(
+                        mgr,
+                        safety,
+                        question=" ".join(rest),
+                        source=source,
+                        json_mode=json_mode,
+                    )
+                    continue
+                if head == "api" and len(argv) >= 2 and argv[1] != "lookup":
+                    await cmd_api_lookup(
+                        mgr,
+                        safety,
+                        query=" ".join(argv[1:]),
+                        json_mode=json_mode,
+                    )
+                    continue
+                if head == "find" and len(argv) >= 2:
+                    await cmd_find_tool_server(
+                        mgr,
+                        safety,
+                        query=" ".join(argv[1:]),
+                        json_mode=json_mode,
+                    )
+                    continue
+                if head == "tools" and len(argv) == 1:
+                    await cmd_tools_list(mgr, json_mode=json_mode)
                     continue
                 if head == "invoke-read" and len(argv) >= 2:
                     raw_args = argv[2] if len(argv) > 2 else "{}"
@@ -437,9 +487,42 @@ async def run_repl(
     return 0
 
 
+_COMMANDS = frozenset(
+    {
+        "tools",
+        "invoke",
+        "invoke-read",
+        "rag",
+        "api",
+        "skills",
+        "docs",
+        "profiles",
+        "shell",
+        "version",
+    }
+)
+
+
+def _normalize_argv(argv: Sequence[str] | None) -> list[str]:
+    """Default bare / flag-only invocations to the interactive shell."""
+    import sys
+
+    raw = list(argv) if argv is not None else sys.argv[1:]
+    if any(a in {"-h", "--help"} for a in raw):
+        return raw
+    # Already has a subcommand somewhere after optional global flags.
+    if any(a in _COMMANDS for a in raw):
+        return raw
+    # No args, or only global flags → shell.
+    return [*raw, "shell"]
+
+
 def main(argv: Sequence[str] | None = None) -> int:
+    raw = _normalize_argv(argv)
     parser = build_parser()
-    args = parser.parse_args(list(argv) if argv is not None else None)
+    args = parser.parse_args(raw)
+    if not getattr(args, "command", None):
+        args.command = "shell"
     try:
         return asyncio.run(_run_connected(args))
     except KeyboardInterrupt:

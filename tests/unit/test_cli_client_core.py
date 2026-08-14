@@ -141,6 +141,16 @@ def test_mcp_cli_parser_help():
     assert "invoke-read" in help_text
 
 
+def test_normalize_argv_defaults_to_shell():
+    from hpe_networking_mcp.cli.mcp_cli import _normalize_argv
+
+    assert _normalize_argv([]) == ["shell"]
+    assert _normalize_argv(["--quiet"]) == ["--quiet", "shell"]
+    assert _normalize_argv(["--json", "profiles"]) == ["--json", "profiles"]
+    assert _normalize_argv(["version"]) == ["version"]
+    assert _normalize_argv(["-h"]) == ["-h"]
+
+
 def test_mcp_cli_version_offline():
     from hpe_networking_mcp.cli.mcp_cli import main
 
@@ -157,3 +167,11 @@ def test_mcp_cli_profiles_offline():
     from hpe_networking_mcp.cli.mcp_cli import main
 
     assert main(["--json", "profiles"]) == 0
+
+
+def test_repo_root_launcher_exists():
+    from hpe_networking_mcp.cli_client.config import repo_root_from_package
+
+    launcher = repo_root_from_package() / "hpe-mcp"
+    assert launcher.is_file()
+    assert launcher.stat().st_mode & 0o111  # executable bit
