@@ -267,5 +267,47 @@ class DocumentStore:
             if q in rec.product.lower():
                 score += 3
             hits.append((score, rec))
-        hits.sort(key=lambda t: (-t[0], t[1].title))
-        return [r for _, r in hits[:limit]]
+        return [r for _, r in sorted(hits, key=lambda p: p[0], reverse=True)[:limit]]
+
+    def search_content(
+        self,
+        query: str,
+        *,
+        collection: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        """Search inside the contents of stored files (Markdown, text, HTML, JSON, YAML)."""
+        q = query.lower().strip()
+        if not q:
+            return []
+        hits: list[dict[str, Any]] = []
+        for rec in self.list(collection):
+            if not rec.stored_path:
+                continue
+            p = Path(rec.stored_path)
+            if not p.is_file():
+                continue
+            try:
+                # Text-based file reading
+                content = p.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+
+            if q in content.lower():
+                # Extract surrounding snippet
+                idx = content.lower().find(q)
+                start = max(0, idx - 120)
+                end = min(len(content), idx + len(q) + 120)
+                snippet = content[start:end].strip().replace("\n", " ")
+                hits.append(
+                    {
+                        "id": rec.id,
+                        "title": rec.title,
+                        "collection": rec.collection,
+                        "source_uri": rec.source_uri,
+                        "snippet": f"…{snippet}…",
+                    }
+                )
+                if len(hits) >= limit:
+                    break
+        return hits

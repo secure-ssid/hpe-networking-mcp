@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 from mcp import ClientSession
@@ -48,6 +49,16 @@ def profile_to_params(
     )
 
 
+class ConnectionState(str, Enum):
+    """Lifecycle state of an MCP connection."""
+
+    DISCONNECTED = "disconnected"
+    CONNECTING = "connecting"
+    CONNECTED = "connected"
+    RECONNECTING = "reconnecting"
+    FAILED = "failed"
+
+
 @dataclass
 class ConnectedServer:
     profile: ServerProfile
@@ -61,6 +72,9 @@ class SessionManager:
 
     group: ClientSessionGroup
     connected: dict[str, ConnectedServer] = field(default_factory=dict)
+    state: ConnectionState = ConnectionState.DISCONNECTED
+    last_error: str | None = None
+    active_profile: str | None = None
 
     @classmethod
     def create(cls, *, namespace: bool = True) -> SessionManager:
@@ -72,18 +86,31 @@ class SessionManager:
         return self
 
     async def __aexit__(self, *exc: Any) -> bool | None:
+        await self.disconnect_all()
         return await self.group.__aexit__(*exc)
 
     async def connect(self, profile: ServerProfile) -> ConnectedServer:
         if profile.name in self.connected:
+            self.state = ConnectionState.CONNECTED
+            self.active_profile = profile.name
             return self.connected[profile.name]
+
+        self.state = ConnectionState.CONNECTING
+        self.active_profile = profile.name
+        self.last_error = None
         params = profile_to_params(profile)
-        session = await self.group.connect_to_server(
-            params,
-            session_params=ClientSessionParameters(
-                client_info=Implementation(name="hpe-networking-mcp-client", version="0.8.0"),
-            ),
-        )
+        try:
+            session = await self.group.connect_to_server(
+                params,
+                session_params=ClientSessionParameters(
+                    client_info=Implementation(name="hpe-networking-mcp-client", version="0.8.0"),
+                ),
+            )
+        except Exception as exc:
+            self.state = ConnectionState.FAILED
+            self.last_error = str(exc)
+            raise
+
         # Best-effort server name from initialize result if available.
         server_name = profile.name
         try:
@@ -94,13 +121,33 @@ class SessionManager:
             pass
         rec = ConnectedServer(profile=profile, session=session, server_name=server_name)
         self.connected[profile.name] = rec
+        self.state = ConnectionState.CONNECTED
         return rec
 
     async def disconnect(self, profile_name: str) -> None:
         rec = self.connected.pop(profile_name, None)
         if rec is None:
             return
-        await self.group.disconnect_from_server(rec.session)
+        try:
+            await self.group.disconnect_from_server(rec.session)
+        except Exception:
+            pass
+        if not self.connected:
+            self.state = ConnectionState.DISCONNECTED
+            self.active_profile = None
+
+    async def disconnect_all(self) -> None:
+        """Disconnect all connected servers cleanly."""
+        names = list(self.connected.keys())
+        for name in names:
+            await self.disconnect(name)
+        self.state = ConnectionState.DISCONNECTED
+        self.active_profile = None
+
+    async def switch_profile(self, profile: ServerProfile) -> ConnectedServer:
+        """Safely disconnect prior sessions and connect to the target profile."""
+        await self.disconnect_all()
+        return await self.connect(profile)
 
     @property
     def tools(self) -> dict[str, Any]:
@@ -115,7 +162,11 @@ class SessionManager:
         return dict(self.group.prompts)
 
     async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> Any:
-        return await self.group.call_tool(name, arguments or {})
+        try:
+            resolved = self.resolve_tool_name(name)
+        except KeyError:
+            resolved = name
+        return await self.group.call_tool(resolved, arguments or {})
 
     def resolve_tool_name(self, query: str) -> str:
         """Resolve bare or namespaced tool names.

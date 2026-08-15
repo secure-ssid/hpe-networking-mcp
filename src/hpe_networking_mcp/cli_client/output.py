@@ -18,6 +18,17 @@ err_console = Console(stderr=True)
 
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"[ \t]+\n")
+_REDACT_KV_RE = re.compile(
+    r"(?i)(password|passphrase|token|secret|client_secret|api[-_]?key|authorization)"
+    r"(\s*[:=\s]\s*[\"']?)([^\"'\s,;]+)([\"']?)"
+)
+
+
+def redact_sensitive_text(text: str) -> str:
+    """Redact passwords, tokens, and secrets from logs and displayed output."""
+    if not text:
+        return ""
+    return _REDACT_KV_RE.sub(r"\1\2***REDACTED***\4", text)
 
 
 def emit_json(payload: Any, *, stream: Any = None) -> None:
@@ -143,6 +154,118 @@ def format_lookup_payload(data: dict[str, Any] | list[Any]) -> str | None:
     return "\n".join(lines)
 
 
+def format_diagram_result(data: dict[str, Any]) -> str | None:
+    """Format network diagram export results nicely."""
+    approach = data.get("approach") or ""
+    written = data.get("written") or []
+    if "diagram" not in approach and not written and "export" not in data:
+        return None
+
+    lines = ["## Network Diagram Export", ""]
+    if approach:
+        lines.append(f"- **Approach:** `{approach}`")
+    saved = data.get("saved")
+    if saved is not None:
+        lines.append(f"- **Saved to disk:** {'Yes' if saved else 'No (inline only)'}")
+    out_dir = data.get("output_dir")
+    if out_dir:
+        lines.append(f"- **Output folder:** `{out_dir}`")
+
+    if written and isinstance(written, list):
+        lines.append("")
+        lines.append("### Generated Files")
+        for item in written:
+            if isinstance(item, dict):
+                p = item.get("path") or item.get("filename") or "?"
+                b = item.get("bytes")
+                size_str = f" ({b:,} bytes)" if isinstance(b, (int, float)) else ""
+                lines.append(f"- `{p}`{size_str}")
+            else:
+                lines.append(f"- `{item}`")
+
+    export = data.get("export")
+    if isinstance(export, dict):
+        editable = export.get("editable_in") or []
+        if editable and isinstance(editable, list):
+            lines.append("")
+            lines.append(f"**Editable in:** {', '.join(editable)}")
+        preview = export.get("preview_html") or export.get("preview_url")
+        if preview:
+            lines.append(f"- **Preview available:** `{preview}`")
+
+    lines.append("")
+    lines.append("💡 *Tip: Open `.drawio` files directly in https://app.diagrams.net or the VS Code Draw.io extension.*")
+    return "\n".join(lines)
+
+
+def format_tool_schema(name: str, tool_obj: Any) -> str:
+    """Format full tool schema into a human-readable summary table."""
+    from hpe_networking_mcp.cli_client.safety import tool_is_read_only
+
+    if isinstance(tool_obj, dict):
+        desc = tool_obj.get("description") or "(no description)"
+        schema = (
+            tool_obj.get("schema")
+            or tool_obj.get("inputSchema")
+            or tool_obj.get("input_schema")
+            or {}
+        )
+        ro = bool(tool_obj.get("read_only", tool_obj.get("capability") == "read"))
+    else:
+        desc = getattr(tool_obj, "description", None) or "(no description)"
+        raw_schema = (
+            getattr(tool_obj, "inputSchema", None)
+            or getattr(tool_obj, "input_schema", None)
+            or {}
+        )
+        if hasattr(raw_schema, "model_dump"):
+            schema = raw_schema.model_dump()
+        elif hasattr(raw_schema, "properties") or hasattr(raw_schema, "__dict__"):
+            schema = {
+                "properties": getattr(raw_schema, "properties", {}),
+                "required": getattr(raw_schema, "required", []),
+            }
+        elif isinstance(raw_schema, dict):
+            schema = raw_schema
+        else:
+            schema = {}
+        ro = tool_is_read_only(tool_obj)
+
+    lines = [
+        f"## Tool: `{name}`",
+        "",
+        f"- **Mode:** {'Read-Only' if ro else 'Write / Destructive'}",
+        f"- **Description:** {desc}",
+        "",
+        "### Parameters",
+        "",
+    ]
+
+    properties = schema.get("properties") if isinstance(schema, dict) else {}
+    required = set(schema.get("required") or []) if isinstance(schema, dict) else set()
+
+    if not properties:
+        lines.append("*(This tool takes no arguments)*")
+    else:
+        for p_name, p_info in properties.items():
+            req_tag = "**Required**" if p_name in required else "*optional*"
+            if isinstance(p_info, dict):
+                p_type = p_info.get("type", "any")
+                p_desc = p_info.get("description", "")
+                enum_vals = p_info.get("enum")
+            else:
+                p_type = getattr(p_info, "type", "any")
+                p_desc = getattr(p_info, "description", "")
+                enum_vals = getattr(p_info, "enum", None)
+            lines.append(f"- **`{p_name}`** ({p_type}) — {req_tag}")
+            if p_desc:
+                lines.append(f"  {p_desc}")
+            if enum_vals:
+                lines.append(f"  *Accepted values:* `{'`, `'.join(map(str, enum_vals))}`")
+
+    return "\n".join(lines)
+
+
 def prettify_tool_text(text: str) -> str:
     """If tool text is JSON with known shapes, render a human view."""
     data = _try_parse_json(text)
@@ -150,6 +273,9 @@ def prettify_tool_text(text: str) -> str:
         return text
     data = _unwrap_payload(data)
     if isinstance(data, dict):
+        diag = format_diagram_result(data)
+        if diag:
+            return diag
         rag = format_rag_payload(data)
         if rag:
             return rag

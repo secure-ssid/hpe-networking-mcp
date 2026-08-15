@@ -81,6 +81,7 @@ def _default_stdio_env(root: Path) -> dict[str, str]:
         "CREDS_PATH": str(root / "config" / "credentials.yaml"),
         "HPE_MCP_ROUTER_MODE": os.environ.get("HPE_MCP_ROUTER_MODE", "minimal"),
         "HPE_MCP_TOOLSETS": os.environ.get("HPE_MCP_TOOLSETS", "central,glp,rag"),
+        "HPE_MCP_PRODUCTS": os.environ.get("HPE_MCP_PRODUCTS", "design"),
     }
 
 

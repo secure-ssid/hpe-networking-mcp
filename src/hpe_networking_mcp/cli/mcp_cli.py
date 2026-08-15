@@ -22,16 +22,24 @@ from typing import Sequence
 
 from hpe_networking_mcp.cli_client.banner import print_banner
 from hpe_networking_mcp.cli_client.commands import (
+    cmd_ai_reason,
     cmd_api_lookup,
+    cmd_architect_plan,
+    cmd_diagram,
     cmd_docs_add,
     cmd_docs_list,
     cmd_docs_search,
+    cmd_docs_search_content,
     cmd_find_tool_server,
     cmd_invoke,
+    cmd_migrate_plan,
     cmd_rag_ask,
     cmd_skills_list,
     cmd_skills_show,
+    cmd_status,
+    cmd_tool_explore,
     cmd_tools_list,
+    cmd_troubleshoot,
     ensure_connected,
     parse_args_json,
 )
@@ -133,13 +141,52 @@ def build_parser() -> argparse.ArgumentParser:
     d_search = docs_sub.add_parser("search")
     d_search.add_argument("query", nargs="+")
     d_search.add_argument("--collection", default=None)
+    d_content = docs_sub.add_parser("search-content")
+    d_content.add_argument("query", nargs="+")
+    d_content.add_argument("--collection", default=None)
+
+    # diagram
+    diag = sub.add_parser("diagram", help="Generate network design diagrams (Draw.io/Graphviz/NeXt)")
+    diag.add_argument("prompt", nargs="*", default=[], help="Diagram description or title")
+    diag.add_argument("--format", "-f", choices=["drawio", "graphviz", "nextui"], default=None)
+    diag.add_argument("--vendor", "-v", default=None)
+    diag.add_argument("--title", "-t", default=None)
+
+    # ai / reason
+    ai_p = sub.add_parser("ai", help="AI multi-turn reasoning and tool dispatch")
+    ai_p.add_argument("prompt", nargs="+", help="Goal or prompt for AI expert")
+    ai_p.add_argument("--provider", choices=["heuristic", "openai", "anthropic", "ollama"], default="heuristic")
+    ai_p.add_argument("--model", default=None)
+
+    # troubleshoot
+    tb_p = sub.add_parser("troubleshoot", help="Automated root cause diagnostic reasoning")
+    tb_p.add_argument("query", nargs="+", help="Symptom, client MAC, or error description")
+    tb_p.add_argument("--site-id", default=None)
+
+    # migrate
+    mg_p = sub.add_parser("migrate", help="Multi-vendor migration blueprint & syntax translation")
+    mg_p.add_argument("source_vendor", nargs="?", default="aos-s", help="Source vendor (cisco, aos-s, procurve)")
+
+    # architect / design
+    ar_p = sub.add_parser("architect", help="Campus / DC Fabric architecture design & BOM synthesis")
+    ar_p.add_argument("environment", nargs="?", default="campus", choices=["campus", "datacenter", "branch", "fabric"])
+    ar_p.add_argument("--ports", type=int, default=200)
+    ar_p.add_argument("--aps", type=int, default=50)
+    ar_p.add_argument("--evpn", action="store_true")
+
+    # tool / explore
+    tool_p = sub.add_parser("tool", help="Inspect tool schema and parameters")
+    tool_p.add_argument("tool_name", help="Name of tool to inspect")
+
+    # status
+    sub.add_parser("status", help="Show connection status and profile details")
 
     # profiles
     prof = sub.add_parser("profiles", help="Show configured server profiles")
     prof.add_argument("profiles_cmd", nargs="?", default="list", choices=["list"])
 
-    # shell / repl
-    sub.add_parser("shell", help="Interactive REPL")
+    # TUI / shell
+    sub.add_parser("shell", help="Interactive Textual TUI (or --repl fallback)")
     sub.add_parser("version", help="Print version and exit")
 
     return p
@@ -216,6 +263,24 @@ async def _run_connected(args: argparse.Namespace) -> int:
             return cmd_skills_list(json_mode=json_mode)
         return cmd_skills_show(args.name, json_mode=json_mode)
 
+    if args.command == "status":
+        return cmd_status(None, cfg, current_profile=args.profile, json_mode=json_mode)
+
+    if args.command == "troubleshoot":
+        return cmd_troubleshoot(" ".join(args.query), site_id=args.site_id, json_mode=json_mode)
+
+    if args.command == "migrate":
+        return cmd_migrate_plan(args.source_vendor, json_mode=json_mode)
+
+    if args.command == "architect":
+        return cmd_architect_plan(
+            environment=args.environment,
+            ports=args.ports,
+            aps=args.aps,
+            evpn=args.evpn,
+            json_mode=json_mode,
+        )
+
     if args.command == "docs":
         if args.docs_cmd == "list":
             return cmd_docs_list(collection=args.collection, json_mode=json_mode)
@@ -228,6 +293,12 @@ async def _run_connected(args: argparse.Namespace) -> int:
             )
         if args.docs_cmd == "search":
             return cmd_docs_search(
+                " ".join(args.query),
+                collection=args.collection,
+                json_mode=json_mode,
+            )
+        if args.docs_cmd == "search-content":
+            return cmd_docs_search_content(
                 " ".join(args.query),
                 collection=args.collection,
                 json_mode=json_mode,
@@ -258,6 +329,35 @@ async def _run_connected(args: argparse.Namespace) -> int:
                 "[dim]connected[/] "
                 f"profile={prof.name} transport={prof.transport} "
                 f"tools={len(mgr.tools)}"
+            )
+
+        if args.command == "diagram":
+            return await cmd_diagram(
+                mgr,
+                safety,
+                prompt=" ".join(args.prompt),
+                format=args.format,
+                vendor=args.vendor,
+                title=args.title,
+                json_mode=json_mode,
+            )
+
+        if args.command == "ai":
+            return await cmd_ai_reason(
+                mgr,
+                safety,
+                prompt=" ".join(args.prompt),
+                provider=args.provider,
+                model=args.model,
+                json_mode=json_mode,
+            )
+
+        if args.command == "tool":
+            return await cmd_tool_explore(
+                mgr,
+                safety,
+                tool_name=args.tool_name,
+                json_mode=json_mode,
             )
 
         if args.command == "tools":
@@ -385,11 +485,31 @@ async def run_repl(
                 print_error(str(exc))
                 continue
 
-            head = argv[0]
+            head = argv[0].lstrip("/")
+            if not head:
+                continue
             json_mode = json_default or "--json" in argv
             argv = [a for a in argv if a != "--json"]
 
             try:
+                if head in {"exit", "quit", ":q", "q"} and len(argv) == 1:
+                    break
+                if head in {"help", "?"} and len(argv) == 1:
+                    console.print(
+                        "[bold]shortcuts[/]\n"
+                        "  ask <question> [--source mist_docs]   RAG / docs Q&A\n"
+                        "  diagram <description>                 Network design diagram\n"
+                        "  tool <name>                           Inspect tool schema\n"
+                        "  api <query>                           OpenAPI lookup\n"
+                        "  find <query>                          find tools\n"
+                        "  tools [list|find]                     list tools\n"
+                        "[bold]also[/]\n"
+                        "  rag ask | tools list|find | api lookup | invoke-read\n"
+                        "  skills [list|show] | docs [list|add|search]\n"
+                        "  status | connect [profile] | profiles | exit\n"
+                        "[dim]Note: Any plain question automatically queries RAG docs.[/]"
+                    )
+                    continue
                 if head == "connect":
                     name = argv[1] if len(argv) > 1 else None
                     prof = await ensure_connected(mgr, cfg, profile=name)
@@ -399,6 +519,44 @@ async def run_repl(
                     for n, p in sorted(cfg.profiles.items()):
                         mark = "*" if n == cfg.default_profile else " "
                         console.print(f"{mark} {n:16} {p.transport:16} {p.description}")
+                    continue
+                if head == "status":
+                    cmd_status(mgr, cfg, current_profile=None, json_mode=json_mode)
+                    continue
+                if head == "diagram":
+                    await cmd_diagram(
+                        mgr,
+                        safety,
+                        prompt=" ".join(argv[1:]),
+                        json_mode=json_mode,
+                    )
+                    continue
+                if head in {"ai", "reason"}:
+                    await cmd_ai_reason(
+                        mgr,
+                        safety,
+                        prompt=" ".join(argv[1:]),
+                        json_mode=json_mode,
+                    )
+                    continue
+                if head in {"troubleshoot", "tb"}:
+                    cmd_troubleshoot(" ".join(argv[1:]), json_mode=json_mode)
+                    continue
+                if head in {"migrate", "migration"}:
+                    vendor = argv[1] if len(argv) > 1 else "aos-s"
+                    cmd_migrate_plan(vendor, json_mode=json_mode)
+                    continue
+                if head in {"architect", "design"}:
+                    env = argv[1] if len(argv) > 1 else "campus"
+                    cmd_architect_plan(env, json_mode=json_mode)
+                    continue
+                if head in {"tool", "explore"} and len(argv) >= 2:
+                    await cmd_tool_explore(
+                        mgr,
+                        safety,
+                        tool_name=argv[1],
+                        json_mode=json_mode,
+                    )
                     continue
                 if head == "tools" and len(argv) >= 2 and argv[1] == "list":
                     await cmd_tools_list(
@@ -439,7 +597,7 @@ async def run_repl(
                     )
                     continue
                 # Short aliases for common actions
-                if head in {"ask", "q"} and len(argv) >= 2:
+                if head in {"ask", "search_docs"} and len(argv) >= 2:
                     source = None
                     rest = argv[1:]
                     if "--source" in rest:
@@ -470,7 +628,7 @@ async def run_repl(
                         json_mode=json_mode,
                     )
                     continue
-                if head == "tools" and len(argv) == 1:
+                if head == "tools" and (len(argv) == 1 or (len(argv) == 2 and argv[1] in {"list"})):
                     await cmd_tools_list(mgr, json_mode=json_mode)
                     continue
                 if head == "invoke-read" and len(argv) >= 2:
@@ -483,23 +641,37 @@ async def run_repl(
                         json_mode=json_mode,
                     )
                     continue
-                if head == "skills" and len(argv) >= 2 and argv[1] == "list":
-                    cmd_skills_list(json_mode=json_mode)
-                    continue
-                if head == "skills" and len(argv) >= 3 and argv[1] == "show":
-                    cmd_skills_show(argv[2], json_mode=json_mode)
-                    continue
-                if head == "docs" and len(argv) >= 2 and argv[1] == "list":
-                    coll = argv[2] if len(argv) > 2 else None
-                    cmd_docs_list(collection=coll, json_mode=json_mode)
-                    continue
-                if head == "docs" and len(argv) >= 3 and argv[1] == "add":
-                    cmd_docs_add(argv[2], json_mode=json_mode)
-                    continue
-                if head == "docs" and len(argv) >= 3 and argv[1] == "search":
-                    cmd_docs_search(" ".join(argv[2:]), json_mode=json_mode)
-                    continue
-                print_error(f"unknown: {line}  (try help)")
+                if head == "skills":
+                    if len(argv) == 1 or (len(argv) >= 2 and argv[1] == "list"):
+                        cmd_skills_list(json_mode=json_mode)
+                        continue
+                    if len(argv) >= 3 and argv[1] == "show":
+                        cmd_skills_show(argv[2], json_mode=json_mode)
+                        continue
+                    if len(argv) == 2:
+                        cmd_skills_show(argv[1], json_mode=json_mode)
+                        continue
+                if head == "docs":
+                    if len(argv) == 1 or (len(argv) >= 2 and argv[1] == "list"):
+                        coll = argv[2] if len(argv) > 2 else None
+                        cmd_docs_list(collection=coll, json_mode=json_mode)
+                        continue
+                    if len(argv) >= 3 and argv[1] == "add":
+                        cmd_docs_add(argv[2], json_mode=json_mode)
+                        continue
+                    if len(argv) >= 3 and argv[1] == "search":
+                        cmd_docs_search(" ".join(argv[2:]), json_mode=json_mode)
+                        continue
+                    if len(argv) >= 2:
+                        cmd_docs_search(" ".join(argv[1:]), json_mode=json_mode)
+                        continue
+                # If the user typed an arbitrary networking question, fall back to RAG
+                await cmd_rag_ask(
+                    mgr,
+                    safety,
+                    question=line,
+                    json_mode=json_mode,
+                )
             except Exception as exc:  # noqa: BLE001
                 print_error(f"{type(exc).__name__}: {exc}", json_mode=json_mode)
 
@@ -509,6 +681,13 @@ async def run_repl(
 _COMMANDS = frozenset(
     {
         "tools",
+        "tool",
+        "diagram",
+        "ai",
+        "troubleshoot",
+        "migrate",
+        "architect",
+        "status",
         "invoke",
         "invoke-read",
         "rag",

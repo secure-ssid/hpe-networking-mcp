@@ -13,7 +13,9 @@ __all__ = [
     "config",
     "documents",
     "output",
+    "repl_input",
     "safety",
     "sessions",
     "skills",
+    "tui",
 ]

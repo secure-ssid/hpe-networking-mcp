@@ -210,10 +210,38 @@ def test_repo_root_launcher_exists():
 def test_tui_app_imports_and_help_text():
     from hpe_networking_mcp.cli_client.config import ClientConfig, ServerProfile
     from hpe_networking_mcp.cli_client.safety import SafetyPolicy
-    from hpe_networking_mcp.cli_client.tui import CSS, HELP_TEXT, HpeMcpApp
+    from hpe_networking_mcp.cli_client.tui import (
+        CSS,
+        HELP_TEXT,
+        HpeMcpApp,
+        history_line_is_safe,
+        normalize_tui_input,
+    )
 
-    assert "ask" in HELP_TEXT
+    assert "Just type a networking question" in HELP_TEXT
     assert "#log" in CSS
+    assert normalize_tui_input("best way to design a 3 tier network") == [
+        "ask",
+        "best way to design a 3 tier network",
+    ]
+    assert normalize_tui_input("/api create WLAN") == ["api", "create", "WLAN"]
+    assert normalize_tui_input("find wireless client") == [
+        "find",
+        "wireless",
+        "client",
+    ]
+    assert normalize_tui_input("help me design a core") == [
+        "ask",
+        "help me design a core",
+    ]
+    assert normalize_tui_input("docs for EX4400") == [
+        "ask",
+        "docs for EX4400",
+    ]
+    assert normalize_tui_input("docs list") == ["docs", "list"]
+    assert normalize_tui_input("/") == ["help"]
+    assert history_line_is_safe("best way to design a campus") is True
+    assert history_line_is_safe("/api token=secret-value") is False
     # Construct without contacting a real MCP server.
     cfg = ClientConfig(
         profiles={
@@ -228,4 +256,242 @@ def test_tui_app_imports_and_help_text():
     )
     app = HpeMcpApp(cfg, SafetyPolicy())
     assert app.TITLE == "hpe-networking-mcp"
-    assert any("quit" in b.key or b.key == "q" for b in app.BINDINGS)
+    assert any(b.key == "ctrl+q" for b in app.BINDINGS)
+
+
+def test_tui_mounts_at_80x24_without_connecting():
+    import asyncio
+
+    from textual.widgets import Input, RichLog
+
+    from hpe_networking_mcp.cli_client.config import ClientConfig, ServerProfile
+    from hpe_networking_mcp.cli_client.safety import SafetyPolicy
+    from hpe_networking_mcp.cli_client.tui import HpeMcpApp
+
+    class NoConnectApp(HpeMcpApp):
+        def connect_session(self) -> None:
+            return None
+
+    cfg = ClientConfig(
+        profiles={
+            "local-router": ServerProfile(
+                name="local-router",
+                transport="stdio",
+                command="false",
+            )
+        },
+        default_profile="local-router",
+    )
+    app = NoConnectApp(cfg, SafetyPolicy())
+
+    async def _run() -> None:
+        async with app.run_test(size=(80, 24)) as pilot:
+            field = app.query_one("#cmd", Input)
+            assert "Ask a networking question" in (field.placeholder or "")
+            assert app.query_one("#log", RichLog)
+            await pilot.press("ctrl+q")
+
+    asyncio.run(_run())
+
+
+def test_tui_ctrl_c_cancels_active_request():
+    import asyncio
+
+    from textual.widgets import Input
+
+    from hpe_networking_mcp.cli_client.config import ClientConfig, ServerProfile
+    from hpe_networking_mcp.cli_client.safety import SafetyPolicy
+    from hpe_networking_mcp.cli_client.tui import HpeMcpApp
+
+    class FakeManager:
+        connected: dict[str, object] = {}
+        tools: dict[str, object] = {}
+
+        async def __aexit__(self, *_exc: object) -> None:
+            return None
+
+    class SlowApp(HpeMcpApp):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.request_started = asyncio.Event()
+
+        def connect_session(self) -> None:
+            return None
+
+        async def _dispatch(self, argv: list[str]) -> str:
+            self.request_started.set()
+            await asyncio.sleep(30)
+            return "unexpected"
+
+    cfg = ClientConfig(
+        profiles={
+            "local-router": ServerProfile(
+                name="local-router",
+                transport="stdio",
+                command="false",
+            )
+        },
+        default_profile="local-router",
+    )
+    app = SlowApp(cfg, SafetyPolicy())
+
+    async def _run() -> None:
+        async with app.run_test(size=(80, 24)) as pilot:
+            app.mgr = FakeManager()  # type: ignore[assignment]
+            field = app.query_one("#cmd", Input)
+            field.value = "design a resilient campus"
+            field.focus()
+            await pilot.press("enter")
+            await asyncio.wait_for(app.request_started.wait(), timeout=2)
+            await pilot.press("ctrl+c")
+            await pilot.pause(0.1)
+            assert app._busy is False
+            assert app._command_worker is None
+
+    asyncio.run(_run())
+
+
+def test_document_store_search_content(tmp_path: Path):
+    store = DocumentStore(root=tmp_path / "collections")
+    src1 = tmp_path / "switch_config.txt"
+    src1.write_text("vlan 100 name CORPORATE-DATA\ninterface 1/1/1 tagged 100", encoding="utf-8")
+    src2 = tmp_path / "ap_setup.md"
+    src2.write_text("# AP Setup\nConfigure SSID CorpSecure with WPA3 Enterprise", encoding="utf-8")
+
+    store.add_file(src1, collection="configs", title="Core Switch")
+    store.add_file(src2, collection="wireless", title="AP Guide")
+
+    hits = store.search_content("CORPORATE-DATA")
+    assert len(hits) == 1
+    assert hits[0]["title"] == "Core Switch"
+    assert "CORPORATE-DATA" in hits[0]["snippet"]
+
+    hits_wpa3 = store.search_content("wpa3", collection="wireless")
+    assert len(hits_wpa3) == 1
+    assert hits_wpa3[0]["title"] == "AP Guide"
+
+
+def test_diagram_intent_parsing_and_model():
+    from hpe_networking_mcp.cli_client.diagram_workflow import (
+        DiagramPreferences,
+        parse_diagram_intent,
+    )
+
+    pref = parse_diagram_intent(
+        "draw a three-tier network with VSX aggregation and Aruba vendor icons in graphviz"
+    )
+    assert pref.format == "graphviz"
+    assert pref.icon_style == "vendor"
+    assert pref.vendor == "aruba"
+    assert "three" in pref.title.lower()
+
+    assert len(pref.nodes) >= 4
+    assert len(pref.links) >= 3
+    node_roles = {n["role"] for n in pref.nodes}
+    assert "core_switch" in node_roles
+    assert "agg_switch" in node_roles
+    assert "access_switch" in node_roles
+
+    # Test detailed multi-vendor + auth profiling prompt
+    pref_rich = parse_diagram_intent(
+        "3 tier network with mist going into detail with how clients authenticating with profiled roles etc with ex and cx"
+    )
+    roles_rich = {n["role"] for n in pref_rich.nodes}
+    assert "client" in roles_rich
+    assert "mist_ap" in roles_rich
+    assert "access_switch" in roles_rich
+    node_ids = {n["id"] for n in pref_rich.nodes}
+    assert "acc_cx" in node_ids
+    assert "acc_ex" in node_ids
+    assert "client_corp" in node_ids
+    assert "client_guest" in node_ids
+    assert "client_iot" in node_ids
+
+
+def test_redact_sensitive_text():
+    from hpe_networking_mcp.cli_client.output import redact_sensitive_text
+
+    raw = "Connecting with token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9 and password=SuperSecret123!"
+    redacted = redact_sensitive_text(raw)
+    assert "eyJhbG" not in redacted
+    assert "SuperSecret123!" not in redacted
+    assert "***REDACTED***" in redacted
+
+
+
+def test_format_tool_schema():
+    from hpe_networking_mcp.cli_client.output import format_tool_schema
+
+    class MockInputSchema:
+        properties = {
+            "query": {"type": "string", "description": "Search query"},
+            "limit": {"type": "integer", "description": "Max results"},
+        }
+        required = ["query"]
+
+    class MockTool:
+        name = "find_tool"
+        description = "Find backend tools"
+        inputSchema = MockInputSchema()
+        annotations = {"readOnlyHint": True}
+
+    rendered = format_tool_schema("find_tool", MockTool())
+    assert "find_tool" in rendered
+    assert "Find backend tools" in rendered
+    assert "query" in rendered
+    assert "Required" in rendered
+
+
+
+def test_session_manager_connection_state():
+    from hpe_networking_mcp.cli_client.sessions import ConnectionState, SessionManager
+
+    mgr = SessionManager.create()
+    assert mgr.state == ConnectionState.DISCONNECTED
+    assert mgr.connected == {}
+    assert mgr.tools == {}
+
+
+def test_command_status_and_tool_explore():
+    import asyncio
+    from hpe_networking_mcp.cli_client.commands import cmd_status, cmd_tool_explore
+    from hpe_networking_mcp.cli_client.config import ClientConfig, ServerProfile
+    from hpe_networking_mcp.cli_client.safety import SafetyPolicy
+    from hpe_networking_mcp.cli_client.sessions import SessionManager
+
+    class MockTool:
+        name = "ask_docs"
+        description = "Query RAG corpus"
+        inputSchema = {"properties": {"question": {"type": "string"}}, "required": ["question"]}
+        annotations = {"readOnlyHint": True}
+
+    class FakeGroup:
+        tools = {"ask_docs": MockTool()}
+
+    mgr = SessionManager(group=FakeGroup())
+    cfg = ClientConfig(
+        profiles={"test": ServerProfile(name="test", transport="stdio", command="true")},
+        default_profile="test",
+    )
+    safety = SafetyPolicy()
+
+    async def _run():
+        ret_status = cmd_status(mgr, cfg, json_mode=True)
+        assert ret_status == 0
+
+        ret_tool = await cmd_tool_explore(mgr, safety, tool_name="ask_docs", json_mode=True)
+        assert ret_tool == 0
+
+    asyncio.run(_run())
+
+
+def test_tui_slash_and_natural_language_handling():
+    from hpe_networking_mcp.cli_client.tui import normalize_tui_input
+
+    assert normalize_tui_input("/diagram campus network") == ["diagram", "campus", "network"]
+    assert normalize_tui_input("/tool list_devices") == ["tool", "list_devices"]
+    assert normalize_tui_input("/status") == ["status"]
+    assert normalize_tui_input("/skills") == ["skills"]
+    assert normalize_tui_input("/docs") == ["docs"]
+    assert normalize_tui_input("specs on cx6300") == ["ask", "specs on cx6300"]
+

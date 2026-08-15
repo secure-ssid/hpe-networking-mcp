@@ -5,10 +5,18 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from hpe_networking_mcp.cli_client.ai import get_ai_backend
+from hpe_networking_mcp.cli_client.ai.agent_loop import AgentReasoningLoop
 from hpe_networking_mcp.cli_client.config import ClientConfig, ServerProfile
+from hpe_networking_mcp.cli_client.diagram_workflow import (
+    DiagramPreferences,
+    execute_diagram_export,
+    parse_diagram_intent,
+)
 from hpe_networking_mcp.cli_client.documents import DocumentStore
 from hpe_networking_mcp.cli_client.output import (
     console,
+    format_tool_schema,
     print_docs_table,
     print_error,
     print_ok,
@@ -18,8 +26,16 @@ from hpe_networking_mcp.cli_client.output import (
     tool_result_to_text,
 )
 from hpe_networking_mcp.cli_client.safety import SafetyPolicy
-from hpe_networking_mcp.cli_client.sessions import SessionManager
+from hpe_networking_mcp.cli_client.sessions import ConnectionState, SessionManager
 from hpe_networking_mcp.cli_client.skills import discover_skills, get_skill
+from hpe_networking_mcp.pipeline.reasoning import (
+    create_troubleshooting_plan,
+    format_architecture_recommendation_markdown,
+    format_migration_plan_markdown,
+    format_troubleshooting_report,
+    plan_migration,
+    synthesize_architecture,
+)
 
 
 async def ensure_connected(
@@ -287,6 +303,170 @@ def cmd_docs_search(query: str, *, collection: str | None = None, json_mode: boo
     return 0
 
 
+def cmd_docs_search_content(query: str, *, collection: str | None = None, json_mode: bool = False) -> int:
+    store = DocumentStore()
+    hits = store.search_content(query, collection=collection)
+    if json_mode:
+        print_ok({"matches": hits, "count": len(hits)}, json_mode=True)
+        return 0
+    if not hits:
+        console.print("[dim]No matching text found in stored documents.[/]")
+        return 0
+    for h in hits:
+        console.print(f"[bold cyan]{h['title']}[/]  [dim]({h['collection']})[/]")
+        console.print(f"  {h['snippet']}")
+    return 0
+
+
+async def cmd_diagram(
+    mgr: SessionManager,
+    safety: SafetyPolicy,
+    *,
+    prompt: str = "",
+    format: str | None = None,
+    vendor: str | None = None,
+    title: str | None = None,
+    json_mode: bool = False,
+) -> int:
+    """Run guided diagram generation from prompt or parameters."""
+    pref = parse_diagram_intent(prompt)
+    if format:
+        pref.format = format
+    if vendor:
+        pref.vendor = vendor
+    if title:
+        pref.title = title
+    result = await execute_diagram_export(mgr, safety, pref)
+    if json_mode:
+        print_ok(result, json_mode=True)
+        return 0 if result.get("ok") else 1
+    if not result.get("ok"):
+        print_error(result.get("error", "Diagram generation failed"), json_mode=False)
+        return 1
+    console.print(result.get("text", "Diagram generated"))
+    return 0
+
+
+async def cmd_tool_explore(
+    mgr: SessionManager,
+    safety: SafetyPolicy,
+    *,
+    tool_name: str,
+    json_mode: bool = False,
+) -> int:
+    """Inspect tool metadata, schema, and annotations."""
+    try:
+        resolved = mgr.resolve_tool_name(tool_name)
+        tool_obj: Any = mgr.tools[resolved]
+    except KeyError:
+        # Fallback to searching the backend tool catalog via find_tool
+        resolved = tool_name
+        tool_obj = None
+        if _has_tool(mgr, "find_tool"):
+            try:
+                res = await mgr.call_tool(
+                    "find_tool",
+                    {"query": tool_name, "include_schema": True, "top_k": 5},
+                )
+                structured = getattr(res, "structuredContent", None) or getattr(
+                    res, "structured_content", None
+                )
+                hits = structured if isinstance(structured, list) else []
+                if not hits and getattr(res, "content", None):
+                    for b in res.content:
+                        t = getattr(b, "text", None)
+                        if t and (t.startswith("[") or t.startswith("{")):
+                            try:
+                                parsed = json.loads(t)
+                                if isinstance(parsed, list):
+                                    hits = parsed
+                            except Exception:
+                                pass
+                for h in hits:
+                    if isinstance(h, dict) and (h.get("name") == tool_name or tool_name in h.get("name", "")):
+                        tool_obj = h
+                        resolved = h.get("name", tool_name)
+                        break
+                if tool_obj is None and hits and isinstance(hits[0], dict):
+                    tool_obj = hits[0]
+                    resolved = hits[0].get("name", tool_name)
+            except Exception:
+                tool_obj = None
+
+        if tool_obj is None:
+            print_error(f"unknown tool '{tool_name}'", json_mode=json_mode, code="unknown_tool")
+            return 2
+
+    if json_mode:
+        from hpe_networking_mcp.cli_client.safety import tool_is_read_only
+
+        if isinstance(tool_obj, dict):
+            schema = tool_obj.get("schema") or {}
+            desc = tool_obj.get("description", "")
+            ro = bool(tool_obj.get("read_only", tool_obj.get("capability") == "read"))
+        else:
+            schema = getattr(tool_obj, "inputSchema", None) or getattr(tool_obj, "input_schema", None) or {}
+            desc = getattr(tool_obj, "description", "")
+            ro = tool_is_read_only(tool_obj)
+
+        print_ok(
+            {
+                "tool": resolved,
+                "description": desc,
+                "read_only": ro,
+                "schema": schema,
+            },
+            json_mode=True,
+        )
+        return 0
+    text = format_tool_schema(resolved, tool_obj)
+    from rich.markdown import Markdown
+
+    console.print(Markdown(text))
+    return 0
+
+
+def cmd_status(
+    mgr: SessionManager | None,
+    cfg: ClientConfig,
+    *,
+    current_profile: str | None = None,
+    json_mode: bool = False,
+) -> int:
+    """Display connection status and configuration."""
+    prof_name = current_profile or (mgr.active_profile if mgr else None) or cfg.default_profile
+    is_connected = mgr is not None and mgr.state == ConnectionState.CONNECTED
+    status_dict = {
+        "connected": is_connected,
+        "state": mgr.state.value if mgr else "disconnected",
+        "profile": prof_name,
+        "tools_visible": len(mgr.tools) if mgr else 0,
+        "last_error": mgr.last_error if mgr else None,
+        "safety": "read-only default",
+        "personal_docs_mode": "local metadata + content search",
+    }
+    if json_mode:
+        print_ok(status_dict, json_mode=True)
+        return 0
+
+    lines = [
+        "## Client Status",
+        "",
+        f"- **Connection State:** `{status_dict['state']}`",
+        f"- **Active Profile:** `{status_dict['profile']}`",
+        f"- **Visible Tools:** {status_dict['tools_visible']}",
+        f"- **Safety Mode:** {status_dict['safety']}",
+        f"- **Personal Documents:** {status_dict['personal_docs_mode']}",
+    ]
+    if status_dict["last_error"]:
+        lines.append(f"- **Last Connection Error:** [red]{status_dict['last_error']}[/]")
+
+    from rich.markdown import Markdown
+
+    console.print(Markdown("\n".join(lines)))
+    return 0
+
+
 def parse_args_json(raw: str | None) -> dict[str, Any]:
     if not raw:
         return {}
@@ -297,3 +477,115 @@ def parse_args_json(raw: str | None) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("--args must be a JSON object")
     return data
+
+
+async def cmd_ai_reason(
+    mgr: SessionManager,
+    safety: SafetyPolicy,
+    *,
+    prompt: str,
+    provider: str = "heuristic",
+    model: str | None = None,
+    json_mode: bool = False,
+) -> int:
+    """Execute AI reasoning loop with available MCP tools."""
+    ai = get_ai_backend(provider=provider, model=model)
+    loop = AgentReasoningLoop(ai_backend=ai, session_manager=mgr)
+    steps_log = []
+
+    final_answer = ""
+    async for step in loop.run(prompt):
+        steps_log.append({
+            "turn": step.turn_index,
+            "type": step.step_type,
+            "content": step.content,
+            "tool": step.tool_name,
+        })
+        if step.step_type == "answer":
+            final_answer = step.content
+        elif not json_mode:
+            if step.step_type == "thought":
+                console.print(f"[dim italic]🧠 {step.content}[/]")
+            elif step.step_type == "tool_call":
+                console.print(f"[bold yellow]⚙️ {step.content}[/]")
+            elif step.step_type == "tool_result":
+                console.print(f"[dim]↳ Result: {step.content[:200]}...[/]")
+            elif step.step_type == "error":
+                console.print(f"[bold red]❌ {step.content}[/]")
+
+    if json_mode:
+        print_ok({"prompt": prompt, "answer": final_answer, "steps": steps_log}, json_mode=True)
+        return 0
+
+    if final_answer:
+        from rich.markdown import Markdown
+
+        console.print(Markdown(final_answer))
+    return 0
+
+
+def cmd_troubleshoot(
+    query: str,
+    *,
+    site_id: str | None = None,
+    json_mode: bool = False,
+) -> int:
+    """Generate structured troubleshooting plan and root cause analysis."""
+    plan = create_troubleshooting_plan(query, site_id=site_id)
+    if json_mode:
+        print_ok(plan.to_dict(), json_mode=True)
+        return 0
+    report = format_troubleshooting_report(plan)
+    from rich.markdown import Markdown
+
+    console.print(Markdown(report))
+    return 0
+
+
+def cmd_migrate_plan(
+    source_vendor: str,
+    *,
+    json_mode: bool = False,
+) -> int:
+    """Generate multi-vendor to AOS-CX migration blueprint."""
+    plan_dict = plan_migration(source_vendor)
+    if json_mode:
+        print_ok(plan_dict, json_mode=True)
+        return 0
+    report = format_migration_plan_markdown(plan_dict)
+    from rich.markdown import Markdown
+
+    console.print(Markdown(report))
+    return 0
+
+
+def cmd_architect_plan(
+    environment: str = "campus",
+    *,
+    ports: int = 200,
+    aps: int = 50,
+    evpn: bool = False,
+    json_mode: bool = False,
+) -> int:
+    """Synthesize network architecture design and Bill of Materials."""
+    rec = synthesize_architecture(
+        environment=environment,
+        scale_ap_count=aps,
+        scale_switch_port_count=ports,
+        require_evpn=evpn,
+    )
+    if json_mode:
+        print_ok({
+            "topology_type": rec.topology_type,
+            "title": rec.title,
+            "description": rec.description,
+            "hardware": rec.recommended_hardware,
+            "principles": rec.key_design_principles,
+            "advantages": rec.advantages,
+        }, json_mode=True)
+        return 0
+    report = format_architecture_recommendation_markdown(rec)
+    from rich.markdown import Markdown
+
+    console.print(Markdown(report))
+    return 0

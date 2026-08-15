@@ -48,20 +48,23 @@ hpe-mcp api lookup "create WLAN on Mist"
 hpe-mcp invoke-read ask_docs --args '{"question":"Mist site config","source":"mist_docs"}'
 ```
 
-Inside the shell, short commands work:
+Inside the TUI, plain text is a networking question. Use `/` commands only
+for expert controls:
 
 ```text
-ask How do I configure WPA3?
-api create WLAN
-find wireless client
-tools
-help
-exit
+How do I configure WPA3?
+/api create WLAN
+/find wireless client
+/tools
+/help
+/quit
 ```
 
 Interactive mode defaults to a **Textual TUI** (scrollable answers, status
-bar, shortcuts sidebar, ↑/↓ history). Fall back to the plain shell with
-`--repl` if needed:
+bar, task-first sidebar, persistent ↑/↓ history, slash-command suggestions,
+elapsed time, and real request cancellation). Legacy commands such as
+`ask ...`, `api ...`, and `find ...` remain compatible. Fall back to the
+plain shell with `--repl` if needed:
 
 ```bash
 hpe-mcp --repl

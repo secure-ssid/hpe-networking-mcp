@@ -11,6 +11,9 @@ Layout:
 from __future__ import annotations
 
 import asyncio
+import re
+import shlex
+import time
 from typing import Any
 
 from rich.markdown import Markdown
@@ -20,7 +23,9 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
+from textual.suggester import SuggestFromList
 from textual.widgets import Footer, Header, Input, RichLog, Static
+from textual.worker import Worker
 
 from hpe_networking_mcp.cli_client.banner import package_version
 from hpe_networking_mcp.cli_client.commands import (
@@ -29,27 +34,181 @@ from hpe_networking_mcp.cli_client.commands import (
     parse_args_json,
 )
 from hpe_networking_mcp.cli_client.config import ClientConfig
-from hpe_networking_mcp.cli_client.output import tool_result_to_text
+from hpe_networking_mcp.cli_client.diagram_workflow import (
+    execute_diagram_export,
+    parse_diagram_intent,
+)
+from hpe_networking_mcp.cli_client.output import (
+    format_tool_schema,
+    redact_sensitive_text,
+    tool_result_to_text,
+)
+from hpe_networking_mcp.cli_client.repl_input import history_path
 from hpe_networking_mcp.cli_client.safety import SafetyPolicy
-from hpe_networking_mcp.cli_client.sessions import SessionManager
+from hpe_networking_mcp.cli_client.sessions import ConnectionState, SessionManager
+
+COMMAND_SUGGESTIONS = (
+    "/help",
+    "/examples",
+    "/diagram ",
+    "/tool ",
+    "/ai ",
+    "/troubleshoot ",
+    "/migrate ",
+    "/architect ",
+    "/api ",
+    "/find ",
+    "/tools",
+    "/docs list",
+    "/docs add ",
+    "/docs search ",
+    "/docs search-content ",
+    "/skills list",
+    "/skills show ",
+    "/profiles",
+    "/status",
+    "/connect",
+    "/clear",
+    "/quit",
+)
+
+_LEGACY_PREFIX_COMMANDS = frozenset(
+    {
+        "ask",
+        "api",
+        "find",
+        "rag",
+        "invoke-read",
+        "connect",
+        "diagram",
+        "tool",
+        "explore",
+        "ai",
+        "reason",
+        "troubleshoot",
+        "tb",
+        "migrate",
+        "migration",
+        "architect",
+        "design",
+    }
+)
+_LEGACY_EXACT_COMMANDS = frozenset(
+    {"profiles", "status", "examples", "clear", "cls", "help", "?", "exit", "quit", ":q"}
+)
+_SLASH_ALIASES = {
+    "?": "help",
+    "h": "help",
+    "q": "exit",
+    "quit": "exit",
+}
+_SENSITIVE_HISTORY_RE = re.compile(
+    r"(?i)(?:--(?:password|passphrase|token|secret|api[-_]?key)\b|"
+    r"(?:password|passphrase|token|secret|client_secret|api[-_]?key)\s*[:=]\s*\S+)"
+)
+
+
+def normalize_tui_input(line: str) -> list[str]:
+    """Map user input to a command.
+
+    Plain text is a networking question. Expert controls use slash commands.
+    Diagram requests ("draw a diagram", "topology map") route to diagram wizard.
+    Old bare commands remain compatible while people transition.
+    """
+    value = line.strip()
+    if not value:
+        return []
+    if value == "/":
+        return ["help"]
+    if value.startswith("/"):
+        argv = shlex.split(value[1:])
+        if not argv:
+            return ["help"]
+        argv[0] = _SLASH_ALIASES.get(argv[0].lower(), argv[0].lower())
+        return argv
+
+    # Natural language diagram routing
+    low = value.lower()
+    if (
+        low.startswith("diagram")
+        or low.startswith("draw diagram")
+        or low.startswith("draw a diagram")
+        or low.startswith("build diagram")
+        or low.startswith("build me a diagram")
+        or "draw a network diagram" in low
+        or "export network diagram" in low
+        or "create network topology diagram" in low
+    ):
+        return ["diagram", value]
+
+    argv = shlex.split(value)
+    if not argv:
+        return []
+    head = argv[0].lower()
+    if head in _LEGACY_PREFIX_COMMANDS:
+        argv[0] = head
+        return argv
+    if head in _LEGACY_EXACT_COMMANDS and len(argv) == 1:
+        argv[0] = head
+        return argv
+    if head == "tools" and (len(argv) == 1 or argv[1] in {"list", "find"}):
+        argv[0] = head
+        return argv
+    if head == "docs" and len(argv) >= 2 and argv[1] in {"list", "add", "search", "search-content"}:
+        argv[0] = head
+        return argv
+    if head == "skills" and len(argv) >= 2 and argv[1] in {"list", "show"}:
+        argv[0] = head
+        return argv
+    return ["ask", value]
+
+
+def history_line_is_safe(line: str) -> bool:
+    """Do not persist commands that appear to contain credentials."""
+    return not _SENSITIVE_HISTORY_RE.search(line)
+
 
 HELP_TEXT = """\
-# hpe-mcp shortcuts
+# hpe-mcp
+
+Just type a networking question and press **Enter**.
+
+Use `/` commands for expert controls:
 
 | Command | What it does |
 |---|---|
-| `ask <question>` | RAG / docs Q&A |
-| `api <query>` | OpenAPI lookup |
-| `find <query>` | Find tools |
-| `tools` | List router tools |
-| `docs list\\|add\\|search` | Personal documents |
-| `skills list\\|show` | Local SKILL.md |
-| `connect [profile]` | (Re)connect MCP |
-| `clear` | Clear the log |
-| `help` | This help |
-| `exit` / `quit` | Leave the TUI |
+| `/diagram <query>` | Generate Draw.io/Graphviz/NeXt design diagrams |
+| `/tool <name>` | Inspect tool parameter schema and options |
+| `/api <query>` | Find exact API endpoints and schemas |
+| `/find <query>` | Search thousands of backend operations |
+| `/tools` | Show the small router/discovery layer |
+| `/docs list\\|add\\|search` | Manage locally stored personal documents |
+| `/skills list\\|show` | Show guided workflows |
+| `/profiles` | Show available MCP connections |
+| `/status` | View connection state, profile, and tools |
+| `/connect [profile]` | (Re)connect MCP |
+| `/examples` | Show useful starter questions |
+| `/clear` | Clear the results pane |
+| `/quit` | Leave the TUI |
 
-**Keys:** `↑`/`↓` input history · `Ctrl+L` clear · `Ctrl+C` cancel busy · `q` quit
+**Keys:** `↑`/`↓` history · `Ctrl+L` clear · `Ctrl+C` cancel · `Ctrl+Q` quit
+
+Legacy commands such as `ask`, `api`, `find`, and `diagram` still work.
+"""
+
+EXAMPLES_TEXT = """\
+# Try one of these
+
+- `What is the best way to design a three-tier campus network?`
+- `How should I design redundant VSX aggregation?`
+- `/diagram three-tier campus network with VSX agg and Aruba APs`
+- `/tool list_devices`
+- `/api create a Mist WLAN`
+- `/find troubleshoot wireless client`
+- `/docs add ./my-network-notes.md`
+- `/docs search-content EX4400`
+
+Personal documents are stored locally and searchable across metadata and text.
 """
 
 CSS = """
@@ -77,7 +236,9 @@ Screen {
 }
 
 #side {
-    width: 28;
+    width: 32;
+    min-width: 24;
+    max-width: 38;
     border: solid $accent;
     padding: 0 1;
     background: $surface;
@@ -145,7 +306,7 @@ class HpeMcpApp(App[int]):
     SUB_TITLE = "standalone MCP client"
     CSS = CSS
     BINDINGS = [
-        Binding("q", "quit_app", "Quit", show=True),
+        Binding("ctrl+q", "quit_app", "Quit", show=True),
         Binding("ctrl+c", "cancel", "Cancel", show=True),
         Binding("ctrl+l", "clear_log", "Clear", show=True),
         Binding("f1", "show_help", "Help", show=True),
@@ -168,7 +329,9 @@ class HpeMcpApp(App[int]):
         self._history: list[str] = []
         self._hist_idx: int = 0
         self._busy = False
-        self._cancel_event = asyncio.Event()
+        self._busy_message = ""
+        self._busy_started: float | None = None
+        self._command_worker: Worker[None] | None = None
         self._exit_code = 0
 
     def compose(self) -> ComposeResult:
@@ -177,44 +340,93 @@ class HpeMcpApp(App[int]):
         with Horizontal(id="main"):
             yield RichLog(id="log", highlight=True, markup=True, wrap=True, auto_scroll=True)
             yield Static(
-                "[bold]shortcuts[/]\n"
-                "ask <q>\n"
-                "api <q>\n"
-                "find <q>\n"
-                "tools\n"
-                "docs list\n"
-                "skills list\n"
-                "connect\n"
-                "clear · help\n"
-                "exit / q",
+                "[bold cyan]START HERE[/]\n\n"
+                "Type a networking\n"
+                "question normally.\n\n"
+                "[bold]Expert commands[/]\n"
+                "/diagram <query>\n"
+                "/tool <name>\n"
+                "/api <query>\n"
+                "/find <query>\n"
+                "/tools\n"
+                "/docs list|search\n"
+                "/skills list\n"
+                "/status\n"
+                "/examples\n"
+                "/help\n"
+                "/quit",
                 id="side",
             )
         yield Static("", id="busy")
         with Vertical(id="input-row"):
             yield Input(
-                placeholder="ask <question>  |  api <query>  |  find <tool>  |  help",
+                placeholder="Ask a networking question…  (type / for commands)",
+                suggester=SuggestFromList(COMMAND_SUGGESTIONS, case_sensitive=False),
                 id="cmd",
             )
         yield Footer()
 
     async def on_mount(self) -> None:
+        self._load_history()
+        self.set_interval(0.25, self._refresh_busy)
         status = self.query_one("#status", StatusBar)
         status.set_status(connected=False, profile=self.profile_name, message="starting…")
         log = self.query_one("#log", RichLog)
         log.write(
             Panel(
-                Text.from_markup(
-                    "[bold cyan]HPE NETWORKING MCP[/]\n"
-                    "[dim]TUI shell · read-only default · dry-run before writes[/]"
+                Markdown(
+                    "# Ask about your network\n\n"
+                    "Type a question normally. Use `/` only when you want a "
+                    "diagram, API lookup, tool search, documents, or settings.\n\n"
+                    "**Examples:**\n"
+                    "- Best way to design a three-tier network\n"
+                    "- How do I troubleshoot a roaming client?\n"
+                    "- `/diagram three-tier campus with VSX agg`\n"
+                    "- `/api create a Mist WLAN`\n"
+                    "- `/tool list_devices`\n"
+                    "- `/find switch port health`"
                 ),
                 border_style="green",
-                title="hpe-networking-mcp",
+                title="Welcome to hpe-networking-mcp",
             )
         )
         self.query_one("#cmd", Input).focus()
         self.connect_session()
 
-    @work(exclusive=True)
+    def _load_history(self) -> None:
+        path = history_path()
+        try:
+            lines = [
+                line.strip()
+                for line in path.read_text(encoding="utf-8").splitlines()
+                if line.strip() and history_line_is_safe(line)
+            ]
+        except OSError:
+            lines = []
+        self._history = lines[-500:]
+        self._hist_idx = len(self._history)
+
+    def _save_history(self) -> None:
+        path = history_path()
+        safe_lines = [line for line in self._history[-500:] if history_line_is_safe(line)]
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_suffix(".tmp")
+            tmp.write_text("\n".join(safe_lines) + ("\n" if safe_lines else ""), encoding="utf-8")
+            tmp.replace(path)
+        except OSError:
+            pass
+
+    def _record_history(self, line: str) -> None:
+        if not history_line_is_safe(line):
+            return
+        if not self._history or self._history[-1] != line:
+            self._history.append(line)
+        self._history = self._history[-500:]
+        self._hist_idx = len(self._history)
+        self._save_history()
+
+    @work(exclusive=True, group="connection")
     async def connect_session(self) -> None:
         status = self.query_one("#status", StatusBar)
         log = self.query_one("#log", RichLog)
@@ -232,19 +444,37 @@ class HpeMcpApp(App[int]):
                 tools=len(self.mgr.tools),
             )
             log.write(
-                Text.from_markup(
-                    f"[green]connected[/] {prof.name} ({prof.transport}) · "
-                    f"{len(self.mgr.tools)} tools"
+                Panel(
+                    Markdown(
+                        f"**Connected:** `{prof.name}` over `{prof.transport}`\n\n"
+                        f"The client sees **{len(self.mgr.tools)} router tools**. "
+                        "Those are the discovery/dispatch layer—not the full catalog. "
+                        "Use `/find <what you need>` to search backend operations."
+                    ),
+                    title="Ready",
+                    border_style="green",
                 )
             )
         except Exception as exc:  # noqa: BLE001
             status.set_status(connected=False, profile=self.profile_name, message="error")
-            log.write(Text.from_markup(f"[red]connect failed:[/] {exc}"))
+            log.write(
+                Panel(
+                    Markdown(
+                        f"**Could not connect:** `{exc}`\n\n"
+                        "Try `/connect`, check `/profiles`, or run "
+                        "`hpe-mcp-doctor` in another terminal."
+                    ),
+                    title="Connection problem",
+                    border_style="red",
+                )
+            )
         finally:
             self._set_busy(None)
 
     def _set_busy(self, message: str | None) -> None:
         self._busy = bool(message)
+        self._busy_message = message or ""
+        self._busy_started = time.monotonic() if message else None
         busy = self.query_one("#busy", Static)
         if message:
             busy.update(f"… {message}")
@@ -252,6 +482,14 @@ class HpeMcpApp(App[int]):
         else:
             busy.update("")
             busy.remove_class("visible")
+
+    def _refresh_busy(self) -> None:
+        if not self._busy or self._busy_started is None:
+            return
+        elapsed = time.monotonic() - self._busy_started
+        self.query_one("#busy", Static).update(
+            f"… {self._busy_message}  ·  {elapsed:.1f}s  ·  Ctrl+C cancels"
+        )
 
     def action_quit_app(self) -> None:
         self.exit(self._exit_code)
@@ -263,15 +501,17 @@ class HpeMcpApp(App[int]):
         self.query_one("#log", RichLog).write(Markdown(HELP_TEXT))
 
     def action_cancel(self) -> None:
-        if self._busy:
-            self._cancel_event.set()
+        worker = self._command_worker
+        if worker is not None and not worker.is_finished:
+            worker.cancel()
             self.query_one("#log", RichLog).write(
-                Text.from_markup("[yellow]cancel requested…[/]")
+                Text.from_markup("[yellow]cancelled the active request[/]")
             )
+            self._command_worker = None
+            self._set_busy(None)
         else:
-            # empty input cancel → quit confirm style: just note
             self.query_one("#log", RichLog).write(
-                Text.from_markup("[dim]nothing to cancel · press q to quit[/]")
+                Text.from_markup("[dim]nothing to cancel · Ctrl+Q quits[/]")
             )
 
     def action_history_prev(self) -> None:
@@ -305,66 +545,94 @@ class HpeMcpApp(App[int]):
         event.input.value = ""
         if not line:
             return
-        if not self._history or self._history[-1] != line:
-            self._history.append(line)
-        self._hist_idx = len(self._history)
+        self._record_history(line)
 
         log = self.query_one("#log", RichLog)
-        log.write(Text.from_markup(f"[bold green]hpe-mcp>[/] {line}"))
+        log.write(Text.from_markup(f"[bold green]you ›[/] {line}"))
 
-        if line in {"exit", "quit", ":q"}:
+        try:
+            argv = normalize_tui_input(line)
+        except ValueError as exc:
+            log.write(Text.from_markup(f"[red]Could not parse input:[/] {exc}"))
+            return
+        if not argv:
+            return
+
+        head = argv[0]
+        if head in {"exit", "quit", ":q"}:
             self.exit(0)
             return
-        if line in {"clear", "cls"}:
+        if head in {"clear", "cls"}:
             log.clear()
             return
-        if line in {"help", "?"}:
+        if head in {"help", "?"}:
             log.write(Markdown(HELP_TEXT))
+            return
+        if head == "examples":
+            log.write(Markdown(EXAMPLES_TEXT))
             return
 
         if self._busy:
             log.write(Text.from_markup("[yellow]busy — wait or Ctrl+C to cancel[/]"))
             return
 
-        self.run_command(line)
+        self._command_worker = self.run_command(line)
 
-    @work(exclusive=True)
+    @work(exclusive=True, group="command")
     async def run_command(self, line: str) -> None:
-        import shlex
-
         log = self.query_one("#log", RichLog)
-        self._cancel_event.clear()
         self._set_busy(line[:60])
+        started = time.monotonic()
         try:
-            try:
-                argv = shlex.split(line)
-            except ValueError as exc:
-                log.write(Text.from_markup(f"[red]parse error:[/] {exc}"))
-                return
-
+            argv = normalize_tui_input(line)
             if not argv:
-                return
-            if self.mgr is None:
-                log.write(Text.from_markup("[red]not connected[/] — try: connect"))
                 return
 
             head = argv[0]
             if head == "connect":
-                name = argv[1] if len(argv) > 1 else None
-                if name:
-                    self.profile_name = name
-                await self._reconnect(log)
+                if self.mgr is None:
+                    self.connect_session()
+                else:
+                    name = argv[1] if len(argv) > 1 else None
+                    if name:
+                        self.profile_name = name
+                    await self._reconnect(log)
+                return
+
+            if self.mgr is None:
+                log.write(
+                    Panel(
+                        Markdown(
+                            "The MCP router is not connected. Try `/connect` or "
+                            "run `hpe-mcp-doctor` in another terminal."
+                        ),
+                        title="Not connected",
+                        border_style="red",
+                    )
+                )
                 return
 
             text = await self._dispatch(argv)
-            if self._cancel_event.is_set():
-                log.write(Text.from_markup("[yellow]cancelled[/]"))
-                return
             if text:
-                self._write_result(log, text)
+                duration = time.monotonic() - started
+                self._write_result(log, text, command=argv[0], duration=duration)
+        except asyncio.CancelledError:
+            log.write(Text.from_markup("[yellow]request cancelled[/]"))
+            raise
         except Exception as exc:  # noqa: BLE001
-            log.write(Text.from_markup(f"[red]{type(exc).__name__}:[/] {exc}"))
+            duration = time.monotonic() - started
+            log.write(
+                Panel(
+                    Markdown(
+                        f"**{type(exc).__name__}:** `{exc}`\n\n"
+                        "Check `/status`, retry, or run `hpe-mcp-doctor`."
+                    ),
+                    title=f"Request failed · {duration:.1f}s",
+                    border_style="red",
+                )
+            )
         finally:
+            self._command_worker = None
             self._set_busy(None)
 
     async def _reconnect(self, log: RichLog) -> None:
@@ -405,8 +673,106 @@ class HpeMcpApp(App[int]):
             result = await mgr.call_tool(resolved, args or {})
             return tool_result_to_text(result)
 
+        # diagram workflow
+        if head == "diagram":
+            prompt_str = " ".join(argv[1:])
+            pref = parse_diagram_intent(prompt_str)
+            res = await execute_diagram_export(mgr, safety, pref)
+            if res.get("ok"):
+                return str(res.get("text", "Diagram generated"))
+            return f"error: {res.get('error', 'Diagram export failed')}"
+
+        # ai multi-turn reasoning
+        if head in {"ai", "reason"} and len(argv) >= 2:
+            from hpe_networking_mcp.cli_client.ai import get_ai_backend
+            from hpe_networking_mcp.cli_client.ai.agent_loop import AgentReasoningLoop
+
+            ai = get_ai_backend()
+            loop = AgentReasoningLoop(ai_backend=ai, session_manager=mgr)
+            parts = []
+            async for step in loop.run(" ".join(argv[1:])):
+                if step.step_type == "thought":
+                    parts.append(f"🧠 *{step.content}*\n")
+                elif step.step_type == "tool_call":
+                    parts.append(f"⚙️ **Tool Call:** `{step.tool_name}`\n")
+                elif step.step_type == "answer":
+                    parts.append(step.content)
+            return "\n".join(parts)
+
+        # troubleshoot
+        if head in {"troubleshoot", "tb"} and len(argv) >= 2:
+            from hpe_networking_mcp.pipeline.reasoning import (
+                create_troubleshooting_plan,
+                format_troubleshooting_report,
+            )
+
+            plan = create_troubleshooting_plan(" ".join(argv[1:]))
+            return format_troubleshooting_report(plan)
+
+        # migrate
+        if head in {"migrate", "migration"}:
+            from hpe_networking_mcp.pipeline.reasoning import (
+                format_migration_plan_markdown,
+                plan_migration,
+            )
+
+            vendor = argv[1] if len(argv) > 1 else "aos-s"
+            plan_dict = plan_migration(vendor)
+            return format_migration_plan_markdown(plan_dict)
+
+        # architect
+        if head in {"architect", "design"}:
+            from hpe_networking_mcp.pipeline.reasoning import (
+                format_architecture_recommendation_markdown,
+                synthesize_architecture,
+            )
+
+            env = argv[1] if len(argv) > 1 else "campus"
+            rec = synthesize_architecture(environment=env)
+            return format_architecture_recommendation_markdown(rec)
+
+        # tool / explore
+        if head in {"tool", "explore"} and len(argv) >= 2:
+            tool_name = argv[1]
+            try:
+                resolved = mgr.resolve_tool_name(tool_name)
+                return format_tool_schema(resolved, mgr.tools[resolved])
+            except KeyError:
+                # Fall back to finding tool schema in backend catalog
+                if any(n.endswith("find_tool") or n == "find_tool" for n in mgr.tools):
+                    try:
+                        res = await mgr.call_tool(
+                            "find_tool",
+                            {"query": tool_name, "include_schema": True, "top_k": 5},
+                        )
+                        structured = getattr(res, "structuredContent", None) or getattr(
+                            res, "structured_content", None
+                        )
+                        hits = structured if isinstance(structured, list) else []
+                        if not hits and getattr(res, "content", None):
+                            for b in res.content:
+                                t = getattr(b, "text", None)
+                                if t and (t.startswith("[") or t.startswith("{")):
+                                    try:
+                                        parsed = json.loads(t)
+                                        if isinstance(parsed, list):
+                                            hits = parsed
+                                    except Exception:
+                                        pass
+                        for h in hits:
+                            if isinstance(h, dict) and (
+                                h.get("name") == tool_name
+                                or tool_name in h.get("name", "")
+                            ):
+                                return format_tool_schema(h.get("name", tool_name), h)
+                        if hits and isinstance(hits[0], dict):
+                            return format_tool_schema(hits[0].get("name", tool_name), hits[0])
+                    except Exception as exc:
+                        return f"error: {exc}"
+                return f"error: unknown tool '{tool_name}'"
+
         # shortcuts
-        if head in {"ask", "q"} and len(argv) >= 2:
+        if head == "ask" and len(argv) >= 2:
             source = None
             rest = argv[1:]
             if "--source" in rest:
@@ -455,7 +821,13 @@ class HpeMcpApp(App[int]):
             # Build a simple text table
             from hpe_networking_mcp.cli_client.safety import tool_is_read_only
 
-            lines = ["## Tools", ""]
+            lines = [
+                "## Router tools",
+                "",
+                "These are the small discovery/dispatch layer. Use "
+                "`/find <what you need>` to search the backend catalog.",
+                "",
+            ]
             query = (q or "").lower()
             for name in sorted(mgr.tools):
                 tool = mgr.tools[name]
@@ -496,31 +868,94 @@ class HpeMcpApp(App[int]):
 
             store = DocumentStore()
             if len(argv) >= 2 and argv[1] == "list":
-                coll = argv[2] if len(argv) > 2 else None
+                coll = None
+                if "--collection" in argv:
+                    i = argv.index("--collection")
+                    if i + 1 < len(argv):
+                        coll = argv[i + 1]
+                elif len(argv) > 2:
+                    coll = argv[2]
                 docs = store.list(coll)
                 if not docs:
                     return "(no documents)"
-                lines = ["## Personal documents", ""]
+                lines = [
+                    "## Personal documents",
+                    "",
+                    "_Stored/bookmarked locally; searchable with `/docs search` and `/docs search-content`._",
+                    "",
+                ]
                 for d in docs:
                     lines.append(f"- `{d.id}` **{d.title}** _{d.collection}_")
                     lines.append(f"  {d.source_uri}")
                 return "\n".join(lines)
             if len(argv) >= 3 and argv[1] == "add":
                 src = argv[2]
+                collection = "personal"
+                title = None
+                if "--collection" in argv:
+                    i = argv.index("--collection")
+                    if i + 1 < len(argv):
+                        collection = argv[i + 1]
+                if "--title" in argv:
+                    i = argv.index("--title")
+                    if i + 1 < len(argv):
+                        title = argv[i + 1]
                 if src.startswith("http://") or src.startswith("https://"):
-                    rec = store.add_uri_record(src)
+                    rec = store.add_uri_record(
+                        src,
+                        collection=collection,
+                        title=title,
+                    )
                 else:
-                    rec = store.add_file(src)
-                return f"added `{rec.id}` → {rec.collection} ({rec.title})"
+                    rec = store.add_file(
+                        src,
+                        collection=collection,
+                        title=title,
+                    )
+                return (
+                    f"Stored `{rec.id}` → {rec.collection} ({rec.title}).\n\n"
+                    "_Available to `/docs search` and `/docs search-content`._"
+                )
+            if len(argv) >= 3 and argv[1] == "search-content":
+                terms = argv[2:]
+                collection = None
+                if "--collection" in terms:
+                    i = terms.index("--collection")
+                    if i + 1 < len(terms):
+                        collection = terms[i + 1]
+                    terms = terms[:i]
+                hits = store.search_content(" ".join(terms), collection=collection)
+                if not hits:
+                    return "(no text matches found in stored documents)"
+                lines = [
+                    "## Document text matches",
+                    "",
+                ]
+                for d in hits:
+                    lines.append(f"- `{d['id']}` **{d['title']}** _{d['collection']}_")
+                    lines.append(f"  {d['snippet']}")
+                return "\n".join(lines)
             if len(argv) >= 3 and argv[1] == "search":
-                hits = store.search(" ".join(argv[2:]))
+                terms = argv[2:]
+                collection = None
+                if "--collection" in terms:
+                    i = terms.index("--collection")
+                    if i + 1 < len(terms):
+                        collection = terms[i + 1]
+                    terms = terms[:i]
+                hits = store.search(" ".join(terms), collection=collection)
                 if not hits:
                     return "(no matches)"
-                lines = ["## Document matches", ""]
+                lines = [
+                    "## Document metadata matches",
+                    "",
+                    "_Local title/path/tag search._",
+                    "",
+                ]
                 for d in hits:
                     lines.append(f"- `{d.id}` **{d.title}**")
                 return "\n".join(lines)
-            return "usage: docs list|add <path>|search <q>"
+            return "usage: docs list|add <path>|search <q>|search-content <q>"
 
         if head == "profiles":
             lines = ["## Profiles", ""]
@@ -529,13 +964,60 @@ class HpeMcpApp(App[int]):
                 lines.append(f"{mark} **{n}** `{p.transport}` — {p.description}")
             return "\n".join(lines)
 
+        if head == "status":
+            connected = self.mgr is not None and self.mgr.state == ConnectionState.CONNECTED
+            state_str = self.mgr.state.value if self.mgr else "disconnected"
+            lines = [
+                "## Client status\n",
+                f"- MCP connection state: **`{state_str}`**",
+                f"- Active profile: `{self.profile_name}`",
+                f"- Visible router tools: **{len(mgr.tools)}**",
+                "- Safety policy: **read-only default**",
+                "- Personal docs: **local metadata + content search enabled**",
+            ]
+            if self.mgr and self.mgr.last_error:
+                lines.append(f"- Last error: `{self.mgr.last_error}`")
+            return "\n".join(lines)
+
         return (
-            f"unknown command: `{head}`\n\n"
-            "Try: ask · api · find · tools · docs · skills · help"
+            f"Unknown command: `/{head}`\n\n"
+            "Type a question normally, or use `/help` to see controls."
         )
 
-    def _write_result(self, log: RichLog, text: str) -> None:
+    def _write_result(
+        self,
+        log: RichLog,
+        text: str,
+        *,
+        command: str,
+        duration: float,
+    ) -> None:
+        text = redact_sensitive_text(text)
         stripped = text.lstrip()
+        border = "cyan"
+        title = {
+            "ask": "Answer",
+            "api": "API lookup",
+            "find": "Tool search",
+            "tools": "Router tools",
+            "tool": "Tool Schema",
+            "explore": "Tool Explorer",
+            "diagram": "Network Diagram",
+            "ai": "AI Reasoning",
+            "reason": "AI Reasoning",
+            "troubleshoot": "Diagnostic Plan",
+            "tb": "Diagnostic Plan",
+            "migrate": "Migration Plan",
+            "migration": "Migration Plan",
+            "architect": "Architecture Blueprint",
+            "design": "Architecture Blueprint",
+            "docs": "Documents",
+            "skills": "Skills",
+            "profiles": "Profiles",
+            "status": "Status",
+        }.get(command, command)
+        if stripped.lower().startswith(("error:", "blocked:")):
+            border = "red"
         if (
             stripped.startswith("#")
             or "\n### " in text
@@ -543,13 +1025,23 @@ class HpeMcpApp(App[int]):
             or "\n### Sources" in text
             or (len(text) > 160 and not stripped.startswith("{"))
         ):
-            log.write(Markdown(text))
+            body: Any = Markdown(text)
         elif stripped.startswith("{") or stripped.startswith("["):
-            log.write(text)
+            body = Text(text)
         else:
-            log.write(text)
+            body = Text(text)
+        log.write(
+            Panel(
+                body,
+                title=f"{title} · {duration:.1f}s",
+                border_style=border,
+            )
+        )
 
     async def on_unmount(self) -> None:
+        self._save_history()
+        if self._command_worker is not None and not self._command_worker.is_finished:
+            self._command_worker.cancel()
         if self.mgr is not None:
             try:
                 await self.mgr.__aexit__(None, None, None)
