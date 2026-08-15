@@ -40,6 +40,25 @@ def select_wordmark(*, width: int, style: str = "block") -> str:
     return _BLOCK if width >= full_width + 2 else _COMPACT
 
 
+def _meta_line(
+    *,
+    profile: str | None,
+    transport: str | None,
+    servers: int | None,
+    mode: str,
+) -> str:
+    ver = package_version()
+    meta: list[str] = [f"v{ver}", f"mode={mode}"]
+    if profile:
+        meta.append(f"profile={profile}")
+    if transport:
+        meta.append(f"transport={transport}")
+    if servers is not None:
+        meta.append(f"servers={servers}")
+    meta.append("read-only default")
+    return " · ".join(meta)
+
+
 def render_banner(
     *,
     width: int = 80,
@@ -51,17 +70,11 @@ def render_banner(
 ) -> str:
     """Return a plain-text banner block (no ANSI codes)."""
     wordmark = select_wordmark(width=width, style=style)
-    ver = package_version()
-    meta: list[str] = [f"hpe-networking-mcp  v{ver}", f"mode={mode}"]
-    if profile:
-        meta.append(f"profile={profile}")
-    if transport:
-        meta.append(f"transport={transport}")
-    if servers is not None:
-        meta.append(f"servers={servers}")
-    meta.append("read-only default · dry-run before writes")
-    bar = "─" * min(max(width - 2, 24), 72)
-    return "\n".join([wordmark, bar, " · ".join(meta), bar])
+    meta = _meta_line(
+        profile=profile, transport=transport, servers=servers, mode=mode
+    )
+    # No internal box borders — outer Rich Panel owns the frame.
+    return f"{wordmark}\n{meta}"
 
 
 def print_banner(
@@ -100,27 +113,28 @@ def print_banner(
                 style=style,
             )
             try:
+                from rich.console import Group
                 from rich.panel import Panel
                 from rich.text import Text
 
                 lines = text.splitlines()
-                body = Text()
-                bar_seen = 0
-                for i, line in enumerate(lines):
-                    suffix = "\n" if i < len(lines) - 1 else ""
-                    if set(line) <= {"─"} and line:
-                        bar_seen += 1
-                        body.append(line + suffix, style="dim green")
-                    elif bar_seen == 0:
-                        body.append(line + suffix, style="bold cyan")
-                    else:
-                        body.append(line + suffix, style="dim")
+                if not lines:
+                    return
+                # Last line is meta; everything above is the wordmark.
+                word_lines = lines[:-1] if len(lines) > 1 else lines
+                meta = lines[-1] if len(lines) > 1 else ""
+                word = Text("\n".join(word_lines), style="bold cyan")
+                parts: list[Any] = [word]
+                if meta:
+                    parts.append(Text(meta, style="dim"))
                 console.print(
-                    Panel.fit(
-                        body,
+                    Panel(
+                        Group(*parts),
                         border_style="green",
                         title="[bold green]hpe-networking-mcp[/]",
                         subtitle="[dim]standalone MCP client[/]",
+                        padding=(0, 1),
+                        expand=False,
                     )
                 )
                 return

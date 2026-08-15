@@ -13,6 +13,7 @@ from hpe_networking_mcp.cli_client.output import (
     print_error,
     print_ok,
     print_skills_table,
+    print_tool_result,
     print_tools_table,
     tool_result_to_text,
 )
@@ -102,8 +103,7 @@ async def cmd_invoke(
             json_mode=True,
         )
     else:
-        console.print(f"[dim]→ {resolved}[/]")
-        console.print(text)
+        print_tool_result(text, tool_name=resolved)
     return 1 if is_err else 0
 
 

@@ -37,6 +37,7 @@ from hpe_networking_mcp.cli_client.commands import (
 )
 from hpe_networking_mcp.cli_client.config import load_client_config
 from hpe_networking_mcp.cli_client.output import console, print_error
+from hpe_networking_mcp.cli_client.repl_input import configure_readline, read_line
 from hpe_networking_mcp.cli_client.safety import SafetyPolicy
 from hpe_networking_mcp.cli_client.sessions import SessionManager
 
@@ -313,6 +314,8 @@ async def run_repl(
     json_default: bool = False,
 ) -> int:
     """Minimal interactive shell over a live session."""
+    # Load readline/libedit BEFORE first prompt so ↑/↓ history works.
+    has_hist = configure_readline()
     print_banner(
         console,
         profile=cfg.default_profile,
@@ -324,6 +327,10 @@ async def run_repl(
         "[dim]full:[/] rag ask · tools list|find · api lookup · invoke-read · "
         "skills · docs · profiles · connect"
     )
+    if has_hist:
+        console.print("[dim]history:[/] ↑/↓ recall · Ctrl-R search (libedit/GNU) · Ctrl-C cancel")
+    else:
+        console.print("[dim yellow]history unavailable (no readline)[/]")
 
     async with SessionManager.create(namespace=True) as mgr:
         try:
@@ -337,7 +344,7 @@ async def run_repl(
 
         while True:
             try:
-                line = await asyncio.to_thread(input, "hpe-mcp> ")
+                line = await asyncio.to_thread(read_line, "hpe-mcp> ")
             except (EOFError, KeyboardInterrupt):
                 console.print()
                 break

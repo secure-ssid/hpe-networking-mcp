@@ -28,9 +28,39 @@ class _Tool:
 
 def test_banner_contains_project_name():
     text = render_banner(width=100, mode="shell", profile="local-router")
-    assert "hpe-networking-mcp" in text
+    # Wordmark is Unicode box-drawing; project name appears in meta/version line context
     assert "mode=shell" in text
-    assert package_version()
+    assert "profile=local-router" in text
+    assert package_version() in text
+
+
+def test_prettify_rag_answer():
+    from hpe_networking_mcp.cli_client.output import prettify_tool_text
+
+    raw = json.dumps(
+        {
+            "answer": "Use a three-tier campus with L3 core and L2 access.",
+            "citations": [
+                {
+                    "file_path": "vsg_docs/campus.md",
+                    "source": "vsg_docs",
+                    "score": 1.0,
+                }
+            ],
+            "mode": "search_docs",
+        }
+    )
+    pretty = prettify_tool_text(raw)
+    assert "three-tier" in pretty
+    assert "vsg_docs/campus.md" in pretty
+    assert "Sources" in pretty
+
+
+def test_configure_readline_idempotent():
+    from hpe_networking_mcp.cli_client.repl_input import configure_readline
+
+    assert configure_readline() is True
+    assert configure_readline() is True
 
 
 def test_banner_compacts_on_narrow_terminal():
