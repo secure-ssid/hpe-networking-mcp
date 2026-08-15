@@ -46,6 +46,14 @@ from hpe_networking_mcp.cli_client.config import default_user_data_dir
 
 _CHUNK_SIZE = 800
 _CHUNK_OVERLAP = 100
+#: Chunks shorter than this are folded into a neighboring chunk instead of
+#: being embedded/indexed standalone (mirrors ``ingestion/chunking.py``'s
+#: MIN_CHUNK_SIZE -- see ``_merge_small_chunks`` there for the full
+#: rationale: a short heading immediately followed by a blank line and an
+#: oversized body paragraph is otherwise left as its own tiny, low-content
+#: "orphan" chunk that can outrank the real content for title-keyword
+#: queries).
+_MIN_CHUNK_SIZE = 200
 _splitter = RecursiveCharacterTextSplitter(
     chunk_size=_CHUNK_SIZE,
     chunk_overlap=_CHUNK_OVERLAP,
@@ -53,8 +61,37 @@ _splitter = RecursiveCharacterTextSplitter(
 )
 
 
+def _merge_small_chunks(chunks: list[str]) -> list[str]:
+    """Fold chunks under ``_MIN_CHUNK_SIZE`` into an adjacent chunk.
+
+    Kept in sync with ``ingestion/chunking.py``'s ``_merge_small_chunks``
+    (duplicated rather than imported for the same ``sys.path`` reason
+    documented above for chunking itself).
+    """
+    if len(chunks) <= 1:
+        return chunks
+
+    merged: list[str] = []
+    pending = ""
+    for chunk in chunks:
+        candidate = f"{pending}\n\n{chunk}" if pending else chunk
+        if len(candidate) < _MIN_CHUNK_SIZE:
+            pending = candidate
+            continue
+        merged.append(candidate)
+        pending = ""
+
+    if pending:
+        if merged:
+            merged[-1] = f"{merged[-1]}\n\n{pending}"
+        else:
+            merged.append(pending)
+
+    return merged
+
+
 def _chunk_text(text: str) -> list[str]:
-    return _splitter.split_text(text)
+    return _merge_small_chunks(_splitter.split_text(text))
 
 
 SUPPORTED_SUFFIXES = {

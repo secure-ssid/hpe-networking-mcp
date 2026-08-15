@@ -159,7 +159,7 @@ OpenAPI inputs are reproducible:
   `mistsys/mist_openapi` repository and SHA-256 verified.
 - Weekly CI checks detect registry hash or Mist upstream drift.
 - Structured OpenAPI records are stored only in `data/specs.sqlite`; the
-  97,783-row LanceDB table remains a prose retrieval corpus.
+  97,644-row LanceDB table remains a prose retrieval corpus.
 
 <div class="docs-next" markdown="1">
 ### Continue

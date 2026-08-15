@@ -89,7 +89,7 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 | Area | Current snapshot |
 |---|---|
 | Tool catalog | Non-additive profiles: 369 core tools / 2830 read-only optional starters / 5810 read-write optional starters; platform API backend total: 6,704; complete backend index: 6,716; direct-all: 6,723 |
-| RAG | 97,783 prose chunks; 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 346 lifecycle records |
+| RAG | 97,644 prose chunks; 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 346 lifecycle records |
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud |
 | Safety | Per-platform write gates, dry-run + confirmation, HTTP host/origin and bearer controls, credential-gated live-test config |
 

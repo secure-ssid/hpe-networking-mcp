@@ -34,8 +34,8 @@
 
     <rect x="550" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
     <text x="572" y="38" class="boxTitle">RAG + OpenAPI</text>
-    <text x="572" y="72" class="count">11 tools</text>
-    <text x="572" y="101" class="boxText">97,783 prose chunks</text>
+    <text x="572" y="72" class="count">12 tools</text>
+    <text x="572" y="101" class="boxText">97,644 prose chunks</text>
     <text x="572" y="124" class="boxText">4,106 exact API endpoints</text>
 
     <rect x="825" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>

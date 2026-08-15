@@ -17,6 +17,10 @@ collection (fixed in the same change, regression-tested here):
   single corrupt embedded media stream (bad CRC-32), blocking extraction of
   an otherwise-intact deck. ``_rebuild_pptx_without_corrupt_members`` repairs
   this by replacing only the broken zip member(s) with an empty placeholder.
+- ``_chunk_text`` (mirroring ``ingestion/chunking.py``) used to leave a short
+  heading immediately followed by a blank line and an oversized body
+  paragraph as its own tiny, low-information "orphan" chunk instead of
+  folding it into a neighboring chunk.
 """
 
 from __future__ import annotations
@@ -43,6 +47,32 @@ def test_chunk_text_long_text_multiple_bounded_chunks():
     chunks = pi._chunk_text(long_text)
     assert len(chunks) > 1
     assert all(len(c) <= pi._CHUNK_SIZE for c in chunks)
+
+
+def test_chunk_text_merges_orphan_heading_into_following_body():
+    # Mirrors ingestion/chunking.py's regression test for the same
+    # real-world defect (a short heading immediately followed by a blank
+    # line and an oversized body paragraph must not survive as its own
+    # tiny, low-information chunk).
+    heading = "# Widget X specifications"
+    body_paragraph_1 = "x" * 790
+    body_paragraph_2 = "y" * 250
+    text = f"{heading}\n\n{body_paragraph_1}\n\n{body_paragraph_2}"
+
+    chunks = pi._chunk_text(text)
+
+    assert heading not in chunks
+    assert all(len(chunk) >= pi._MIN_CHUNK_SIZE for chunk in chunks)
+    assert any(heading in chunk and "x" in chunk for chunk in chunks)
+    assert any("y" * 250 in chunk for chunk in chunks)
+
+
+def test_merge_small_chunks_folds_trailing_chunk_backward():
+    chunks = ["a" * 300, "b" * 300, "tiny tail"]
+
+    merged = pi._merge_small_chunks(chunks)
+
+    assert merged == ["a" * 300, "b" * 300 + "\n\ntiny tail"]
 
 
 # ── PPTX extraction ───────────────────────────────────────────────────────

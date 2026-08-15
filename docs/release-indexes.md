@@ -14,7 +14,7 @@ whenever an index is rebuilt, and verify with
 
 | Artifact content | Count |
 |---|---:|
-| LanceDB prose chunks | 97,783 |
+| LanceDB prose chunks | 97,644 |
 | Indexed prose sources | 14 |
 | Declared RAG sources | 16 |
 | Exact endpoints | 4,106 |
