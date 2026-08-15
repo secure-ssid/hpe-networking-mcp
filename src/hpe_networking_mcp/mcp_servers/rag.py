@@ -245,6 +245,74 @@ def _boost_sources(hits: list[dict[str, Any]], query: str = "") -> list[dict[str
     return hits
 
 
+# feature_navigator and product_datasheets ship one file per hardware model
+# with near-identical structure — every CX switch file repeats the same
+# section headings ("## ACL", "## VXLAN", ...) and the same "Yes/No"
+# boilerplate, so a query naming one model (e.g. "CX 8400") can be outscored
+# by a *different* model's file that happens to share more generic content
+# terms. _boost_sources cannot fix this: it ranks by source authority, and
+# every file in the family carries the same source label. Matches an explicit
+# vendor-prefixed model mention such as "CX 8400", "cx-8400", or "EX4400" —
+# deliberately never a bare number, so "port 8400" or "VLAN 100" cannot
+# trigger it.
+_MODEL_TOKEN_RE = re.compile(r"\b(?:cx|ex)[\s-]?(\d{3,5})\b", re.IGNORECASE)
+
+# Sources that ship one near-duplicate file per hardware model, where a
+# file_path model match is a deliberate signal rather than incidental prose
+# overlap (e.g. two unrelated docs both mentioning "2024").
+_MODEL_FAMILY_SOURCES = frozenset({"feature_navigator", "product_datasheets", "product_specs"})
+
+# Deliberately NOT calibrated like _SOURCE_BOOST (max 0.16, a small nudge that
+# lets a clearly-more-relevant hit still win). Within one model family the raw
+# relevance gap between siblings is mostly noise: every CX file repeats the
+# same "## VXLAN\n- EVPN...: Yes" boilerplate, so min-max normalising a
+# same-family candidate set turns a marginal raw-score difference (e.g.
+# 0.0313 vs 0.0229 out of ~0.03) into a large normalised gap (1.0 vs 0.17) that
+# looks decisive but is not — it is an artifact of normalising over 20+
+# near-duplicate rows. A small additive nudge could not close that gap, so
+# this is sized to always beat the largest possible non-matching combination
+# (normalised 1.0 + the biggest _SOURCE_BOOST, 0.16) with margin to spare.
+# Non-family sources are never touched by this at all, so a genuinely more
+# authoritative hit from outside the family (an OpenAPI spec, curated
+# hardware-spec entry, etc.) still competes on its own merits.
+_MODEL_MATCH_BOOST = 1.2
+
+
+def _detect_model_token(query: str) -> str | None:
+    """Extract a normalised device-model number from a query, or None.
+
+    Only fires on an explicit vendor-prefixed mention, never a bare number.
+    Returns None when the query names zero or multiple distinct models — a
+    comparison question ("CX 6400 vs CX 8400") must not silently boost only
+    the first one mentioned, mirroring _detect_vendor's ambiguity rule.
+    """
+    models = {m.lower() for m in _MODEL_TOKEN_RE.findall(query)}
+    return models.pop() if len(models) == 1 else None
+
+
+def _boost_model_match(hits: list[dict[str, Any]], query: str) -> list[dict[str, Any]]:
+    """Boost hits whose file_path names the exact model the query asked about.
+
+    Runs after _boost_sources so it builds on the already-normalised scores.
+    A no-op when the query does not name a single, specific model, or when no
+    candidate file_path contains it — matching family hits are boosted,
+    non-matching family hits and every non-family hit are left exactly as
+    _boost_sources ranked them.
+    """
+    if not hits:
+        return hits
+    model = _detect_model_token(query)
+    if not model:
+        return hits
+    for h in hits:
+        if _boost_key(h) not in _MODEL_FAMILY_SOURCES:
+            continue
+        if model in str(h.get("file_path", "")).lower():
+            h["score"] = h.get("score", 0.0) + _MODEL_MATCH_BOOST
+    hits.sort(key=lambda h: h.get("score", 0.0), reverse=True)
+    return hits
+
+
 def _search_lancedb(query: str, top_k: int, source_filter: SourceFilter) -> list[dict[str, Any]]:
     try:
         db = lance_client.connect()
@@ -258,7 +326,8 @@ def _search_lancedb(query: str, top_k: int, source_filter: SourceFilter) -> list
         )
     except (FileNotFoundError, ValueError) as exc:
         return [{"error": str(exc)}]
-    return _shape(_boost_sources(hits, query), top_k)
+    hits = _boost_model_match(_boost_sources(hits, query), query)
+    return _shape(hits, top_k)
 
 
 def _search_redis(query: str, top_k: int, source_filter: SourceFilter) -> list[dict[str, Any]]:
@@ -286,6 +355,7 @@ def _search_redis(query: str, top_k: int, source_filter: SourceFilter) -> list[d
         else:
             r["score"] = r["score"] + _SOURCE_BOOST.get(key, 0.0)
     candidates.sort(key=lambda r: r["score"], reverse=True)
+    candidates = _boost_model_match(candidates, query)
     return _shape(candidates, top_k)
 
 
