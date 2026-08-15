@@ -60,6 +60,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     p.add_argument("--quiet", "-q", action="store_true", help="Suppress banner")
     p.add_argument(
+        "--repl",
+        action="store_true",
+        help="Use plain readline shell instead of the Textual TUI",
+    )
+    p.add_argument(
+        "--tui",
+        action="store_true",
+        help="Force Textual TUI (default for interactive shell)",
+    )
+    p.add_argument(
         "--allow-writes",
         action="store_true",
         help="Permit write-capable tools (still requires --yes unless interactive)",
@@ -224,6 +234,8 @@ async def _run_connected(args: argparse.Namespace) -> int:
             )
 
     if args.command == "shell":
+        # TUI is started from main() on the main thread. This path is the
+        # plain readline fallback (--repl) only.
         return await run_repl(cfg, safety, quiet=args.quiet, json_default=json_mode)
 
     # Connected commands
@@ -530,6 +542,30 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(raw)
     if not getattr(args, "command", None):
         args.command = "shell"
+
+    # Textual TUI must own the main thread / event loop.
+    if args.command == "shell" and not getattr(args, "repl", False):
+        cfg = load_client_config(
+            config_path=args.config, profile_override=args.profile
+        )
+        safety = _safety_from_args(args)
+        try:
+            from hpe_networking_mcp.cli_client.tui import run_tui
+        except ImportError:
+            console.print(
+                "[yellow]textual not installed — falling back to readline shell[/]"
+            )
+            try:
+                return asyncio.run(
+                    run_repl(cfg, safety, quiet=args.quiet, json_default=args.json)
+                )
+            except KeyboardInterrupt:
+                return 130
+        try:
+            return run_tui(cfg, safety, profile=args.profile)
+        except KeyboardInterrupt:
+            return 130
+
     try:
         return asyncio.run(_run_connected(args))
     except KeyboardInterrupt:

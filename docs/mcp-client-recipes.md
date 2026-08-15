@@ -59,7 +59,14 @@ help
 exit
 ```
 
-This is a **CLI + REPL**, not a full-screen TUI (TUI is deferred).
+Interactive mode defaults to a **Textual TUI** (scrollable answers, status
+bar, shortcuts sidebar, ↑/↓ history). Fall back to the plain shell with
+`--repl` if needed:
+
+```bash
+hpe-mcp --repl
+hpe-mcp --tui          # force TUI (default)
+```
 
 Useful flags:
 

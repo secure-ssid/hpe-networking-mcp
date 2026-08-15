@@ -205,3 +205,27 @@ def test_repo_root_launcher_exists():
     launcher = repo_root_from_package() / "hpe-mcp"
     assert launcher.is_file()
     assert launcher.stat().st_mode & 0o111  # executable bit
+
+
+def test_tui_app_imports_and_help_text():
+    from hpe_networking_mcp.cli_client.config import ClientConfig, ServerProfile
+    from hpe_networking_mcp.cli_client.safety import SafetyPolicy
+    from hpe_networking_mcp.cli_client.tui import CSS, HELP_TEXT, HpeMcpApp
+
+    assert "ask" in HELP_TEXT
+    assert "#log" in CSS
+    # Construct without contacting a real MCP server.
+    cfg = ClientConfig(
+        profiles={
+            "local-router": ServerProfile(
+                name="local-router",
+                transport="stdio",
+                command="false",
+                args=[],
+            )
+        },
+        default_profile="local-router",
+    )
+    app = HpeMcpApp(cfg, SafetyPolicy())
+    assert app.TITLE == "hpe-networking-mcp"
+    assert any("quit" in b.key or b.key == "q" for b in app.BINDINGS)
