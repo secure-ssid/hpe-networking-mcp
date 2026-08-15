@@ -58,6 +58,7 @@ SOURCE_META = {
     "juniper_security_advisories": "security-advisory",
     "juniper_kb": "juniper-kb",
     "mist_docs": "mist-docs",
+    "product_datasheets": "product-datasheet",
 }
 
 # Source folders holding OpenAPI JSON rather than prose. `openapi_specs` is

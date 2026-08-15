@@ -97,13 +97,16 @@
   {
     "source": "feature_navigator",
     "doc_type": "feature-navigator",
-    "purpose": "Switching Feature Navigator wired feature/platform/release availability pages for RAG answers about CX feature support.",
+    "purpose": "AOS-CX per-switch-platform feature/release support matrix and AOS10 (AP/gateway) feature/release matrix, for RAG answers about hardware/software feature support.",
     "seed_urls": [
-      "https://feature-navigator.arubanetworking.hpe.com/wired?mode=explore"
+      "https://feature-navigator.arubanetworking.hpe.com/api/productInfo",
+      "https://feature-navigator.arubanetworking.hpe.com/api/switchReleaseCompatibility",
+      "https://feature-navigator.arubanetworking.hpe.com/api/releases",
+      "https://feature-navigator.arubanetworking.hpe.com/api/releaseCompatibility"
     ],
     "output_dir": "ingestion/sources/feature_navigator",
-    "scraper": null,
-    "notes": "Dynamic explorer content should be exported or captured with source URLs before ingesting. No scraper script exists yet \u2014 export manually or build one with scripts/add_rag_source.py."
+    "scraper": "ingestion/scrape_feature_navigator.py",
+    "notes": "The page itself (https://feature-navigator.arubanetworking.hpe.com/wired and /aos10) is a client-rendered Next.js app with no data in its initial HTML, but its compiled JS bundles call a small unauthenticated public JSON API that returns the real comparison data directly: /api/productInfo lists every AOS-CX switch platform with its supported release list, /api/switchReleaseCompatibility?productId=&productReleaseNames=&licenses=1,2,3 returns that platform's full feature Yes/No matrix for the requested releases, and /api/releases + /api/releaseCompatibility?ids=&releases= do the same for the shared AOS10 (AP/gateway/Mobility Controller) image. Only the latest AOS-CX release is captured per switch platform (current-state snapshot); the AOS10 side keeps every published release since the response stays small and shows which release introduced a feature. 5 of the 25 productInfo entries (5400R, 3810, 2930F/M, 2540, 2530) are legacy ProVision/AOS-S platforms whose supportedReleases use AOS-S version strings (e.g. YA/YB.16.08.0001), not real AOS-CX releases, so they are deliberately skipped rather than queried; CX 4100i's supportedReleases also contains a literal \"#REF!\" Excel artifact that is filtered out before selecting its latest real release."
   },
   {
     "source": "openapi_specs",
@@ -241,5 +244,16 @@
     "output_dir": "ingestion/sources/product_specs",
     "scraper": "ingestion/scrape_apinext_specs.py",
     "notes": "These seven portal sections run ReadMe's api-next v2 API, so they carry no oasPublicUrl pointer for scrape_openapi.py to parse, and the admin /apis listing is 403 for anonymous callers. The public per-page reference endpoint embeds the whole OpenAPI document under data.api.schema, so one fetch per sidebar category recovers every spec. Kept separate from openapi_specs (Central-only) so the generated Central client and manifest are unaffected; these are embedded for semantic search rather than added to the exact SQLite spec index. Discovery manifest: ingestion/product_specs_manifest.json."
+  },
+  {
+    "source": "product_datasheets",
+    "doc_type": "product-datasheet",
+    "purpose": "Official Juniper EX-series switch and Mist-family access-point hardware datasheet specifications (port density, throughput, PoE, Wi-Fi standard, radios, mounting) for exact hardware-spec RAG lookup.",
+    "seed_urls": [
+      "https://www.juniper.net/sitemaps/en_US.xml"
+    ],
+    "output_dir": "ingestion/sources/product_datasheets",
+    "scraper": "ingestion/scrape_product_datasheets.py",
+    "notes": "URLs are filtered directly out of juniper.net's flat product sitemap (2,130 <loc> entries; distinct from the documentation sitemap discover_mist_docs_urls.py reads) rather than cached to a seed file, because the whole corpus is ~50 pages fetched in well under a minute \u2014 not the multi-hour crawl that justifies mist_docs_urls.json. EX-series .../specs.html pages extract div.cmp-specifications (a stable Adobe Experience Manager component verified across EX2300-EX9250); AP .../*-datasheet.html pages have no such wrapper but always carry exactly 5 <table> elements with the real spec content, rendered generically (a table whose first row has >2 cells becomes a markdown comparison table, otherwise label/value bullets). Aruba/HPE-branded hardware pages (arubanetworks.com, arubanetworking.hpe.com, www.hpe.com) were probed from this environment and every one returned an Akamai 403 or a hard HTTP/2 stream reset \u2014 including via a genuine headless-Chromium Playwright request \u2014 so this source is Juniper-only by evidenced necessity, not by choice; Aruba CX/AP exact specs are served instead by hpe_networking_mcp.pipeline.clients.hardware_specs, which ask_docs consults before RAG."
   }
 ]

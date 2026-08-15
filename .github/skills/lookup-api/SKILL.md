@@ -17,7 +17,7 @@ Use `lookup_api` for precise, authoritative API answers. Fall back to
 ## Workflow
 
 1. Call `invoke_read_tool(name="lookup_api", arguments={"query": "..."})`.
-2. If results are empty, call `invoke_read_tool(name="search_docs", ...)`.
+2. If results are empty, call `invoke_read_tool(name="search_docs", arguments={"query": "..."})`.
 3. Always include the `file_path` / operationId in your answer so the user
    can find the spec entry.
 

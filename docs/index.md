@@ -229,7 +229,7 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 |---|---|
 | Tool catalog | 6,144 generated operations (6,127 active) / 588 curated / 6,715 backend tools / 6,722 direct-all |
 | Capability totals (platform APIs) | 3,152 read, 165 diagnostic, 2,544 write, 842 destructive |
-| RAG | 96,256 prose chunks in LanceDB |
+| RAG | 97,783 prose chunks in LanceDB |
 | Structured lookup | 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 346 lifecycle records |
 | API provenance | Aruba ReadMe registries, official Mist/Apstra sources, pinned GLP and EdgeConnect snapshots, SHA-pinned Axis generator |
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud |

@@ -6,6 +6,8 @@
     "name": "hpe-networking-mcp",
     "version": "0.8.0",
     "console_scripts": {
+      "hpe-mcp": "hpe_networking_mcp.cli.mcp_cli:main",
+      "hpe-mcp-client": "hpe_networking_mcp.cli.mcp_cli:main",
       "hpe-mcp-doctor": "hpe_networking_mcp.cli.doctor:main",
       "hpe-mcp-router": "hpe_networking_mcp.mcp_servers.tool_router:main",
       "hpe-mcp-run-pipeline": "hpe_networking_mcp.cli.run_pipeline:main",
@@ -210,7 +212,7 @@
     "total": 6144
   },
   "rag_sources": {
-    "count": 16,
+    "count": 17,
     "sources": [
       "aos_techdocs",
       "developer_docs",
@@ -223,6 +225,7 @@
       "mist_docs",
       "nac_docs",
       "openapi_specs",
+      "product_datasheets",
       "product_specs",
       "security_advisories",
       "tech_docs",
@@ -240,18 +243,20 @@
       "lifecycle_events": 346
     },
     "docs_lance": {
-      "rows": 96256,
-      "source_count": 14,
+      "rows": 97783,
+      "source_count": 16,
       "rows_by_source": {
         "aos_techdocs": 1534,
         "developer_docs": 1367,
         "devhub": 354,
+        "feature_navigator": 1372,
         "juniper_kb": 1808,
         "juniper_lifecycle": 15,
         "juniper_security_advisories": 18,
         "lifecycle_notices": 1589,
         "mist_docs": 15870,
         "nac_docs": 1156,
+        "product_datasheets": 155,
         "product_specs": 8773,
         "security_advisories": 2506,
         "tech_docs": 34365,

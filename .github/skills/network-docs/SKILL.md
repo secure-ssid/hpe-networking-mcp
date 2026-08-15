@@ -40,6 +40,8 @@ Narrow with `source=` when the topic is clearly vendor-specific:
 | Security advisories | `security_advisories` or `juniper_security_advisories` |
 | Lifecycle notices | `lifecycle_notices` or `juniper_lifecycle` |
 | Juniper KB | `juniper_kb` |
+| AOS-CX / AOS10 feature-by-release support | `feature_navigator` |
+| Juniper EX-series switch / Mist AP hardware specs | `product_datasheets` |
 
 Omit `source=` when unsure — the hybrid search will find the best match.
 
@@ -53,12 +55,26 @@ Omit `source=` when unsure — the hybrid search will find the best match.
 - **NAC / ClearPass docs**
 - **VSG / DC design guides**
 - **Security advisories & lifecycle notices** (Aruba + Juniper)
+- **AOS-CX feature/release support matrix**: per-platform Yes/No feature
+  support at the latest AOS-CX release (20 of 25 switch platforms — the 5
+  skipped are legacy ProVision/AOS-S switches, not real AOS-CX)
+- **AOS10 feature/release support matrix**: AP/gateway feature support
+  across all published AOS10 releases (shows which release added a feature)
+- **Juniper hardware datasheets**: EX-series switch specs (EX2300-EX9250)
+  and Mist-line AP datasheets (AP21-AP66) — official juniper.net spec pages
 
-## What is NOT in the RAG (fall back to web search)
+## What is NOT in the RAG (fall back to web search or `lookup_hardware_specs`)
 
-- Hardware datasheets (EX4400, AOS-CX specs, AP specs) — not yet ingested
+- Aruba/HPE-branded hardware datasheets (CX switch, Aruba AP exact specs) —
+  arubanetworks.com, arubanetworking.hpe.com, and www.hpe.com are all
+  network/WAF-blocked from this MCP's ingestion environment (confirmed via
+  plain HTTP and a real headless-browser request). Use the
+  `lookup_hardware_specs` tool / `hardware_specs` catalog instead — it is a
+  structured, hand-verified spec reference for CX and Aruba AP models and is
+  already wired into `ask_docs` (a query naming a specific hardware model
+  routes there automatically, before RAG).
 - Real-time device state — use monitoring MCP tools instead
-- Juniper documentation outside of Mist and KB articles
+- Juniper documentation outside of Mist, KB articles, and EX/AP datasheets
 
 ## Workflow
 

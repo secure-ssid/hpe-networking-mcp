@@ -231,3 +231,62 @@ def test_citation_omits_empty_list_fields():
 
     assert "cves" not in citation
     assert "product_skus" not in citation
+
+
+def test_ask_docs_routes_hardware_specs_query():
+    out = rag.ask_docs("cx6300 specs")
+    assert out["mode"] == "hardware_specs"
+    assert "Aruba CX 6300" in out["answer"]
+    assert "880 Gbps" in out["answer"]
+    assert "VSF" in out["answer"]
+    assert len(out["citations"]) == 1
+    assert out["citations"][0]["source"] == "hardware_datasheets"
+
+
+def test_ask_docs_routes_juniper_hardware_query():
+    out = rag.ask_docs("ex4400 hardware specs")
+    assert out["mode"] == "hardware_specs"
+    assert "EX4400" in out["answer"]
+    assert "Virtual Chassis" in out["answer"]
+
+
+def test_hardware_specs_citation_is_not_a_fabricated_file_path():
+    """The citation must not claim a real file exists (e.g. datasheets/*.pdf)
+    when the answer is drawn from the curated hardware_specs.py catalog and
+    no such file exists anywhere in the repo or ingestion corpus."""
+    out = rag.ask_docs("cx6300 specs")
+    file_path = out["citations"][0]["file_path"]
+    assert file_path == "hardware_specs_catalog:cx6300"
+    assert not file_path.endswith(".pdf")
+
+
+@pytest.mark.parametrize(
+    ("query", "expected_model_text"),
+    [
+        ("ap505 specs", "AP-505"),
+        ("AP-515 specs", "AP-515"),
+        ("ap-535 specs", "AP-535"),
+        ("545 specs", "AP-545"),
+        ("ap555 hardware specs", "AP-555"),
+    ],
+)
+def test_ask_docs_routes_common_aruba_ap_models(query, expected_model_text):
+    """Regression test: previously only ap635/ap45 were catalogued, so common
+    Aruba Wi-Fi 6 AP queries fell through to search_docs and returned
+    unrelated content (e.g. CLI show-command output naming other AP models).
+    """
+    out = rag.ask_docs(query)
+    assert out["mode"] == "hardware_specs"
+    assert expected_model_text in out["answer"]
+    assert out["citations"][0]["file_path"].startswith("hardware_specs_catalog:")
+
+
+def test_ask_docs_ap_models_do_not_cross_contaminate():
+    """Each AP model must return its own distinct spec, not another model's."""
+    out_505 = rag.ask_docs("ap505 specs")
+    out_555 = rag.ask_docs("ap555 specs")
+    assert "AP-505" in out_505["answer"]
+    assert "AP-555" not in out_505["answer"]
+    assert "AP-555" in out_555["answer"]
+    assert "AP-505" not in out_555["answer"]
+

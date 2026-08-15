@@ -517,7 +517,7 @@ uv run python ingestion/ingest_docs.py
 
 Built indexes live under `data/` and are git-ignored.
 
-The current rebuilt snapshot contains 96,256 prose chunks and a structured
+The current rebuilt snapshot contains 97,783 prose chunks and a structured
 index with 4,106 endpoints, 8,890 schemas, 50,675 fields,
 104 security advisories, and 346 lifecycle records.
 

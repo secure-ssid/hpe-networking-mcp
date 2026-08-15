@@ -21,8 +21,12 @@ from mcp.server.mcpserver import MCPServer
 from hpe_networking_mcp.mcp_servers.shared import READ_ONLY, READ_ONLY_LOCAL, resolve_rag_backend
 from hpe_networking_mcp.mcp_servers.skills import list_skills_payload, load_skill_payload
 from hpe_networking_mcp.pipeline import artifact_contracts as contracts
-from hpe_networking_mcp.pipeline.clients import advisory_index, specs_index
-from hpe_networking_mcp.pipeline.clients import rag_diagnostics as rag_diagnostics_client
+from hpe_networking_mcp.pipeline.clients import (
+    advisory_index,
+    hardware_specs,
+    rag_diagnostics as rag_diagnostics_client,
+    specs_index,
+)
 
 mcp = MCPServer("rag-core")
 
@@ -101,6 +105,7 @@ _SOURCE_VENDOR: dict[str, str] = {
     "juniper_lifecycle": "juniper",
     "juniper_security_advisories": "juniper",
     "juniper_kb": "juniper",
+    "product_datasheets": "juniper",
 }
 
 # Brand-specific enough that a match is a deliberate signal, not incidental
@@ -140,6 +145,7 @@ _DOC_TYPE_TO_SOURCE: dict[str, str | tuple[str, ...]] = {
     "feature-navigator": "feature_navigator",
     "security-advisory": ("security_advisories", "juniper_security_advisories"),
     "lifecycle": ("lifecycle_notices", "juniper_lifecycle"),
+    "product-datasheet": "product_datasheets",
 }
 _API_QUERY_HINTS = {
     "api",
@@ -300,8 +306,9 @@ def search_docs(
         top_k:    Results to return (default 5, range 1-20).
         source:   Filter by source folder — developer_docs, tech_docs, nac_docs,
                   vsg_docs, techdocs_html, aos_techdocs, security_advisories,
-                  lifecycle_notices, juniper_lifecycle, or
-                  juniper_security_advisories.
+                  lifecycle_notices, juniper_lifecycle,
+                  juniper_security_advisories, feature_navigator, or
+                  product_datasheets.
         doc_type: DEPRECATED — use source instead.
     """
     top_k = _clamp_top_k(top_k, 20)
@@ -653,6 +660,35 @@ def _citation(hit: dict[str, Any]) -> dict[str, Any]:
     return citation
 
 
+def lookup_hardware_specs(
+    model: str,
+) -> dict[str, Any]:
+    """Look up authoritative hardware datasheet specifications for switches and APs.
+
+    Returns switching capacity, throughput, stacking (VSF/Virtual Chassis),
+    port configurations, PoE wattage, uplinks, architecture, and routing/security
+    features for Aruba CX (6000, 6100, 6200, 6300, 6400, 8325, 8360, 10000),
+    Juniper EX (2300, 4100, 4400, 4650), Aruba APs (635), and Mist APs (45).
+
+    Args:
+        model: Hardware model identifier, e.g. "cx6300", "6300", "ex4400", "8360", "ap635".
+    """
+    key = hardware_specs.detect_hardware_query(model) or model.lower().strip()
+    spec = hardware_specs.get_hardware_specs(key)
+    if not spec:
+        return {
+            "ok": False,
+            "error": f"Hardware model '{model}' not found in hardware specifications catalog.",
+            "available_models": sorted(hardware_specs.HARDWARE_CATALOG.keys()),
+        }
+    return {
+        "ok": True,
+        "model": key,
+        "specs": spec,
+        "formatted": hardware_specs.format_hardware_specs_markdown(key),
+    }
+
+
 @mcp.tool(annotations=READ_ONLY_LOCAL)
 def ask_docs(
     question: str,
@@ -671,6 +707,28 @@ def ask_docs(
     k = max(1, min(top_k, 5))
     mode = "search_docs"
     hits: list[dict[str, Any]] = []
+
+    if source is None:
+        hw_model = hardware_specs.detect_hardware_query(question)
+        if hw_model:
+            hw_info = hardware_specs.get_hardware_specs(hw_model)
+            if hw_info:
+                return {
+                    "answer": hardware_specs.format_hardware_specs_markdown(hw_model),
+                    "citations": [
+                        {
+                            # Not a scraped/ingested file — a pseudo-path into
+                            # the curated hardware_specs.py catalog. Do not
+                            # format this as a real datasheet file path; no
+                            # such file exists in the repo or ingestion corpus.
+                            "file_path": f"hardware_specs_catalog:{hw_model}",
+                            "source": "hardware_datasheets",
+                            "doc_type": "datasheet",
+                            "score": 1.0,
+                        }
+                    ],
+                    "mode": "hardware_specs",
+                }
 
     if source is None:
         identifier = _extract_exact_identifier(question)

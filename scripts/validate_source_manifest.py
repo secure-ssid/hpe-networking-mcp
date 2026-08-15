@@ -34,12 +34,7 @@ REQUIRED_FIELDS = ("source", "doc_type", "purpose", "seed_urls", "output_dir", "
 # still useful in the manifest because manually exported files under
 # ingestion/sources/<source> can be ingested, but the lack of a scraper is an
 # explicit deferred implementation item rather than an unexplained warning.
-SCRAPER_PENDING: dict[str, str] = {
-    "feature_navigator": (
-        "Dynamic explorer content requires a reviewed export format or "
-        "browser-backed scraper before refresh can be automated."
-    ),
-}
+SCRAPER_PENDING: dict[str, str] = {}
 
 # Sources refreshed by one shared orchestrated scraper step in
 # scripts/refresh_rag_sources.py instead of one per-source scraper command.

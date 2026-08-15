@@ -176,17 +176,21 @@ def test_unallowlisted_missing_scraper_fails(tmp_path: Path, monkeypatch):
 
 def test_allowlisted_pending_scraper_is_ok(tmp_path: Path, monkeypatch):
     _patch_paths(monkeypatch, tmp_path)
-    entry = _good_entry(tmp_path, "feature_navigator", "scrape_feature_navigator")
+    # Use a synthetic source name (not a real one from ingestion/source_manifest.json)
+    # so this test doesn't silently break the moment a real pending source gets a
+    # scraper registered and is removed from SCRAPER_PENDING.
+    monkeypatch.setitem(vsm.SCRAPER_PENDING, "my_pending_docs", "tracked in ISSUE-123")
+    entry = _good_entry(tmp_path, "my_pending_docs", "scrape_my_pending_docs")
     entry["scraper"] = None
     _write_manifest(vsm.MANIFEST_PATH, [entry])
     vsm.RAG_PY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _write_source_meta(vsm.INGEST_DOCS_PATH, {"feature_navigator": "feature-navigator"})
-    _write_doc_type_map(vsm.RAG_PY_PATH, {"feature-navigator": "feature_navigator"})
+    _write_source_meta(vsm.INGEST_DOCS_PATH, {"my_pending_docs": "my-pending-docs"})
+    _write_doc_type_map(vsm.RAG_PY_PATH, {"my-pending-docs": "my_pending_docs"})
 
     checks = vsm.validate()
 
     assert [c for c in checks if c.status == "FAIL"] == []
-    assert any(c.name == "feature_navigator: scraper pending" for c in checks)
+    assert any(c.name == "my_pending_docs: scraper pending" for c in checks)
 
 
 def test_shared_scraper_source_is_ok_when_script_exists(tmp_path: Path, monkeypatch):
