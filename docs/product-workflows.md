@@ -16,12 +16,12 @@ The ArubaOS 8-to-Classic/New Central migration rows below are gated by the autho
 |---|---:|
 | Central generated + curated configuration, monitoring, NAC, and operations | 1,924 |
 | GreenLake Platform | 1,011 |
-| RAG/OpenAPI | 11 |
+| RAG/OpenAPI | 12 |
 | Optional products, read-only annotated | 1,773 |
 | Optional products, guarded writes included | 3,757 |
-| **Platform API backend catalog** | **6,703** |
+| **Platform API backend catalog** | **6,704** |
 | `design-core` + `interop-core` (credential-free, no vendor API) | 12 |
-| **Complete backend catalog** | **6,715** |
+| **Complete backend catalog** | **6,716** |
 
 ## Promotion rule
 

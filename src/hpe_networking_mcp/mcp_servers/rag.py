@@ -1,4 +1,4 @@
-"""MCP server — Aruba/HPE documentation RAG tools (11 tools).
+"""MCP server — Aruba/HPE documentation RAG tools (12 tools).
 
 Covers: hybrid (vector + BM25) search over ingested Aruba Central developer
 docs, tech docs, NAC docs, VSG docs, and HTML tech docs; exact API
@@ -6,7 +6,8 @@ endpoint/schema/enum lookup via the SQLite specs index; exact structured
 security-advisory/lifecycle lookup, bounded list/filter/pagination, an
 exact-only advisory<->lifecycle correlation, bounded RAG index
 diagnostics (ingestion delta, source freshness, citation completeness),
-and local skills/runbook browse+load helpers.
+local skills/runbook browse+load helpers, and a search over the user's own
+local personal/internal document collection (separate index, never shared).
 
 Default backend is the embedded stack — LanceDB + fastembed, no servers
 needed (`clone -> uv sync -> run`). Set HPE_MCP_RAG_BACKEND=redis for the
@@ -768,6 +769,46 @@ def ask_docs(
         "citations": [_citation(hit) for hit in hits[:k]],
         "mode": mode,
     }
+
+
+@mcp.tool(annotations=READ_ONLY_LOCAL)
+def search_internal_docs(
+    query: str,
+    top_k: int = 5,
+    collection: str = "internal",
+) -> list[dict[str, Any]]:
+    """Search your local personal/internal document collection.
+
+    Hybrid (vector + keyword) search over documents you ingested yourself
+    with `hpe-mcp docs ingest <folder>` — e.g. internal sales/technical
+    enablement decks, transcripts, or notes. This is a separate, local-only
+    index stored under ~/.config/hpe-mcp/personal/ — never the shared,
+    repository-distributed RAG corpus, and never uploaded anywhere. If you
+    have not ingested anything yet, this returns an empty list; run the CLI
+    ingest command first.
+
+    Args:
+        query:      Natural language question or keywords.
+        top_k:      Results to return (default 5, range 1-20).
+        collection: Which personal collection to search (default "internal").
+    """
+    from hpe_networking_mcp.cli_client import personal_ingest
+
+    top_k = _clamp_top_k(top_k, 20)
+    hits = personal_ingest.search_personal(query, collection=collection, top_k=top_k)
+    if not hits:
+        counts = personal_ingest.personal_collection_counts()
+        if not counts:
+            return [
+                {
+                    "error": (
+                        "No personal documents have been ingested yet. Run "
+                        "`hpe-mcp docs ingest <folder>` (or "
+                        "personal_ingest.ingest_folder(...) directly) first."
+                    )
+                }
+            ]
+    return hits
 
 
 @mcp.tool(annotations=READ_ONLY_LOCAL)

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hpe-networking-mcp"
 version = "0.8.0"
-description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,715-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
+description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,716-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -67,6 +67,8 @@ dependencies = [
     "httpx>=0.27.0",
     "langchain-text-splitters>=0.2.0",
     "pypdf>=6.14.2",
+    "python-pptx>=1.0.2",
+    "python-docx>=1.2.0",
     "beautifulsoup4>=4.15.0",
     "playwright>=1.58.0",
     "redis>=8.0.1",

@@ -79,3 +79,13 @@ ingestion/greenlake_specs/
 resources/diagram_icons/private/
 resources/diagram_icons/vendors/**
 !resources/diagram_icons/vendors/.gitkeep
+
+# Personal/internal document collections (cli_client personal_ingest.py).
+# The real store lives outside the repo under ~/.config/hpe-mcp/personal/ —
+# these patterns are only a defensive backstop in case a relative data_dir
+# is ever pointed at the repo by mistake. Never commit ingested personal or
+# internal/proprietary document content or its local vector index.
+personal_data/
+personal_docs/
+*.personal.lancedb/
+cli_client/personal/

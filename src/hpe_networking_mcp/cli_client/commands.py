@@ -318,6 +318,85 @@ def cmd_docs_search_content(query: str, *, collection: str | None = None, json_m
     return 0
 
 
+def cmd_docs_ingest(
+    folder: str,
+    *,
+    collection: str = "internal",
+    json_mode: bool = False,
+) -> int:
+    """Extract/chunk/embed every supported file under ``folder`` into the
+    local-only personal index (never the shared repo corpus, never uploaded).
+    """
+    from pathlib import Path
+
+    from hpe_networking_mcp.cli_client.personal_ingest import ingest_folder
+
+    path = Path(folder).expanduser()
+    if not path.is_dir():
+        print_error(f"not a directory: {path}", json_mode=json_mode, code="docs_ingest_failed")
+        return 1
+
+    def _progress(msg: str) -> None:
+        if not json_mode:
+            console.print(f"[dim]{msg}[/]")
+
+    result = ingest_folder(path, collection=collection, progress=None if json_mode else _progress)
+    payload = {
+        "collection": collection,
+        "files_seen": result.files_seen,
+        "files_ingested": result.files_ingested,
+        "files_skipped_unchanged": result.files_skipped_unchanged,
+        "files_skipped_duplicate": result.files_skipped_duplicate,
+        "files_skipped_unsupported": result.files_skipped_unsupported,
+        "files_failed": result.files_failed,
+        "chunks_written": result.chunks_written,
+        "errors": result.errors or {},
+    }
+    if json_mode:
+        print_ok(payload, json_mode=True)
+        return 0
+    console.print(
+        f"[bold green]ingested[/] {result.files_ingested} file(s), "
+        f"{result.chunks_written} chunk(s) → collection '{collection}'"
+    )
+    console.print(
+        f"[dim]seen={result.files_seen} unchanged={result.files_skipped_unchanged} "
+        f"duplicate={result.files_skipped_duplicate} "
+        f"unsupported={result.files_skipped_unsupported} "
+        f"failed={result.files_failed}[/]"
+    )
+    if result.errors:
+        for path_str, err in result.errors.items():
+            console.print(f"[red]failed:[/] {path_str}: {err}")
+    return 0 if result.files_failed == 0 else 1
+
+
+def cmd_docs_search_internal(
+    query: str,
+    *,
+    collection: str = "internal",
+    json_mode: bool = False,
+) -> int:
+    """Hybrid search over the local-only personal index built by ``docs ingest``."""
+    from hpe_networking_mcp.cli_client.personal_ingest import search_personal
+
+    hits = search_personal(query, collection=collection)
+    if json_mode:
+        print_ok({"hits": hits, "count": len(hits)}, json_mode=True)
+        return 0
+    if not hits:
+        console.print(
+            "[dim]No matches. Have you run `hpe-mcp docs ingest <folder>` yet?[/]"
+        )
+        return 0
+    for h in hits:
+        title = h.get("title") or h.get("file_path", "")
+        console.print(f"[bold cyan]{title}[/]")
+        text = str(h.get("text", ""))
+        console.print(f"  {text[:240]}{'…' if len(text) > 240 else ''}")
+    return 0
+
+
 async def cmd_diagram(
     mgr: SessionManager,
     safety: SafetyPolicy,

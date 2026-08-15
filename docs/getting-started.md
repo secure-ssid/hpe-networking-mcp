@@ -367,7 +367,7 @@ HPE_MCP_TOOLSETS=central,glp,rag
 ```
 
 This exposes only the router discovery/dispatch surface and keeps tool-list
-token cost low. The router can search 6,715 backend tools when all platforms
+token cost low. The router can search 6,716 backend tools when all platforms
 and guarded writes are indexed, while minimal mode exposes only three
 client-visible tools: `find_tool`, `invoke_read_tool`, and `invoke_tool`.
 
@@ -394,7 +394,7 @@ Include optional product starters:
 uv run python scripts/ingest_tools.py --products all
 ```
 
-The safe default hides optional write tools. Build all 6,715 backend tools only
+The safe default hides optional write tools. Build all 6,716 backend tools only
 for an intentional lab read/write profile:
 
 ```bash
@@ -481,12 +481,12 @@ check [troubleshooting.md](troubleshooting.md) for the matching fix.
 python3 scripts/setup_wizard.py --yes --skip-credentials --skip-catalog
 uv run hpe-mcp-doctor
 uv run pytest tests/unit -q
-uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6703
+uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6704
 ```
 
-`--min-tools 6703` is the platform API compatibility floor (the 6,703
+`--min-tools 6704` is the platform API compatibility floor (the 6,704
 vendor-facing platform API tools), not the complete registered backend total
-of 6,715 — validation passes at or above the floor. See
+of 6,716 — validation passes at or above the floor. See
 [tool-catalog.md](tool-catalog.md) for both totals.
 
 `scripts/doctor.py` is a non-mutating local setup diagnostic. It checks Python

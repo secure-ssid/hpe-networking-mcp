@@ -10,7 +10,7 @@ HPE_MCP_TOOLSETS=central,glp,rag
 
 This exposes only `find_tool`, `invoke_read_tool`, and `invoke_tool` in
 minimal mode while still letting the router reach the backend catalog on
-demand. The complete index can contain 6,715 backend tools, while minimal
+demand. The complete index can contain 6,716 backend tools, while minimal
 mode keeps only three discovery/dispatch tools in client context.
 
 By the end of this page you will have picked the right transport for your

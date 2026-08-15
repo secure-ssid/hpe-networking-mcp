@@ -27,9 +27,11 @@ from hpe_networking_mcp.cli_client.commands import (
     cmd_architect_plan,
     cmd_diagram,
     cmd_docs_add,
+    cmd_docs_ingest,
     cmd_docs_list,
     cmd_docs_search,
     cmd_docs_search_content,
+    cmd_docs_search_internal,
     cmd_find_tool_server,
     cmd_invoke,
     cmd_migrate_plan,
@@ -144,6 +146,16 @@ def build_parser() -> argparse.ArgumentParser:
     d_content = docs_sub.add_parser("search-content")
     d_content.add_argument("query", nargs="+")
     d_content.add_argument("--collection", default=None)
+    d_ingest = docs_sub.add_parser(
+        "ingest", help="Extract/chunk/embed a folder into the local personal index"
+    )
+    d_ingest.add_argument("folder")
+    d_ingest.add_argument("--collection", default="internal")
+    d_search_internal = docs_sub.add_parser(
+        "search-internal", help="Hybrid search over the local personal index"
+    )
+    d_search_internal.add_argument("query", nargs="+")
+    d_search_internal.add_argument("--collection", default="internal")
 
     # diagram
     diag = sub.add_parser("diagram", help="Generate network design diagrams (Draw.io/Graphviz/NeXt)")
@@ -299,6 +311,18 @@ async def _run_connected(args: argparse.Namespace) -> int:
             )
         if args.docs_cmd == "search-content":
             return cmd_docs_search_content(
+                " ".join(args.query),
+                collection=args.collection,
+                json_mode=json_mode,
+            )
+        if args.docs_cmd == "ingest":
+            return cmd_docs_ingest(
+                args.folder,
+                collection=args.collection,
+                json_mode=json_mode,
+            )
+        if args.docs_cmd == "search-internal":
+            return cmd_docs_search_internal(
                 " ".join(args.query),
                 collection=args.collection,
                 json_mode=json_mode,

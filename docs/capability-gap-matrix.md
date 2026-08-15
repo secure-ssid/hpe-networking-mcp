@@ -16,7 +16,7 @@ Counts below describe the full read-write registration of the *platform API* bac
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|
 | Aruba Central | 1,677 | 1,677 | 247 | **1,924** | 797 | 31 | 816 | 280 | official OpenAPI + curated; Official HPE APIs; OAuth token manager ready |
 | GreenLake Platform | 920 | 906 | 105 | **1,011** | 571 | 0 | 352 | 88 | official OpenAPI + curated; Official HPE APIs; Workspace OAuth ready |
-| RAG / API lookup | 0 | 0 | 11 | **11** | 11 | 0 | 0 | 0 | committed application code; Local indexes over cited sources; No platform auth |
+| RAG / API lookup | 0 | 0 | 12 | **12** | 12 | 0 | 0 | 0 | committed application code; Local indexes over cited sources; No platform auth |
 | ClearPass | 816 | 815 | 30 | **845** | 285 | 0 | 412 | 148 | official OpenAPI + curated; Official HPE API; API credential ready |
 | Juniper Mist | 1,050 | 1,050 | 30 | **1,080** | 547 | 9 | 405 | 119 | official OpenAPI + curated; Official Juniper OpenAPI; REST token/session ready |
 | Juniper Apstra | 135 | 133 | 22 | **155** | 86 | 2 | 47 | 20 | official SDK-derived + curated; Official Juniper SDK; Login/token session ready |
@@ -24,9 +24,9 @@ Counts below describe the full read-write registration of the *platform API* bac
 | EdgeConnect | 1,216 | 1,216 | 54 | **1,270** | 687 | 121 | 359 | 103 | instance artifact + curated; Target Orchestrator Swagger; Token/session and doctor ready |
 | HPE Aruba UXI | 25 | 25 | 24 | **49** | 24 | 0 | 16 | 9 | official OpenAPI + curated; Official HPE API; OAuth client credentials ready |
 | Axis Atmos Cloud | 47 | 47 | 0 | **47** | 12 | 0 | 23 | 12 | reviewed benchmark-derived registry; Benchmark only; verify with Axis; Static bearer token ready |
-| **Total** | **6,144** | **6,127** | **576** | **6,703** | **3,152** | **165** | **2,544** | **842** | |
+| **Total** | **6,144** | **6,127** | **577** | **6,704** | **3,153** | **165** | **2,544** | **842** | |
 
-The 6,144 manifest records are provenance-bearing generated operations. Only 6,127 register as executable generated tools because 17 are intentionally excluded. Adding 576 curated tools yields 6,703 executable platform API backend tools. The three minimal-router tools are a separate client-visible dispatch surface, not three additional backend capabilities.
+The 6,144 manifest records are provenance-bearing generated operations. Only 6,127 register as executable generated tools because 17 are intentionally excluded. Adding 577 curated tools yields 6,704 executable platform API backend tools. The three minimal-router tools are a separate client-visible dispatch surface, not three additional backend capabilities.
 
 ### Intentional exclusions
 
@@ -72,7 +72,7 @@ The benchmark's 5,960 endpoint count was reproduced from the pinned tree with it
 
 ### Why the headline totals are non-equivalent
 
-- **6,703 platform API tools vs. 4,109** compares executable backend registries, but generation strategy and curated overlap differ; it does not prove practical superiority.
+- **6,704 platform API tools vs. 4,109** compares executable backend registries, but generation strategy and curated overlap differ; it does not prove practical superiority.
 - **6,144 vs. 5,960** compares hpe-networking-mcp generated operation records with the benchmark's documentation index. The latter includes endpoints that may have no callable tool, so this is not a tool-count comparison.
 - Router/code/dynamic surfaces intentionally expose only discovery and dispatch tools. A smaller top-level surface can still reach a much larger backend.
 - Capability quality depends on authentication, bounded responses, safe writes, async-result handling, and verified workflows—not raw endpoint quantity.
