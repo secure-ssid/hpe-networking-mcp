@@ -568,6 +568,28 @@ payload (`router_dependency_plan`, `router_reconciliation_plan`, or
 ready for `hpe_networking_mcp.pipeline.artifact_contracts.write_artifact`; none of the three
 write to disk themselves.
 
+## Why the router does not adopt FastMCP code-mode
+
+FastMCP code-mode is useful when a model needs to write a sandboxed program that
+chains many tool calls. It is not enabled here because it would add a second
+execution language, sandbox/runtime dependency, and policy boundary to a router
+that already has explicit per-tool annotations, write gates, response budgets,
+rate limiting, and audit-oriented dispatch.
+
+The low-risk equivalent needed by this project is already available:
+`invoke_read_tool_batch` performs up to 25 ordered, read-only calls in one MCP
+round trip. Each entry independently passes the same annotation gate, cursor
+validation, response bounds, and per-backend rate gate as a single
+`invoke_read_tool` call. It cannot execute writes, diagnostics, arbitrary
+Python, or filesystem/network code.
+
+This is an intentional additive choice rather than a FastMCP migration. A
+future sandboxed execution feature would need an isolated runtime, a
+capability-aware API limited to explicitly selected read tools, instruction
+and resource limits, cancellation, provenance for every sub-call, and an
+expanded security/evaluation gate. Until those requirements are met, batching
+provides the round-trip reduction without weakening the router's safety model.
+
 ## Why `invoke_tool` is destructive
 
 The backend catalog contains both read-only tools and tools that can change
