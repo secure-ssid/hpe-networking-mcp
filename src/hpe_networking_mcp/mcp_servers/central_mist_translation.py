@@ -60,10 +60,19 @@ from typing import Any
 
 _OPMODE_TO_MIST_AUTH_TYPE: dict[str, str] = {
     "OPEN": "open",
+    "ENHANCED_OPEN": "open",
+    "WPA_PERSONAL": "psk",
     "WPA2_PERSONAL": "psk",
-    "WPA3_PERSONAL": "psk",
+    "BOTH_WPA_WPA2_PSK": "psk",
+    "WPA3_SAE": "psk",
+    "WPA_ENTERPRISE": "eap",
     "WPA2_ENTERPRISE": "eap",
-    "WPA3_ENTERPRISE": "eap",
+    "BOTH_WPA_WPA2_DOT1X": "eap",
+    "WPA3_ENTERPRISE_CCM_128": "eap",
+    "WPA3_ENTERPRISE_GCM_256": "eap",
+    "WPA3_ENTERPRISE_CNSA": "eap",
+    "WPA2_MPSK_AES": "psk",
+    "WPA2_MPSK_LOCAL": "psk",
 }
 _MIST_AUTH_TYPE_TO_OPMODE: dict[str, str] = {
     "open": "OPEN",
@@ -71,14 +80,45 @@ _MIST_AUTH_TYPE_TO_OPMODE: dict[str, str] = {
     "eap": "WPA2_ENTERPRISE",
 }
 
-_CENTRAL_BAND_TO_MIST_BAND: dict[str, str] = {
-    "BAND_24": "24",
-    "BAND_5": "5",
-    "BAND_6": "6",
+_CENTRAL_RF_BAND_TO_MIST_BANDS: dict[str, list[str]] = {
+    "24GHZ": ["24"],
+    "5GHZ": ["5"],
+    "6GHZ": ["6"],
+    "24GHZ_5GHZ": ["24", "5"],
+    "24GHZ_6GHZ": ["24", "6"],
+    "5GHZ_6GHZ": ["5", "6"],
+    "BAND_24": ["24"],
+    "BAND_5": ["5"],
+    "BAND_6": ["6"],
 }
-_MIST_BAND_TO_CENTRAL_BAND: dict[str, str] = {
-    value: key for key, value in _CENTRAL_BAND_TO_MIST_BAND.items()
+_MIST_BANDS_TO_CENTRAL_RF_BAND: dict[tuple[str, ...], str] = {
+    ("24",): "24GHZ",
+    ("5",): "5GHZ",
+    ("6",): "6GHZ",
+    ("24", "5"): "24GHZ_5GHZ",
+    ("24", "6"): "24GHZ_6GHZ",
+    ("5", "6"): "5GHZ_6GHZ",
+    ("24", "5", "6"): "BAND_ALL",
 }
+
+
+def _normalized_bands(value: Any) -> list[str]:
+    if isinstance(value, (list, tuple)):
+        raw = value
+    elif value in (None, ""):
+        return []
+    else:
+        raw = [value]
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for band in raw:
+        token = str(band).strip()
+        if token not in {"24", "5", "6"} or token in seen:
+            continue
+        seen.add(token)
+        normalized.append(token)
+    return normalized
 
 
 def translate_central_wlan_to_mist_wlan(profile: dict[str, Any]) -> dict[str, Any]:
@@ -137,11 +177,13 @@ def translate_central_wlan_to_mist_wlan(profile: dict[str, Any]) -> dict[str, An
 
     rf_band = profile.get("rf_band")
     if rf_band is not None and rf_band != "BAND_ALL":
-        mist_band = _CENTRAL_BAND_TO_MIST_BAND.get(rf_band)
-        if mist_band is not None:
-            wlan["band"] = mist_band
+        mist_bands = _CENTRAL_RF_BAND_TO_MIST_BANDS.get(str(rf_band))
+        if mist_bands is not None:
+            if len(mist_bands) == 1:
+                wlan["band"] = mist_bands[0]
+            wlan["bands"] = mist_bands
         else:
-            warnings.append(f"unmapped Central rf_band {rf_band!r}; Mist band left unset.")
+            warnings.append(f"unmapped Central rf_band {rf_band!r}; Mist band/bands left unset.")
     # BAND_ALL: leave band/bands unset -- Mist's default covers all bands.
 
     opmode = profile.get("opmode")
@@ -212,14 +254,16 @@ def translate_mist_wlan_to_central_wlan(wlan: dict[str, Any]) -> dict[str, Any]:
     if "dtim" in wlan:
         profile["dtim_period"] = wlan["dtim"]
 
-    band = wlan.get("band")
-    if band is not None:
-        central_band = _MIST_BAND_TO_CENTRAL_BAND.get(str(band))
+    bands = _normalized_bands(wlan.get("bands"))
+    if not bands:
+        bands = _normalized_bands(wlan.get("band"))
+    if bands:
+        central_band = _MIST_BANDS_TO_CENTRAL_RF_BAND.get(tuple(sorted(bands)))
         if central_band is not None:
             profile["rf_band"] = central_band
         else:
             warnings.append(
-                f"unmapped Mist band {band!r}; Central rf_band left unset "
+                f"unmapped Mist bands {bands!r}; Central rf_band left unset "
                 "(New Central defaults new SSIDs to BAND_ALL)."
             )
 

@@ -79,6 +79,26 @@ class TestCentralToMistWlan:
         )
 
         assert result["wlan"]["band"] == "5"
+        assert result["wlan"]["bands"] == ["5"]
+
+    def test_multi_band_rf_band_maps_to_mist_bands(self):
+        result = translate_central_wlan_to_mist_wlan(
+            {"ssid_name": "DualBand", "rf_band": "24GHZ_5GHZ"}
+        )
+
+        assert "band" not in result["wlan"]
+        assert result["wlan"]["bands"] == ["24", "5"]
+
+    def test_transition_and_enterprise_opmodes_map_to_auth_type(self):
+        psk = translate_central_wlan_to_mist_wlan(
+            {"ssid_name": "LegacyMixed", "opmode": "BOTH_WPA_WPA2_PSK"}
+        )
+        enterprise = translate_central_wlan_to_mist_wlan(
+            {"ssid_name": "Corp", "opmode": "WPA3_ENTERPRISE_GCM_256"}
+        )
+
+        assert psk["wlan"]["auth"] == {"type": "psk"}
+        assert enterprise["wlan"]["auth"] == {"type": "eap"}
 
     def test_unrecognized_keys_are_ignored_not_passed_through(self):
         result = translate_central_wlan_to_mist_wlan(
@@ -123,8 +143,18 @@ class TestMistToCentralWlan:
         assert profile["client_isolation"] is True
         assert profile["inactivity_timeout"] == 1000
         assert profile["dtim_period"] == 1
-        assert profile["rf_band"] == "BAND_5"
+        assert profile["rf_band"] == "5GHZ"
         assert profile["opmode"] == "OPEN"
+
+    def test_bands_array_maps_back_to_multi_band_central_rf_band(self):
+        wlan = {
+            "ssid": "TriBand",
+            "bands": ["6", "24", "5"],
+        }
+
+        result = translate_mist_wlan_to_central_wlan(wlan)
+
+        assert result["profile"]["rf_band"] == "BAND_ALL"
 
     def test_psk_auth_carries_passphrase(self):
         wlan = {"ssid": "Corp-WiFi", "auth": {"type": "psk", "psk": "s3cr3t"}}
@@ -148,6 +178,11 @@ class TestMistToCentralWlan:
         )
 
         assert result["profile"]["vlan_ids"] == ["10", "20"]
+
+    def test_single_psk_auth_type_still_maps_to_wpa2_personal(self):
+        result = translate_mist_wlan_to_central_wlan({"ssid": "X", "auth": {"type": "psk"}})
+
+        assert result["profile"]["opmode"] == "WPA2_PERSONAL"
 
 
 class TestWlanRoundTrip:
