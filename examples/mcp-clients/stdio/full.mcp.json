@@ -1,5 +1,4 @@
 {
-  "_comment": "Full safe-read-only stdio profile: every optional product starter enabled alongside the core/glp/rag/interop backends, with all write and destructive tools blocked. Router still exposes only find_tool/invoke_read_tool/invoke_tool in minimal mode. Use full-read-write.mcp.json only for a trusted session that intentionally needs guarded writes. Replace /path/to/hpe-networking-mcp with your local clone path.",
   "mcpServers": {
     "hpe-networking-mcp": {
       "command": "/path/to/hpe-networking-mcp/.venv/bin/python3",

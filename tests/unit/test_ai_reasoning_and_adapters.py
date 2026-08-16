@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from hpe_networking_mcp.cli_client.ai import (
+    AnthropicAdapter,
     ChatMessage,
     HeuristicReasoningEngine,
     MessageRole,
@@ -27,17 +28,114 @@ from hpe_networking_mcp.pipeline.reasoning import (
 )
 
 
+class _JsonResponse:
+    def __init__(self, data):
+        self._data = data
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self._data
+
+
+class _JsonClient:
+    def __init__(self, data, **_kwargs):
+        self._data = data
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_exc):
+        return None
+
+    async def post(self, *_args, **_kwargs):
+        data = self._data(_args[0]) if callable(self._data) else self._data
+        return _JsonResponse(data)
+
+
+@pytest.mark.anyio
+async def test_adapters_refuse_malformed_nonstream_tool_arguments(monkeypatch):
+    import hpe_networking_mcp.cli_client.ai.openai_adapter as openai_module
+
+    def response_for_url(url):
+        if url.endswith("/chat/completions"):
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "tool_calls": [
+                                {
+                                    "id": "openai-call",
+                                    "function": {"name": "create_site", "arguments": "{"},
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        if url.endswith("/api/chat"):
+            return {
+                "message": {
+                    "tool_calls": [
+                        {"id": "ollama-call", "function": {"name": "create_site", "arguments": []}}
+                    ]
+                }
+            }
+        return {
+            "content": [
+                {"type": "tool_use", "id": "anthropic-call", "name": "create_site", "input": []}
+            ]
+        }
+
+    monkeypatch.setattr(
+        openai_module.httpx,
+        "AsyncClient",
+        lambda **kwargs: _JsonClient(response_for_url, **kwargs),
+    )
+    messages = [ChatMessage(role=MessageRole.USER, content="create a site")]
+
+    responses = [
+        await OpenAiAdapter(api_key="test").complete(messages),
+        await OllamaAdapter().complete(messages),
+        await AnthropicAdapter(api_key="test").complete(messages),
+    ]
+
+    assert all(not response.tool_calls[0].arguments_valid for response in responses)
+    assert all(response.tool_calls[0].arguments == {} for response in responses)
+
+
 def test_classify_troubleshooting_intents():
-    assert classify_troubleshooting_intent("Client cannot authenticate with 802.1X") == ProblemCategory.WIRELESS_CLIENT_AUTH
-    assert classify_troubleshooting_intent("PoE budget exceeded on port 1/1/4") == ProblemCategory.POE_BUDGET
-    assert classify_troubleshooting_intent("Client getting 169.254 APIPA address") == ProblemCategory.DHCP_IP_AM
-    assert classify_troubleshooting_intent("Spanning tree loop detected, broadcast storm") == ProblemCategory.STP_TOPOLOGY_LOOP
-    assert classify_troubleshooting_intent("Sticky client won't roam between APs") == ProblemCategory.ROAMING_RF_HEALTH
-    assert classify_troubleshooting_intent("CRC errors and port flap on 1/1/1") == ProblemCategory.WIRED_PORT_HEALTH
+    assert (
+        classify_troubleshooting_intent("Client cannot authenticate with 802.1X")
+        == ProblemCategory.WIRELESS_CLIENT_AUTH
+    )
+    assert (
+        classify_troubleshooting_intent("PoE budget exceeded on port 1/1/4")
+        == ProblemCategory.POE_BUDGET
+    )
+    assert (
+        classify_troubleshooting_intent("Client getting 169.254 APIPA address")
+        == ProblemCategory.DHCP_IP_AM
+    )
+    assert (
+        classify_troubleshooting_intent("Spanning tree loop detected, broadcast storm")
+        == ProblemCategory.STP_TOPOLOGY_LOOP
+    )
+    assert (
+        classify_troubleshooting_intent("Sticky client won't roam between APs")
+        == ProblemCategory.ROAMING_RF_HEALTH
+    )
+    assert (
+        classify_troubleshooting_intent("CRC errors and port flap on 1/1/1")
+        == ProblemCategory.WIRED_PORT_HEALTH
+    )
 
 
 def test_extract_target_entities():
-    entities = extract_target_entities("Check client AA:BB:CC:DD:EE:FF on switch SG1234567890 port 1/1/24 with IP 10.1.20.55")
+    entities = extract_target_entities(
+        "Check client AA:BB:CC:DD:EE:FF on switch SG1234567890 port 1/1/24 with IP 10.1.20.55"
+    )
     assert entities["mac"] == "AA:BB:CC:DD:EE:FF"
     assert entities["serial"] == "SG1234567890"
     assert entities["ip"] == "10.1.20.55"
@@ -45,7 +143,9 @@ def test_extract_target_entities():
 
 
 def test_create_troubleshooting_plan_and_format():
-    plan = create_troubleshooting_plan("Investigate 802.1X auth failure for client 00:11:22:33:44:55")
+    plan = create_troubleshooting_plan(
+        "Investigate 802.1X auth failure for client 00:11:22:33:44:55"
+    )
     assert plan.category == ProblemCategory.WIRELESS_CLIENT_AUTH
     assert plan.target_client == "00:11:22:33:44:55"
     assert len(plan.steps) >= 2
@@ -74,7 +174,9 @@ def test_migration_planner_aos_s_and_cisco():
 
 
 def test_network_architect_campus_and_datacenter():
-    campus = synthesize_architecture(environment="campus", scale_ap_count=30, scale_switch_port_count=100)
+    campus = synthesize_architecture(
+        environment="campus", scale_ap_count=30, scale_switch_port_count=100
+    )
     assert campus.topology_type == "collapsed_core_campus"
     assert len(campus.recommended_hardware) >= 3
 
@@ -112,16 +214,22 @@ async def test_heuristic_reasoning_engine():
     assert "880 Gbps" in resp_hw.content
 
     # Troubleshooting
-    resp_tb = await engine.complete([ChatMessage(role=MessageRole.USER, content="client auth fail error")])
+    resp_tb = await engine.complete(
+        [ChatMessage(role=MessageRole.USER, content="client auth fail error")]
+    )
     assert "Network Diagnostic" in resp_tb.content
     assert len(resp_tb.tool_calls) >= 1
 
     # Migration
-    resp_mg = await engine.complete([ChatMessage(role=MessageRole.USER, content="migrate cisco to cx")])
+    resp_mg = await engine.complete(
+        [ChatMessage(role=MessageRole.USER, content="migrate cisco to cx")]
+    )
     assert "Migration Blueprint" in resp_mg.content
 
     # Design
-    resp_ds = await engine.complete([ChatMessage(role=MessageRole.USER, content="architect spine-leaf evpn fabric")])
+    resp_ds = await engine.complete(
+        [ChatMessage(role=MessageRole.USER, content="architect spine-leaf evpn fabric")]
+    )
     assert "EVPN-VXLAN" in resp_ds.content
 
 
@@ -160,3 +268,68 @@ async def test_agent_reasoning_loop_execution():
     step_types = [s.step_type for s in steps]
     assert "thought" in step_types
     assert "tool_call" in step_types or "answer" in step_types
+
+
+def test_agent_loop_system_prompt_router_contract():
+    from hpe_networking_mcp.cli_client.ai.agent_loop import DEFAULT_SYSTEM_PROMPT
+
+    assert "low-token router contract" in DEFAULT_SYSTEM_PROMPT
+    assert "find_tool" in DEFAULT_SYSTEM_PROMPT
+    assert "invoke_read_tool" in DEFAULT_SYSTEM_PROMPT
+    assert "invoke_tool" in DEFAULT_SYSTEM_PROMPT
+
+
+def test_agent_loop_result_truncation_and_error_preservation():
+    from hpe_networking_mcp.cli_client.ai.agent_loop import _format_tool_result_content
+
+    # Fit within max_chars
+    llm, disp = _format_tool_result_content("hello world", {"ok": True}, max_chars=100)
+    assert llm == "hello world"
+    assert disp == "hello world"
+
+    # Truncation with dict metadata preservation
+    large_dict = {"ok": False, "code": "AUTH_FAILED", "error": "Invalid token", "data": "x" * 500}
+    res_text = str(large_dict)
+    llm_t, disp_t = _format_tool_result_content(res_text, large_dict, max_chars=200)
+    assert "AUTH_FAILED" in disp_t
+    assert "truncated" in disp_t
+    # Error preservation when string lacks explicit error tag
+    error_result = Exception("Connection refused")
+    llm_e, disp_e = _format_tool_result_content("A" * 300, error_result, max_chars=100)
+    assert "[ERROR PRESERVED]" in disp_e
+    assert len(llm_e) <= 100
+
+
+@pytest.mark.anyio
+async def test_agent_loop_usage_accumulation():
+    from hpe_networking_mcp.cli_client.ai.base import AiBackend, AiResponse
+
+    class UsageAiBackend(AiBackend):
+        @property
+        def name(self) -> str:
+            return "mock-usage"
+
+        async def complete(self, messages, tools=None, system_prompt=None):
+            return AiResponse(
+                content="done",
+                thought_trace="thinking",
+                usage={"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70},
+            )
+
+        async def complete_stream(self, messages, tools=None, system_prompt=None):
+            yield
+
+    class DummySessionManager:
+        async def list_all_tools(self):
+            return []
+
+    ai = UsageAiBackend()
+    mgr = DummySessionManager()
+    loop = AgentReasoningLoop(ai_backend=ai, session_manager=mgr)
+
+    steps = []
+    async for step in loop.run("test prompt"):
+        steps.append(step)
+
+    assert loop.total_usage == {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+    assert steps[-1].usage == {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}

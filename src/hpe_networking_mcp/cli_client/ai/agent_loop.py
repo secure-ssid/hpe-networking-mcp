@@ -9,24 +9,121 @@ from typing import Any
 
 from hpe_networking_mcp.cli_client.ai.base import (
     AiBackend,
-    ChatMessage,
-    MessageRole,
 )
+from hpe_networking_mcp.cli_client.ai.service import ConversationMemory, ReasoningService
+from hpe_networking_mcp.cli_client.safety import SafetyPolicy
 from hpe_networking_mcp.cli_client.sessions import SessionManager
+
+__all__ = ["AgentLoopStep", "AgentReasoningLoop", "ReasoningService"]
+
+DEFAULT_SYSTEM_PROMPT = (
+    "You are the HPE Networking AI Expert. You diagnose network health, analyze topologies, "
+    "recommend switch and AP hardware, plan migrations, and invoke MCP tools safely.\n"
+    "When interacting with MCP tools via the low-token router contract:\n"
+    "1. Use `find_tool(query=...)` to discover relevant tools from the backend catalog.\n"
+    "2. For read-only tools, invoke via `invoke_read_tool(name=..., arguments=...)`.\n"
+    "3. For write or destructive tools, invoke via `invoke_tool(name=..., arguments=...)`.\n"
+    "4. If domain tools are directly available in your tool list, call them directly.\n"
+    "Always prefer read-only diagnostics, confirm destructive actions, and provide concise "
+    "user-facing rationale without exposing private chain-of-thought."
+)
 
 
 @dataclass
 class AgentLoopStep:
     turn_index: int
-    step_type: str  # "thought", "tool_call", "tool_result", "answer", "error"
+    step_type: str  # "thought", "tool_call", "tool_result", "answer", "error", "cancelled"
     content: str
     tool_name: str | None = None
     tool_args: dict[str, Any] = field(default_factory=dict)
     tool_result: Any = None
+    usage: dict[str, int] = field(default_factory=dict)
+    provider: str = ""
+    model: str = ""
+
+
+def _accumulate_usage(total: dict[str, int], incremental: dict[str, int]) -> dict[str, int]:
+    """Sum numerical token usage fields across turns."""
+    res = dict(total)
+    for k, v in incremental.items():
+        if isinstance(v, (int, float)):
+            res[k] = res.get(k, 0) + int(v)
+    return res
+
+
+def _format_tool_result_content(
+    res_text: str,
+    result: Any,
+    max_chars: int,
+) -> tuple[str, str]:
+    """Format tool result string for LLM message and UI display while preserving errors/metadata.
+
+    Returns:
+        (llm_content, display_content)
+    """
+    is_error = False
+    if isinstance(result, Exception):
+        is_error = True
+    elif result is not None:
+        if getattr(result, "isError", False) or getattr(result, "is_error", False):
+            is_error = True
+        elif isinstance(result, dict) and (
+            result.get("ok") is False
+            or result.get("is_error")
+            or "error" in result
+            or "code" in result
+        ):
+            is_error = True
+    if res_text.startswith("Tool execution error:") or "[error]" in res_text.lower():
+        is_error = True
+
+    if len(res_text) <= max_chars:
+        llm_text = res_text
+        disp_text = res_text
+    else:
+        budget = max(1, max_chars)
+        meta_prefix = ""
+        if isinstance(result, dict):
+            meta_keys = [
+                "ok",
+                "is_error",
+                "error",
+                "code",
+                "status",
+                "message",
+                "count",
+                "next_cursor",
+            ]
+            preserved_meta = {k: result[k] for k in meta_keys if k in result}
+            if preserved_meta:
+                meta_prefix = (
+                    f"[Result Meta: {json.dumps(preserved_meta, separators=(',', ':'))}]\n"
+                )
+        if is_error and "[ERROR PRESERVED]" not in meta_prefix:
+            meta_prefix = "[ERROR PRESERVED] " + meta_prefix
+
+        marker = f"\n... [showing X of {len(res_text)} chars, truncated]"
+        if budget <= len(marker):
+            return marker[:budget], marker[:budget]
+        avail_for_body = max(0, budget - len(meta_prefix) - len(marker))
+        body_slice = res_text[:avail_for_body].rstrip()
+        marker = f"\n... [showing {len(body_slice)} of {len(res_text)} chars, truncated]"
+        truncated = meta_prefix + body_slice + marker
+        if len(truncated) > budget:
+            truncated = truncated[: max(0, budget - len(marker))] + marker
+        llm_text = truncated
+        disp_text = truncated
+
+    return llm_text, disp_text
 
 
 class AgentReasoningLoop:
-    """Coordinates an AI backend with MCP tools over multiple reasoning turns."""
+    """Compatibility facade over :class:`ReasoningService`.
+
+    New terminal code should consume ``ReasoningService.stream`` directly.
+    This adapter preserves the older ``AgentLoopStep`` event shape for callers
+    that still use the legacy one-shot loop.
+    """
 
     def __init__(
         self,
@@ -34,102 +131,69 @@ class AgentReasoningLoop:
         session_manager: SessionManager,
         max_turns: int = 6,
         system_prompt: str | None = None,
+        max_result_chars: int = 2000,
+        safety_policy: SafetyPolicy | None = None,
+        memory: ConversationMemory | None = None,
     ) -> None:
-        self._ai = ai_backend
-        self._session_mgr = session_manager
-        self._max_turns = max_turns
-        self._system_prompt = system_prompt or (
-            "You are the HPE Networking AI Expert. You diagnose network health, analyze topologies, "
-            "recommend switch and AP hardware, plan migrations, and invoke MCP tools safely. "
-            "Always prefer read-only diagnostics and explain your reasoning clearly."
+        self._service = ReasoningService(
+            ai_backend=ai_backend,
+            session_manager=session_manager,
+            safety_policy=safety_policy,
+            memory=memory,
+            max_turns=max_turns,
+            max_result_chars=max_result_chars,
+            system_prompt=system_prompt or DEFAULT_SYSTEM_PROMPT,
         )
 
+    @property
+    def total_usage(self) -> dict[str, int]:
+        """Cumulative token usage across all turns in this loop run."""
+        return self._service.total_usage
+
     async def run(self, user_prompt: str) -> AsyncIterator[AgentLoopStep]:
-        messages: list[ChatMessage] = [
-            ChatMessage(role=MessageRole.USER, content=user_prompt)
-        ]
-
-        # Collect available tools from active MCP session
-        available_tools = []
-        try:
-            tools_list = await self._session_mgr.list_all_tools()
-            for t in tools_list:
-                available_tools.append({
-                    "name": t.name,
-                    "description": t.description or "",
-                    "inputSchema": t.inputSchema if hasattr(t, "inputSchema") else {"type": "object"},
-                })
-        except Exception:
-            available_tools = []
-
-        for turn in range(1, self._max_turns + 1):
-            try:
-                response = await self._ai.complete(
-                    messages=messages,
-                    tools=available_tools if available_tools else None,
-                    system_prompt=self._system_prompt,
-                )
-            except Exception as e:
+        answer_parts: list[str] = []
+        async for event in self._service.stream(user_prompt):
+            base = {
+                "turn_index": event.turn_index,
+                "usage": dict(event.usage),
+                "provider": event.provider,
+                "model": event.model,
+            }
+            if event.kind == "started":
                 yield AgentLoopStep(
-                    turn_index=turn,
-                    step_type="error",
-                    content=f"AI completion error: {e}",
-                )
-                break
-
-            if response.thought_trace:
-                yield AgentLoopStep(
-                    turn_index=turn,
+                    **base,
                     step_type="thought",
-                    content=response.thought_trace,
+                    content="Model reasoning started; private details omitted.",
                 )
-
-            if not response.tool_calls:
+            elif event.kind == "text_delta":
+                answer_parts.append(event.content)
+            elif event.kind == "tool_call":
                 yield AgentLoopStep(
-                    turn_index=turn,
-                    step_type="answer",
-                    content=response.content,
-                )
-                break
-
-            # Process tool calls
-            messages.append(
-                ChatMessage(
-                    role=MessageRole.ASSISTANT,
-                    content=response.content,
-                    tool_calls=response.tool_calls,
-                )
-            )
-
-            for tc in response.tool_calls:
-                yield AgentLoopStep(
-                    turn_index=turn,
+                    **base,
                     step_type="tool_call",
-                    content=f"Calling tool `{tc.tool_name}` with args: {json.dumps(tc.arguments)}",
-                    tool_name=tc.tool_name,
-                    tool_args=tc.arguments,
+                    content=(
+                        f"Calling tool `{event.tool_name}` with args: {json.dumps(event.tool_args)}"
+                    ),
+                    tool_name=event.tool_name,
+                    tool_args=event.tool_args,
                 )
-
-                try:
-                    # Execute tool via MCP session manager
-                    result = await self._session_mgr.call_tool(tc.tool_name, tc.arguments)
-                    res_text = json.dumps(result, indent=2) if isinstance(result, (dict, list)) else str(result)
-                except Exception as ex:
-                    res_text = f"Tool execution error: {ex}"
-
+            elif event.kind == "tool_result":
                 yield AgentLoopStep(
-                    turn_index=turn,
+                    **base,
                     step_type="tool_result",
-                    content=res_text[:1000] + ("..." if len(res_text) > 1000 else ""),
-                    tool_name=tc.tool_name,
-                    tool_result=result if "result" in locals() else None,
+                    content=event.content,
+                    tool_name=event.tool_name,
+                    tool_result=event.tool_result,
                 )
-
-                messages.append(
-                    ChatMessage(
-                        role=MessageRole.TOOL,
-                        name=tc.tool_name,
-                        tool_call_id=tc.call_id,
-                        content=res_text,
-                    )
+            elif event.kind == "completed":
+                yield AgentLoopStep(
+                    **base,
+                    step_type="answer",
+                    content=event.content or "".join(answer_parts),
+                )
+            elif event.kind in {"error", "cancelled"}:
+                yield AgentLoopStep(
+                    **base,
+                    step_type=event.kind,
+                    content=event.content or "Request cancelled.",
                 )

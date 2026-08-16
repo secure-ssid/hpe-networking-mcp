@@ -46,6 +46,23 @@ def format_duration(seconds: float) -> str:
     return f"{secs}s"
 
 
+def format_usage(usage: dict[str, int]) -> str:
+    """Render token usage dict as a compact human string."""
+    if not usage:
+        return "none"
+    if "total_tokens" in usage:
+        prompt = usage.get("prompt_tokens", usage.get("input_tokens", 0))
+        comp = usage.get("completion_tokens", usage.get("output_tokens", 0))
+        tot = usage.get("total_tokens", 0)
+        return f"prompt={prompt}, completion={comp}, total={tot}"
+    if "input_tokens" in usage or "output_tokens" in usage:
+        inp = usage.get("input_tokens", 0)
+        out = usage.get("output_tokens", 0)
+        return f"input={inp}, output={out}, total={inp + out}"
+    parts = [f"{k}={v}" for k, v in usage.items()]
+    return ", ".join(parts)
+
+
 def emit_json(payload: Any, *, stream: Any = None) -> None:
     out = stream or sys.stdout
     json.dump(payload, out, indent=2, sort_keys=True, default=str)
@@ -209,7 +226,10 @@ def format_diagram_result(data: dict[str, Any]) -> str | None:
             lines.append(f"- **Preview available:** `{preview}`")
 
     lines.append("")
-    lines.append("💡 *Tip: Open `.drawio` files directly in https://app.diagrams.net or the VS Code Draw.io extension.*")
+    lines.append(
+        "💡 *Tip: Open `.drawio` files directly in https://app.diagrams.net "
+        "or the VS Code Draw.io extension.*"
+    )
     return "\n".join(lines)
 
 
@@ -229,9 +249,7 @@ def format_tool_schema(name: str, tool_obj: Any) -> str:
     else:
         desc = getattr(tool_obj, "description", None) or "(no description)"
         raw_schema = (
-            getattr(tool_obj, "inputSchema", None)
-            or getattr(tool_obj, "input_schema", None)
-            or {}
+            getattr(tool_obj, "inputSchema", None) or getattr(tool_obj, "input_schema", None) or {}
         )
         if hasattr(raw_schema, "model_dump"):
             schema = raw_schema.model_dump()

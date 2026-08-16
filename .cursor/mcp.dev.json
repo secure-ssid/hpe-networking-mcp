@@ -1,5 +1,4 @@
 {
-  "_note": "Dev variant: exposes the 6 core Central/GLP servers directly for full introspection. Optional product starters stay opt-in through the router. Copy over mcp.json while debugging a specific tool, or use alongside the router for raw access.",
   "mcpServers": {
     "central-monitoring": {
       "command": "${workspaceFolder}/.venv/bin/python3",

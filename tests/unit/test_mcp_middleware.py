@@ -375,6 +375,92 @@ class TestUnknownToolSuggest:
 
         assert "create_vlan" in str(result)
 
+    def test_platform_hint_resolver_reports_unconfigured_platform(self):
+        """(a) A prefix-matched, unconfigured-platform guess gets the
+        distinct platform_not_configured shape instead of a fuzzy hint."""
+
+        def list_devices() -> str:
+            return "ok"
+
+        def platform_hint_resolver(name: str):
+            if name.startswith("mist_"):
+                return {
+                    "reason": "platform_not_configured",
+                    "platform": "mist",
+                    "hint": "The 'mist' backend is not currently enabled.",
+                }
+            return None
+
+        srv = _make_server_with_tool(list_devices)
+        install_middleware(
+            srv,
+            [
+                UnknownToolSuggestMiddleware(
+                    lambda: srv._tool_manager._tools,
+                    suggestion_provider=lambda name, limit: [
+                        {"name": "SHOULD_NOT_APPEAR", "score": 1.0}
+                    ],
+                    platform_hint_resolver=platform_hint_resolver,
+                )
+            ],
+        )
+
+        result = _call(srv, "mist_get_site_stats", {})
+
+        assert result["reason"] == "platform_not_configured"
+        assert result["platform"] == "mist"
+        assert result["suggestions"] == []
+        assert "SHOULD_NOT_APPEAR" not in str(result)
+
+    def test_platform_hint_resolver_none_falls_back_to_fuzzy_for_unknown_name(self):
+        """(b) A genuinely unknown name with no platform-prefix match is
+        unaffected: the resolver returns None and fuzzy suggestions run."""
+
+        def list_devices() -> str:
+            return "ok"
+
+        srv = _make_server_with_tool(list_devices)
+        install_middleware(
+            srv,
+            [
+                UnknownToolSuggestMiddleware(
+                    lambda: srv._tool_manager._tools,
+                    platform_hint_resolver=lambda name: None,
+                )
+            ],
+        )
+
+        result = _call(srv, "get_devices", {})
+
+        assert "reason" not in result
+        assert "list_devices" in str(result)
+
+    def test_platform_hint_resolver_none_for_already_enabled_platform_typo(self):
+        """(c) A typo of an already-enabled platform's tool must not be
+        misreported as platform_not_configured -- the resolver already
+        encodes "is it enabled" and returns None for this case, so the
+        ordinary fuzzy path still runs."""
+
+        def mist_status() -> str:
+            return "ok"
+
+        srv = _make_server_with_tool(mist_status)
+        install_middleware(
+            srv,
+            [
+                UnknownToolSuggestMiddleware(
+                    lambda: srv._tool_manager._tools,
+                    # Simulates: mist IS enabled, so a mist_ prefix never blocks.
+                    platform_hint_resolver=lambda name: None,
+                )
+            ],
+        )
+
+        result = _call(srv, "mist_statuss", {})
+
+        assert "reason" not in result
+        assert "mist_status" in str(result)
+
 
 class TestResponseEnvelope:
     def test_wraps_error_dict(self):

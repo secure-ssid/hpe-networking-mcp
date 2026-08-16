@@ -23,17 +23,17 @@ whenever an index is rebuilt, and verify with
 | Security advisories | 104 |
 | Lifecycle records | 346 |
 | Generated operation manifests | 6,144 |
-| Platform API backend catalog | 6,705 |
-| Complete backend catalog (+ `design-core`, `interop-core`) | 6,717 |
-| Registered router tool index rows | 6,717 |
+| Platform API backend catalog | 6,706 |
+| Complete backend catalog (+ `site-health`, `design-core`, `interop-core`) | 6,719 |
+| Registered router tool index rows | 6,719 |
 
 The prose index covers 28 of the 29 declared sources: `openapi_specs` is
 parsed only into `data/specs.sqlite` (see below), while several declared
 sources are metadata/API families or are not present in this local snapshot.
-The registered tool index matches the complete backend catalog exactly: both
-include the two credential-free local backends (`design-core`, `interop-core`),
-which are searchable but make no vendor API call, matching
-[`docs/tool-catalog.md`](tool-catalog.md).
+The registered tool index matches the
+complete backend catalog exactly: both include the two credential-free
+local backends (`design-core`, `interop-core`), which are searchable but
+make no vendor API call, matching [`docs/tool-catalog.md`](tool-catalog.md).
 
 OpenAPI documents are parsed only into SQLite exact lookup. They are not
 embedded into LanceDB, which keeps prose retrieval smaller and avoids lossy
@@ -206,6 +206,13 @@ atomically while preserving the advisory and lifecycle tables that share
 `data/specs.sqlite`. The full ingestion command starts a fresh shared SQLite
 artifact and then rebuilds all structured tables, so it is also the recovery
 path for a corrupt index.
+
+Feature Navigator history is also stored in `data/specs.sqlite`. The
+`compare_aoscx_releases` tool resolves release-family inputs such as `10.13`
+and `10.16` to indexed platform snapshots, compares feature support exactly,
+and complements that result with release-note enhancements, resolved issues,
+and caveats selected by exact platform/version file paths. Latest patch notes
+are not treated as cumulative.
 
 To recover only the shared structured artifact without touching LanceDB:
 

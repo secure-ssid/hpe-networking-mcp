@@ -139,6 +139,44 @@ If the semantic tool index is unavailable and no keyword fallback matches,
 `find_tool` returns a compact error with a rebuild hint instead of an empty
 success-shaped result.
 
+### Unknown tool names
+
+Guessing a tool name instead of calling `find_tool` first still gets a
+structured answer instead of a bare protocol error. A name with a
+recognized optional-product prefix (`mist_`, `clearpass_`, `apstra_`,
+`aos8_`, `edgeconnect_`, `uxi_`, `axis_`) whose backend isn't currently
+loaded reports that distinctly from an ordinary typo:
+
+<div class="docs-callout docs-callout--info" markdown="1">
+
+```json
+{
+  "error": "Unknown tool: mist_get_site_stats",
+  "reason": "platform_not_configured",
+  "platform": "mist",
+  "hint": "The 'mist' backend is not currently enabled. Set HPE_MCP_PRODUCTS=mist (or include it in HPE_MCP_TOOLSETS) and configure Mist credentials, then restart the server.",
+  "suggestions": []
+}
+```
+
+Any other unresolved name -- including a typo of a tool on an
+**already-enabled** platform -- instead gets the ordinary fuzzy "did you
+mean" fallback:
+
+```json
+{
+  "error": "Unknown tool: get_devices",
+  "hint": "Use find_tool to discover available tools, then invoke_read_tool for read-only results or invoke_tool for intentional writes.",
+  "suggestions": [{"name": "list_devices", "score": 0.5}]
+}
+```
+</div>
+
+`design` is intentionally excluded from the prefix check: its tools
+(`list_diagram_icons`, `drawio_network_design_diagram`, ...) don't share a
+`design_` prefix, so a `design_...` guess falls through to the fuzzy path
+above instead of a possibly-wrong platform claim.
+
 ## Dispatch reads with `invoke_read_tool`
 
 `invoke_read_tool(name, arguments=None, cursor=None)` refuses any tool that is
@@ -376,9 +414,9 @@ MCP hop.
 |---|---:|
 | Minimal router | 3 client-visible tools |
 | Default router | 18 client-visible tools[^compliance-tool] |
-| Platform API backend index | 6,705 tools |
-| Complete backend index (platform APIs + `design-core` + `interop-core`) | 6,717 tools |
-| Direct-all router | 6,724 client-visible tools |
+| Platform API backend index | 6,706 tools |
+| Complete backend index (platform APIs + `site-health` + `design-core` + `interop-core`) | 6,719 tools |
+| Direct-all router | 6,726 client-visible tools |
 
 </div>
 
@@ -395,10 +433,11 @@ MCP hop.
 
 The complete catalog spans nine platform surfaces plus RAG, `design-core`,
 and `interop-core`: nine generated manifests contain 6,144 reproducible
-operations (6,127 register as active generated tools; 577 platform curated
-tools bring the platform API backend total to 6,705). Adding the two
+operations (6,127 register as active generated tools; 579 platform curated
+tools bring the platform API backend total to 6,706). Adding the
+cross-platform `site-health` tool and the two
 credential-free local backends (`design-core`: 7, `interop-core`: 5) yields
-the complete 6,717-tool registered backend catalog. Minimal mode does not
+the complete 6,719-tool registered backend catalog. Minimal mode does not
 expose that schema surface to the MCP client -- it searches the catalog on
 demand.
 
@@ -422,6 +461,7 @@ early or blocking an MCP call for the full server window.
 | `central-generated` | Complete generated Central API surface |
 | `config` | Central configuration tools |
 | `monitoring` | Health, alerts, events, clients, devices |
+| `site-health` | Bounded cross-platform Central/Mist site health |
 | `nac` | MAC registration, MPSK, visitors, auth policy tools |
 | `ops` | Troubleshooting and operational tools |
 | `glp` | GreenLake Platform devices and documented attribute grouping, subscriptions, users, Audit Logs v2beta1, workspaces, reporting, service catalog, and guarded writes |

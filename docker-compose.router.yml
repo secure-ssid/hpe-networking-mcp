@@ -1,0 +1,75 @@
+# Optional overlay: adds a containerized hpe-networking-mcp streamable-HTTP
+# router service alongside the existing Redis/Ollama backend defined in
+# docker-compose.yml. This file changes nothing in docker-compose.yml and is
+# inert on its own -- layer it on top explicitly:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.router.yml \
+#     --profile router up -d --build
+#
+# Security choices (see docs/production-deployment.md for the full writeup):
+#   * "router" is a Compose *profile*, so a plain `docker compose up` (no
+#     --profile router) starts only redis/ollama exactly as before -- this
+#     overlay never changes default `docker-compose.yml` behavior.
+#   * The published port is loopback-only ("127.0.0.1:8010:8010"), matching
+#     the redis/ollama services already in docker-compose.yml.
+#   * MCP_HOST=0.0.0.0 is required *inside* the container network namespace
+#     for Docker's port-publish proxy to reach the process at all; the
+#     loopback-only guarantee comes from the host-side "127.0.0.1:" bind
+#     above, not from what the app binds to internally. MCP_ALLOWED_HOSTS /
+#     MCP_ALLOWED_ORIGINS are set explicitly (non-wildcard) because the
+#     router refuses to start on a non-loopback MCP_HOST otherwise -- see
+#     UnsafeHttpBindingError in src/hpe_networking_mcp/mcp_servers/shared.py.
+#   * Credentials are never passed as plaintext `environment:` values. See
+#     secrets/README.md for the CREDS_PATH file-secret and MCP_HTTP_BEARER_TOKEN
+#     "*_FILE" conventions this service uses.
+#   * `./data` is bind-mounted read-only and starts empty. Prebuilt
+#     RAG/OpenAPI indexes are never downloaded automatically by this file,
+#     the image build, or the container's entrypoint -- populate it
+#     explicitly per docs/production-deployment.md.
+#   * This overlay intentionally has no `depends_on` on `redis`/`ollama` --
+#     it stays valid and startable on its own (`HPE_MCP_RAG_BACKEND` unset
+#     uses the embedded LanceDB backend, no Redis/Ollama needed). If you set
+#     HPE_MCP_RAG_BACKEND=redis, start `docker-compose.yml`'s `redis`/
+#     `ollama` services first (or via one `docker compose ... up`) so the
+#     router doesn't come up racing an unstarted Redis.
+
+services:
+  mcp-router:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: hpe-networking-mcp-router:local
+    profiles:
+      - router
+    ports:
+      - "127.0.0.1:8010:8010"
+    environment:
+      MCP_TRANSPORT: streamable-http
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8010"
+      MCP_ALLOWED_HOSTS: "127.0.0.1,localhost"
+      MCP_ALLOWED_ORIGINS: "http://127.0.0.1:8010,http://localhost:8010"
+      HPE_MCP_ROUTER_MODE: "${HPE_MCP_ROUTER_MODE:-minimal}"
+      HPE_MCP_TOOLSETS: "${HPE_MCP_TOOLSETS:-central,glp,rag}"
+      HPE_MCP_ACCESS_PROFILE: "${HPE_MCP_ACCESS_PROFILE:-custom}"
+      HPE_MCP_RAG_BACKEND: "${HPE_MCP_RAG_BACKEND:-}"
+      CREDS_PATH: /run/secrets/credentials_yaml
+      MCP_HTTP_BEARER_TOKEN_FILE: /run/secrets/mcp_http_bearer_token
+    secrets:
+      - credentials_yaml
+      - mcp_http_bearer_token
+    volumes:
+      - ./data:/app/data:ro
+      - router_state:/app/state
+      - router_outputs:/app/outputs
+    restart: unless-stopped
+
+secrets:
+  credentials_yaml:
+    file: ./secrets/credentials.yaml
+  mcp_http_bearer_token:
+    file: ./secrets/mcp_http_bearer_token
+
+volumes:
+  router_state:
+  router_outputs:

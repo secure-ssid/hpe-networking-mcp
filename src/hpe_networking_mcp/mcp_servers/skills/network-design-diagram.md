@@ -51,10 +51,32 @@ Graphviz/NeXt exports. Prefer live Central topology when a site is known.
 
 ### Step 0 — Confirm operator preferences
 
-If not specified by the user, ask for their preferences:
-- **Output format**: Draw.io (`.drawio` XML - default), Graphviz (PNG/SVG image), or NeXt UI (web).
-- **Icon style**: Generic role shapes vs. vendor-specific icons (Aruba, HPE, Cisco, Juniper/Mist, ClearPass).
-- **Topology source**: Live Central site inventory (`list_sites` -> `get_topology`) or custom hand-built model.
+Never assume or default silently -- if not already specified by the user, ask
+for each of these before building the model:
+- **Diagram purpose**: what decision or audience is this for (e.g. change
+  ticket attachment, executive overview, troubleshooting reference, onboarding
+  documentation)? This shapes detail level and layout below.
+- **Topology source**: live Central/Mist site inventory (`list_sites` ->
+  `get_topology`) or a custom hand-built model (e.g. a proposed/future design
+  with no live inventory yet).
+- **Scope**: org-wide/global, a specific site, or a specific group/label?
+  Resolve with `list_scopes` / `list_sites` before fetching topology.
+- **Output format**: Draw.io (`.drawio` XML - default), Graphviz (PNG/SVG
+  image), or NeXt UI (web).
+- **Icon style**: generic role shapes vs. vendor-specific icons.
+- **Vendor/product**: if vendor icons are wanted, which vendor(s) -- Aruba,
+  HPE, Cisco, Juniper/Mist, ClearPass, or mixed multi-vendor? Confirm per
+  device role if the topology spans more than one vendor.
+- **Detail level**: high-level roles/links only, or full per-port/per-VLAN
+  detail? Denser detail is harder to read at org-wide scope.
+- **Layout**: hierarchical top-down (core/agg/access), left-right, or
+  radial/hub-and-spoke -- match the diagram's purpose and scope.
+- **Filename**: proposed output filename/path, or accept the tool's default
+  under `outputs/diagrams/`.
+
+If the topology source or scope makes live data unavailable or incomplete,
+say so explicitly and confirm whether the operator wants an illustrative
+model instead -- never silently substitute one for the other (see Step 1).
 
 ### Step 1 — Gather topology input
 

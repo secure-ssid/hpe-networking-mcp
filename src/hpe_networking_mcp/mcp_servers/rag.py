@@ -1,4 +1,4 @@
-"""MCP server — Aruba/HPE documentation RAG tools (13 tools).
+"""MCP server — Aruba/HPE documentation RAG tools (14 tools).
 
 Covers: hybrid (vector + BM25) search over ingested Aruba Central developer
 docs, tech docs, NAC docs, VSG docs, and HTML tech docs; exact API
@@ -16,6 +16,7 @@ needed (`clone -> uv sync -> run`). Set HPE_MCP_RAG_BACKEND=redis for the
 optional Redis Stack + Ollama server deployment (vector-only + source boost).
 """
 
+import os
 import re
 from typing import Any
 
@@ -26,7 +27,9 @@ from hpe_networking_mcp.mcp_servers.skills import list_skills_payload, load_skil
 from hpe_networking_mcp.pipeline import artifact_contracts as contracts
 from hpe_networking_mcp.pipeline.clients import (
     advisory_index,
+    aoscx_release_index,
     hardware_specs,
+    rag_cache,
     specs_index,
 )
 from hpe_networking_mcp.pipeline.clients import rag_diagnostics as rag_diagnostics_client
@@ -51,6 +54,39 @@ else:
     from hpe_networking_mcp.pipeline.clients.embed_client import EmbedClient
 
     _embedder = EmbedClient()  # lazy — the ONNX model loads on first query
+
+
+def _cache_size(env_name: str, default: int) -> int:
+    raw = os.getenv(env_name, str(default)).strip()
+    try:
+        return max(1, min(int(raw), 4096))
+    except ValueError:
+        return default
+
+
+_SEARCH_CACHE = rag_cache.BoundedCache[
+    tuple[str, str, str, int, str | tuple[str, ...] | None], list[dict[str, Any]]
+](
+    max_entries=_cache_size("HPE_MCP_RAG_CACHE_SIZE", 256)
+)
+_EMBED_CACHE = rag_cache.BoundedCache[tuple[str, str], tuple[float, ...]](
+    max_entries=_cache_size("HPE_MCP_RAG_EMBED_CACHE_SIZE", 256)
+)
+
+
+def warm_up_rag() -> None:
+    """Load the local embedding model on demand for long-lived hosts."""
+    if _BACKEND != "redis":
+        _embedder.warm_up()
+
+
+if _BACKEND != "redis" and os.getenv("HPE_MCP_RAG_PREWARM", "").strip().casefold() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}:
+    warm_up_rag()
 
 # Redis backend only — the LanceDB path replaces this static re-rank with
 # hybrid BM25+vector RRF fusion (R5).
@@ -177,6 +213,16 @@ _SOURCE_FILTER_RE = re.compile(r"^[a-z0-9_]+$")
 _MAX_SOURCE_FILTERS = 20
 _MAX_EVIDENCE_ANSWER_CHARS = 2400
 _MAX_EVIDENCE_EXCERPT_CHARS = 600
+_MAX_FOLLOW_UP_CONTEXT_CHARS = 2000
+_SOFTWARE_VERSION_HINTS = {
+    "code",
+    "firmware",
+    "image",
+    "release",
+    "release-notes",
+    "software",
+    "version",
+}
 
 _DOC_TYPE_TO_SOURCE: dict[str, str | tuple[str, ...]] = {
     "developer-docs": "developer_docs",
@@ -227,16 +273,19 @@ def _clamp_top_k(value: int, max_value: int) -> int:
 
 
 def _shape(rows: list[dict[str, Any]], top_k: int) -> list[dict[str, Any]]:
-    return [
-        {
+    shaped = []
+    for r in rows[:top_k]:
+        hit: dict[str, Any] = {
             "text": r["text"][:600] + "…" if len(r["text"]) > 600 else r["text"],
             "source": r["source"],
             "doc_type": r.get("doc_type"),
             "file_path": r["file_path"],
             "score": round(r["score"], 4),
         }
-        for r in rows[:top_k]
-    ]
+        if r.get("also_in"):
+            hit["also_in"] = r["also_in"]
+        shaped.append(hit)
+    return shaped
 
 
 def _boost_key(hit: dict[str, Any]) -> str:
@@ -313,6 +362,13 @@ def _boost_sources(hits: list[dict[str, Any]], query: str = "") -> list[dict[str
 # deliberately never a bare number, so "port 8400" or "VLAN 100" cannot
 # trigger it.
 _MODEL_TOKEN_RE = re.compile(r"\b(?:cx|ex)[\s-]?(\d{3,5})\b", re.IGNORECASE)
+_RELEASE_TOKEN_RE = re.compile(r"\b(?:10|20)\.\d+(?:\.\d+)?\b")
+_METADATA_SCOPE_RE = re.compile(
+    r"\b(?:release[- ]notes?|version history|enhancements?|resolved issues?|"
+    r"known issues?|caveats?|fundamentals?|cli reference|feature navigator|"
+    r"feature support|support matrix)\b",
+    re.IGNORECASE,
+)
 
 # Sources that ship one near-duplicate file per hardware model, where a
 # file_path model match is a deliberate signal rather than incidental prose
@@ -347,6 +403,28 @@ def _detect_model_token(query: str) -> str | None:
     return models.pop() if len(models) == 1 else None
 
 
+def _query_metadata_filter(query: str, columns: set[str]) -> dict[str, str]:
+    """Derive only high-confidence metadata filters from explicit query terms."""
+    filters: dict[str, str] = {}
+    vendor = _detect_vendor(query)
+    if vendor and "vendor" in columns:
+        filters["vendor"] = vendor
+
+    # Model/release columns describe release-note and guide records, not every
+    # generic support matrix or how-to page. Only push these filters when the
+    # query explicitly names a release-oriented scope; otherwise a valid
+    # record with null metadata would be filtered out before semantic search.
+    if _METADATA_SCOPE_RE.search(query):
+        model = _detect_model_token(query)
+        if model and "model" in columns:
+            filters["model"] = model
+
+        releases = {match.group(0) for match in _RELEASE_TOKEN_RE.finditer(query)}
+        if len(releases) == 1 and "release" in columns:
+            filters["release"] = next(iter(releases))
+    return filters
+
+
 def _boost_model_match(hits: list[dict[str, Any]], query: str) -> list[dict[str, Any]]:
     """Boost hits whose file_path names the exact model the query asked about.
 
@@ -370,10 +448,64 @@ def _boost_model_match(hits: list[dict[str, Any]], query: str) -> list[dict[str,
     return hits
 
 
+def _dedup_by_content(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse hits with identical content into one representative row.
+
+    38% of the corpus is boilerplate repeated verbatim across many source files
+    (license text, upgrade-procedure steps, overview headers). Without this
+    step, a query like "AOS-CX upgrade procedure" returns 10 results whose text
+    is character-for-character identical — only the ``file_path`` differs.
+
+    Strategy:
+    - Group by ``content_hash`` (exact duplicate detection).
+    - Keep the highest-scored hit from each group.
+    - Attach a ``also_in`` list of alternative ``file_path`` values so callers
+      can still see all provenance paths without the result list being flooded.
+    - Hits without a ``content_hash`` (legacy index rows) are treated as unique
+      and pass through unchanged.
+
+    Ordering is preserved: the merged list is sorted by the representative's
+    score so ranking is unchanged after deduplication.
+    """
+    seen: dict[str, dict[str, Any]] = {}
+    no_hash: list[dict[str, Any]] = []
+
+    for hit in hits:
+        ch = hit.get("content_hash")
+        if not ch:
+            no_hash.append(hit)
+            continue
+        if ch not in seen:
+            seen[ch] = {**hit, "_alt_paths": []}
+        else:
+            existing = seen[ch]
+            if hit.get("score", 0.0) > existing.get("score", 0.0):
+                alt_paths = existing["_alt_paths"] + [existing["file_path"]]
+                seen[ch] = {**hit, "_alt_paths": alt_paths}
+            else:
+                existing["_alt_paths"].append(hit["file_path"])
+
+    deduped: list[dict[str, Any]] = []
+    for hit in seen.values():
+        alt_paths = hit.pop("_alt_paths", [])
+        if alt_paths:
+            hit = {**hit, "also_in": alt_paths[:5]}
+        deduped.append(hit)
+
+    result = deduped + no_hash
+    result.sort(key=lambda h: h.get("score", 0.0), reverse=True)
+    return result
+
+
 def _search_lancedb(query: str, top_k: int, source_filter: SourceFilter) -> list[dict[str, Any]]:
     try:
         db = lance_client.connect()
-        query_vector = _embedder.embed_query(query)
+        cache_key = (getattr(_embedder, "model_name", ""), rag_cache.normalize_query(query))
+        cached_vector = _EMBED_CACHE.get(cache_key)
+        if cached_vector is None:
+            cached_vector = tuple(_embedder.embed_query(query))
+            _EMBED_CACHE.set(cache_key, cached_vector)
+        query_vector = list(cached_vector)
         # Fetch well beyond top_k so the source boost has candidates to promote —
         # authoritative-but-lower-ranked docs are typically just outside top_k,
         # and boosting a list already truncated to top_k can only reorder it.
@@ -383,10 +515,23 @@ def _search_lancedb(query: str, top_k: int, source_filter: SourceFilter) -> list
             query_vector,
             top_k=max(top_k * 6, 30),
             source_filter=source_filter,
+            metadata_filter=_query_metadata_filter(query, lance_client.docs_columns(db)),
         )
+        if not hits:
+            # Metadata is intentionally conservative and can be absent from
+            # legacy indexes or incomplete for a document family. A scoped
+            # miss must not become a false "no documentation" answer.
+            hits = lance_client.hybrid_search(
+                db,
+                query,
+                query_vector,
+                top_k=max(top_k * 6, 30),
+                source_filter=source_filter,
+            )
     except (FileNotFoundError, ValueError) as exc:
         return [{"error": str(exc)}]
     hits = _boost_model_match(_boost_sources(hits, query), query)
+    hits = _dedup_by_content(hits)
     return _shape(hits, top_k)
 
 
@@ -446,6 +591,47 @@ def _normalize_source_filter(source_filter: SourceFilter) -> SourceFilter:
 
 
 @mcp.tool(annotations=READ_ONLY_LOCAL)
+def compare_aoscx_releases(
+    platform: str,
+    from_version: str,
+    to_version: str,
+    sections: list[str] | None = None,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """Compare AOS-CX feature support and release-note changes exactly.
+
+    Uses structured Feature Navigator snapshots for feature deltas and exact
+    release-note file/range filtering for enhancements, resolved issues, and
+    caveats. It does not use embeddings or semantic ranking.
+
+    Args:
+        platform: Switch platform, for example ``6100`` or ``CX 6100``.
+        from_version: Baseline release/family, for example ``10.13``.
+        to_version: Target release/family, for example ``10.16``.
+        sections: Optional subset of ``features``, ``enhancements``,
+                  ``resolved_issues``, and ``caveats``.
+        limit: Combined results returned (default 50, range 1-200).
+    """
+    try:
+        return aoscx_release_index.compare(
+            platform=platform,
+            from_version=from_version,
+            to_version=to_version,
+            sections=sections,
+            limit=limit,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        return {
+            "platform": platform,
+            "requested_range": {"from": from_version, "to": to_version},
+            "errors": [str(exc)],
+            "results": [],
+            "count": 0,
+            "truncated": False,
+        }
+
+
+@mcp.tool(annotations=READ_ONLY_LOCAL)
 def search_docs(
     query: str,
     top_k: int = 5,
@@ -482,9 +668,32 @@ def search_docs(
     except ValueError as exc:
         return [{"error": str(exc)}]
 
+    normalized_query = rag_cache.normalize_query(query)
     if _BACKEND == "redis":
-        return _search_redis(query, top_k, source_filter)
-    return _search_lancedb(query, top_k, source_filter)
+        index_identity = "redis"
+    else:
+        try:
+            index_identity = lance_client.index_identity(lance_client.connect())
+        except Exception:
+            index_identity = "unavailable"
+    cache_key = (
+        _BACKEND,
+        index_identity,
+        normalized_query,
+        top_k,
+        source_filter,
+    )
+    cached = _SEARCH_CACHE.get(cache_key)
+    if cached is not None:
+        return [dict(hit) for hit in cached]
+
+    if _BACKEND == "redis":
+        results = _search_redis(query, top_k, source_filter)
+    else:
+        results = _search_lancedb(query, top_k, source_filter)
+    if results and not any("error" in hit for hit in results):
+        _SEARCH_CACHE.set(cache_key, [dict(hit) for hit in results])
+    return results
 
 
 @mcp.tool(annotations=READ_ONLY_LOCAL)
@@ -941,15 +1150,15 @@ def lookup_hardware_specs(
     """Look up authoritative hardware datasheet specifications for switches and APs.
 
     Exact, curated catalog lookup (no RAG search) — use this INSTEAD of
-    ask_docs/search_docs for hardware datasheet questions, since datasheet
-    PDFs are not part of the ingested document corpus. Returns switching
+    ask_docs/search_docs for exact hardware datasheet questions. Returns switching
     capacity, throughput, stacking (VSF/Virtual Chassis), port configurations,
     PoE wattage, uplinks, architecture, and routing/security features for
     Aruba CX (6000, 6100, 6200, 6300, 6400, 8325, 8360, 10000), Juniper EX
-    (2300, 4100, 4400, 4650), Aruba APs (635), and Mist APs (45).
+    (2300, 4000, 4100, 4400, 4650), Aruba APs (635), and Mist APs (45).
 
     Args:
-        model: Hardware model identifier, e.g. "cx6300", "6300", "ex4400", "8360", "ap635".
+        model: Hardware model identifier, e.g. "cx6300", "ex4000", "ex4400",
+            "8360", or "ap635".
 
     On a miss, returns ``{"ok": False, "available_models": [...]}`` listing every
     catalogued key instead of raising, so a caller can retry with a valid model.
@@ -970,27 +1179,61 @@ def lookup_hardware_specs(
     }
 
 
+def _contextual_question(question: str, context: str | None) -> str:
+    """Combine a follow-up with a bounded prior-turn summary for retrieval."""
+    question = question.strip()
+    context = (context or "").strip()
+    if not context:
+        return question
+    return (
+        "Prior conversation context:\n"
+        f"{context[:_MAX_FOLLOW_UP_CONTEXT_CHARS]}\n\n"
+        f"Follow-up question:\n{question}"
+    )
+
+
+def _is_software_version_question(question: str) -> bool:
+    tokens = {
+        token.strip(".,:;?!()[]{}\"'").casefold()
+        for token in question.replace("/", " ").replace("-", " ").split()
+    }
+    return bool(tokens & _SOFTWARE_VERSION_HINTS) or bool(
+        re.search(r"\b(?:10|20)\.\d+(?:\.\d+)?\b", question)
+    )
+
+
 @mcp.tool(annotations=READ_ONLY_LOCAL)
 def ask_docs(
     question: str,
     top_k: int = 3,
     source: str | None = None,
+    context: str | None = None,
 ) -> dict[str, Any]:
     """Return a compact cited answer from local docs/API indexes.
 
     Token-saving companion to `search_docs`: it returns the shortest useful
     extractive answer plus citations instead of dumping multiple long chunks.
+    For an ambiguous follow-up, pass a short standalone summary of the prior
+    turn in ``context``; it is combined with the question for exact routing
+    and document retrieval.
     A question containing a literal CVE ID or vendor advisory ID consults
     `lookup_advisory` first (exact, never a guessed product filter);
     otherwise API-shaped questions consult `lookup_api` first; both fall
     back to prose RAG when no exact match exists.
     """
     k = max(1, min(top_k, 5))
+    retrieval_question = _contextual_question(question, context)
     mode = "search_docs"
     hits: list[dict[str, Any]] = []
 
     if source is None:
         hw_model = hardware_specs.detect_hardware_query(question)
+        if (
+            hw_model is None
+            and context
+            and not _is_software_version_question(question)
+        ):
+            hw_model = hardware_specs.detect_hardware_query(retrieval_question)
         if hw_model:
             hw_info = hardware_specs.get_hardware_specs(hw_model)
             if hw_info:
@@ -1012,21 +1255,21 @@ def ask_docs(
                 }
 
     if source is None:
-        identifier = _extract_exact_identifier(question)
+        identifier = _extract_exact_identifier(retrieval_question)
         if identifier:
             advisory_hits = lookup_advisory(limit=k, **identifier)
             if advisory_hits and "error" not in advisory_hits[0]:
                 mode = "lookup_advisory"
                 hits = advisory_hits
 
-    if not hits and source is None and _is_api_question(question):
-        api_hits = lookup_api(question, top_k=k)
+    if not hits and source is None and _is_api_question(retrieval_question):
+        api_hits = lookup_api(retrieval_question, top_k=k)
         if api_hits and "error" not in api_hits[0]:
             mode = "lookup_api"
             hits = api_hits
 
     if not hits:
-        hits = search_docs(question, top_k=k, source=source)
+        hits = search_docs(retrieval_question, top_k=k, source=source)
         mode = "search_docs"
 
     if not hits:

@@ -891,6 +891,35 @@ def test_ask_docs_wrapper_forwards_backend_question_arg(monkeypatch):
     ]
 
 
+def test_ask_docs_wrapper_forwards_follow_up_context(monkeypatch):
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((ctx, name, arguments))
+        return {"answer": "ok"}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(
+        router.ask_docs(
+            object(),
+            "what about 10.16 code?",
+            top_k=2,
+            context="Comparing Juniper EX4000 with Aruba CX 6100.",
+        )
+    )
+
+    assert result == {"answer": "ok"}
+    assert calls[0][1:] == (
+        "ask_docs",
+        {
+            "question": "what about 10.16 code?",
+            "top_k": 2,
+            "context": "Comparing Juniper EX4000 with Aruba CX 6100.",
+        },
+    )
+
+
 def test_find_device_wrapper_forwards_backend_serial_arg(monkeypatch):
     calls = []
 
@@ -990,3 +1019,106 @@ def test_generated_record_for_uncollided_name_is_generated(monkeypatch):
         "manifest_platform": "uxi",
     }
     assert router._generated_record_for("not_generated_at_all") is None
+
+
+# ---------------------------------------------------------------------------
+# Unknown-tool "platform not configured" detection
+# ---------------------------------------------------------------------------
+
+
+def test_optional_product_tool_prefixes_derived_from_optional_backends():
+    """Prefix map is derived from _OPTIONAL_BACKENDS, not a second hand-typed
+    list, and every prefixed product has a human-readable label (so a newly
+    added optional product can't silently ship an unlabeled hint)."""
+    assert set(router._OPTIONAL_PRODUCT_TOOL_PREFIXES) == set(router._OPTIONAL_BACKENDS) - {
+        "design"
+    }
+    for product, prefix in router._OPTIONAL_PRODUCT_TOOL_PREFIXES.items():
+        assert prefix == f"{product}_"
+    assert set(router._OPTIONAL_PRODUCT_LABELS) == set(router._OPTIONAL_PRODUCT_TOOL_PREFIXES)
+
+
+def test_unconfigured_platform_hint_flags_disabled_optional_product(monkeypatch):
+    monkeypatch.setattr(
+        router, "_BACKENDS", {"central-config": "hpe_networking_mcp.mcp_servers.config"}
+    )
+
+    hint = router._unconfigured_platform_hint("mist_get_site_stats")
+
+    assert hint == {
+        "reason": "platform_not_configured",
+        "platform": "mist",
+        "hint": (
+            "The 'mist' backend is not currently enabled. Set HPE_MCP_PRODUCTS=mist "
+            "(or include it in HPE_MCP_TOOLSETS) and configure Mist credentials, "
+            "then restart the server."
+        ),
+    }
+
+
+def test_unconfigured_platform_hint_covers_every_prefixed_optional_product(monkeypatch):
+    monkeypatch.setattr(router, "_BACKENDS", {})
+    for product in router._OPTIONAL_PRODUCT_TOOL_PREFIXES:
+        hint = router._unconfigured_platform_hint(f"{product}_status")
+        assert hint is not None and hint["platform"] == product
+        assert hint["reason"] == "platform_not_configured"
+
+
+def test_unconfigured_platform_hint_returns_none_when_platform_already_enabled(monkeypatch):
+    monkeypatch.setattr(router, "_BACKENDS", {"mist-core": "hpe_networking_mcp.mcp_servers.mist"})
+
+    # A typo of an already-enabled platform's tool name must NOT be flagged
+    # platform_not_configured -- it should fall through to fuzzy suggestions.
+    assert router._unconfigured_platform_hint("mist_get_site_stat") is None
+
+
+def test_unconfigured_platform_hint_returns_none_for_non_prefixed_name(monkeypatch):
+    monkeypatch.setattr(router, "_BACKENDS", {})
+    assert router._unconfigured_platform_hint("totally_bogus_tool_name") is None
+
+
+def test_unconfigured_platform_hint_excludes_design_product(monkeypatch):
+    """design.py's tools (list_diagram_icons, drawio_network_design_diagram,
+    ...) don't share a "design_" prefix, so a "design_..." guess is left to
+    the ordinary fuzzy fallback rather than a possibly-wrong platform claim."""
+    monkeypatch.setattr(router, "_BACKENDS", {})
+    assert router._unconfigured_platform_hint("design_anything_at_all") is None
+
+
+def test_dispatch_unknown_tool_reports_platform_not_configured(monkeypatch):
+    """invoke_tool/invoke_read_tool's shared _unknown_tool_error also carries
+    the platform_not_configured reason for an unconfigured-platform-prefixed
+    name -- no raised exception needed (that's only the router's top-level
+    on_error path)."""
+    monkeypatch.setattr(router, "_BACKENDS", {})
+    monkeypatch.setattr(router, "_backend_load_errors", {})
+
+    error = router._unknown_tool_error("clearpass_get_endpoint_by_mac")
+
+    assert error["status"] == "unknown_tool"
+    assert error["reason"] == "platform_not_configured"
+    assert error["platform"] == "clearpass"
+    assert error["suggestions"] == []
+
+
+def test_dispatch_unknown_tool_without_platform_match_is_unchanged(monkeypatch):
+    """A genuinely unknown name (no platform prefix) keeps the exact
+    pre-existing shape -- no reason/platform/suggestions fields added."""
+    monkeypatch.setattr(router, "_BACKENDS", {})
+    monkeypatch.setattr(router, "_backend_load_errors", {})
+
+    error = router._unknown_tool_error("totally_bogus_tool_name")
+
+    assert error == {
+        "error": "Unknown tool 'totally_bogus_tool_name'. Use find_tool to discover.",
+        "tool": "totally_bogus_tool_name",
+        "status": "unknown_tool",
+    }
+
+
+def test_router_middleware_chain_wires_platform_hint_resolver():
+    middlewares = router.build_router_middlewares()
+    unknown_tool_mw = next(
+        m for m in middlewares if type(m).__name__ == "UnknownToolSuggestMiddleware"
+    )
+    assert unknown_tool_mw._platform_hint_resolver is router._unconfigured_platform_hint

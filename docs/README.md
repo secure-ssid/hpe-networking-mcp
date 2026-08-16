@@ -11,7 +11,8 @@ JavaScript.
 |---|---|
 | [index.md](index.md) | Task-based front door for new users, network operators, and contributors |
 | [getting-started.md](getting-started.md) | Wizard install, credentials, optional products, MCP client setup, and indexes |
-| [mcp-client-recipes.md](mcp-client-recipes.md) | Copy/paste stdio and streamable HTTP MCP client setup recipes |
+| [production-deployment.md](production-deployment.md) | Containerized router packaging: Dockerfile, Compose overlay, secrets, and explicit prebuilt-index provisioning |
+| [mcp-client-recipes.md](mcp-client-recipes.md) | Host-first MCP setup recipes plus optional local `hpe-mcp` chat |
 | [../examples/README.md](../examples/README.md) | Tested, non-secret example configs: minimal/full stdio, local/bearer HTTP, Copilot CLI, and prompt/runbook examples |
 | [../MIGRATION.md](../MIGRATION.md) | Local migration path from the legacy `secure-ssid/centralmcp` repository |
 | [../CHANGELOG.md](../CHANGELOG.md) | Version history index into per-release notes |
@@ -24,6 +25,7 @@ JavaScript.
 | [aos8-migration-contract-matrix.md](aos8-migration-contract-matrix.md) | Authoritative AOS8-to-Classic/New Central migration contract matrix gating 0.5.0 implementation |
 | [aos8-live-dryrun-evaluation.md](aos8-live-dryrun-evaluation.md) | Read-only live/fixture-backed evaluation record of the AOS8 migration pipeline against the contract matrix |
 | [release-indexes.md](release-indexes.md) | Download, package, and release prebuilt RAG/OpenAPI indexes |
+| [release-notes-0.9.0.md](release-notes-0.9.0.md) | RAG corpus expansion (29 sources, 262k chunks), ANN+metadata indexes, content-hash dedup, Docker packaging, operator runbooks, AI attribution |
 | [release-notes-0.8.0.md](release-notes-0.8.0.md) | Clean repository/package rename, MCP 2 transport repair, PII protection, interop tools, GLP inventory completion, strict RAG/catalog facts, and classified drift gates |
 | [release-notes-0.7.0.md](release-notes-0.7.0.md) | Artifact/live-test gates, source lifecycle provenance, structured RAG intelligence, Central/GLP/AOS8/optional-product depth, observability/security, router automation, and release artifact automation |
 | [central-v07-workflows.md](central-v07-workflows.md) | Central v0.7 depth workflows: VSF template lifecycle, bulk site/site-collection delete, firmware-compliance campaigns, config-health remediation, troubleshooting orchestration |
@@ -68,7 +70,7 @@ panels are defined in `assets/css/style.scss`.
 | Path | Purpose |
 |---|---|
 | `src/hpe_networking_mcp/mcp_servers/` | MCPServer backends, low-token router, prompts, middleware, optional product starters, and the always-loaded credential-free `interop-core` backend |
-| `src/hpe_networking_mcp/cli/` | `hpe-mcp-doctor`, `hpe-mcp-run-pipeline`, `hpe-mcp-run-ssid` console-script implementations |
+| `src/hpe_networking_mcp/cli/` | `hpe-mcp` local client plus doctor and pipeline/SSID console-script implementations |
 | `src/hpe_networking_mcp/pipeline/` | Migration pipeline, typed clients, credentials loading, state store, SSID helpers |
 | `ingestion/` | Docs/API ingestion into LanceDB and SQLite |
 | `ingestion/source_manifest.json` | RAG source seeds for product docs, OpenAPI, security advisories, and end-of-sale/end-of-life lifecycle notices |
@@ -84,6 +86,9 @@ panels are defined in `assets/css/style.scss`.
 | `src/hpe_networking_mcp/pipeline/aos8_migration_orchestrator.py` / `src/hpe_networking_mcp/pipeline/aos8_target_adapters.py` | Resumable AOS8 migration-run execution and guarded New Central/Classic target writes |
 | `scripts/run_http_router.sh` | Start the minimal router over streamable HTTP |
 | `docker-compose.yml` | Optional localhost-only Redis/Ollama server backend for power users |
+| `docker-compose.router.yml` | Optional overlay: containerized MCP router service, behind an opt-in `router` Compose profile -- see [production-deployment.md](production-deployment.md) |
+| `Dockerfile` | Production image for the streamable-HTTP router -- non-root, frozen dependencies, no baked-in secrets or indexes |
+| `secrets/` | `*.example` templates for the Docker secrets `docker-compose.router.yml` mounts (real files are git-ignored) |
 | `scripts/doctor.py` | Check local setup without making API calls |
 | `scripts/` | Tool-catalog ingestion, release validation, local sync helpers |
 | `.mcp.json.example` | Generic stdio MCP client example using the minimal router |
@@ -110,7 +115,7 @@ uv run python scripts/ingest_tools.py
 # Include optional product starters in the tool catalog
 uv run python scripts/ingest_tools.py --products all
 
-# Include every guarded write tool (6,717 backend tools)
+# Include every guarded write tool (6,719 backend tools)
 uv run python scripts/ingest_tools.py --complete-catalog
 
 # Start the model-agnostic HTTP MCP router
@@ -123,7 +128,7 @@ uv run hpe-mcp-doctor
 uv run pytest tests/unit -q
 
 # Run the full local release gate
-uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6705
+uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6706
 ```
 
 The wizard can run `uv sync`, choose common Central API gateways, fill secrets
@@ -132,4 +137,4 @@ the product selector to local stdio MCP configs. The HTTP helper safely loads
 expected `.env` assignments first and exits with listener details instead of
 starting a duplicate router when the selected port is already in use.
 
-The release helper enforces the documented tool catalog floor and checks local LanceDB tool-index freshness when `data/tools.lance` exists. `--min-tools 6705` is the platform API compatibility floor (the 6,705 vendor-facing platform API tools), not the complete registered backend total of 6,717 — validation passes at or above the floor; see [Tool catalog](tool-catalog.md) for both totals. The unit suite also carries static regression guards for async-safe MCP tools, shared `httpx` client boundaries, project metadata (`hpe-networking-mcp` package name with no direct sync SDK/`requests` runtime dependencies), committed low-token MCP config examples, local-only config files, router product/toolset docs, bounded generic read-only GET tools, MCP list default bounds, RAG/search top_k bounds, public tool-count claims, tool-count docstrings, rendered RAG/index doc-fact claims, tracked Markdown local links and images, Pages sitemap and robots metadata, documented router example arguments, product workflow tool-name tables, and wizard optional-product env tables.
+The release helper enforces the documented tool catalog floor and checks local LanceDB tool-index freshness when `data/tools.lance` exists. `--min-tools 6706` is the platform API compatibility floor (the 6,706 vendor-facing platform API tools), not the complete registered backend total of 6,719 — validation passes at or above the floor; see [Tool catalog](tool-catalog.md) for both totals. The unit suite also carries static regression guards for async-safe MCP tools, shared `httpx` client boundaries, project metadata (`hpe-networking-mcp` package name with no direct sync SDK/`requests` runtime dependencies), committed low-token MCP config examples, local-only config files, router product/toolset docs, bounded generic read-only GET tools, MCP list default bounds, RAG/search top_k bounds, public tool-count claims, tool-count docstrings, rendered RAG/index doc-fact claims, tracked Markdown local links and images, Pages sitemap and robots metadata, documented router example arguments, product workflow tool-name tables, and wizard optional-product env tables.

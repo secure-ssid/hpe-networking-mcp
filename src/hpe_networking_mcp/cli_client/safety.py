@@ -29,7 +29,27 @@ def _anno_bool(annotations: Any, names: tuple[str, ...]) -> bool | None:
 
 def tool_is_read_only(tool: Any) -> bool:
     """Best-effort classification from MCP tool annotations + name heuristics."""
-    annotations = getattr(tool, "annotations", None)
+    if isinstance(tool, dict):
+        if "read_only" in tool:
+            return bool(tool["read_only"])
+        capability = str(tool.get("capability", "")).lower()
+        if capability in {"read", "diagnostic", "readonly", "read_only"}:
+            return True
+        if capability in {"write", "destructive", "idempotent_write"}:
+            return False
+        annotations = tool.get("annotations")
+        tool_name = tool.get("name", "")
+    else:
+        read_only = getattr(tool, "read_only", None)
+        if read_only is not None:
+            return bool(read_only)
+        capability = str(getattr(tool, "capability", "") or "").lower()
+        if capability in {"read", "diagnostic", "readonly", "read_only"}:
+            return True
+        if capability in {"write", "destructive", "idempotent_write"}:
+            return False
+        annotations = getattr(tool, "annotations", None)
+        tool_name = getattr(tool, "name", "")
     read = _anno_bool(annotations, _READ_HINTS)
     if read is True:
         return True
@@ -39,7 +59,7 @@ def tool_is_read_only(tool: Any) -> bool:
     if read is False:
         return False
 
-    name = str(getattr(tool, "name", "") or "").lower()
+    name = str(tool_name or "").lower()
     # Prefer namespaced bare segment.
     bare = name.rsplit(".", 1)[-1]
     write_prefixes = (
@@ -100,7 +120,7 @@ class SafetyPolicy:
 
     def check(self, tool: Any, *, force_write: bool = False) -> SafetyDecision:
         ro = tool_is_read_only(tool)
-        name = getattr(tool, "name", "?")
+        name = tool.get("name", "?") if isinstance(tool, dict) else getattr(tool, "name", "?")
         if ro:
             return SafetyDecision(allowed=True, reason="read-only tool", is_read_only=True)
         if not self.read_only_default and self.allow_writes:

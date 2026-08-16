@@ -27,6 +27,10 @@ allowed_keys = {
     "HPE_MCP_READONLY",
     "HPE_MCP_TOOLSETS",
     "HPE_MCP_RAG_BACKEND",
+    "HPE_MCP_RAG_CACHE_SIZE",
+    "HPE_MCP_RAG_EMBED_CACHE_SIZE",
+    "HPE_MCP_RAG_PREWARM",
+    "HPE_MCP_MILVUS_PATH",
     "HPE_MCP_BOUND_LISTS",
     "HPE_MCP_NORMALIZE_MACS",
     "HPE_MCP_SWITCH_GROUP_NAME",
@@ -128,9 +132,12 @@ export MCP_PORT="${MCP_PORT:-8010}"
 export HPE_MCP_ROUTER_MODE="${HPE_MCP_ROUTER_MODE:-minimal}"
 export HPE_MCP_TOOLSETS="${HPE_MCP_TOOLSETS:-central,glp,rag}"
 HPE_MCP_ACCESS_PROFILE="$(
-  normalize_access_profile "${HPE_MCP_ACCESS_PROFILE:-custom}"
+  normalize_access_profile "${HPE_MCP_ACCESS_PROFILE:-safe-read-only}"
 )"
-export HPE_MCP_ACCESS_PROFILE="${HPE_MCP_ACCESS_PROFILE:-custom}"
+export HPE_MCP_ACCESS_PROFILE="${HPE_MCP_ACCESS_PROFILE:-safe-read-only}"
+if [[ "${HPE_MCP_ACCESS_PROFILE}" == "safe-read-only" ]]; then
+  export HPE_MCP_READONLY="${HPE_MCP_READONLY:-1}"
+fi
 if [[ "${HPE_MCP_ACCESS_PROFILE}" == "full-read-write" ]]; then
   default_product_access="read-write"
 else

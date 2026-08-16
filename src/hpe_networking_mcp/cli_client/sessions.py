@@ -163,6 +163,10 @@ class SessionManager:
     def prompts(self) -> dict[str, Any]:
         return dict(self.group.prompts)
 
+    async def list_all_tools(self) -> list[Any]:
+        """Return visible MCP tools for model clients and command handlers."""
+        return list(self.tools.values())
+
     async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> Any:
         try:
             resolved = self.resolve_tool_name(name)

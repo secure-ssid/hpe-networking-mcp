@@ -19,7 +19,9 @@ import json
 import re
 import sys
 import uuid
+from collections.abc import Mapping
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -147,6 +149,79 @@ def content_hash(text: str) -> str:
 
 _SOURCE_URL_COMMENT_RE = re.compile(r"<!--\s*source:\s*(\S+?)\s*-->")
 
+RAG_METADATA_FIELDS = (
+    "vendor",
+    "product",
+    "platform",
+    "model",
+    "release",
+    "version",
+    "document_family",
+    "record_type",
+    "authority",
+    "freshness",
+)
+
+_DOCUMENT_FAMILIES = {
+    "aoscx_guides": "technical-guide",
+    "aoscx_release_notes": "release-notes",
+    "clearpass_guide": "technical-guide",
+    "feature_navigator": "feature-matrix",
+    "junos_ex_release_notes": "release-notes",
+    "junos_mx_release_notes": "release-notes",
+    "junos_qfx_release_notes": "release-notes",
+    "junos_srx_release_notes": "release-notes",
+    "lifecycle_notices": "lifecycle",
+    "juniper_lifecycle": "lifecycle",
+    "juniper_security_advisories": "security-advisory",
+    "mist_product_updates": "product-updates",
+    "openapi_specs": "api-reference",
+    "product_datasheets": "datasheet",
+    "product_specs": "api-reference",
+    "security_advisories": "security-advisory",
+}
+
+_OFFICIAL_VENDOR_HOSTS = {
+    "arubanetworking.hpe.com",
+    "arubanetworks.com",
+    "developer.arubanetworks.com",
+    "feature-navigator.arubanetworking.hpe.com",
+    "hpe.com",
+    "juniper.net",
+    "mistsys.com",
+    "mist.com",
+    "support.hpe.com",
+}
+
+_AOSCX_VERSION_RE = re.compile(
+    r"(?<!\d)(\d{1,2})[-_.](\d{1,2})[-_.](\d{1,4})(?!\d)"
+)
+_JUNOS_VERSION_RE = re.compile(
+    r"(?<!\d)(\d{2})[._-](\d{1,2})(?:[._-]?[rR](\d+))?(?!\d)"
+)
+_YEAR_MONTH_RE = re.compile(
+    r"(?<!\d)(20\d{2})[-_./](0?[1-9]|1[0-2])"
+    r"(?:[-_./](0?[1-9]|[12]\d|3[01]))?(?!\d)"
+)
+_MODEL_RE = re.compile(
+    r"(?<![a-z0-9])(ex\d{3,5}(?:-[a-z]{1,3})?|ap\d{2,4}(?:-[a-z]{1,3})?)(?![a-z0-9])",
+    re.IGNORECASE,
+)
+_MONTHS = {
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
+}
+
 
 def extract_source_url(text: str) -> str | None:
     """Extract a leading scraper provenance comment from source text."""
@@ -163,6 +238,253 @@ def _file_source_url(path: Path, chunked_text: str) -> str | None:
     except OSError:
         return None
     return extract_source_url(raw_head)
+
+
+def _normalize_model(value: str | None) -> str | None:
+    if not value:
+        return None
+    return re.sub(r"[-_]+", "-", unquote(str(value)).strip()).upper() or None
+
+
+def _source_vendor(
+    source: str,
+    source_url: str | None,
+    path: str = "",
+) -> str | None:
+    host = (urlparse(source_url).hostname or "").lower() if source_url else ""
+    haystack = f"{source} {path} {source_url or ''}".lower()
+    if host.endswith(("juniper.net", "mistsys.com", "mist.com")):
+        return "juniper"
+    if host.endswith(("arubanetworks.com", "arubanetworking.hpe.com", "hpe.com")):
+        return "aruba"
+    if "mist" in haystack or source.startswith(("junos_", "juniper_")):
+        return "juniper"
+    if source in {
+        "aos_techdocs",
+        "aoscx_guides",
+        "aoscx_release_notes",
+        "clearpass_guide",
+        "devhub",
+        "developer_docs",
+        "feature_navigator",
+        "nac_docs",
+        "product_specs",
+        "product_datasheets",
+        "security_advisories",
+        "tech_docs",
+        "techdocs_html",
+        "vsg_docs",
+    }:
+        return "aruba"
+    return None
+
+
+def _source_product(
+    source: str,
+    path: str,
+    source_url: str | None,
+    product_hint: str | None,
+) -> str | None:
+    haystack = f"{source} {path} {source_url or ''} {product_hint or ''}".lower()
+    if "mist" in haystack:
+        return "mist"
+    if "cppm" in haystack or "clearpass" in haystack:
+        return "clearpass"
+    if "edgeconnect" in haystack:
+        return "edgeconnect"
+    if "fabric-composer" in haystack or "afc-" in haystack:
+        return "fabric-composer"
+    if "apstra" in haystack:
+        return "apstra"
+    if "aos8" in haystack or "aos-8" in haystack:
+        return "aos8"
+    if "aoscx" in haystack or "aos-cx" in haystack:
+        return "aos-cx"
+    if "aos-s" in haystack or "aos_s" in haystack:
+        return "aos-s"
+    if re.search(r"(?<![a-z])uxi(?![a-z])", haystack):
+        return "uxi"
+    if source == "aos_techdocs" or "aos10" in haystack:
+        return "aos10"
+    if source.startswith("junos_") or "junos" in haystack:
+        return "junos"
+    if source == "feature_navigator":
+        return "aos-cx" if "wired" in haystack or "switch" in haystack else "aos10"
+    if source == "product_datasheets":
+        return "ex-series" if "/switches/ex-series/" in haystack else "mist"
+    if "central" in haystack or source in {
+        "devhub",
+        "developer_docs",
+        "nac_docs",
+        "openapi_specs",
+        "techdocs_html",
+    }:
+        return "central"
+    return product_hint.strip().lower() if product_hint and product_hint.strip() else None
+
+
+def _source_platform(source: str, path: str, product: str | None) -> str | None:
+    haystack = f"{source} {path}".lower()
+    if product == "junos":
+        for platform in ("ex", "mx", "qfx", "srx"):
+            if re.search(rf"(?<![a-z]){platform}(?![a-z])", haystack):
+                return platform
+    if product == "ex-series":
+        return "switch"
+    if product == "aos-cx":
+        return "switch"
+    if product == "aos10":
+        return "wireless"
+    if product == "aos8":
+        return "wireless"
+    if product == "clearpass":
+        return "nac"
+    if product in {"mist", "central", "edgeconnect", "fabric-composer", "apstra", "uxi"}:
+        return "cloud"
+    if source == "product_datasheets":
+        return "access-point" if "/ap-" in haystack or "access-point" in haystack else "switch"
+    return None
+
+
+def _release_and_version(
+    path: str,
+    product: str | None,
+    version_hint: str | None,
+) -> tuple[str | None, str | None]:
+    if version_hint:
+        version = str(version_hint).strip()
+        if version:
+            parts = re.findall(r"\d+", version)
+            release = ".".join(parts[:2]) if len(parts) >= 2 else None
+            return release, version
+
+    if product == "aos-cx":
+        match = _AOSCX_VERSION_RE.search(path)
+        if match:
+            major, minor, patch = match.groups()
+            return f"{int(major)}.{int(minor)}", f"{int(major)}.{int(minor)}.{int(patch):04d}"
+    if product == "junos":
+        match = _JUNOS_VERSION_RE.search(path)
+        if match:
+            major, minor, revision = match.groups()
+            release = f"{major}.{int(minor)}"
+            version = release + (f"R{revision}" if revision else "")
+            return release, version
+    return None, None
+
+
+def _source_model(path: str, product: str | None, platform: str | None) -> str | None:
+    normalized = path.replace("_", "-")
+    if product == "aos-cx":
+        match = re.search(
+            r"(?:^|/)(?:cli-reference|fundamentals|guide)-([a-z0-9/]+)",
+            normalized,
+            re.I,
+        )
+        if match:
+            model = match.group(1).split("/", 1)[0]
+            if re.fullmatch(r"[0-9]{3,5}(?:l|i)?", model, re.I):
+                return _normalize_model(model)
+        parts = normalized.split("/")
+        if len(parts) > 1 and re.fullmatch(r"[0-9]{3,5}(?:l|i)?", parts[1], re.I):
+            return _normalize_model(parts[1])
+        for part in parts:
+            if re.fullmatch(r"[0-9]{3,5}(?:l|i)?", part, re.I):
+                return _normalize_model(part)
+    match = _MODEL_RE.search(normalized)
+    return _normalize_model(match.group(1)) if match else None
+
+
+def _authority(
+    source: str,
+    source_url: str | None,
+    document_family: str | None,
+    provenance: Mapping[str, object] | None,
+    path: str = "",
+) -> str | None:
+    if provenance and provenance.get("authority"):
+        return str(provenance["authority"])
+    host = (urlparse(source_url).hostname or "").lower() if source_url else ""
+    if host.endswith(tuple(_OFFICIAL_VENDOR_HOSTS)) or _source_vendor(source, source_url, path):
+        return (
+            "official_vendor_openapi"
+            if document_family == "api-reference"
+            else "official_vendor"
+        )
+    return None
+
+
+def _freshness(
+    path: str,
+    provenance: Mapping[str, object] | None,
+) -> str | None:
+    if provenance:
+        for key in ("freshness", "reviewed_at", "fetched_at", "retrieved_at"):
+            value = provenance.get(key)
+            if value:
+                return str(value)
+    match = _YEAR_MONTH_RE.search(path)
+    if match:
+        year, month, day = match.groups()
+        result = f"{year}-{int(month):02d}"
+        return f"{result}-{int(day):02d}" if day else result
+    parts = [part.lower() for part in path.replace("\\", "/").split("/")]
+    for index, part in enumerate(parts):
+        if part not in _MONTHS:
+            continue
+        if index + 1 >= len(parts):
+            continue
+        year_match = re.fullmatch(r"(20\d{2})(?:\.[a-z0-9]+)?", parts[index + 1])
+        if year_match:
+            return f"{year_match.group(1)}-{_MONTHS[part]:02d}"
+    return None
+
+
+def derive_metadata(
+    source: str,
+    file_path: str,
+    source_url: str | None = None,
+    *,
+    product_hint: str | None = None,
+    version_hint: str | None = None,
+    record_type: str = "document",
+    provenance: Mapping[str, object] | None = None,
+) -> dict[str, str | None]:
+    """Derive deterministic, conservative metadata from ingestion provenance."""
+    source = str(source).strip().lower()
+    file_path = str(file_path).replace("\\", "/")
+    document_family = _DOCUMENT_FAMILIES.get(source)
+    if document_family is None:
+        document_family = {
+            "security-advisory": "security-advisory",
+            "lifecycle": "lifecycle",
+        }.get(SOURCE_META.get(source, ""))
+    vendor = _source_vendor(source, source_url, file_path)
+    product = _source_product(source, file_path, source_url, product_hint)
+    platform = _source_platform(source, file_path, product)
+    model = _source_model(file_path, product, platform)
+    release, version = _release_and_version(file_path, product, version_hint)
+    return {
+        "vendor": vendor,
+        "product": product,
+        "platform": platform,
+        "model": model,
+        "release": release,
+        "version": version,
+        "document_family": document_family or SOURCE_META.get(source),
+        "record_type": record_type,
+        "authority": _authority(
+            source,
+            source_url,
+            document_family,
+            provenance,
+            file_path,
+        ),
+        "freshness": _freshness(file_path, provenance),
+    }
+
+
+derive_rag_metadata = derive_metadata
 
 
 def _schema_to_text(spec_name: str, schema_name: str, schema: dict) -> str | None:
@@ -231,6 +553,7 @@ def collect_openapi_points(source_dir: Path, doc_type: str = "openapi") -> list[
             continue
 
         spec_name = spec.get("info", {}).get("title", path.stem)
+        spec_version = spec.get("info", {}).get("version")
         try:
             rel_path = str(path.resolve().relative_to(SOURCES_DIR.resolve()))
         except ValueError:
@@ -246,6 +569,13 @@ def collect_openapi_points(source_dir: Path, doc_type: str = "openapi") -> list[
             if not text or not text.strip():
                 continue
             chunk_key = f"{rel_path}:schema:{schema_name}"
+            metadata = derive_metadata(
+                source_dir.name,
+                rel_path,
+                product_hint=spec_name,
+                version_hint=spec_version,
+                record_type="schema",
+            )
             records.append(
                 {
                     "id": _md5_uuid(chunk_key),
@@ -254,6 +584,7 @@ def collect_openapi_points(source_dir: Path, doc_type: str = "openapi") -> list[
                     "doc_type": doc_type,
                     "file_path": rel_path,
                     "chunk_index": len(records),
+                    **metadata,
                 }
             )
 
@@ -266,6 +597,13 @@ def collect_openapi_points(source_dir: Path, doc_type: str = "openapi") -> list[
                     continue
                 text = _endpoint_to_text(spec_name, api_path, method, op)
                 chunk_key = f"{rel_path}:path:{method}:{api_path}"
+                metadata = derive_metadata(
+                    source_dir.name,
+                    rel_path,
+                    product_hint=spec_name,
+                    version_hint=spec_version,
+                    record_type="operation",
+                )
                 records.append(
                     {
                         "id": _md5_uuid(chunk_key),
@@ -274,6 +612,7 @@ def collect_openapi_points(source_dir: Path, doc_type: str = "openapi") -> list[
                         "doc_type": doc_type,
                         "file_path": rel_path,
                         "chunk_index": len(records),
+                        **metadata,
                     }
                 )
 
@@ -310,6 +649,7 @@ def collect_points(source_dir: Path, doc_type: str) -> list[dict]:
             continue
         source_url = _file_source_url(path, file_text)
         chunks = chunk_text_with_breadcrumbs(file_text)
+        metadata = derive_metadata(source_dir.name, rel_path, source_url)
         for i, (chunk, breadcrumb) in enumerate(chunks):
             records.append(
                 {
@@ -322,6 +662,7 @@ def collect_points(source_dir: Path, doc_type: str) -> list[dict]:
                     "content_hash": content_hash(chunk),
                     "source_url": source_url,
                     "heading_breadcrumb": breadcrumb,
+                    **metadata,
                 }
             )
     return records
@@ -384,7 +725,7 @@ def upload_lancedb(
     (one embed pass so parallel workers spawn once), add rows in batches into a
     staging table, assert every ingested source landed >0 chunks (R2 — a
     silently-empty source poisoned the old index), then atomically swap the
-    staging table into place and build its FTS index.
+    staging table into place and build its ANN, metadata, and FTS indexes.
 
     Building into a staging table (rather than overwriting the live "docs"
     table on the first batch) means a crash partway through a large rebuild
@@ -432,8 +773,8 @@ def upload_lancedb(
 
     print("  swapping staged index into place...", flush=True)
     live_table = lance_client.promote_staging_table(db, staging_name)
-    print("  building FTS index...", flush=True)
-    lance_client.build_fts_index(live_table)
+    print("  building vector and FTS indexes...", flush=True)
+    lance_client.build_search_indexes(live_table)
 
 
 def upload_lancedb_incremental(
@@ -479,7 +820,12 @@ def upload_lancedb_incremental(
         )
 
     db = lance_client.connect()
-    required_columns = {"content_hash", "source_url", "heading_breadcrumb"}
+    required_columns = {
+        "content_hash",
+        "source_url",
+        "heading_breadcrumb",
+        *RAG_METADATA_FIELDS,
+    }
     missing_columns = sorted(required_columns - lance_client.docs_columns(db))
     if missing_columns:
         print(
@@ -567,8 +913,8 @@ def upload_lancedb_incremental(
     if table is None:
         raise SystemExit("LanceDB docs table disappeared during incremental ingest")
     if changed or removed:
-        print("  rebuilding FTS index...", flush=True)
-        lance_client.build_fts_index(table)
+        print("  rebuilding vector and FTS indexes...", flush=True)
+        lance_client.build_search_indexes(table)
 
     counts = lance_client.source_counts(db)
     empty = [source for source in ingested_sources if counts.get(source, 0) == 0]
@@ -591,6 +937,89 @@ def missing_required_sources(sources_dir: Path | None = None) -> list[str]:
     return sorted(name for name in _required_sources() if not (base / name).is_dir())
 
 
+# Authority ranking for dedup: when multiple records share a content_hash the one
+# from the highest-authority source is kept as the canonical representative.
+# Sources not listed here rank at 0 (lowest).
+_DEDUP_SOURCE_PRIORITY: dict[str, int] = {
+    # Primary/official prose docs — authoritative sources rank highest
+    "developer_docs": 90,
+    "techdocs_html": 85,
+    "tech_docs": 85,
+    "nac_docs": 80,
+    "aoscx_guides": 75,
+    "aoscx_release_notes": 70,
+    "clearpass_guide": 70,
+    "mist_docs": 70,
+    "aos_techdocs": 65,
+    "vsg_docs": 60,
+    "feature_navigator": 55,
+    "product_datasheets": 50,
+    "mist_product_updates": 50,
+    "junos_ex_hardware": 45,
+    "junos_ex_release_notes": 45,
+    "junos_mx_hardware": 45,
+    "junos_mx_release_notes": 45,
+    "junos_qfx_hardware": 45,
+    "junos_qfx_release_notes": 45,
+    "junos_srx_hardware": 45,
+    "junos_srx_release_notes": 45,
+    "security_advisories": 40,
+    "juniper_security_advisories": 40,
+    "lifecycle_notices": 35,
+    "juniper_lifecycle": 35,
+    "juniper_kb": 30,
+    "devhub": 20,
+}
+
+
+def dedup_records(records: list[dict]) -> tuple[list[dict], int]:
+    """Remove exact-duplicate content from the record list before embedding.
+
+    38% of the corpus is boilerplate repeated verbatim across multiple source
+    files — license text, standard upgrade steps, overview headers that appear
+    in every AOS-CX patch release note. Embedding and storing 100k+ redundant
+    chunks wastes space and degrades search quality by flooding results with
+    near-identical entries.
+
+    Strategy:
+    - Group by ``content_hash`` (exact duplicate detection via SHA-256 prefix).
+    - Within each group, keep the record from the highest-priority source
+      (``_DEDUP_SOURCE_PRIORITY``). Ties are broken by lexicographic file_path
+      order to make the selection stable across runs.
+    - Discard the other records — their content_hash is still the canonical
+      match key, so search-time ``_dedup_by_content`` will never see the
+      duplicates.
+
+    Returns ``(deduped_records, n_dropped)``. Chunks with no ``content_hash``
+    (should not happen in current ingestion, but handled defensively) are
+    always kept.
+    """
+    by_hash: dict[str, dict] = {}
+    no_hash: list[dict] = []
+
+    for rec in records:
+        ch = rec.get("content_hash")
+        if not ch:
+            no_hash.append(rec)
+            continue
+        existing = by_hash.get(ch)
+        if existing is None:
+            by_hash[ch] = rec
+        else:
+            # Keep the higher-priority source; break ties by file_path
+            existing_priority = _DEDUP_SOURCE_PRIORITY.get(existing.get("source", ""), 0)
+            new_priority = _DEDUP_SOURCE_PRIORITY.get(rec.get("source", ""), 0)
+            if new_priority > existing_priority or (
+                new_priority == existing_priority
+                and rec.get("file_path", "") < existing.get("file_path", "")
+            ):
+                by_hash[ch] = rec
+
+    deduped = list(by_hash.values()) + no_hash
+    n_dropped = len(records) - len(deduped)
+    return deduped, n_dropped
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--backend", choices=("lancedb", "redis"), default="lancedb")
@@ -608,6 +1037,17 @@ def main():
         default=None,
         help=("fastembed worker processes (Linux; macOS safely falls back in-process)"),
     )
+    parser.add_argument(
+        "--dedup-on-ingest",
+        action="store_true",
+        help=(
+            "Drop exact-duplicate content (same content_hash) before embedding. "
+            "Keeps the most authoritative representative of each unique chunk. "
+            "Reduces index size by up to 38%% without re-downloading sources. "
+            "Not compatible with --incremental (incremental upsert handles "
+            "duplicate avoidance at the row level)."
+        ),
+    )
     args = parser.parse_args()
 
     if args.backend == "lancedb" and args.source:
@@ -616,6 +1056,10 @@ def main():
         )
     if args.backend == "redis" and args.incremental:
         parser.error("--incremental applies only to the lancedb backend")
+    if args.dedup_on_ingest and args.incremental:
+        parser.error("--dedup-on-ingest is incompatible with --incremental")
+    if args.dedup_on_ingest and args.backend == "redis":
+        parser.error("--dedup-on-ingest applies only to the lancedb backend")
     if args.backend == "lancedb" and not args.incremental and not args.dry_run:
         missing = missing_required_sources(SOURCES_DIR)
         if missing:
@@ -645,6 +1089,13 @@ def main():
         print(f"  → {len(records)} chunks")
 
     print(f"\nTotal chunks: {len(all_records)}")
+
+    if args.dedup_on_ingest:
+        all_records, n_dropped = dedup_records(all_records)
+        print(
+            f"  --dedup-on-ingest: dropped {n_dropped} exact-duplicate chunks "
+            f"→ {len(all_records)} unique chunks remain"
+        )
 
     if args.dry_run:
         print("Dry run — no upload.")

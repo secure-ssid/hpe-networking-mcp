@@ -1,5 +1,4 @@
 {
-  "_comment": "Full read/write stdio profile: loads every core and optional backend and enables all ordinary platform write gates. Write tools still retain dry_run defaults, confirm/elicitation requirements, capability annotations, and dedicated safeguards such as the separate AOS8 rollback gate. Use only in a trusted environment. Replace /path/to/hpe-networking-mcp with your local clone path.",
   "mcpServers": {
     "hpe-networking-mcp": {
       "command": "/path/to/hpe-networking-mcp/.venv/bin/python3",

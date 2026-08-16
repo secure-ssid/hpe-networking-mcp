@@ -72,6 +72,17 @@ def test_built_in_profiles_include_stdio_and_http():
     assert "local-router" in profiles
     assert profiles["local-router"].transport == "stdio"
     assert profiles["local-router"].command
+    assert profiles["local-router"].env == {
+        "PYTHONPATH": str(Path(__file__).resolve().parents[2] / "src"),
+        "CREDS_PATH": str(Path(__file__).resolve().parents[2] / "config" / "credentials.yaml"),
+        "HPE_MCP_ROUTER_MODE": "minimal",
+        "HPE_MCP_TOOLSETS": "central,glp,rag",
+        "HPE_MCP_ACCESS_PROFILE": "safe-read-only",
+        "HPE_MCP_READONLY": "1",
+        "HPE_MCP_PRODUCT_ACCESS": "read-only",
+        "HPE_MCP_CENTRAL_WRITES": "0",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "0",
+    }
     assert profiles["local-http"].transport == "streamable-http"
     assert profiles["local-http"].url
 
@@ -99,6 +110,55 @@ def test_load_config_merges_user_json(tmp_path: Path, monkeypatch: pytest.Monkey
     assert "extra" in cfg.profiles
     assert cfg.default_profile == "extra"
     assert cfg.profiles["extra"].url.endswith("/mcp")
+
+
+@pytest.mark.parametrize(
+    ("contents", "match"),
+    [
+        ("{", "invalid client configuration"),
+        (
+            json.dumps(
+                {
+                    "servers": {
+                        "bad": {
+                            "transport": "unsupported",
+                            "url": "http://127.0.0.1:9999/mcp",
+                        }
+                    }
+                }
+            ),
+            "unsupported transport",
+        ),
+        (
+            json.dumps({"defaultProfile": "missing", "servers": {}}),
+            "unknown profile",
+        ),
+    ],
+)
+def test_load_config_rejects_invalid_explicit_host_configs(
+    tmp_path: Path, contents: str, match: str
+):
+    path = tmp_path / "config.json"
+    path.write_text(contents, encoding="utf-8")
+
+    with pytest.raises(ValueError, match=match):
+        load_client_config(config_path=path)
+
+
+def test_load_config_rejects_missing_explicit_host_config(tmp_path: Path):
+    with pytest.raises(ValueError, match="configuration file not found"):
+        load_client_config(config_path=tmp_path / "missing.json")
+
+
+def test_load_config_rejects_invalid_explicit_environment_host_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    path = tmp_path / "config.json"
+    path.write_text("{", encoding="utf-8")
+    monkeypatch.setenv("HPE_MCP_CLIENT_CONFIG", str(path))
+
+    with pytest.raises(ValueError, match="invalid client configuration"):
+        load_client_config(repo_root=tmp_path)
 
 
 def test_profile_to_params_stdio_and_http():
@@ -179,6 +239,35 @@ def test_normalize_argv_defaults_to_shell():
     assert _normalize_argv(["--json", "profiles"]) == ["--json", "profiles"]
     assert _normalize_argv(["version"]) == ["version"]
     assert _normalize_argv(["-h"]) == ["-h"]
+
+
+def test_bare_cli_uses_streaming_chat_in_a_tty(monkeypatch: pytest.MonkeyPatch):
+    import hpe_networking_mcp.cli.mcp_cli as cli
+
+    class _Tty:
+        def isatty(self) -> bool:
+            return True
+
+    async def fake_chat(*args, **kwargs):
+        return 17
+
+    monkeypatch.setattr(cli.sys, "stdin", _Tty())
+    monkeypatch.setattr(cli, "run_chat", fake_chat)
+    monkeypatch.setattr(cli, "run_repl", lambda *args, **kwargs: 18)
+
+    assert cli.main([]) == 17
+
+
+def test_bare_cli_exits_without_connecting_when_not_a_tty(monkeypatch: pytest.MonkeyPatch):
+    import hpe_networking_mcp.cli.mcp_cli as cli
+
+    class _Pipe:
+        def isatty(self) -> bool:
+            return False
+
+    monkeypatch.setattr(cli.sys, "stdin", _Pipe())
+
+    assert cli.main([]) == 0
 
 
 def test_mcp_cli_version_offline():
@@ -397,7 +486,6 @@ def test_document_store_search_content(tmp_path: Path):
 
 def test_diagram_intent_parsing_and_model():
     from hpe_networking_mcp.cli_client.diagram_workflow import (
-        DiagramPreferences,
         parse_diagram_intent,
     )
 
@@ -418,7 +506,8 @@ def test_diagram_intent_parsing_and_model():
 
     # Test detailed multi-vendor + auth profiling prompt
     pref_rich = parse_diagram_intent(
-        "3 tier network with mist going into detail with how clients authenticating with profiled roles etc with ex and cx"
+        "3 tier network with mist going into detail with how clients "
+        "authenticating with profiled roles etc with ex and cx"
     )
     roles_rich = {n["role"] for n in pref_rich.nodes}
     assert "client" in roles_rich
@@ -475,7 +564,6 @@ def test_format_tool_schema():
     assert "Required" in rendered
 
 
-
 def test_session_manager_connection_state():
     from hpe_networking_mcp.cli_client.sessions import ConnectionState, SessionManager
 
@@ -487,6 +575,7 @@ def test_session_manager_connection_state():
 
 def test_command_status_and_tool_explore():
     import asyncio
+
     from hpe_networking_mcp.cli_client.commands import cmd_status, cmd_tool_explore
     from hpe_networking_mcp.cli_client.config import ClientConfig, ServerProfile
     from hpe_networking_mcp.cli_client.safety import SafetyPolicy
@@ -557,5 +646,62 @@ def test_tui_slash_and_natural_language_handling():
     assert normalize_tui_input("/status") == ["status"]
     assert normalize_tui_input("/skills") == ["skills"]
     assert normalize_tui_input("/docs") == ["docs"]
+    assert normalize_tui_input("/profile dev") == ["profile", "dev"]
+    assert normalize_tui_input("/products") == ["products"]
+    assert normalize_tui_input("/usage") == ["usage"]
     assert normalize_tui_input("specs on cx6300") == ["ask", "specs on cx6300"]
 
+
+def test_format_usage_helper():
+    from hpe_networking_mcp.cli_client.output import format_usage
+
+    assert format_usage({}) == "none"
+    assert (
+        format_usage({"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120})
+        == "prompt=100, completion=20, total=120"
+    )
+    assert (
+        format_usage({"input_tokens": 50, "output_tokens": 25}) == "input=50, output=25, total=75"
+    )
+
+
+def test_tui_dispatch_profile_products_usage():
+    import asyncio
+
+    from hpe_networking_mcp.cli_client.config import ClientConfig, ServerProfile
+    from hpe_networking_mcp.cli_client.safety import SafetyPolicy
+    from hpe_networking_mcp.cli_client.tui import HpeMcpApp
+
+    class FakeManager:
+        state = object()
+        connected = {}
+        tools = {}
+
+        def resolve_tool_name(self, name):
+            raise KeyError(name)
+
+    cfg = ClientConfig(
+        profiles={
+            "local-router": ServerProfile(name="local-router", transport="stdio", command="false"),
+            "alt-profile": ServerProfile(name="alt-profile", transport="stdio", command="false"),
+        },
+        default_profile="local-router",
+    )
+    app = HpeMcpApp(cfg, SafetyPolicy())
+    app.mgr = FakeManager()  # type: ignore[assignment]
+
+    async def _run():
+        res_prods = await app._dispatch(["products"])
+        assert "Active Product Configuration" in res_prods
+
+        res_usage_empty = await app._dispatch(["usage"])
+        assert "No AI token usage" in res_usage_empty
+
+        app._session_usage = {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}
+        res_usage_has = await app._dispatch(["usage"])
+        assert "prompt=10" in res_usage_has
+
+        res_profs = await app._dispatch(["profiles"])
+        assert "alt-profile" in res_profs
+
+    asyncio.run(_run())

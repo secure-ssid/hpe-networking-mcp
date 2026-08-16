@@ -39,7 +39,10 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "family": "AOS-CX Entry Campus Access Switches",
         "switching_capacity": "Up to 176 Gbps",
         "throughput": "Up to 98.6 Mpps",
-        "stacking": "Standalone (no VSF stacking)",
+        "stacking": (
+            "Virtual Switching Framework (VSF) up to 6 switches on AOS-CX "
+            "10.16.1000 and later; standalone on earlier releases"
+        ),
         "uplinks": "4x 1/10GbE SFP+ (or 2x SFP on 12G model)",
         "access_ports": "12, 24, or 48 ports: 10/100/1000BASE-T",
         "poe": "IEEE 802.3at Class 4 PoE (up to 370W total budget)",
@@ -163,6 +166,38 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "architecture": "Junos OS with Mist AI cloud telemetry, redundant hot-swappable power supplies and fans",
         "layer3_features": "EVPN-VXLAN, BGP, OSPF, IS-IS, VRF, MACsec AES-256",
     },
+    "ex4000": {
+        "model": "Juniper Networks EX4000 Switch Series",
+        "vendor": "Juniper Networks / Mist AI",
+        "family": "Cloud-Native Campus and Branch Access Switches",
+        "switching_capacity": (
+            "30-100 Gbps unidirectional / 60-200 Gbps bidirectional, "
+            "model dependent"
+        ),
+        "throughput": "44-148 Mpps, model dependent",
+        "stacking": (
+            "Virtual Chassis up to 6 switches with up to 80 Gbps VC interconnect"
+        ),
+        "uplinks": (
+            "Fixed, model-dependent uplinks; typically 2x 1/10GbE SFP+ plus "
+            "2x 10GbE SFP+ VC/uplink ports"
+        ),
+        "access_ports": (
+            "8, 12, 24, or 48 x 1GbE; MP models add 2.5GbE multi-gigabit ports"
+        ),
+        "poe": (
+            "PoE+ up to 30W/port or PoE++ up to 60W/port; up to 960W total "
+            "on EX4000-48MP"
+        ),
+        "architecture": (
+            "Junos OS with Mist AI/Wired Assurance; integrated fixed power and "
+            "fans, with compact fanless models"
+        ),
+        "layer3_features": (
+            "Layer 2 and Layer 3; Flex licensing enables IPv4/IPv6 OSPF and "
+            "BGP, with static routing, RIP, IS-IS, VRRP, and VRF-Lite"
+        ),
+    },
     "ap505": {
         "model": "Aruba AP-505 Campus Access Point",
         "vendor": "Aruba / HPE",
@@ -257,6 +292,8 @@ _MODEL_ALIASES: dict[str, str] = {
     "10000": "cx10000",
     "ex4400": "ex4400",
     "4400": "ex4400",
+    "ex4000": "ex4000",
+    "4000": "ex4000",
     "ex4100": "ex4100",
     "4100": "ex4100",
     "ex2300": "ex2300",
@@ -298,6 +335,13 @@ _HARDWARE_QUERY_HINTS = {
     "uplink",
     "uplinks",
     "poe",
+    "l2",
+    "l3",
+    "layer2",
+    "layer3",
+    "routing",
+    "license",
+    "licensing",
     "smartrate",
     "ports",
     "hardware",

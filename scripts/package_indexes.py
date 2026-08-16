@@ -45,11 +45,14 @@ DATA_DIR = ROOT / "data"
 DIST_DIR = ROOT / "dist"
 REQUIRED_ARTIFACTS = ("docs.lance", "tools.lance", "specs.sqlite")
 SOURCE_MANIFEST = ROOT / "ingestion" / "source_manifest.json"
+SOURCES_ROOT = ROOT / "ingestion" / "sources"
 LATEST_ARCHIVE = "hpe-networking-mcp-rag-index-latest.tar.gz"
 
 #: Bumped when the generated INDEX-MANIFEST.json shape changes so a stale
 #: manifest is rejected instead of silently half-read.
-INDEX_MANIFEST_SCHEMA_VERSION = 2
+#: v3 adds the per-source "sources" block (digest/count/refresh-timestamp/
+#: required flag) described in the module docstring's fail-closed contract.
+INDEX_MANIFEST_SCHEMA_VERSION = 3
 LOCAL_SOURCE_MANIFEST = DATA_DIR / "SOURCE-MANIFEST.json"
 LOCAL_INDEX_MANIFEST = DATA_DIR / "INDEX-MANIFEST.json"
 _RECONCILE_COMMAND = "uv run python scripts/package_indexes.py --write-local-manifests"
@@ -156,6 +159,75 @@ def _tree_sha256(root: Path) -> str:
     return digest.hexdigest()
 
 
+def _required_source_names() -> frozenset[str]:
+    """Source folders whose complete absence must fail a rebuild/package closed.
+
+    Reuses ``advisory_index.SOURCE_DIRS`` -- the same four security-advisory/
+    lifecycle source families ``ingestion/ingest_docs.py``'s
+    ``required_sources()`` and ``specs_index.rebuild_shared`` already treat
+    as load-bearing, so this manifest's notion of "required" can never drift
+    from the code path that actually enforces it. Imported lazily to keep
+    this script's baseline import light.
+    """
+    from hpe_networking_mcp.pipeline.clients import advisory_index
+
+    return frozenset(advisory_index.SOURCE_DIRS)
+
+
+def _source_artifact_summary(source_dir: Path) -> dict[str, object]:
+    """On-disk digest/count/refresh-timestamp summary for one declared source.
+
+    Mirrors ``_artifact_manifest``'s per-index-artifact digest (``_tree_sha256``/
+    ``_modified_at``) at the per-source-folder granularity, so a single
+    ``ingestion/sources/<name>`` directory going missing, appearing empty, or
+    silently changing content is visible in the manifest the same way a
+    rebuilt docs.lance already is. A present-but-empty directory reports
+    ``sha256: None`` -- there is no meaningful content digest for zero files.
+    """
+    if not source_dir.is_dir():
+        return {
+            "present": False,
+            "file_count": 0,
+            "bytes": 0,
+            "sha256": None,
+            "last_refreshed_at": None,
+        }
+    files = [item for item in source_dir.rglob("*") if item.is_file()]
+    return {
+        "present": True,
+        "file_count": len(files),
+        "bytes": sum(item.stat().st_size for item in files),
+        "sha256": _tree_sha256(source_dir) if files else None,
+        "last_refreshed_at": _modified_at(source_dir) if files else None,
+    }
+
+
+def _per_source_manifest(
+    declared_sources: list[str],
+    sources_dir: Path,
+    docs_sources_counts: dict[str, int],
+) -> dict[str, dict[str, object]]:
+    """Per-declared-source digest/count/refresh-timestamp/required summary.
+
+    Combines the declared source list (``ingestion/source_manifest.json``),
+    each source's on-disk artifact under ``ingestion/sources/<name>``, its
+    required/optional status (see ``_required_source_names``), and how many
+    chunks of it actually landed in the live docs.lance table (from
+    ``_index_contents``'s ``docs_sources``) -- so a required source that is
+    present on disk but was never actually indexed (every file failed to
+    parse, say) is visible here too, not just a wholly-missing directory.
+    """
+    required = _required_source_names()
+    return {
+        name: {
+            **_source_artifact_summary(sources_dir / name),
+            "required": name in required,
+            "indexed_chunk_count": docs_sources_counts.get(name, 0),
+        }
+        for name in declared_sources
+    }
+
+
 def _index_contents(data_dir: Path | None = None) -> dict[str, object]:
     """Row/identity counts actually stored in the local LanceDB tables.
 
@@ -242,8 +314,13 @@ def _artifact_manifest(version: str) -> dict[str, object]:
             ),
         },
         "artifacts": artifacts,
-        "index_contents": _index_contents(),
-        "source_manifest": _source_manifest_summary(),
+        "index_contents": (index_contents := _index_contents()),
+        "source_manifest": (source_summary := _source_manifest_summary()),
+        "sources": _per_source_manifest(
+            source_summary["sources"],
+            SOURCES_ROOT,
+            index_contents.get("docs_sources") or {},
+        ),
         "restore": "tar -xzf hpe-networking-mcp-rag-index-<version>.tar.gz",
         "rebuild": (
             "uv run python ingestion/ingest_docs.py && "
@@ -383,6 +460,19 @@ def check_local_manifests(require_artifacts: bool = True) -> list[str]:
                     f"INDEX-MANIFEST.json specs.sqlite counts {recorded.get('counts')!r} != "
                     f"local {counts!r}"
                 )
+
+    recorded_per_source = manifest.get("sources") or {}
+    required_gaps = sorted(
+        name
+        for name, detail in recorded_per_source.items()
+        if isinstance(detail, dict)
+        and detail.get("required")
+        and not detail.get("indexed_chunk_count")
+    )
+    if required_gaps:
+        problems.append(
+            f"required source(s) have zero indexed chunks in INDEX-MANIFEST.json: {required_gaps}"
+        )
     return problems
 
 
@@ -395,6 +485,17 @@ def package_indexes(version: str, output_dir: Path) -> tuple[Path, Path]:
     archive = output_dir / f"hpe-networking-mcp-rag-index-{version}.tar.gz"
     checksum = archive.with_suffix(archive.suffix + ".sha256")
     manifest = _artifact_manifest(version)
+    required_gaps = sorted(
+        name
+        for name, detail in manifest["sources"].items()
+        if detail["required"] and not detail["indexed_chunk_count"]
+    )
+    if required_gaps:
+        raise SystemExit(
+            "Refusing to package: required source(s) have zero indexed chunks in "
+            f"data/docs.lance: {required_gaps}. Rebuild with a complete "
+            "ingestion/sources/ checkout before packaging a release."
+        )
 
     with tempfile.TemporaryDirectory() as tmp:
         manifest_path = Path(tmp) / "INDEX-MANIFEST.json"

@@ -124,7 +124,8 @@ def vector_search(
 ) -> list[dict]:
     """Search for similar documents using vector similarity.
 
-    Returns list of dicts with text, source, doc_type, file_path, chunk_index, score.
+    Returns list of dicts with text, source, doc_type, file_path, chunk_index,
+    score, and optional source_url/heading_breadcrumb provenance.
     """
     top_k = _clamp_top_k(top_k)
     vec_bytes = np.array(query_vector, dtype=np.float32).tobytes()
@@ -134,7 +135,16 @@ def vector_search(
     q = (
         Query(f"({filter_str})=>[KNN {top_k} @embedding $vec AS score]")
         .sort_by("score")
-        .return_fields("text", "source", "doc_type", "file_path", "chunk_index", "score")
+        .return_fields(
+            "text",
+            "source",
+            "doc_type",
+            "file_path",
+            "chunk_index",
+            "score",
+            "source_url",
+            "heading_breadcrumb",
+        )
         .paging(0, top_k)
         .dialect(2)
     )
@@ -146,14 +156,19 @@ def vector_search(
         # Redis cosine distance: 0 = identical, 1 = orthogonal. Convert to similarity.
         raw_score = float(getattr(doc, "score", 1.0))
         similarity = max(0.0, min(1.0, 1.0 - raw_score))
-        hits.append({
+        hit = {
             "text": getattr(doc, "text", ""),
             "source": getattr(doc, "source", ""),
             "doc_type": getattr(doc, "doc_type", ""),
             "file_path": getattr(doc, "file_path", ""),
             "chunk_index": int(getattr(doc, "chunk_index", 0) or 0),
             "score": round(similarity, 4),
-        })
+        }
+        for key in ("source_url", "heading_breadcrumb"):
+            value = getattr(doc, key, None)
+            if value is not None and value != "":
+                hit[key] = value
+        hits.append(hit)
     return hits
 
 

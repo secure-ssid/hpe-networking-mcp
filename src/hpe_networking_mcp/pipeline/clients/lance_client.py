@@ -8,7 +8,9 @@ Hybrid search (R5): vector similarity + native BM25 FTS, fused with Reciprocal
 Rank Fusion — this catches exact identifiers (WPA3_SAE, endpoint paths) that
 pure vector search misses, replacing the static _SOURCE_BOOST re-rank.
 Result rows match redis_client.vector_search's shape so rag.py can treat the
-backends interchangeably: {text, source, doc_type, file_path, chunk_index, score}.
+backends interchangeably, with optional provenance fields:
+{text, source, doc_type, file_path, chunk_index, score, source_url,
+heading_breadcrumb}.
 """
 
 from __future__ import annotations
@@ -32,10 +34,28 @@ DOCS_TABLE = "docs"
 TOOLS_TABLE = "tools"
 EMBEDDING_DIMS = 768
 MAX_SEARCH_TOP_K = 200
+VECTOR_INDEX_NAME = "vector_idx"
+FTS_INDEX_NAME = "text_idx"
+MIN_VECTOR_INDEX_ROWS = 3
+METADATA_INDEX_FIELDS = (
+    "source",
+    "doc_type",
+    "vendor",
+    "product",
+    "platform",
+    "model",
+    "release",
+    "version",
+    "document_family",
+    "record_type",
+    "authority",
+    "freshness",
+)
 
 _SOURCE_RE = re.compile(r"^[a-z0-9_]+$")
 _DOC_ID_RE = re.compile(r"^[0-9a-f-]{36}$")
 SourceFilter = str | tuple[str, ...] | list[str] | None
+MetadataFilter = dict[str, str | tuple[str, ...] | list[str]]
 
 
 def _clamp_top_k(top_k: int) -> int:
@@ -103,6 +123,20 @@ def docs_columns(db, table_name: str = DOCS_TABLE) -> set[str]:
     return set(table.schema.names) if table is not None else set()
 
 
+def index_identity(db, table_name: str = DOCS_TABLE) -> str:
+    """Return a bounded identity string for cache invalidation and diagnostics."""
+    table = docs_table(db, table_name)
+    if table is None:
+        return "missing"
+    index_parts = []
+    for index in sorted(table.list_indices(), key=lambda item: item.name):
+        index_parts.append(
+            f"{index.name}:{index.index_type}:{index.num_indexed_rows}:"
+            f"{index.num_unindexed_rows}:{index.index_version}"
+        )
+    return f"v{table.version}:rows{table.count_rows()}:" + "|".join(index_parts)
+
+
 def docs_metadata(
     db,
     table_name: str = DOCS_TABLE,
@@ -161,7 +195,61 @@ def build_fts_index(table) -> None:
     """Build the native BM25 FTS index over text (call once after all adds)."""
     from lancedb.index import FTS
 
-    table.create_index("text", config=FTS(), replace=True)
+    table.create_index("text", name=FTS_INDEX_NAME, config=FTS(), replace=True)
+
+
+def build_vector_index(table) -> bool:
+    """Build the cosine ANN index used by dense and hybrid searches.
+
+    The previous ingestion path created only the text index, leaving vector
+    retrieval to scan every row. HNSW-SQ keeps the embedded index compact
+    while providing an ANN plan for the 768-dimensional normalized embeddings.
+    A failure is raised to the caller: silently shipping a table that looks
+    indexed but falls back to a full vector scan defeats the release check.
+    """
+    if table.count_rows() < MIN_VECTOR_INDEX_ROWS:
+        logger.info(
+            "Skipping vector ANN index for %s rows; LanceDB vector search "
+            "remains available without an ANN index.",
+            table.count_rows(),
+        )
+        return False
+
+    from lancedb.index import HnswSq
+
+    table.create_index(
+        "vector",
+        name=VECTOR_INDEX_NAME,
+        config=HnswSq(distance_type="cosine"),
+        replace=True,
+    )
+    return True
+
+
+def build_metadata_indexes(table) -> tuple[str, ...]:
+    """Build BTree indexes for metadata columns present in the table."""
+    from lancedb.index import BTree
+
+    columns = set(table.schema.names)
+    indexed: list[str] = []
+    for column in METADATA_INDEX_FIELDS:
+        if column not in columns:
+            continue
+        table.create_index(
+            column,
+            name=f"{column}_idx",
+            config=BTree(),
+            replace=True,
+        )
+        indexed.append(column)
+    return tuple(indexed)
+
+
+def build_search_indexes(table) -> bool:
+    """Build all retrieval indexes for a fully materialized docs table."""
+    build_fts_index(table)
+    build_metadata_indexes(table)
+    return build_vector_index(table)
 
 
 def _source_where_clause(source_filter: SourceFilter) -> str | None:
@@ -176,12 +264,28 @@ def _source_where_clause(source_filter: SourceFilter) -> str | None:
     return f"source IN ({quoted})" if len(values) > 1 else f"source = '{values[0]}'"
 
 
+def _metadata_where_clause(metadata_filter: MetadataFilter | None) -> str | None:
+    if not metadata_filter:
+        return None
+    clauses: list[str] = []
+    for field, raw_values in metadata_filter.items():
+        if field not in METADATA_INDEX_FIELDS:
+            raise ValueError(f"invalid metadata filter field: {field!r}")
+        values = (raw_values,) if isinstance(raw_values, str) else tuple(raw_values)
+        if not values or any(not isinstance(value, str) or not value for value in values):
+            raise ValueError(f"invalid metadata filter value for {field!r}")
+        quoted = ", ".join("'" + value.replace("'", "''") + "'" for value in values)
+        clauses.append(f"{field} IN ({quoted})" if len(values) > 1 else f"{field} = {quoted}")
+    return " AND ".join(clauses)
+
+
 def hybrid_search(
     db,
     query_text: str,
     query_vector: list[float],
     top_k: int = 15,
     source_filter: SourceFilter = None,
+    metadata_filter: MetadataFilter | None = None,
     table_name: str = DOCS_TABLE,
 ) -> list[dict[str, Any]]:
     """Hybrid (vector + BM25, RRF-fused) search over the docs table.
@@ -198,6 +302,9 @@ def hybrid_search(
         )
     top_k = _clamp_top_k(top_k)
     source_where = _source_where_clause(source_filter)
+    metadata_where = _metadata_where_clause(metadata_filter)
+    where_clauses = [clause for clause in (source_where, metadata_where) if clause]
+    where = " AND ".join(where_clauses) if where_clauses else None
     # limit() truncates EACH leg (vector, FTS) before RRF fusion — fetch deep
     # so fusion sees real overlap, then slice to top_k after.
     q = (
@@ -206,8 +313,8 @@ def hybrid_search(
         .text(query_text)
         .limit(max(top_k * 3, 15))
     )
-    if source_where:
-        q = q.where(source_where, prefilter=True)
+    if where:
+        q = q.where(where, prefilter=True)
     try:
         rows = q.to_list()
         score_key = "_relevance_score"
@@ -225,8 +332,8 @@ def hybrid_search(
             table_name,
         )
         vq = table.search(query_vector).limit(max(top_k * 3, 15))
-        if source_where:
-            vq = vq.where(source_where, prefilter=True)
+        if where:
+            vq = vq.where(where, prefilter=True)
         rows = vq.to_list()
         score_key = None
     hits = []
@@ -236,14 +343,20 @@ def hybrid_search(
         else:
             # Vector-only: convert L2 distance to a higher-is-better score.
             score = 1.0 / (1.0 + float(r.get("_distance", 0.0)))
-        hits.append({
+        hit = {
             "text": r.get("text", ""),
             "source": r.get("source", ""),
             "doc_type": r.get("doc_type", ""),
             "file_path": r.get("file_path", ""),
             "chunk_index": int(r.get("chunk_index", 0) or 0),
             "score": round(score, 4),
-        })
+        }
+        if r.get("content_hash"):
+            hit["content_hash"] = r["content_hash"]
+        for key in ("source_url", "heading_breadcrumb", *METADATA_INDEX_FIELDS):
+            if r.get(key) is not None:
+                hit[key] = r[key]
+        hits.append(hit)
     return hits
 
 

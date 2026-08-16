@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hpe-networking-mcp"
 version = "0.8.0"
-description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,717-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
+description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,719-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -77,6 +77,11 @@ dependencies = [
     "fastembed>=0.8.0",
     "websockets>=14.0",
     "textual>=8.2.8",
+]
+
+[project.optional-dependencies]
+milvus-lite = [
+    "pymilvus[milvus-lite]>=2.5.0,<3",
 ]
 
 [project.scripts]

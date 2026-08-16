@@ -24,11 +24,9 @@ real comparison data the UI renders:
   writing) — AOS10 is one shared OS image, so this is not split per
   hardware platform the way AOS-CX is.
 
-Only the *latest* release is requested per AOS-CX switch platform (a
-current-state snapshot, matching this repo's hardware_specs.py convention
-of documenting current specs rather than full version history), while the
-AOS10 side keeps every published release since the response stays small
-(~40KB) and shows which release introduced a feature.
+Every release is requested per AOS-CX switch platform. The latest release is
+still rendered as Markdown for semantic search, while a compact history JSON
+is written for exact release-to-release comparison.
 
 This was previously a declared-but-unfilled RAG source
 (ingestion/source_manifest.json's ``feature_navigator`` entry had
@@ -40,6 +38,7 @@ Usage:
     uv run python ingestion/scrape_feature_navigator.py
 Writes:
     ingestion/sources/feature_navigator/cx-<slug>.md   (one per switch platform)
+    ingestion/sources/feature_navigator/cx-<slug>-history.json
     ingestion/sources/feature_navigator/aos10-features.md
 """
 from __future__ import annotations
@@ -144,6 +143,42 @@ def format_switch_doc(product: dict, latest: str, rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def format_switch_history(
+    product: dict,
+    releases: list[str],
+    rows: list[dict],
+) -> dict:
+    """Return the compact structured matrix consumed by specs.sqlite."""
+    return {
+        "schema_version": 1,
+        "product_id": int(product["productID"]),
+        "product_name": _clean(product["productName"]),
+        "product_type": _clean(product["productType"]),
+        "minimum_supported_release": _clean(product["minSupportedRelease"]),
+        "releases": releases,
+        "source_url": (
+            f"{BASE_URL}/wired?mode=compare&productId={product['productID']}"
+        ),
+        "features": [
+            {
+                "feature_type": _clean(row.get("FeatureType") or "Other"),
+                "feature_name": html.unescape(_clean(row.get("FeatureName") or "")),
+                "feature_publication_release": row.get("FeaturePubRel"),
+                "support": {
+                    release: (
+                        _clean(row[release]) or "Not documented"
+                        if isinstance(row.get(release), str)
+                        else "Not documented"
+                    )
+                    for release in releases
+                },
+            }
+            for row in rows
+            if _clean(row.get("FeatureName") or "")
+        ],
+    }
+
+
 def scrape_switches() -> list[str]:
     results = []
     products = fetch_json("/api/productInfo")
@@ -168,7 +203,7 @@ def scrape_switches() -> list[str]:
                 "/api/switchReleaseCompatibility",
                 {
                     "productId": str(product["productID"]),
-                    "productReleaseNames": latest,
+                    "productReleaseNames": ",".join(releases),
                     "licenses": ALL_LICENSES,
                 },
             )
@@ -181,7 +216,16 @@ def scrape_switches() -> list[str]:
         doc = format_switch_doc(product, latest, rows)
         out_path = OUTPUT_DIR / f"cx-{slugify(name)}.md"
         out_path.write_text(doc, encoding="utf-8")
-        results.append(f"OK {name} ({len(rows)} features @ {latest}, {len(doc)} chars)")
+        history = format_switch_history(product, releases, rows)
+        history_path = OUTPUT_DIR / f"cx-{slugify(name)}-history.json"
+        history_path.write_text(
+            json.dumps(history, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        results.append(
+            f"OK {name} ({len(rows)} features across {len(releases)} releases; "
+            f"latest {latest})"
+        )
         if i % 5 == 0 or i == len(products):
             print(f"  [{i}/{len(products)}] {results[-1]}")
         time.sleep(0.3)
@@ -248,7 +292,10 @@ def main() -> None:
     aos10_result = scrape_aos10()
     print(f"  {aos10_result}")
 
-    print(f"\nDone. {len(switch_results) - len(errors)} switch docs written, {len(errors)} skipped/errored.")
+    print(
+        f"\nDone. {len(switch_results) - len(errors)} switch docs written, "
+        f"{len(errors)} skipped/errored."
+    )
     for e in errors:
         print(" ", e)
 

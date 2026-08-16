@@ -11,6 +11,8 @@ Layout:
 from __future__ import annotations
 
 import asyncio
+import json
+import os
 import re
 import shlex
 import time
@@ -30,6 +32,7 @@ from textual.worker import Worker
 from hpe_networking_mcp.cli_client.banner import package_version
 from hpe_networking_mcp.cli_client.commands import (
     cmd_tools_list,
+    create_reasoning_service,
     ensure_connected,
     parse_args_json,
 )
@@ -41,6 +44,7 @@ from hpe_networking_mcp.cli_client.diagram_workflow import (
 from hpe_networking_mcp.cli_client.output import (
     format_duration,
     format_tool_schema,
+    format_usage,
     redact_sensitive_text,
     tool_result_to_text,
 )
@@ -68,6 +72,9 @@ COMMAND_SUGGESTIONS = (
     "/skills list",
     "/skills show ",
     "/profiles",
+    "/profile ",
+    "/products",
+    "/usage",
     "/status",
     "/connect",
     "/clear",
@@ -77,11 +84,18 @@ COMMAND_SUGGESTIONS = (
 _LEGACY_PREFIX_COMMANDS = frozenset(
     {
         "ask",
+        "chat",
         "api",
         "find",
         "rag",
         "invoke-read",
         "connect",
+        "profile",
+        "products",
+        "product",
+        "toolsets",
+        "toolset",
+        "usage",
         "diagram",
         "tool",
         "explore",
@@ -188,6 +202,9 @@ Use `/` commands for expert controls:
 | `/docs list\\|add\\|remove\\|search` | Manage personal documents (`--collection name` to scope) |
 | `/skills list\\|show` | Show guided workflows |
 | `/profiles` | Show available MCP connections |
+| `/profile [name]` | View or switch active connection profile |
+| `/products` | View enabled product/toolset configuration |
+| `/usage` | View cumulative AI token usage |
 | `/status` | View connection state, profile, and tools |
 | `/connect [profile]` | (Re)connect MCP |
 | `/examples` | Show useful starter questions |
@@ -284,6 +301,8 @@ class StatusBar(Static):
         profile: str,
         transport: str = "",
         tools: int = 0,
+        products: str = "",
+        usage: str = "",
         message: str = "",
     ) -> None:
         ver = package_version()
@@ -295,6 +314,10 @@ class StatusBar(Static):
         ]
         if transport:
             bits.append(f"transport={transport}")
+        if products:
+            bits.append(f"products={products}")
+        if usage:
+            bits.append(f"tokens={usage}")
         if tools:
             bits.append(f"tools={tools}")
         bits.append("[dim]read-only default[/]")
@@ -324,12 +347,17 @@ class HpeMcpApp(App[int]):
         safety: SafetyPolicy,
         *,
         profile: str | None = None,
+        provider: str | None = None,
+        model: str | None = None,
     ) -> None:
         super().__init__()
         self.cfg = cfg
         self.safety = safety
         self.profile_name = profile or cfg.default_profile
+        self.provider = provider or cfg.ai_provider
+        self.model = model or cfg.ai_model
         self.mgr: SessionManager | None = None
+        self._reasoning_service = None
         self._history: list[str] = []
         self._hist_idx: int = 0
         self._busy = False
@@ -337,6 +365,17 @@ class HpeMcpApp(App[int]):
         self._busy_started: float | None = None
         self._command_worker: Worker[None] | None = None
         self._exit_code = 0
+        self._session_usage: dict[str, int] = {}
+
+    def _get_active_products(self) -> str:
+        prods = os.environ.get("HPE_MCP_PRODUCTS", "").strip()
+        toolsets = os.environ.get("HPE_MCP_TOOLSETS", "").strip()
+        parts = []
+        if prods:
+            parts.append(prods)
+        if toolsets:
+            parts.append(f"toolsets:{toolsets}")
+        return ",".join(parts) if parts else "default"
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -441,11 +480,16 @@ class HpeMcpApp(App[int]):
             self.mgr = SessionManager.create(namespace=True)
             await self.mgr.__aenter__()
             prof = await ensure_connected(self.mgr, self.cfg, profile=self.profile_name)
+            if self._reasoning_service is not None:
+                self._reasoning_service.session_manager = self.mgr
+                self._reasoning_service.safety_policy = self.safety
             status.set_status(
                 connected=True,
                 profile=prof.name,
                 transport=prof.transport,
                 tools=len(self.mgr.tools),
+                products=self._get_active_products(),
+                usage=format_usage(self._session_usage) if self._session_usage else "",
             )
             log.write(
                 Panel(
@@ -460,7 +504,13 @@ class HpeMcpApp(App[int]):
                 )
             )
         except Exception as exc:  # noqa: BLE001
-            status.set_status(connected=False, profile=self.profile_name, message="error")
+            status.set_status(
+                connected=False,
+                profile=self.profile_name,
+                products=self._get_active_products(),
+                usage=format_usage(self._session_usage) if self._session_usage else "",
+                message="error",
+            )
             log.write(
                 Panel(
                     Markdown(
@@ -591,6 +641,11 @@ class HpeMcpApp(App[int]):
             argv = normalize_tui_input(line)
             if not argv:
                 return
+            # ``normalize_tui_input`` keeps the old return shape for callers,
+            # but plain natural language is now model-backed chat. Explicit
+            # slash commands can still request legacy `ask`/RAG behavior.
+            if not line.lstrip().startswith("/") and argv[0] == "ask":
+                argv = ["chat", line]
 
             head = argv[0]
             if head == "connect":
@@ -649,14 +704,19 @@ class HpeMcpApp(App[int]):
                 profile=prof.name,
                 transport=prof.transport,
                 tools=len(self.mgr.tools),
+                products=self._get_active_products(),
+                usage=format_usage(self._session_usage) if self._session_usage else "",
             )
             log.write(
-                Text.from_markup(
-                    f"[green]connected[/] {prof.name} · {len(self.mgr.tools)} tools"
-                )
+                Text.from_markup(f"[green]connected[/] {prof.name} · {len(self.mgr.tools)} tools")
             )
         except Exception as exc:  # noqa: BLE001
-            status.set_status(connected=False, profile=self.profile_name)
+            status.set_status(
+                connected=False,
+                profile=self.profile_name,
+                products=self._get_active_products(),
+                usage=format_usage(self._session_usage) if self._session_usage else "",
+            )
             log.write(Text.from_markup(f"[red]connect failed:[/] {exc}"))
 
     async def _dispatch(self, argv: list[str]) -> str:
@@ -688,20 +748,31 @@ class HpeMcpApp(App[int]):
 
         # ai multi-turn reasoning
         if head in {"ai", "reason"} and len(argv) >= 2:
-            from hpe_networking_mcp.cli_client.ai import get_ai_backend
-            from hpe_networking_mcp.cli_client.ai.agent_loop import AgentReasoningLoop
+            head = "chat"
 
-            ai = get_ai_backend()
-            loop = AgentReasoningLoop(ai_backend=ai, session_manager=mgr)
-            parts = []
-            async for step in loop.run(" ".join(argv[1:])):
-                if step.step_type == "thought":
-                    parts.append(f"🧠 *{step.content}*\n")
-                elif step.step_type == "tool_call":
-                    parts.append(f"⚙️ **Tool Call:** `{step.tool_name}`\n")
-                elif step.step_type == "answer":
-                    parts.append(step.content)
-            return "\n".join(parts)
+        if head == "chat" and len(argv) >= 2:
+            if self._reasoning_service is None:
+                self._reasoning_service = create_reasoning_service(
+                    mgr,
+                    safety,
+                    provider=self.provider,
+                    model=self.model,
+                )
+            result = await self._reasoning_service.complete(" ".join(argv[1:]))
+            if result.usage:
+                for key, value in result.usage.items():
+                    self._session_usage[key] = self._session_usage.get(key, 0) + value
+                status = self.query_one("#status", StatusBar)
+                prof = self.cfg.profiles.get(self.profile_name)
+                status.set_status(
+                    connected=True,
+                    profile=self.profile_name,
+                    transport=prof.transport if prof else "",
+                    tools=len(mgr.tools),
+                    products=self._get_active_products(),
+                    usage=format_usage(self._session_usage),
+                )
+            return result.content
 
         # troubleshoot
         if head in {"troubleshoot", "tb"} and len(argv) >= 2:
@@ -765,8 +836,7 @@ class HpeMcpApp(App[int]):
                                         pass
                         for h in hits:
                             if isinstance(h, dict) and (
-                                h.get("name") == tool_name
-                                or tool_name in h.get("name", "")
+                                h.get("name") == tool_name or tool_name in h.get("name", "")
                             ):
                                 return format_tool_schema(h.get("name", tool_name), h)
                         if hits and isinstance(hits[0], dict):
@@ -819,8 +889,10 @@ class HpeMcpApp(App[int]):
         if head == "tools":
             if len(argv) >= 3 and argv[1] == "find":
                 return await self._dispatch(["find", *argv[2:]])
-            q = argv[2] if len(argv) > 2 and argv[1] == "list" else (
-                argv[1] if len(argv) > 1 and argv[1] != "list" else None
+            q = (
+                argv[2]
+                if len(argv) > 2 and argv[1] == "list"
+                else (argv[1] if len(argv) > 1 and argv[1] != "list" else None)
             )
             # Build a simple text table
             from hpe_networking_mcp.cli_client.safety import tool_is_read_only
@@ -885,7 +957,8 @@ class HpeMcpApp(App[int]):
                 lines = [
                     "## Personal documents",
                     "",
-                    "_Stored/bookmarked locally; searchable with `/docs search` and `/docs search-content`._",
+                    "_Stored/bookmarked locally; searchable with `/docs search` "
+                    "and `/docs search-content`._",
                     "",
                 ]
                 for d in docs:
@@ -971,12 +1044,53 @@ class HpeMcpApp(App[int]):
                 "search-content <q> [--collection name]"
             )
 
-        if head == "profiles":
+        if head in {"profiles", "profile"}:
+            if head == "profile" and len(argv) > 1:
+                self.profile_name = argv[1]
+                log = self.query_one("#log", RichLog)
+                await self._reconnect(log)
+                return f"Switched profile to `{self.profile_name}`."
             lines = ["## Profiles", ""]
             for n, p in sorted(self.cfg.profiles.items()):
-                mark = "*" if n == self.cfg.default_profile else " "
+                mark = "*" if n == self.profile_name else " "
                 lines.append(f"{mark} **{n}** `{p.transport}` — {p.description}")
             return "\n".join(lines)
+
+        if head in {"products", "product", "toolsets", "toolset"}:
+            if len(argv) > 1:
+                val = argv[1] if argv[1] != "set" else (argv[2] if len(argv) > 2 else "")
+                if head in {"toolsets", "toolset"}:
+                    os.environ["HPE_MCP_TOOLSETS"] = val
+                else:
+                    os.environ["HPE_MCP_PRODUCTS"] = val
+                log = self.query_one("#log", RichLog)
+                await self._reconnect(log)
+                prods = os.environ.get("HPE_MCP_PRODUCTS", "(default)")
+                toolsets = os.environ.get("HPE_MCP_TOOLSETS", "(default)")
+                return (
+                    f"Updated configuration & reconnected.\n\n"
+                    f"- **HPE_MCP_PRODUCTS:** `{prods}`\n"
+                    f"- **HPE_MCP_TOOLSETS:** `{toolsets}`"
+                )
+
+            prods = os.environ.get("HPE_MCP_PRODUCTS", "(default)")
+            toolsets = os.environ.get("HPE_MCP_TOOLSETS", "(default)")
+            mode = os.environ.get("HPE_MCP_ROUTER_MODE", "minimal")
+            lines = [
+                "## Active Product Configuration",
+                "",
+                f"- **HPE_MCP_PRODUCTS:** `{prods}`",
+                f"- **HPE_MCP_TOOLSETS:** `{toolsets}`",
+                f"- **HPE_MCP_ROUTER_MODE:** `{mode}`",
+                "",
+                "_Tip: Use `/products <names>` or `/toolsets <names>` to switch dynamically._",
+            ]
+            return "\n".join(lines)
+
+        if head == "usage":
+            if not self._session_usage:
+                return "No AI token usage recorded in this session."
+            return f"## Cumulative Session Token Usage\n\n`{format_usage(self._session_usage)}`"
 
         if head == "status":
             state_str = self.mgr.state.value if self.mgr else "disconnected"
@@ -1005,6 +1119,10 @@ class HpeMcpApp(App[int]):
                 for prefix, count in sorted(by_server.items(), key=lambda kv: -kv[1]):
                     lines.append(f"  - `{prefix}`: {count}")
             lines.append("- Safety policy: **read-only default**")
+            lines.append(
+                f"- AI backend: **`{self.provider}`**"
+                + (f" / `{self.model}`" if self.model else "")
+            )
             lines.append("- Personal docs: **local metadata + content search enabled**")
             if self.mgr and self.mgr.last_error:
                 lines.append(f"- Last error: `{self.mgr.last_error}`")
@@ -1028,6 +1146,7 @@ class HpeMcpApp(App[int]):
         border = "cyan"
         title = {
             "ask": "Answer",
+            "chat": "AI Chat",
             "api": "API lookup",
             "find": "Tool search",
             "tools": "Router tools",
@@ -1045,6 +1164,10 @@ class HpeMcpApp(App[int]):
             "docs": "Documents",
             "skills": "Skills",
             "profiles": "Profiles",
+            "profile": "Profile",
+            "products": "Products",
+            "product": "Products",
+            "usage": "Usage",
             "status": "Status",
         }.get(command, command)
         if stripped.lower().startswith(("error:", "blocked:")):
@@ -1086,9 +1209,17 @@ def run_tui(
     safety: SafetyPolicy,
     *,
     profile: str | None = None,
+    provider: str | None = None,
+    model: str | None = None,
 ) -> int:
     """Run the Textual app; returns process exit code."""
-    app = HpeMcpApp(cfg, safety, profile=profile)
+    app = HpeMcpApp(
+        cfg,
+        safety,
+        profile=profile,
+        provider=provider,
+        model=model,
+    )
     result = app.run()
     if isinstance(result, int):
         return result

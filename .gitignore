@@ -8,6 +8,12 @@
 config/credentials.yaml
 .token_cache_*.json
 
+# Docker secrets mounted into the MCP router container (docker-compose.router.yml).
+# Only *.example templates and secrets/README.md are tracked.
+secrets/*
+!secrets/*.example
+!secrets/README.md
+
 # Claude local settings (may contain credentials in allowed commands)
 .claude/settings.local.json
 

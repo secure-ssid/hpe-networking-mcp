@@ -47,6 +47,18 @@ def test_vector_search_distance_to_similarity(distance, expected):
     assert hits[0]["score"] == pytest.approx(expected)
 
 
+def test_vector_search_preserves_optional_provenance():
+    client = _fake_client_returning(0.0)
+    doc = client.ft.return_value.search.return_value.docs[0]
+    doc.source_url = "https://example.com/ssid"
+    doc.heading_breadcrumb = "Wireless > Security"
+
+    hits = redis_client.vector_search(client, query_vector=[0.0] * 768, top_k=1)
+
+    assert hits[0]["source_url"] == "https://example.com/ssid"
+    assert hits[0]["heading_breadcrumb"] == "Wireless > Security"
+
+
 @pytest.mark.parametrize("distance,expected", [(0.0, 1.0), (0.28, 0.72), (1.0, 0.0)])
 def test_search_tools_distance_to_similarity(distance, expected):
     client = _fake_client_returning(distance)

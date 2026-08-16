@@ -26,6 +26,28 @@ Use the router pattern: `find_tool` first, then `invoke_read_tool`.
 | Broader keyword search, want raw chunks | `search_docs` | exploratory, multiple results wanted |
 | Security advisory / CVE | `lookup_advisory` | CVE IDs, advisory IDs, product vulnerability lookup |
 | Exact hardware datasheet spec | `lookup_hardware_specs` | "CX6300 switching capacity", "EX4400 PoE budget", "AP-635 specs" — curated catalog, not a document search |
+| Exact AOS-CX release comparison | `compare_aoscx_releases` | "what changed on CX 6100 from 10.13 to 10.16" — structured feature and release-note delta |
+
+## Follow-up questions and comparisons
+
+Short follow-ups such as "what about 10.16 code?" are not standalone
+questions. Preserve the prior product, platform, and comparison target, then
+rewrite the follow-up into a standalone retrieval query before calling
+`ask_docs`. Pass the same bounded summary in `context` when using the router,
+for example:
+
+```json
+{
+  "query": "what about 10.16 code?",
+  "context": "Comparing Juniper EX4000 with Aruba CX 6100; the question is about AOS-CX software support and VSF."
+}
+```
+
+For hardware comparisons, retrieve exact model facts with
+`lookup_hardware_specs` first. For AOS-CX version questions such as CX 6100
+on 10.16, use `compare_aoscx_releases` with explicit `platform`,
+`from_version`, and `to_version`; use `ask_docs` for explanatory prose around
+the result. Do not infer an equivalence from product names alone.
 
 ## Source filters for `ask_docs` / `search_docs`
 
@@ -131,6 +153,9 @@ Omit `source=` when unsure — the hybrid search will find the best match.
   and Mist-line AP datasheets (AP21-AP66) — official juniper.net spec pages
   (MX/QFX/SRX datasheets are a known remaining gap — see "What is NOT in the
   RAG" below).
+  The EX4000 datasheet is already represented by the indexed
+  `product_datasheets` source and the curated hardware catalog; do not ingest
+  a duplicate local PDF unless page-level PDF citations are required.
 
 ## What is NOT in the RAG (fall back to web search or `lookup_hardware_specs`)
 

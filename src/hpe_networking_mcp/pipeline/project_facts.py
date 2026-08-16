@@ -60,6 +60,10 @@ SPECS_TABLES = ("endpoints", "schemas", "fields", "advisories", "lifecycle_event
 #: "platform backend catalog" total, matching docs/capability-gap-matrix.md.
 CREDENTIAL_FREE_LOCAL_SERVERS = ("design-core", "interop-core")
 
+# Cross-platform aggregators are real registered tools, but are not part of
+# the vendor-facing per-platform API catalog or its capability benchmark.
+PLATFORM_CATALOG_EXCLUDED_SERVERS = (*CREDENTIAL_FREE_LOCAL_SERVERS, "site-health")
+
 FULL_WRITE_GATE_ENV = {
     "HPE_MCP_READONLY": "0",
     "HPE_MCP_CENTRAL_WRITES": "1",
@@ -272,7 +276,9 @@ def tool_facts(*, identities: dict[str, list[str]] | None = None) -> dict[str, A
     by_server = {server: len(names) for server, names in identities.items()}
     registered_names = {name for names in identities.values() for name in names}
     registered_generated = registered_names & generated_names
-    local_total = sum(by_server.get(server, 0) for server in CREDENTIAL_FREE_LOCAL_SERVERS)
+    excluded_total = sum(
+        by_server.get(server, 0) for server in PLATFORM_CATALOG_EXCLUDED_SERVERS
+    )
     total = sum(by_server.values())
     return {
         "catalog_env": dict(sorted(CATALOG_ENV.items())),
@@ -284,9 +290,12 @@ def tool_facts(*, identities: dict[str, list[str]] | None = None) -> dict[str, A
         "credential_free_local": {
             server: by_server.get(server, 0) for server in CREDENTIAL_FREE_LOCAL_SERVERS
         },
-        "platform_backend_total": total - local_total,
-        "platform_curated_total": total - len(registered_generated) - local_total,
+        "platform_backend_total": total - excluded_total,
+        "platform_curated_total": total - len(registered_generated) - excluded_total,
         "interop_tools": by_server.get("interop-core", 0),
+        "non_platform_aggregators": {
+            server: by_server.get(server, 0) for server in ("site-health",)
+        },
     }
 
 

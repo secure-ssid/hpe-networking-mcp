@@ -8,7 +8,7 @@ description: |
   a specific endpoint.
 platforms: [central, nac]
 tags: [client, connectivity, troubleshooting, wireless]
-tools: [find_client, get_client, list_clients, get_device, get_alerts, find_tool, invoke_read_tool]
+tools: [find_client, get_client, list_clients, get_device, list_active_alerts, find_tool, invoke_read_tool]
 ---
 
 # Client connectivity investigation
@@ -42,7 +42,7 @@ or site-wide. Return a short root-cause hypothesis and safe next checks.
 
 ### Step 3 — Site context
 
-**Tool:** site health / `get_alerts` for the client site
+**Tool:** site health / `list_active_alerts` for the client site
 **Why:** Distinguishes single-client vs site-wide incidents.
 **Expected result:** Site health score + relevant alerts in the last few hours.
 **If anomaly:** Many failed clients or critical RF alerts → site incident, not one laptop.

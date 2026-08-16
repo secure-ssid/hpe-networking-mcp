@@ -54,6 +54,27 @@ class TestHybridSearch:
                               "chunk_index", "score"}
             assert isinstance(h["chunk_index"], int)
 
+    def test_result_includes_optional_provenance(self, tmp_path):
+        db = lc.connect(tmp_path)
+        rows = [{
+            "id": "1",
+            "text": "WPA3 guide",
+            "source": "developer_docs",
+            "doc_type": "developer-docs",
+            "file_path": "ssid.md",
+            "chunk_index": 0,
+            "source_url": "https://example.com/ssid",
+            "heading_breadcrumb": "Wireless > Security",
+            "vector": _vec(1),
+        }]
+        table = lc.create_docs_table(db, rows)
+        lc.build_fts_index(table)
+
+        hits = lc.hybrid_search(db, "WPA3 guide", _vec(99), top_k=1)
+
+        assert hits[0]["source_url"] == "https://example.com/ssid"
+        assert hits[0]["heading_breadcrumb"] == "Wireless > Security"
+
     def test_bm25_surfaces_exact_keyword_despite_junk_vector(self, db):
         # the query vector is random noise — only the FTS half can rank this
         hits = lc.hybrid_search(db, "WPA3 SAE SSID", _vec(99), top_k=1)
@@ -80,6 +101,49 @@ class TestHybridSearch:
         assert {h["source"] for h in hits} <= {"developer_docs", "vsg_docs"}
         assert {h["source"] for h in hits} == {"developer_docs", "vsg_docs"}
 
+    def test_metadata_filter_narrows_results(self, tmp_path):
+        db = lc.connect(tmp_path)
+        rows = [
+            {
+                "id": "1",
+                "text": "Aruba WPA3 guide",
+                "source": "developer_docs",
+                "doc_type": "guide",
+                "file_path": "aruba.md",
+                "chunk_index": 0,
+                "vendor": "aruba",
+                "product": "central",
+                "vector": _vec(1),
+            },
+            {
+                "id": "2",
+                "text": "Juniper WPA3 guide",
+                "source": "mist_docs",
+                "doc_type": "guide",
+                "file_path": "juniper.md",
+                "chunk_index": 0,
+                "vendor": "juniper",
+                "product": "mist",
+                "vector": _vec(2),
+            },
+        ]
+        table = lc.create_docs_table(db, rows)
+        lc.build_fts_index(table)
+
+        hits = lc.hybrid_search(
+            db,
+            "WPA3 guide",
+            _vec(99),
+            top_k=3,
+            metadata_filter={"vendor": "aruba"},
+        )
+
+        assert hits and all(hit["vendor"] == "aruba" for hit in hits)
+
+    def test_metadata_filter_rejects_unknown_fields(self, db):
+        with pytest.raises(ValueError, match="invalid metadata filter field"):
+            lc.hybrid_search(db, "x", _vec(99), metadata_filter={"where": "bad"})
+
     def test_malformed_source_filter_raises(self, db):
         with pytest.raises(ValueError, match="invalid source filter"):
             lc.hybrid_search(db, "x", _vec(99), source_filter="bad'; DROP--")
@@ -105,6 +169,36 @@ class TestCounts:
         empty = lc.connect(tmp_path / "empty")
         assert lc.doc_count(empty) == 0
         assert lc.source_counts(empty) == {}
+
+
+class TestSearchIndexes:
+    def test_build_search_indexes_creates_fts_and_vector_indexes(self, db):
+        table = lc.docs_table(db)
+        lc.build_search_indexes(table)
+
+        indexes = {index.name: index for index in table.list_indices()}
+        assert indexes[lc.FTS_INDEX_NAME].index_type == "FTS"
+        assert indexes[lc.VECTOR_INDEX_NAME].columns == ["vector"]
+        assert indexes["source_idx"].index_type == "BTree"
+
+    def test_small_tables_keep_fts_without_untrainable_ann_index(self, tmp_path):
+        db = lc.connect(tmp_path)
+        rows = [{
+            "id": "1",
+            "text": "small",
+            "source": "docs",
+            "doc_type": "docs",
+            "file_path": "small.md",
+            "chunk_index": 0,
+            "vector": _vec(1),
+        }]
+        table = lc.create_docs_table(db, rows)
+
+        assert lc.build_search_indexes(table) is False
+        names = {index.name for index in table.list_indices()}
+        assert lc.FTS_INDEX_NAME in names
+        assert "source_idx" in names
+        assert lc.VECTOR_INDEX_NAME not in names
 
 
 class TestToolsTable:

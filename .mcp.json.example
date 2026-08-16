@@ -9,9 +9,13 @@
       "env": {
         "PYTHONPATH": "/path/to/hpe-networking-mcp/src",
         "CREDS_PATH": "/path/to/hpe-networking-mcp/config/credentials.yaml",
-        "HPE_MCP_ACCESS_PROFILE": "custom",
+        "HPE_MCP_ACCESS_PROFILE": "safe-read-only",
+        "HPE_MCP_READONLY": "1",
         "HPE_MCP_ROUTER_MODE": "minimal",
-        "HPE_MCP_TOOLSETS": "central,glp,rag"
+        "HPE_MCP_TOOLSETS": "central,glp,rag",
+        "HPE_MCP_PRODUCT_ACCESS": "read-only",
+        "HPE_MCP_CENTRAL_WRITES": "0",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "0"
       }
     }
   }

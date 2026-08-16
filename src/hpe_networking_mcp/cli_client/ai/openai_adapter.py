@@ -14,7 +14,7 @@ from hpe_networking_mcp.cli_client.ai.base import (
     AiResponse,
     AiStreamChunk,
     ChatMessage,
-    MessageRole,
+    ToolCallDelta,
     ToolCallRequest,
 )
 
@@ -26,11 +26,13 @@ class OpenAiAdapter(AiBackend):
         self,
         api_key: str | None = None,
         base_url: str | None = None,
-        model: str = "gpt-4o",
+        model: str | None = None,
         timeout: float = 60.0,
     ) -> None:
         self._api_key = api_key or os.getenv("OPENAI_API_KEY", "")
-        self._base_url = (base_url or os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
+        self._base_url = (
+            base_url or os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        ).rstrip("/")
         self._model = model or os.getenv("OPENAI_MODEL", "gpt-4o")
         self._timeout = timeout
 
@@ -38,7 +40,9 @@ class OpenAiAdapter(AiBackend):
     def name(self) -> str:
         return f"openai:{self._model}"
 
-    def _format_messages(self, messages: list[ChatMessage], system_prompt: str | None) -> list[dict[str, Any]]:
+    def _format_messages(
+        self, messages: list[ChatMessage], system_prompt: str | None
+    ) -> list[dict[str, Any]]:
         formatted: list[dict[str, Any]] = []
         if system_prompt:
             formatted.append({"role": "system", "content": system_prompt})
@@ -70,14 +74,19 @@ class OpenAiAdapter(AiBackend):
         formatted = []
         for t in tools:
             if "name" in t and "function" not in t:
-                formatted.append({
-                    "type": "function",
-                    "function": {
-                        "name": t["name"],
-                        "description": t.get("description", ""),
-                        "parameters": t.get("inputSchema", t.get("parameters", {"type": "object", "properties": {}})),
-                    },
-                })
+                formatted.append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": t["name"],
+                            "description": t.get("description", ""),
+                            "parameters": t.get(
+                                "inputSchema",
+                                t.get("parameters", {"type": "object", "properties": {}}),
+                            ),
+                        },
+                    }
+                )
             else:
                 formatted.append(t)
         return formatted
@@ -115,15 +124,25 @@ class OpenAiAdapter(AiBackend):
         tool_calls: list[ToolCallRequest] = []
         for tc in msg.get("tool_calls", []):
             fn = tc.get("function", {})
+            arguments_valid = True
+            arguments_error: str | None = None
             try:
                 args = json.loads(fn.get("arguments", "{}"))
-            except Exception:
+                if not isinstance(args, dict):
+                    arguments_valid = False
+                    arguments_error = "tool arguments must be a JSON object"
+                    args = {}
+            except (TypeError, json.JSONDecodeError) as exc:
+                arguments_valid = False
+                arguments_error = f"invalid JSON arguments: {exc}"
                 args = {}
             tool_calls.append(
                 ToolCallRequest(
                     call_id=tc.get("id", ""),
                     tool_name=fn.get("name", ""),
                     arguments=args,
+                    arguments_valid=arguments_valid,
+                    arguments_error=arguments_error,
                 )
             )
 
@@ -171,10 +190,28 @@ class OpenAiAdapter(AiBackend):
                         delta_content = delta.get("content") or ""
                         thought_content = delta.get("reasoning_content") or ""
                         finish_reason = choice.get("finish_reason")
+                        tool_deltas: list[ToolCallDelta] = []
+                        for raw_tool_call in delta.get("tool_calls", []) or []:
+                            function = raw_tool_call.get("function", {}) or {}
+                            tool_deltas.append(
+                                ToolCallDelta(
+                                    index=int(raw_tool_call.get("index", 0) or 0),
+                                    call_id=str(raw_tool_call.get("id", "") or ""),
+                                    tool_name=str(function.get("name", "") or ""),
+                                    arguments_fragment=str(function.get("arguments", "") or ""),
+                                )
+                            )
+                        usage = chunk_json.get("usage") or {}
                         yield AiStreamChunk(
                             delta_content=delta_content,
                             thought_content=thought_content,
+                            tool_call_deltas=tool_deltas,
                             finish_reason=finish_reason,
+                            usage={
+                                str(key): int(value)
+                                for key, value in usage.items()
+                                if isinstance(value, (int, float))
+                            },
                         )
                     except Exception:
                         continue

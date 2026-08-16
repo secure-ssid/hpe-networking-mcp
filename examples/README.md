@@ -1,6 +1,7 @@
 # hpe-networking-mcp examples
 
-Tested, non-secret MCP client and prompt/runbook configuration examples.
+Tested, non-secret, safe-read-only MCP client and prompt/runbook configuration
+examples.
 Nothing under this directory is loaded automatically by any client -- copy
 the file you need and edit the placeholders. Every absolute path shown is a
 placeholder (`/path/to/hpe-networking-mcp`); replace it with your real clone
@@ -12,35 +13,47 @@ full copy/paste walkthrough per client, and
 [`docs/getting-started.md`](../docs/getting-started.md) for credentials and
 install steps that come before any of these configs matter.
 
+**Recommended:** VS Code + GitHub Copilot is the primary host path. Use
+Copilot CLI when already subscribed, Crush for user-selected providers or
+local Ollama, MCPJam for local trace/debug and cross-client validation, and
+LibreChat/Open WebUI only for a persistent multi-provider browser platform.
+This repository remains focused on the router, setup/doctor, configs, safety,
+and docs; it does not include a custom GUI.
+
 ## Profile matrix
 
 | Client | Transport | Profile | Example |
 |---|---|---|---|
+| VS Code + GitHub Copilot | stdio | **primary** safe-read-only minimal | [`../.vscode/mcp.json.example`](../.vscode/mcp.json.example) |
+| GitHub Copilot CLI / app | stdio | safe-read-only minimal (when subscribed) | [`../.github/mcp.json`](../.github/mcp.json) |
 | Generic stdio | stdio | minimal (`central,glp,rag`) | [`mcp-clients/stdio/minimal.mcp.json`](mcp-clients/stdio/minimal.mcp.json) |
 | Generic stdio | stdio | full (all products, safe read-only) | [`mcp-clients/stdio/full.mcp.json`](mcp-clients/stdio/full.mcp.json) |
 | Generic stdio | stdio | full read/write (all products, guarded writes enabled) | [`mcp-clients/stdio/full-read-write.mcp.json`](mcp-clients/stdio/full-read-write.mcp.json) |
 | Generic HTTP | streamable HTTP | local loopback | [`mcp-clients/http/local.mcp.http.json`](mcp-clients/http/local.mcp.http.json) |
 | Generic HTTP | streamable HTTP | non-loopback, bearer-protected | [`mcp-clients/http/bearer.mcp.http.json`](mcp-clients/http/bearer.mcp.http.json) + [`bearer.server.env`](mcp-clients/http/bearer.server.env) |
-| Copilot CLI / app | stdio | minimal | [`mcp-clients/copilot-cli.mcp-config.json`](mcp-clients/copilot-cli.mcp-config.json) |
+| GitHub Copilot CLI / app | stdio | portable placeholder | [`mcp-clients/copilot-cli.mcp-config.json`](mcp-clients/copilot-cli.mcp-config.json) |
 | Cursor | stdio | minimal (committed default) | [`../.cursor/mcp.json`](../.cursor/mcp.json) |
 | Cursor | stdio | full debug (direct backend servers) | [`../.cursor/mcp.dev.json`](../.cursor/mcp.dev.json) |
-| VS Code | stdio | minimal | [`../.vscode/mcp.json.example`](../.vscode/mcp.json.example) |
-| Claude Desktop / Code | stdio | minimal + direct debug servers | [`../.claude/launch.json`](../.claude/launch.json) |
+| Claude Code | stdio | project `.mcp.json` shape | [`mcp-clients/claude-code.mcp.json`](mcp-clients/claude-code.mcp.json) |
+| Claude Code | stdio | optional launch/debug profiles | [`../.claude/launch.json`](../.claude/launch.json) |
 
-Cursor, VS Code, and Claude already ship their canonical example under the
-repository root (`.cursor/`, `.vscode/`, `.claude/`) so this table links to
-those instead of duplicating them -- duplicated copies would drift the next
-time a profile changes. `tests/unit/test_example_configs.py` parses every
-row in this table and fails if a linked file goes missing, uses an old
-`aruba-*`/`centralmcp`/`CENTRALMCP_*` identifier, or does not match the
-documented low-token router profile.
+Cursor, VS Code, GitHub Copilot, and Claude ship canonical host examples
+under the repository root or this directory. `mcpServers` is used by generic
+clients, GitHub Copilot, and Claude Code; VS Code intentionally uses the
+different top-level `servers` shape. JSON files contain no comment keys so
+they can be copied directly into a host config. `tests/unit/test_example_configs.py`
+parses every row in this table and fails if a linked file goes missing, uses
+an old `aruba-*`/`centralmcp`/`CENTRALMCP_*` identifier, or drifts from the
+documented safe-read-only router profile.
 
 ## Which stdio config should I copy?
 
-- **minimal** — the recommended default. Client-visible tool list stays at
+- **minimal** — the recommended safe default. Client-visible tool list stays at
   three entries (`find_tool`, `invoke_read_tool`, `invoke_tool`) while the
   router still reaches `central`, `glp`, and `rag` plus the always-on
-  credential-free `interop-core` backend.
+  credential-free `interop-core` backend. The shipped host configs set
+  `HPE_MCP_ACCESS_PROFILE=safe-read-only`, `HPE_MCP_READONLY=1`, and
+  `HPE_MCP_PRODUCT_ACCESS=read-only`.
 - **full** — adds every optional product starter
   (`clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design`) under
   `safe-read-only`. Use this only when you actually need one of those
@@ -88,8 +101,13 @@ script path:
       "command": "hpe-mcp-router",
       "env": {
         "CREDS_PATH": "/path/to/hpe-networking-mcp/config/credentials.yaml",
+        "HPE_MCP_ACCESS_PROFILE": "safe-read-only",
+        "HPE_MCP_READONLY": "1",
         "HPE_MCP_ROUTER_MODE": "minimal",
-        "HPE_MCP_TOOLSETS": "central,glp,rag"
+        "HPE_MCP_TOOLSETS": "central,glp,rag",
+        "HPE_MCP_PRODUCT_ACCESS": "read-only",
+        "HPE_MCP_CENTRAL_WRITES": "0",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "0"
       }
     }
   }
@@ -107,3 +125,27 @@ the package is already importable wherever Python is installed. Keep
 a bundled skill (multi-step runbook). See
 [`docs/example-prompts.md`](../docs/example-prompts.md) for the complete,
 capability-labeled scenario set.
+
+## Optional existing frontends
+
+This repository does not add a custom web app. Existing frontends that can
+consume the same safe-read-only router include:
+
+- [Crush](https://github.com/charmbracelet/crush) — terminal frontend with
+  `stdio`, HTTP, and SSE MCP support; useful for selected providers or local
+  Ollama; configure it through `.crushrc`.
+- [MCPJam Inspector](https://github.com/MCPJam/inspector) — local
+  STDIO/HTTP debugging and evaluation frontend; hosted mode requires HTTPS
+  and cannot launch a local STDIO process.
+- [LibreChat](https://github.com/danny-avila/LibreChat) — self-hosted,
+  persistent multi-provider browser platform configured through
+  `librechat.yaml`; use Streamable HTTP for a running router.
+- [Open WebUI](https://github.com/open-webui/open-webui) — persistent
+  multi-provider browser platform with native MCP Streamable HTTP integration
+  for v0.6.31+, admin-configured; use
+  [mcpo](https://github.com/open-webui/mcpo) only when an OpenAPI bridge is
+  needed.
+
+These hosts own model selection, user access, and approval behavior. Keep the
+router on `safe-read-only`, use a protected HTTP endpoint for remote/container
+frontends, and never commit credentials or bearer tokens.

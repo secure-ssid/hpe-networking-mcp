@@ -30,6 +30,7 @@ BACKEND_MODULES = [
     "hpe_networking_mcp.mcp_servers.ops",
     "hpe_networking_mcp.mcp_servers.glp",
     "hpe_networking_mcp.mcp_servers.rag",
+    "hpe_networking_mcp.mcp_servers.design",
     "hpe_networking_mcp.mcp_servers.clearpass",
     "hpe_networking_mcp.mcp_servers.mist",
     "hpe_networking_mcp.mcp_servers.apstra",
@@ -167,11 +168,18 @@ def test_documented_router_invocation_arguments_match_backend_tools():
                 )
                 continue
             args = call.args
-            if not args or not isinstance(args[0], ast.Constant) or not isinstance(args[0].value, str):
+            if (
+                not args
+                or not isinstance(args[0], ast.Constant)
+                or not isinstance(args[0].value, str)
+            ):
                 continue
             tool_name = args[0].value
             if tool_name not in tool_args:
-                problems.append(f"{path.relative_to(REPO_ROOT)}:{line_number}: unknown tool {tool_name!r}")
+                problems.append(
+                    f"{path.relative_to(REPO_ROOT)}:{line_number}: "
+                    f"unknown tool {tool_name!r}"
+                )
                 continue
             if len(args) < 2 or not isinstance(args[1], ast.Dict):
                 continue

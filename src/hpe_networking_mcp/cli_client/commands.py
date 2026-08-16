@@ -6,11 +6,13 @@ import json
 import time
 from typing import Any
 
-from hpe_networking_mcp.cli_client.ai import get_ai_backend
-from hpe_networking_mcp.cli_client.ai.agent_loop import AgentReasoningLoop
+from hpe_networking_mcp.cli_client.ai import (
+    ConversationMemory,
+    ReasoningService,
+    get_ai_backend,
+)
 from hpe_networking_mcp.cli_client.config import ClientConfig, ServerProfile
 from hpe_networking_mcp.cli_client.diagram_workflow import (
-    DiagramPreferences,
     execute_diagram_export,
     parse_diagram_intent,
 )
@@ -98,7 +100,9 @@ async def cmd_invoke(
         return 2
 
     tool_obj = mgr.tools[resolved]
-    decision = safety.check(tool_obj, force_write=force_write or allow_writes)
+    # ``--allow-writes`` changes the policy mode, but does not itself approve
+    # an operation.  Only --yes/interactive approval may set force_write.
+    decision = safety.check(tool_obj, force_write=force_write)
     if not decision.allowed:
         print_error(decision.reason, json_mode=json_mode, code="write_blocked")
         return 3
@@ -320,7 +324,9 @@ def cmd_docs_search(query: str, *, collection: str | None = None, json_mode: boo
     return 0
 
 
-def cmd_docs_search_content(query: str, *, collection: str | None = None, json_mode: bool = False) -> int:
+def cmd_docs_search_content(
+    query: str, *, collection: str | None = None, json_mode: bool = False
+) -> int:
     store = DocumentStore()
     hits = store.search_content(query, collection=collection)
     if json_mode:
@@ -402,9 +408,7 @@ def cmd_docs_search_internal(
         print_ok({"hits": hits, "count": len(hits)}, json_mode=True)
         return 0
     if not hits:
-        console.print(
-            "[dim]No matches. Have you run `hpe-mcp docs ingest <folder>` yet?[/]"
-        )
+        console.print("[dim]No matches. Have you run `hpe-mcp docs ingest <folder>` yet?[/]")
         return 0
     for h in hits:
         title = h.get("title") or h.get("file_path", "")
@@ -479,7 +483,9 @@ async def cmd_tool_explore(
                             except Exception:
                                 pass
                 for h in hits:
-                    if isinstance(h, dict) and (h.get("name") == tool_name or tool_name in h.get("name", "")):
+                    if isinstance(h, dict) and (
+                        h.get("name") == tool_name or tool_name in h.get("name", "")
+                    ):
                         tool_obj = h
                         resolved = h.get("name", tool_name)
                         break
@@ -501,7 +507,11 @@ async def cmd_tool_explore(
             desc = tool_obj.get("description", "")
             ro = bool(tool_obj.get("read_only", tool_obj.get("capability") == "read"))
         else:
-            schema = getattr(tool_obj, "inputSchema", None) or getattr(tool_obj, "input_schema", None) or {}
+            schema = (
+                getattr(tool_obj, "inputSchema", None)
+                or getattr(tool_obj, "input_schema", None)
+                or {}
+            )
             desc = getattr(tool_obj, "description", "")
             ro = tool_is_read_only(tool_obj)
 
@@ -535,7 +545,7 @@ def cmd_status(
     is_connected = mgr is not None and mgr.state == ConnectionState.CONNECTED
     rec = mgr.connected.get(prof_name) if mgr else None
     by_server: dict[str, int] = {}
-    for tool_name in (mgr.tools if mgr else {}):
+    for tool_name in mgr.tools if mgr else {}:
         prefix = tool_name.split(".", 1)[0] if "." in tool_name else "(unnamespaced)"
         by_server[prefix] = by_server.get(prefix, 0) + 1
     status_dict: dict[str, Any] = {
@@ -551,6 +561,7 @@ def cmd_status(
         "last_error": mgr.last_error if mgr else None,
         "safety": "read-only default",
         "personal_docs_mode": "local metadata + content search",
+        "ai": {"provider": cfg.ai_provider, "model": cfg.ai_model},
     }
     if json_mode:
         print_ok(status_dict, json_mode=True)
@@ -573,6 +584,9 @@ def cmd_status(
         for prefix, count in sorted(by_server.items(), key=lambda kv: -kv[1]):
             lines.append(f"  - `{prefix}`: {count}")
     lines.append(f"- **Safety Mode:** {status_dict['safety']}")
+    lines.append(
+        f"- **AI Backend:** `{cfg.ai_provider}`" + (f" / `{cfg.ai_model}`" if cfg.ai_model else "")
+    )
     lines.append(f"- **Personal Documents:** {status_dict['personal_docs_mode']}")
     if status_dict["last_error"]:
         lines.append(f"- **Last Connection Error:** [red]{status_dict['last_error']}[/]")
@@ -600,44 +614,68 @@ async def cmd_ai_reason(
     safety: SafetyPolicy,
     *,
     prompt: str,
-    provider: str = "heuristic",
+    provider: str | None = None,
     model: str | None = None,
     json_mode: bool = False,
 ) -> int:
-    """Execute AI reasoning loop with available MCP tools."""
-    ai = get_ai_backend(provider=provider, model=model)
-    loop = AgentReasoningLoop(ai_backend=ai, session_manager=mgr)
-    steps_log = []
+    """Execute the shared reasoning service for a one-shot AI command."""
+    from hpe_networking_mcp.cli_client.output import format_usage
 
-    final_answer = ""
-    async for step in loop.run(prompt):
-        steps_log.append({
-            "turn": step.turn_index,
-            "type": step.step_type,
-            "content": step.content,
-            "tool": step.tool_name,
-        })
-        if step.step_type == "answer":
-            final_answer = step.content
-        elif not json_mode:
-            if step.step_type == "thought":
-                console.print(f"[dim italic]🧠 {step.content}[/]")
-            elif step.step_type == "tool_call":
-                console.print(f"[bold yellow]⚙️ {step.content}[/]")
-            elif step.step_type == "tool_result":
-                console.print(f"[dim]↳ Result: {step.content[:200]}...[/]")
-            elif step.step_type == "error":
-                console.print(f"[bold red]❌ {step.content}[/]")
-
+    if not (prompt or "").strip():
+        return 0
+    service = ReasoningService(
+        ai_backend=get_ai_backend(provider=provider, model=model),
+        session_manager=mgr,
+        safety_policy=safety,
+    )
+    result = await service.complete(prompt)
     if json_mode:
-        print_ok({"prompt": prompt, "answer": final_answer, "steps": steps_log}, json_mode=True)
+        payload: dict[str, Any] = {
+            "prompt": prompt,
+            "answer": result.content,
+            "metadata": result.metadata,
+            "events": [
+                {
+                    "type": event.kind,
+                    "turn": event.turn_index,
+                    "content": event.content,
+                    "tool": event.tool_name,
+                    "allowed": event.allowed,
+                    "is_read_only": event.is_read_only,
+                    "metadata": event.metadata,
+                }
+                for event in result.events
+            ],
+        }
+        if result.usage:
+            payload["usage"] = result.usage
+        print_ok(payload, json_mode=True)
         return 0
 
-    if final_answer:
+    if result.content:
         from rich.markdown import Markdown
 
-        console.print(Markdown(final_answer))
+        console.print(Markdown(result.content))
+        if result.usage:
+            console.print(f"[dim]Tokens used: {format_usage(result.usage)}[/dim]")
     return 0
+
+
+def create_reasoning_service(
+    mgr: SessionManager | None,
+    safety: SafetyPolicy,
+    *,
+    provider: str | None = None,
+    model: str | None = None,
+    memory: ConversationMemory | None = None,
+) -> ReasoningService:
+    """Build the shared service without coupling model code to the MCP router."""
+    return ReasoningService(
+        ai_backend=get_ai_backend(provider=provider, model=model),
+        session_manager=mgr,
+        safety_policy=safety,
+        memory=memory,
+    )
 
 
 def cmd_troubleshoot(
@@ -691,14 +729,17 @@ def cmd_architect_plan(
         require_evpn=evpn,
     )
     if json_mode:
-        print_ok({
-            "topology_type": rec.topology_type,
-            "title": rec.title,
-            "description": rec.description,
-            "hardware": rec.recommended_hardware,
-            "principles": rec.key_design_principles,
-            "advantages": rec.advantages,
-        }, json_mode=True)
+        print_ok(
+            {
+                "topology_type": rec.topology_type,
+                "title": rec.title,
+                "description": rec.description,
+                "hardware": rec.recommended_hardware,
+                "principles": rec.key_design_principles,
+                "advantages": rec.advantages,
+            },
+            json_mode=True,
+        )
         return 0
     report = format_architecture_recommendation_markdown(rec)
     from rich.markdown import Markdown

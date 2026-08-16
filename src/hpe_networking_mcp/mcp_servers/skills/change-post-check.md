@@ -7,7 +7,7 @@ description: |
   config object. Use immediately after SSID, VLAN, role, or assignment changes.
 platforms: [central, glp]
 tags: [change, post-check, validation, maintenance]
-tools: [get_tenant_health, get_alerts, list_devices, list_ssids, find_tool, invoke_read_tool]
+tools: [get_tenant_health, list_active_alerts, list_devices, list_ssids, find_tool, invoke_read_tool]
 ---
 
 # Post-change validation checklist
@@ -41,7 +41,7 @@ This skill is read-only.
 
 ### Step 4 — New alerts
 
-**Tool:** `get_alerts`
+**Tool:** `list_active_alerts`
 **Look for:** new critical/major alerts since change time on the same scope.
 
 ### Step 5 — Client sample (when wireless)

@@ -89,9 +89,12 @@ def test_tracked_tool_totals_are_internally_consistent():
 
     assert tools["registered_total"] == sum(tools["by_server"].values())
     assert tools["curated_total"] == tools["registered_total"] - tools["generated_registered"]
-    local = sum(tools["credential_free_local"].values())
-    assert tools["platform_backend_total"] == tools["registered_total"] - local
+    excluded = sum(tools["credential_free_local"].values()) + sum(
+        tools["non_platform_aggregators"].values()
+    )
+    assert tools["platform_backend_total"] == tools["registered_total"] - excluded
     assert tools["interop_tools"] == tools["by_server"]["interop-core"]
+    assert tools["non_platform_aggregators"]["site-health"] == 1
 
 
 def test_tracked_router_modes_are_internally_consistent():
@@ -189,11 +192,11 @@ def test_published_canonical_counts_match_the_documented_contract():
     tools = TRACKED["tools"]
     router_tools = TRACKED["router_modes"]["tools"]
 
-    assert tools["registered_total"] == 6717  # complete registered backend identities
-    assert tools["platform_backend_total"] == 6705  # platform API total / compatibility floor
+    assert tools["registered_total"] == 6719  # complete registered backend identities
+    assert tools["platform_backend_total"] == 6706  # platform API total / compatibility floor
     assert router_tools["minimal"] == 3
     assert router_tools["default"] == 18
-    assert router_tools["direct_all"] == 6724
+    assert router_tools["direct_all"] == 6726
 
 
 def test_router_mode_probe_environment_is_reproducible():

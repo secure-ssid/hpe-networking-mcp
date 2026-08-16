@@ -15,7 +15,11 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
-from hpe_networking_mcp.mcp_servers.rag import _SOURCE_BOOST, _boost_sources  # noqa: E402
+from hpe_networking_mcp.mcp_servers.rag import (  # noqa: E402
+    _SOURCE_BOOST,
+    _boost_sources,
+    _query_metadata_filter,
+)
 
 
 def _hit(source: str, score: float, path: str = "f.md") -> dict:
@@ -81,6 +85,28 @@ def test_unknown_source_gets_no_boost():
     assert _boost_sources(hits)[0]["source"] == "nac_docs"
 
 
+def test_query_metadata_filter_uses_only_explicit_singletons():
+    assert _query_metadata_filter(
+        "Aruba CX 6100 AOS-CX 10.16 release notes",
+        {"vendor", "model", "release"},
+    ) == {"vendor": "aruba", "model": "6100", "release": "10.16"}
+    assert _query_metadata_filter(
+        "Does AOS-CX 9300S support Central on-prem on 10.13?",
+        {"vendor", "model", "release"},
+    ) == {"vendor": "aruba"}
+
+
+def test_query_metadata_filter_ignores_ambiguous_versions_and_missing_columns():
+    assert _query_metadata_filter(
+        "compare CX 6100 AOS-CX 10.13 and 10.16",
+        {"vendor", "model", "release"},
+    ) == {"vendor": "aruba"}
+    assert _query_metadata_filter(
+        "Aruba CX 6100",
+        {"vendor"},
+    ) == {"vendor": "aruba"}
+
+
 def test_boost_ordering_matches_table_priority():
     """Equal relevance means the table's ordering decides the ranking."""
     sources = ["openapi_specs", "developer_docs", "vsg_docs", "nac_docs", "tech_docs"]
@@ -111,7 +137,9 @@ def test_mist_spec_gets_its_own_boost_key():
     # fetch_mist_openapi.py writes the pinned spec under a hyphenated name;
     # matching only the legacy dotted name silently demoted it to an Aruba spec.
     assert _boost_key(_hit("openapi_specs", 0.1, "openapi_specs/mist-openapi.json")) == "mist_specs"
-    assert _boost_key(_hit("openapi_specs", 0.1, "openapi_specs/config-interfaces.json")) == "openapi_specs"
+    assert _boost_key(
+        _hit("openapi_specs", 0.1, "openapi_specs/config-interfaces.json")
+    ) == "openapi_specs"
 
 
 def test_non_spec_sources_keep_their_own_label_as_key():

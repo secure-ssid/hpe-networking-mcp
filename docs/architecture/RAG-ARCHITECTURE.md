@@ -1,4 +1,4 @@
-# hpe-networking-mcp — RAG Architecture & Source Provenance (updated 2026-07-25)
+# hpe-networking-mcp — RAG Architecture & Source Provenance (updated 2026-08-16, dedup 2026-08-16)
 
 **Repo:** https://github.com/secure-ssid/hpe-networking-mcp
 
@@ -14,6 +14,90 @@
 > - **The portal consumes via the MCP** (`search_docs` / `ask_docs` over stdio or streamable-HTTP) — it never touches the store directly, so no shared server is needed.
 >
 > **Redis Stack** remains a documented, supported *server option* for anyone who wants it — but it is **not** the default for the cloned-and-run experience.
+
+## Retrieval modernization
+
+The local index has four performance layers:
+
+- LanceDB native BM25 over `text`.
+- A cosine HNSW-SQ ANN index over `vector` (`vector_idx`) for materialized
+  tables with at least three rows.
+- BTree indexes over available scope/provenance fields (`source`,
+  `doc_type`, vendor/product/platform/model/release/version/family and
+  authority fields) so safe metadata filters can be pushed down with
+  `prefilter=True`.
+- **Content-hash deduplication** — 38% of the raw corpus is boilerplate
+  repeated verbatim across files (license text, standard upgrade steps,
+  overview headers that appear in every AOS-CX patch). Search-time dedup in
+  `_dedup_by_content()` collapses those hits to one representative (highest
+  score wins) and attaches `also_in` for full citation provenance. A full
+  rebuild with `--dedup-on-ingest` keeps only the most-authoritative
+  representative per `content_hash` and reduces the embedded index by ~38%
+  (262,104 → ~161,816 rows). Existing prebuilt indexes can be migrated
+  without re-embedding:
+
+```bash
+uv run python scripts/migrate_dedup_index.py --dry-run
+uv run python scripts/migrate_dedup_index.py
+```
+
+`search_docs` also uses bounded, index-aware in-process caches for normalized
+query results and embeddings. Cache keys include the backend, table version,
+row count, and index versions, so a rebuilt/promoted table invalidates old
+results without a manual cache purge. Set `HPE_MCP_RAG_CACHE_SIZE` and
+`HPE_MCP_RAG_EMBED_CACHE_SIZE` to tune the LRU bounds. Long-lived MCP hosts can
+set `HPE_MCP_RAG_PREWARM=1` to pay the ONNX model-load cost at startup instead
+of on the first user query.
+
+Run the local benchmark before and after retrieval changes:
+
+```bash
+HF_HUB_OFFLINE=1 uv run python scripts/benchmark_rag.py --warm-runs 5
+```
+
+The benchmark reports cold and warm p50/p95 latency separately and breaks out
+embedding, hybrid search, reranking, and response-shaping time. This matters
+because cold-start embedding/model initialization is a different bottleneck
+from steady-state table retrieval.
+
+Ingestion now emits normalized metadata for vendor, product, platform/model,
+release/version, document family, record type, authority, and freshness. A
+legacy table missing those columns deliberately falls back to the documented
+full rebuild path on the next `--incremental` run; it is never silently treated
+as fully organized. If the source tree is incomplete but a prebuilt legacy
+index must be preserved, materialize the fields without re-embedding:
+
+```bash
+uv run python scripts/migrate_rag_metadata.py --dry-run
+uv run python scripts/migrate_rag_metadata.py
+```
+
+The migration copies stable IDs, text, provenance, and existing vectors through
+a staging table, atomically promotes it, and rebuilds the ANN, metadata, and FTS
+indexes. It does not delete or replace the live table until the staged copy is
+complete. Prefer `uv run python ingestion/ingest_docs.py` for a complete source
+refresh; use the migration only to organize an existing prebuilt corpus.
+
+### Backend alternatives reviewed
+
+GitHub review found no drop-in backend that is clearly better across the
+repository's offline, no-mandatory-service, exact-SQLite, MCP, and prebuilt
+index constraints. LanceDB + SQLite remains the default. Milvus Lite is the
+only serious embedded replacement pilot and is intentionally opt-in:
+
+```bash
+uv sync --extra milvus-lite
+```
+
+The adapter in `pipeline/clients/milvus_client.py` supports local `.db`
+persistence, stable IDs, bounded dense retrieval, safe scalar filters, and
+capability-detected native hybrid search. It is not wired into `rag.py` until
+it passes the same quality, latency, memory, incremental-update, and packaging
+gates as LanceDB. LlamaIndex and Haystack provide useful caching/fusion
+patterns, while Tantivy is a future lexical sidecar only if BM25 is proven to
+be the bottleneck. Qdrant, Typesense, Meilisearch, Weaviate, Quickwit, full
+Milvus, RAGFlow, and Open WebUI require a service or full product layer and
+remain optional future profiles.
 
 ## July 2026 OpenAPI source migration
 
@@ -86,7 +170,7 @@ Deployment (embedded vs server) does not affect retrieval quality — the
 vector-only Redis path:
 
 1. **API/field/enum/endpoint questions → exact SQLite lookup, not vectors.** A large slice of the corpus is OpenAPI specs (structured JSON). Embedding them is lossy; vector search returns *fuzzy-similar* prose instead of the authoritative enum/field list. `lookup_api` resolves literal `METHOD /path` and `operationId` identifiers before its structured endpoint/schema/field fallback, so exact identifiers cannot be displaced by similar enum or schema text.
-2. **Prose questions → hybrid (BM25 + vector) + rerank.** Today's path is vector-only and *misses exact identifiers* (`WPA3_SAE`, endpoint paths, error codes). BM25 catches those; a cross-encoder rerank promotes the truly relevant chunk. (~+15–30% precision in practice; Anthropic measured up to **67%** retrieval-failure reduction with contextual + hybrid + rerank.)
+2. **Prose questions → hybrid (BM25 + vector) + bounded rerank.** Today's path is vector-only and *misses exact identifiers* (`WPA3_SAE`, endpoint paths, error codes). BM25 catches those; bounded source/vendor/model heuristics preserve authority and specificity without requiring a second model on every query. A local cross-encoder remains an evaluated opt-in stage, not an assumed dependency.
 3. **Same embeddings, fixed prefixes.** fastembed can run `nomic-embed-text-v1.5` in-process — identical semantics to today — while fixing the **missing `search_query:`/`search_document:` prefixes** (see fix R3).
 4. **Agentic safety net.** `search_docs`/`ask_docs` are called by an LLM that can re-query when results are thin.
 
@@ -105,7 +189,7 @@ These are correctness/quality fixes; most are inherited or simplified by the Lan
   `embed_query()`: passages use `search_document:` and queries use
   `search_query:` consistently.
 - **R4 — Batched embeddings.** The default embedded path batches through fastembed (ONNX), and the optional Redis/Ollama path uses Ollama `/api/embed` with `{"input":[...]}` before falling back to legacy `/api/embeddings`. Full re-ingests now use batched embedding paths instead of serial per-chunk requests.
-- **R5 — Hybrid + rerank.** Native in LanceDB (`.search(..., query_type="hybrid")` + a reranker; RRF default). Replaces the brittle static `_SOURCE_BOOST`.
+- **R5 — Hybrid + bounded rerank.** Native in LanceDB (`.search(..., query_type="hybrid")` + RRF) followed by bounded source/vendor/model heuristics. An explicit local cross-encoder is evaluated separately and is not required by the default path.
 - **R6 — Chunking.** The prose build uses header-aware chunking with bounded
   overlap. OpenAPI parameter tables and enums are not chunked because they are
   parsed into exact SQLite records.
@@ -154,7 +238,7 @@ This sequence is complete for the default local path. Redis remains optional; Qd
 
 A small, labeled question set + runner so the backend swap is **proven**, not asserted. Lives at `tests/eval/`.
 
-- `tests/eval/rag_eval.yaml` — 33 questions, each tagged `api-lookup` (expects an exact field/enum/endpoint via `lookup_api`), `howto` (expects a prose chunk via `search_docs`), or one of the structured tags (`advisory`, `lifecycle`, `list-advisories`, `list-lifecycle`, `correlate`, `diagnostics`), with `expect_sources` (file_path substrings) and `expect_keywords`.
+- `tests/eval/rag_eval.yaml` — 36 questions, each tagged `api-lookup` (expects an exact field/enum/endpoint via `lookup_api`), `howto` (expects a prose chunk via `search_docs`), or one of the structured tags (`advisory`, `lifecycle`, `list-advisories`, `list-lifecycle`, `correlate`, `diagnostics`), with `expect_sources` (file_path substrings) and `expect_keywords`. A further 7 `deferred_questions` (version-conflict, duplicate-rate, latency, and citation-completeness cases) are tracked separately and excluded from the scored gate until their fixtures stabilize.
 - `tests/eval/run_eval.py` — calls the RAG tools, computes **recall@k**, **source-hit@k**, and keyword presence; prints a per-question pass/fail table and an aggregate score. Run before and after migration; require no regression.
 
 Metrics: `recall@5` (did an expected source appear in top-5), `mrr` (rank of first correct), `api_exact` (did `lookup_api` return the exact enum/field). Target: api-lookup `api_exact` = 100% (it's structured), howto `recall@5` ≥ today's baseline.
@@ -162,16 +246,17 @@ Metrics: `recall@5` (did an expected source appear in top-5), `mrr` (rank of fir
 **Baseline measured 2026-06-03** (historical Redis, vector-only, no prefixes,
 specs missing from index), then re-measured after wiring `lookup_api` and the
 embedded LanceDB design. The current release gate is measured on the full
-33-question set with `uv run --with pyyaml python tests/eval/run_eval.py`:
+36-question set with `uv run --with pyyaml python tests/eval/run_eval.py`:
 
-| Metric | Baseline (Redis, vector-only) | After `lookup_api` (2026-06-03) | **Current: embedded LanceDB hybrid (33 questions)** | Target |
+| Metric | Baseline (Redis, vector-only) | After `lookup_api` (2026-06-03) | **Current: embedded LanceDB hybrid (36 questions)** | Target |
 |---|---|---|---|---|
 | `howto_recall@k` (prose) | 0.80 | 0.80 | **1.00** | ≥ 0.85 ✅ |
 | `api_exact` (API lookups) | **0.50** | 0.90 | **1.00** | ≥ 0.95 ✅ |
 | `structured_exact` / `structured_list_exact` | — | — | **1.00** / **1.00** | 1.00 ✅ |
-| `source_hit@k` (overall) | 0.50 | 0.80 | **0.97** | ≥ 0.85 ✅ |
-| `mrr` | 0.339 | 0.679 | **0.923** | ≥ 0.85 ✅ |
+| `source_hit@k` (overall) | 0.50 | 0.80 | **1.00** | ≥ 0.85 ✅ |
+| `mrr` | 0.339 | 0.679 | **1.00** | ≥ 0.85 ✅ |
 | `keyword_hit` | — | 0.80 | **1.00** | — |
+| `duplicate_guard` / `latency_guard` | — | — | **1.00** / **1.00** | — |
 
 **Current evaluated corpus:** 262,104 prose chunks across the released
 documentation sources (see [`docs/project-facts.json`](../project-facts.json),
@@ -179,14 +264,16 @@ regenerated by `scripts/project_facts.py` -- never hand-entered). The 5,419
 OpenAPI vector records from the pre-LanceDB build were intentionally removed
 because structured API lookup is authoritative. The rebuilt SQLite index
 contains 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, and
-346 lifecycle records. The rebuilt router index contains 6,717 backend
+346 lifecycle records. The rebuilt router index contains 6,719 backend
 tools. Minimal mode keeps this
 catalog behind the three-tool discovery/dispatch surface; direct-all mode
-exposes 6,724 tools including the router itself. The current 33-question eval
+exposes 6,726 tools including the router itself. The current 36-question eval
 set (expanded from 24 to add structured list/correlate/diagnostics and
-negative coverage-gap questions) resolves 32 of 33 questions from an expected
-source, 30 of them at rank 1 (`source_hit@k` 0.97, `mrr` 0.923). Standard catalog
-profiles contain 370 core tools / 2831 read-only optional starters / 5811 read-write optional starters; those optional profiles now map to
+negative coverage-gap questions, then further expanded with version-conflict,
+duplicate-rate, latency, and citation-completeness cases) resolves all 36
+questions from an expected source, all at rank 1 (`source_hit@k` 1.00,
+`mrr` 1.00). Standard catalog
+profiles contain 372 core tools / 2833 read-only optional starters / 5813 read-write optional starters; those optional profiles now map to
 `safe-read-only` and `full-read-write`, respectively. The complete index also enables generated GLP.
 
 Tracked RAG refresh targets live in `ingestion/source_manifest.json`. The

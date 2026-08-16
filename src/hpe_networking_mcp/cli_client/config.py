@@ -36,14 +36,28 @@ class ServerProfile:
         return self.transport in {"streamable-http", "sse"}
 
 
+@dataclass(frozen=True)
+class AISettings:
+    """Provider/model selection for client-side model reasoning."""
+
+    provider: str = "heuristic"
+    model: str | None = None
+
+
 @dataclass
 class ClientConfig:
     """Resolved CLI configuration."""
 
     profiles: dict[str, ServerProfile] = field(default_factory=dict)
     default_profile: str = DEFAULT_PROFILE
+    ai_provider: str = "heuristic"
+    ai_model: str | None = None
     config_path: Path | None = None
     user_data_dir: Path | None = None
+
+    @property
+    def ai(self) -> AISettings:
+        return AISettings(provider=self.ai_provider, model=self.ai_model)
 
     def get(self, name: str | None = None) -> ServerProfile:
         key = (name or self.default_profile).strip()
@@ -81,7 +95,13 @@ def _default_stdio_env(root: Path) -> dict[str, str]:
         "CREDS_PATH": str(root / "config" / "credentials.yaml"),
         "HPE_MCP_ROUTER_MODE": os.environ.get("HPE_MCP_ROUTER_MODE", "minimal"),
         "HPE_MCP_TOOLSETS": os.environ.get("HPE_MCP_TOOLSETS", "central,glp,rag"),
-        "HPE_MCP_PRODUCTS": os.environ.get("HPE_MCP_PRODUCTS", "design"),
+        # Match the documented host recipes: default client startup must not
+        # expose write-capable router operations or opt into extra products.
+        "HPE_MCP_ACCESS_PROFILE": "safe-read-only",
+        "HPE_MCP_READONLY": "1",
+        "HPE_MCP_PRODUCT_ACCESS": "read-only",
+        "HPE_MCP_CENTRAL_WRITES": "0",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "0",
     }
 
 
@@ -161,6 +181,35 @@ def _load_json_profiles(path: Path) -> tuple[dict[str, ServerProfile], str | Non
     return profiles, None
 
 
+def _load_json_ai_settings(path: Path) -> tuple[str | None, str | None]:
+    """Read optional client-side AI settings without affecting MCP profiles."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return None, None
+    nested = data.get("ai") or data.get("AI") or data.get("reasoning")
+    if not isinstance(nested, dict):
+        nested = {}
+    provider = (
+        nested.get("provider")
+        or nested.get("backend")
+        or nested.get("aiProvider")
+        or data.get("aiProvider")
+        or data.get("ai_provider")
+        or data.get("provider")
+    )
+    model = (
+        nested.get("model")
+        or nested.get("aiModel")
+        or data.get("aiModel")
+        or data.get("ai_model")
+        or data.get("model")
+    )
+    return (
+        str(provider).strip() if provider else None,
+        str(model).strip() if model else None,
+    )
+
+
 def discover_config_paths(repo_root: Path | None = None) -> list[Path]:
     """Ordered candidate config files (later wins when merging)."""
     root = repo_root or repo_root_from_package()
@@ -184,6 +233,8 @@ def load_client_config(
     repo_root: Path | None = None,
     config_path: Path | str | None = None,
     profile_override: str | None = None,
+    provider_override: str | None = None,
+    model_override: str | None = None,
 ) -> ClientConfig:
     """Load built-in profiles, then merge user/repo JSON configs."""
     root = repo_root or repo_root_from_package()
@@ -194,26 +245,63 @@ def load_client_config(
     )
 
     paths: list[Path]
+    explicit_path = config_path is not None
     if config_path is not None:
         paths = [Path(config_path)]
     else:
         env_path = os.environ.get("HPE_MCP_CLIENT_CONFIG")
+        explicit_path = bool(env_path)
         paths = [Path(env_path)] if env_path else discover_config_paths(root)
 
     last_path: Path | None = None
     for path in paths:
         if not path.is_file():
+            if explicit_path:
+                raise ValueError(f"client configuration file not found: {path}")
             continue
         try:
             profiles, default = _load_json_profiles(path)
-        except (OSError, ValueError, json.JSONDecodeError):
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            if explicit_path:
+                raise ValueError(f"invalid client configuration {path}: {exc}") from exc
             continue
         cfg.profiles.update(profiles)
         if default:
             cfg.default_profile = default
+        try:
+            provider, model = _load_json_ai_settings(path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            provider, model = None, None
+        if provider:
+            cfg.ai_provider = provider
+        if model:
+            cfg.ai_model = model
         last_path = path
 
     cfg.config_path = last_path
     if profile_override:
         cfg.default_profile = profile_override
+    env_provider = (
+        os.environ.get("HPE_MCP_AI_PROVIDER")
+        or os.environ.get("HPE_MCP_AI_BACKEND")
+        or os.environ.get("HPE_MCP_PROVIDER")
+        or os.environ.get("AI_PROVIDER")
+    )
+    env_model = (
+        os.environ.get("HPE_MCP_AI_MODEL")
+        or os.environ.get("HPE_MCP_MODEL")
+        or os.environ.get("AI_MODEL")
+    )
+    if env_provider:
+        cfg.ai_provider = env_provider.strip()
+    if env_model:
+        cfg.ai_model = env_model.strip()
+    if provider_override:
+        cfg.ai_provider = provider_override.strip()
+    if model_override:
+        cfg.ai_model = model_override.strip()
+    try:
+        cfg.get()
+    except KeyError as exc:
+        raise ValueError(f"invalid client configuration: {exc}") from exc
     return cfg

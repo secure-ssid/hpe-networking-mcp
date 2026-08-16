@@ -296,11 +296,11 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
         ),
         (
             REPO_ROOT / "docs" / "tool-catalog.md",
-            f"| **Platform API backend total** | **3,153** | **{platform_backend_total:,}** |",
+            f"| **Platform API backend total** | **3,155** | **{platform_backend_total:,}** |",
         ),
         (
             REPO_ROOT / "docs" / "tool-catalog.md",
-            f"| **Complete backend total** | **3,165** | **{registered_total:,}** |",
+            f"| **Complete backend total** | **3,168** | **{registered_total:,}** |",
         ),
         (
             REPO_ROOT / "docs" / "tool-router.md",
@@ -313,7 +313,8 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
         ),
         (
             REPO_ROOT / "docs" / "tool-router.md",
-            f"| Complete backend index (platform APIs + `design-core` + "
+            f"| Complete backend index (platform APIs + `site-health` + "
+            f"`design-core` + "
             f"`interop-core`) | {registered_total:,} tools |",
         ),
         (
@@ -394,8 +395,8 @@ def test_rag_architecture_scores_are_at_or_above_the_enforced_eval_gate():
 
     text = RAG_ARCHITECTURE.read_text(encoding="utf-8")
     published = {
-        "source_hit@k": 0.97,
-        "mrr": 0.923,
+        "source_hit@k": 1.0,
+        "mrr": 1.0,
         "howto_recall@k": 1.0,
         "api_exact": 1.0,
         "structured_exact": 1.0,
@@ -404,5 +405,5 @@ def test_rag_architecture_scores_are_at_or_above_the_enforced_eval_gate():
 
     for metric, score in published.items():
         assert score >= run_eval._DEFAULT_THRESHOLDS[metric], metric
-    assert "| `source_hit@k` (overall) | 0.50 | 0.80 | **0.97** |" in text
-    assert "| `mrr` | 0.339 | 0.679 | **0.923** |" in text
+    assert "| `source_hit@k` (overall) | 0.50 | 0.80 | **1.00** |" in text
+    assert "| `mrr` | 0.339 | 0.679 | **1.00** |" in text

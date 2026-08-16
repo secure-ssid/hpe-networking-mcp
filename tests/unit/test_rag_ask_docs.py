@@ -49,6 +49,48 @@ def test_ask_docs_falls_back_to_search_docs(monkeypatch):
     assert out["citations"][0]["file_path"] == "developer_docs/scopes.md"
 
 
+def test_ask_docs_includes_bounded_context_for_ambiguous_follow_up(monkeypatch):
+    calls = []
+
+    def fake_search(question, top_k=3, source=None):
+        calls.append((question, top_k, source))
+        return [
+            {
+                "text": "AOS-CX 10.16 adds VSF support for the CX 6100.",
+                "source": "aoscx_release_notes",
+                "file_path": "aoscx_release_notes/cx6100.md",
+                "score": 0.95,
+            }
+        ]
+
+    monkeypatch.setattr(rag, "search_docs", fake_search)
+
+    out = rag.ask_docs(
+        "what about 10.16 code?",
+        context="Comparing Juniper EX4000 with Aruba CX 6100.",
+    )
+
+    assert out["mode"] == "search_docs"
+    assert "Aruba CX 6100" in calls[0][0]
+    assert "10.16 code" in calls[0][0]
+    assert "VSF support" in out["answer"]
+
+
+def test_ask_docs_routes_ex4000_to_hardware_catalog():
+    out = rag.ask_docs("EX4000 switching capacity")
+
+    assert out["mode"] == "hardware_specs"
+    assert out["citations"][0]["file_path"] == "hardware_specs_catalog:ex4000"
+    assert "EX4000" in out["answer"]
+
+
+def test_ask_docs_routes_ex4000_layer_question_to_hardware_catalog():
+    out = rag.ask_docs("is 4000 L2 and L3?")
+
+    assert out["mode"] == "hardware_specs"
+    assert "Layer 2 and Layer 3" in out["answer"]
+
+
 def test_ask_docs_returns_error_without_citations(monkeypatch):
     monkeypatch.setattr(
         rag,
@@ -74,6 +116,46 @@ def test_search_docs_clamps_negative_top_k_to_one(monkeypatch):
     rag.search_docs("wlan", top_k=-5)
 
     assert calls == [("wlan", 1, None)]
+
+
+def test_search_docs_caches_successful_results(monkeypatch):
+    calls = []
+
+    def fake_search(query, top_k, source_filter):
+        calls.append((query, top_k, source_filter))
+        return [{"text": "cached result", "score": 1.0}]
+
+    rag._SEARCH_CACHE.clear()
+    monkeypatch.setattr(rag, "_BACKEND", "lancedb")
+    monkeypatch.setattr(rag, "_search_lancedb", fake_search)
+    monkeypatch.setattr(rag.lance_client, "connect", lambda: object())
+    monkeypatch.setattr(rag.lance_client, "index_identity", lambda _db: "test-index")
+
+    first = rag.search_docs("cacheable query", top_k=3)
+    second = rag.search_docs("  CACHEABLE   QUERY ", top_k=3)
+
+    assert first == second == [{"text": "cached result", "score": 1.0}]
+    assert calls == [("cacheable query", 3, None)]
+    rag._SEARCH_CACHE.clear()
+
+
+def test_search_docs_does_not_cache_error_results(monkeypatch):
+    calls = []
+
+    def fake_search(query, top_k, source_filter):
+        calls.append((query, top_k, source_filter))
+        return [{"error": "index missing"}]
+
+    rag._SEARCH_CACHE.clear()
+    monkeypatch.setattr(rag, "_BACKEND", "lancedb")
+    monkeypatch.setattr(rag, "_search_lancedb", fake_search)
+    monkeypatch.setattr(rag.lance_client, "connect", lambda: object())
+    monkeypatch.setattr(rag.lance_client, "index_identity", lambda _db: "test-index")
+
+    assert rag.search_docs("error query") == [{"error": "index missing"}]
+    assert rag.search_docs("error query") == [{"error": "index missing"}]
+    assert calls == [("error query", 5, None), ("error query", 5, None)]
+    rag._SEARCH_CACHE.clear()
 
 
 @pytest.mark.parametrize(
@@ -124,18 +206,194 @@ def test_search_docs_source_filter_overrides_ambiguous_legacy_doc_type(monkeypat
     assert calls == [("query", 5, "juniper_lifecycle")]
 
 
+def test_search_docs_normalizes_and_deduplicates_comma_source_filter(monkeypatch):
+    calls = []
+
+    def fake_search(query, top_k, source_filter):
+        calls.append((query, top_k, source_filter))
+        return []
+
+    monkeypatch.setattr(rag, "_BACKEND", "lancedb")
+    monkeypatch.setattr(rag, "_search_lancedb", fake_search)
+
+    rag.search_docs("query", source="developer_docs, tech_docs,developer_docs")
+
+    assert calls == [("query", 5, ("developer_docs", "tech_docs"))]
+
+
+def test_search_docs_rejects_malformed_source_filter_without_search(monkeypatch):
+    called = False
+
+    def unexpected_search(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        return []
+
+    monkeypatch.setattr(rag, "_BACKEND", "lancedb")
+    monkeypatch.setattr(rag, "_search_lancedb", unexpected_search)
+
+    out = rag.search_docs("query", source="developer_docs,,tech_docs")
+
+    assert called is False
+    assert out[0]["error"].startswith("invalid source filter")
+
+
+def test_ask_docs_synthesizes_distinct_evidence_with_aligned_citations(monkeypatch):
+    monkeypatch.setattr(
+        rag,
+        "lookup_api",
+        lambda question, top_k=3: [
+            {
+                "text": "POST /one creates the first resource.",
+                "source": "openapi_specs",
+                "file_path": "openapi_specs/one.json",
+                "score": 1.0,
+            },
+            {
+                "text": "POST /one creates the first resource.",
+                "source": "openapi_specs",
+                "file_path": "openapi_specs/one-duplicate.json",
+                "score": 0.9,
+            },
+            {
+                "text": "GET /two lists the related resources.",
+                "source": "openapi_specs",
+                "file_path": "openapi_specs/two.json",
+                "score": 0.8,
+            },
+        ],
+    )
+
+    out = rag.ask_docs("Which API endpoint and method should I use?", top_k=3)
+
+    assert out["mode"] == "lookup_api"
+    assert "POST /one" in out["answer"]
+    assert "GET /two" in out["answer"]
+    assert len(out["answer"]) <= rag._MAX_EVIDENCE_ANSWER_CHARS
+    assert [citation["file_path"] for citation in out["citations"]] == [
+        "openapi_specs/one.json",
+        "openapi_specs/two.json",
+    ]
+
+
+def test_evidence_boundary_note_absent_when_hits_agree():
+    hits = [
+        {"source": "aos_techdocs", "platform": "aos-cx", "version": "10.13"},
+        {"source": "aos_techdocs", "platform": "aos-cx", "version": "10.13"},
+    ]
+
+    assert rag._evidence_boundary_note(hits) == ""
+
+
+def test_evidence_boundary_note_flags_mixed_versions():
+    hits = [
+        {"source": "aos_techdocs", "platform": "aos-cx", "version": "10.10"},
+        {"source": "aos_techdocs", "platform": "aos-cx", "version": "10.13"},
+    ]
+
+    note = rag._evidence_boundary_note(hits)
+
+    assert note.startswith("Boundary:")
+    assert "verify applicability" in note
+
+
+def test_evidence_boundary_note_flags_mixed_platforms_and_sources():
+    hits = [
+        {"source": "techdocs_html", "platform": "central"},
+        {"source": "mist_docs", "platform": "mist"},
+    ]
+
+    note = rag._evidence_boundary_note(hits)
+
+    assert note.startswith("Boundary:")
+
+
+def test_ask_docs_prepends_boundary_note_for_mixed_platform_evidence(monkeypatch):
+    monkeypatch.setattr(
+        rag,
+        "lookup_api",
+        lambda question, top_k=3: [
+            {
+                "text": "POST /one creates the first resource.",
+                "source": "openapi_specs",
+                "file_path": "openapi_specs/one.json",
+                "platform": "central",
+                "version": "2.13",
+                "score": 1.0,
+            },
+            {
+                "text": "GET /two lists the related resources.",
+                "source": "openapi_specs",
+                "file_path": "openapi_specs/two.json",
+                "platform": "aos-cx",
+                "version": "10.13",
+                "score": 0.8,
+            },
+        ],
+    )
+
+    out = rag.ask_docs("Which API endpoint and method should I use?", top_k=3)
+
+    assert out["answer"].startswith("Boundary:")
+    assert "POST /one" in out["answer"]
+    assert "GET /two" in out["answer"]
+    assert len(out["answer"]) <= rag._MAX_EVIDENCE_ANSWER_CHARS
+    assert out["citations"][0]["platform"] == "central"
+    assert out["citations"][1]["platform"] == "aos-cx"
+
+
 def test_lookup_api_clamps_negative_top_k_to_one(monkeypatch):
     calls = []
 
-    def fake_lookup(query, top_k):
-        calls.append((query, top_k))
+    def fake_lookup(query, top_k, **kwargs):
+        calls.append((query, top_k, kwargs))
         return []
 
     monkeypatch.setattr(rag.specs_index, "lookup", fake_lookup)
 
     rag.lookup_api("wlan endpoint", top_k=-5)
 
-    assert calls == [("wlan endpoint", 1)]
+    assert calls == [
+        (
+            "wlan endpoint",
+            1,
+            {
+                "source": None,
+                "platform": None,
+                "version": None,
+                "include_metadata": False,
+            },
+        )
+    ]
+
+
+def test_lookup_api_forwards_provenance_filters(monkeypatch):
+    captured = {}
+
+    def fake_lookup(query, top_k, **kwargs):
+        captured.update(query=query, top_k=top_k, **kwargs)
+        return [{"kind": "endpoint"}]
+
+    monkeypatch.setattr(rag.specs_index, "lookup", fake_lookup)
+
+    result = rag.lookup_api(
+        "create WLAN",
+        top_k=4,
+        source="product_specs",
+        platform="mist",
+        version="2607.1.0",
+        include_metadata=True,
+    )
+
+    assert result == [{"kind": "endpoint"}]
+    assert captured == {
+        "query": "create WLAN",
+        "top_k": 4,
+        "source": "product_specs",
+        "platform": "mist",
+        "version": "2607.1.0",
+        "include_metadata": True,
+    }
 
 
 def test_ask_docs_routes_exact_cve_to_lookup_advisory(monkeypatch):
@@ -187,9 +445,7 @@ def test_ask_docs_routes_exact_advisory_id_to_lookup_advisory(monkeypatch):
 
 
 def test_ask_docs_falls_back_when_no_advisory_match(monkeypatch):
-    monkeypatch.setattr(
-        rag, "lookup_advisory", lambda **kwargs: [{"error": "no match"}]
-    )
+    monkeypatch.setattr(rag, "lookup_advisory", lambda **kwargs: [{"error": "no match"}])
     monkeypatch.setattr(rag, "lookup_api", lambda question, top_k=3: [])
     monkeypatch.setattr(
         rag,
@@ -289,7 +545,6 @@ def test_ask_docs_ap_models_do_not_cross_contaminate():
     assert "AP-555" not in out_505["answer"]
     assert "AP-555" in out_555["answer"]
     assert "AP-505" not in out_555["answer"]
-
 
 
 def test_lookup_hardware_specs_is_registered_as_an_mcp_tool():

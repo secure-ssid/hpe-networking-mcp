@@ -168,8 +168,9 @@ def test_http_router_loads_lab_safety_flags():
 def test_http_router_banner_shows_access_profile_and_product_mode():
     text = _script_text()
 
-    assert 'normalize_access_profile "${HPE_MCP_ACCESS_PROFILE:-custom}"' in text
-    assert 'export HPE_MCP_ACCESS_PROFILE="${HPE_MCP_ACCESS_PROFILE:-custom}"' in text
+    assert 'normalize_access_profile "${HPE_MCP_ACCESS_PROFILE:-safe-read-only}"' in text
+    assert 'export HPE_MCP_ACCESS_PROFILE="${HPE_MCP_ACCESS_PROFILE:-safe-read-only}"' in text
+    assert 'export HPE_MCP_READONLY="${HPE_MCP_READONLY:-1}"' in text
     assert "profile:  ${HPE_MCP_ACCESS_PROFILE}" in text
     assert "optional: ${HPE_MCP_PRODUCT_ACCESS}" in text
 

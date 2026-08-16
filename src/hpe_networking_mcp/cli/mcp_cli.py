@@ -18,6 +18,7 @@ import argparse
 import asyncio
 import json
 import shlex
+import sys
 from typing import Sequence
 
 from hpe_networking_mcp.cli_client.banner import print_banner
@@ -43,6 +44,7 @@ from hpe_networking_mcp.cli_client.commands import (
     cmd_tool_explore,
     cmd_tools_list,
     cmd_troubleshoot,
+    create_reasoning_service,
     ensure_connected,
     parse_args_json,
 )
@@ -58,7 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="hpe-mcp",
         description=(
             "Standalone client for hpe-networking-mcp (and other MCP servers). "
-            "Run with no arguments to open the interactive shell."
+            "Run with no arguments to open plain streaming AI chat."
         ),
     )
     p.add_argument(
@@ -71,14 +73,25 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
     p.add_argument("--quiet", "-q", action="store_true", help="Suppress banner")
     p.add_argument(
+        "--provider",
+        choices=["heuristic", "openai", "anthropic", "ollama"],
+        default=None,
+        help="AI provider for interactive/AI commands (env/config may set the default)",
+    )
+    p.add_argument(
+        "--model",
+        default=None,
+        help="AI model name (provider-specific; env/config may set the default)",
+    )
+    p.add_argument(
         "--repl",
         action="store_true",
-        help="Use plain readline shell instead of the Textual TUI",
+        help="Use the gum/readline command shell instead of streaming chat",
     )
     p.add_argument(
         "--tui",
         action="store_true",
-        help="Force Textual TUI (default for interactive shell)",
+        help="Use the legacy full-screen Textual TUI",
     )
     p.add_argument(
         "--allow-writes",
@@ -166,7 +179,9 @@ def build_parser() -> argparse.ArgumentParser:
     d_search_internal.add_argument("--collection", default="internal")
 
     # diagram
-    diag = sub.add_parser("diagram", help="Generate network design diagrams (Draw.io/Graphviz/NeXt)")
+    diag = sub.add_parser(
+        "diagram", help="Generate network design diagrams (Draw.io/Graphviz/NeXt)"
+    )
     diag.add_argument("prompt", nargs="*", default=[], help="Diagram description or title")
     diag.add_argument("--format", "-f", choices=["drawio", "graphviz", "nextui"], default=None)
     diag.add_argument("--vendor", "-v", default=None)
@@ -175,8 +190,12 @@ def build_parser() -> argparse.ArgumentParser:
     # ai / reason
     ai_p = sub.add_parser("ai", help="AI multi-turn reasoning and tool dispatch")
     ai_p.add_argument("prompt", nargs="+", help="Goal or prompt for AI expert")
-    ai_p.add_argument("--provider", choices=["heuristic", "openai", "anthropic", "ollama"], default="heuristic")
-    ai_p.add_argument("--model", default=None)
+    ai_p.add_argument(
+        "--provider",
+        choices=["heuristic", "openai", "anthropic", "ollama"],
+        default=argparse.SUPPRESS,
+    )
+    ai_p.add_argument("--model", default=argparse.SUPPRESS)
 
     # troubleshoot
     tb_p = sub.add_parser("troubleshoot", help="Automated root cause diagnostic reasoning")
@@ -185,11 +204,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     # migrate
     mg_p = sub.add_parser("migrate", help="Multi-vendor migration blueprint & syntax translation")
-    mg_p.add_argument("source_vendor", nargs="?", default="aos-s", help="Source vendor (cisco, aos-s, procurve)")
+    mg_p.add_argument(
+        "source_vendor", nargs="?", default="aos-s", help="Source vendor (cisco, aos-s, procurve)"
+    )
 
     # architect / design
-    ar_p = sub.add_parser("architect", help="Campus / DC Fabric architecture design & BOM synthesis")
-    ar_p.add_argument("environment", nargs="?", default="campus", choices=["campus", "datacenter", "branch", "fabric"])
+    ar_p = sub.add_parser(
+        "architect", help="Campus / DC Fabric architecture design & BOM synthesis"
+    )
+    ar_p.add_argument(
+        "environment",
+        nargs="?",
+        default="campus",
+        choices=["campus", "datacenter", "branch", "fabric"],
+    )
     ar_p.add_argument("--ports", type=int, default=200)
     ar_p.add_argument("--aps", type=int, default=50)
     ar_p.add_argument("--evpn", action="store_true")
@@ -205,8 +233,17 @@ def build_parser() -> argparse.ArgumentParser:
     prof = sub.add_parser("profiles", help="Show configured server profiles")
     prof.add_argument("profiles_cmd", nargs="?", default="list", choices=["list"])
 
-    # TUI / shell
-    sub.add_parser("shell", help="Interactive Textual TUI (or --repl fallback)")
+    # TUI / shell.  Repeat mode flags here so both
+    # ``hpe-mcp --tui shell`` and ``hpe-mcp shell --tui`` work.
+    shell_p = sub.add_parser("shell", help="Interactive plain streaming chat")
+    shell_p.add_argument("--repl", action="store_true", default=argparse.SUPPRESS)
+    shell_p.add_argument("--tui", action="store_true", default=argparse.SUPPRESS)
+    shell_p.add_argument(
+        "--provider",
+        choices=["heuristic", "openai", "anthropic", "ollama"],
+        default=argparse.SUPPRESS,
+    )
+    shell_p.add_argument("--model", default=argparse.SUPPRESS)
     sub.add_parser("version", help="Print version and exit")
 
     return p
@@ -221,7 +258,16 @@ def _safety_from_args(args: argparse.Namespace) -> SafetyPolicy:
 
 
 async def _run_connected(args: argparse.Namespace) -> int:
-    cfg = load_client_config(config_path=args.config, profile_override=args.profile)
+    try:
+        cfg = load_client_config(
+            config_path=args.config,
+            profile_override=args.profile,
+            provider_override=getattr(args, "provider", None),
+            model_override=getattr(args, "model", None),
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print_error(f"configuration error: {exc}", json_mode=bool(args.json), code="config_error")
+        return 2
     safety = _safety_from_args(args)
     json_mode = bool(args.json)
 
@@ -250,9 +296,7 @@ async def _run_connected(args: argparse.Namespace) -> int:
             print_ok(
                 {
                     "profiles": rows,
-                    "config_path": (
-                        str(cfg.config_path) if cfg.config_path else None
-                    ),
+                    "config_path": (str(cfg.config_path) if cfg.config_path else None),
                 },
                 json_mode=True,
             )
@@ -385,8 +429,8 @@ async def _run_connected(args: argparse.Namespace) -> int:
                 mgr,
                 safety,
                 prompt=" ".join(args.prompt),
-                provider=args.provider,
-                model=args.model,
+                provider=cfg.ai_provider,
+                model=cfg.ai_model,
                 json_mode=json_mode,
             )
 
@@ -456,45 +500,202 @@ async def _run_connected(args: argparse.Namespace) -> int:
         return 2
 
 
+async def _stream_terminal_request(
+    service,
+    prompt: str,
+    *,
+    json_mode: bool = False,
+    cancel_event: asyncio.Event | None = None,
+) -> int:
+    """Render observable reasoning events without exposing hidden thinking."""
+    events = []
+    wrote_text = False
+    async for event in service.stream(prompt, cancel_event=cancel_event):
+        events.append(event)
+        if json_mode:
+            continue
+        if event.kind == "text_delta":
+            console.print(event.content, end="", markup=False, soft_wrap=True)
+            wrote_text = True
+        elif event.kind == "tool_call":
+            if wrote_text:
+                console.print()
+                wrote_text = False
+            console.print(
+                f"[dim]→ {event.tool_name or 'tool'} "
+                f"({'read-only' if event.is_read_only else 'write/unknown'})[/]"
+            )
+        elif event.kind == "tool_result":
+            console.print(f"[dim]↳ {event.content[:240]}[/]")
+        elif event.kind == "error":
+            if wrote_text:
+                console.print()
+                wrote_text = False
+            console.print(f"[red]{event.content}[/]")
+        elif event.kind == "cancelled":
+            if wrote_text:
+                console.print()
+                wrote_text = False
+            console.print("[yellow]request cancelled[/]")
+    if not json_mode:
+        if wrote_text:
+            console.print()
+        return 0
+
+    from hpe_networking_mcp.cli_client.output import print_ok
+
+    print_ok(
+        {
+            "prompt": prompt,
+            "metadata": service.metadata,
+            "events": [
+                {
+                    "type": event.kind,
+                    "turn": event.turn_index,
+                    "content": event.content,
+                    "tool": event.tool_name,
+                    "allowed": event.allowed,
+                    "is_read_only": event.is_read_only,
+                    "usage": event.usage,
+                    "metadata": event.metadata,
+                }
+                for event in events
+            ],
+            "usage": service.total_usage,
+        },
+        json_mode=True,
+    )
+    return 0
+
+
+async def run_chat(
+    cfg,
+    safety: SafetyPolicy,
+    *,
+    quiet: bool = False,
+    json_default: bool = False,
+    provider: str | None = None,
+    model: str | None = None,
+) -> int:
+    """Run the default plain terminal chat loop with model-backed streaming.
+
+    A non-TTY invocation has no interactive prompt and exits without
+    connecting or making an AI request.  This keeps startup/blank stdin safe
+    for shell probes and process supervisors.
+    """
+
+    if not sys.stdin.isatty():
+        return 0
+    configure_readline()
+    if not quiet and not json_default:
+        print_banner(console, profile=cfg.default_profile, mode="chat")
+
+    async with SessionManager.create(namespace=True) as mgr:
+        service = None
+        connected = False
+        while True:
+            try:
+                line = await asyncio.to_thread(read_line, "hpe-mcp> ")
+            except (EOFError, KeyboardInterrupt):
+                console.print()
+                return 0
+            line = (line or "").strip()
+            if not line:
+                continue
+            if line.lower() in {"exit", "quit", ":q", "/exit", "/quit"}:
+                return 0
+            if line.lower() in {"help", "/help", "?"}:
+                console.print(
+                    "Type a networking question to chat. "
+                    "Use `hpe-mcp --repl` for the legacy command shell, "
+                    "`hpe-mcp --tui` for Textual, or `hpe-mcp ai <prompt>` "
+                    "for one-shot mode."
+                )
+                continue
+
+            if not connected:
+                try:
+                    prof = await ensure_connected(mgr, cfg)
+                    connected = True
+                    if not quiet and not json_default:
+                        console.print(
+                            f"[green]connected[/] {prof.name} "
+                            f"({prof.transport}) · {len(mgr.tools)} tools"
+                        )
+                except Exception as exc:  # noqa: BLE001 - connection boundary
+                    console.print(f"[red]connect failed:[/] {exc}")
+                    continue
+                service = create_reasoning_service(
+                    mgr,
+                    safety,
+                    provider=provider or cfg.ai_provider,
+                    model=model or cfg.ai_model,
+                )
+
+            if line.startswith("/"):
+                console.print(
+                    "[yellow]This plain chat path accepts questions only; "
+                    "use --repl or --tui for command controls.[/]"
+                )
+                continue
+            assert service is not None
+            cancel_event = asyncio.Event()
+            try:
+                await _stream_terminal_request(
+                    service,
+                    line,
+                    json_mode=json_default,
+                    cancel_event=cancel_event,
+                )
+            except KeyboardInterrupt:
+                cancel_event.set()
+                service.cancel()
+                console.print("\n[yellow]request cancelled[/]")
+
+
 async def run_repl(
     cfg,
     safety: SafetyPolicy,
     *,
     quiet: bool = False,
     json_default: bool = False,
+    provider: str | None = None,
+    model: str | None = None,
 ) -> int:
     """Minimal interactive shell over a live session."""
-    # Load readline/libedit BEFORE first prompt so ↑/↓ history works.
-    has_hist = configure_readline()
-    print_banner(
-        console,
-        profile=cfg.default_profile,
-        mode="shell",
-        quiet=quiet,
-    )
-    console.print(
-        "[dim]shortcuts:[/] ask <q> · api <q> · find <q> · tools · help · exit\n"
-        "[dim]full:[/] rag ask · tools list|find · api lookup · invoke-read · "
-        "skills · docs · profiles · connect"
-    )
-    if has_hist:
-        console.print("[dim]history:[/] ↑/↓ recall · Ctrl-R search (libedit/GNU) · Ctrl-C cancel")
-    else:
-        console.print("[dim yellow]history unavailable (no readline)[/]")
+    if not sys.stdin.isatty():
+        return 0
+    from hpe_networking_mcp.cli_client.banner import package_version
+    from hpe_networking_mcp.cli_client.gum_shell import GumShell
+
+    gum = GumShell()
+
+    # readline history still useful even when gum handles the prompt.
+    configure_readline()
+
+    if not quiet:
+        gum.header(package_version(), profile=cfg.default_profile)
+        gum.print_shortcuts()
 
     async with SessionManager.create(namespace=True) as mgr:
+        service = None
         try:
-            prof = await ensure_connected(mgr, cfg)
-            console.print(
-                f"[green]connected[/] {prof.name} ({prof.transport}) · {len(mgr.tools)} tools"
+            with gum.spin("connecting…"):
+                prof = await ensure_connected(mgr, cfg)
+            gum.connected(prof.name, prof.transport, len(mgr.tools))
+            service = create_reasoning_service(
+                mgr,
+                safety,
+                provider=provider or cfg.ai_provider,
+                model=model or cfg.ai_model,
             )
         except Exception as exc:  # noqa: BLE001
-            console.print(f"[yellow]not connected yet:[/] {exc}")
-            console.print("[dim]use: connect [profile][/]")
+            gum.error(f"not connected: {exc}")
+            gum.info("use: connect [profile]")
 
         while True:
             try:
-                line = await asyncio.to_thread(read_line, "hpe-mcp> ")
+                line = await gum.prompt()
             except (EOFError, KeyboardInterrupt):
                 console.print()
                 break
@@ -545,13 +746,14 @@ async def run_repl(
                         "  rag ask | tools list|find | api lookup | invoke-read\n"
                         "  skills [list|show] | docs [list|add|remove|search]\n"
                         "  status | connect [profile] | profiles | exit\n"
-                        "[dim]Note: Any plain question automatically queries RAG docs.[/]"
+                        "[dim]Note: Any plain question uses the configured AI backend.[/]\n"
                     )
                     continue
                 if head == "connect":
                     name = argv[1] if len(argv) > 1 else None
-                    prof = await ensure_connected(mgr, cfg, profile=name)
-                    console.print(f"[green]connected[/] {prof.name} · {len(mgr.tools)} tools")
+                    with gum.spin("connecting…"):
+                        prof = await ensure_connected(mgr, cfg, profile=name)
+                    gum.connected(prof.name, prof.transport, len(mgr.tools))
                     continue
                 if head == "profiles":
                     for n, p in sorted(cfg.profiles.items()):
@@ -570,10 +772,16 @@ async def run_repl(
                     )
                     continue
                 if head in {"ai", "reason"}:
-                    await cmd_ai_reason(
-                        mgr,
-                        safety,
-                        prompt=" ".join(argv[1:]),
+                    if service is None:
+                        service = create_reasoning_service(
+                            mgr,
+                            safety,
+                            provider=provider or cfg.ai_provider,
+                            model=model or cfg.ai_model,
+                        )
+                    await _stream_terminal_request(
+                        service,
+                        " ".join(argv[1:]),
                         json_mode=json_mode,
                     )
                     continue
@@ -706,15 +914,21 @@ async def run_repl(
                     if len(argv) >= 2:
                         cmd_docs_search(" ".join(argv[1:]), json_mode=json_mode)
                         continue
-                # If the user typed an arbitrary networking question, fall back to RAG
-                await cmd_rag_ask(
-                    mgr,
-                    safety,
-                    question=line,
-                    json_mode=json_mode,
-                )
+                # Plain non-empty input is model-backed chat. Explicit
+                # `rag ask`/`ask` remains available above for docs lookup.
+                if service is None:
+                    service = create_reasoning_service(
+                        mgr,
+                        safety,
+                        provider=provider or cfg.ai_provider,
+                        model=model or cfg.ai_model,
+                    )
+                await _stream_terminal_request(service, line, json_mode=json_mode)
             except Exception as exc:  # noqa: BLE001
-                print_error(f"{type(exc).__name__}: {exc}", json_mode=json_mode)
+                if json_mode:
+                    print_error(f"{type(exc).__name__}: {exc}", json_mode=True)
+                else:
+                    gum.error(f"{type(exc).__name__}: {exc}")
 
     return 0
 
@@ -763,26 +977,57 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not getattr(args, "command", None):
         args.command = "shell"
 
-    # Textual TUI must own the main thread / event loop.
-    if args.command == "shell" and not getattr(args, "repl", False):
-        cfg = load_client_config(
-            config_path=args.config, profile_override=args.profile
-        )
-        safety = _safety_from_args(args)
+    # The default interactive path is the plain streaming chat loop.  The
+    # legacy readline shell and Textual UI remain explicit opt-in modes.
+    if args.command == "shell":
         try:
-            from hpe_networking_mcp.cli_client.tui import run_tui
-        except ImportError:
-            console.print(
-                "[yellow]textual not installed — falling back to readline shell[/]"
+            cfg = load_client_config(
+                config_path=args.config,
+                profile_override=args.profile,
+                provider_override=getattr(args, "provider", None),
+                model_override=getattr(args, "model", None),
             )
-            try:
-                return asyncio.run(
-                    run_repl(cfg, safety, quiet=args.quiet, json_default=args.json)
-                )
-            except KeyboardInterrupt:
-                return 130
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            print_error(f"configuration error: {exc}", json_mode=args.json, code="config_error")
+            return 2
+        safety = _safety_from_args(args)
+        if not sys.stdin.isatty():
+            return 0
         try:
-            return run_tui(cfg, safety, profile=args.profile)
+            if getattr(args, "tui", False):
+                from hpe_networking_mcp.cli_client.tui import run_tui
+
+                return run_tui(
+                    cfg,
+                    safety,
+                    profile=args.profile,
+                    provider=cfg.ai_provider,
+                    model=cfg.ai_model,
+                )
+            if getattr(args, "repl", False):
+                return asyncio.run(
+                    run_repl(
+                        cfg,
+                        safety,
+                        quiet=args.quiet,
+                        json_default=args.json,
+                        provider=cfg.ai_provider,
+                        model=cfg.ai_model,
+                    )
+                )
+            return asyncio.run(
+                run_chat(
+                    cfg,
+                    safety,
+                    quiet=args.quiet,
+                    json_default=args.json,
+                    provider=cfg.ai_provider,
+                    model=cfg.ai_model,
+                )
+            )
+        except ImportError:
+            console.print("[yellow]Textual is not installed; use the plain chat or --repl mode.[/]")
+            return 2
         except KeyboardInterrupt:
             return 130
 
