@@ -305,15 +305,15 @@
       "https://www.juniper.net/documentation/us/en/hardware/ex4400/topics/topic-map/ex4400-configure-junos-os.html"
     ],
     "output_dir": "ingestion/sources/junos_ex_hardware",
-    "scraper": "ingestion/scrape_junos_ex.py",
+    "scraper": "ingestion/scrape_junos_docs.py",
     "extra_scripts": [
-      "ingestion/discover_junos_ex_urls.py"
+      "ingestion/discover_junos_urls.py"
     ],
     "extra_script_phases": {
-      "ingestion/discover_junos_ex_urls.py": "pre"
+      "ingestion/discover_junos_urls.py": "pre"
     },
     "url_seed_file": "ingestion/junos_ex_hardware_urls.json",
-    "notes": "Found via the same juniper.net sitemap crawl as mist_docs (plain urllib, no Playwright/bot-gate) filtered to /documentation/us/en/hardware/ex* paths -- confirmed 720 pages across every EX chassis family (ex2300, ex3400, ex4000, ex4100(-f/-h), ex4300, ex4400, ex4600, ex4650, ex9204/9208/9214/9251/9253). Same DITA topicBody template as mist_docs, confirmed via direct sampling, so ingestion/scrape_junos_ex.py reuses that extraction logic verbatim. This is predominantly a physical install/maintenance book (413 'concept' pages, mostly site/cabling/power/safety, plus 268 topic-map index pages); only ~14 pages are first-boot 'configure Junos OS' content -- deeper feature/CLI configuration guidance lives in the general Junos software config guides, a much larger (~24,700-page) corpus already deliberately excluded (see the same note on mist_docs' discovery script). Discover and scrape both junos_ex_hardware and junos_ex_release_notes together with ingestion/discover_junos_ex_urls.py (pre-phase) and ingestion/scrape_junos_ex.py -- one script produces/consumes both datasets since they share the same sitemap crawl and scrape mechanics, but are kept as two separate RAG sources because their content types (hardware install vs. software changelog) differ."
+    "notes": "Found via the same juniper.net sitemap crawl as mist_docs (plain urllib, no Playwright/bot-gate) filtered to /documentation/us/en/hardware/ex* paths -- confirmed 720 pages across every EX chassis family (ex2300, ex3400, ex4000, ex4100(-f/-h), ex4300, ex4400, ex4600, ex4650, ex9204/9208/9214/9251/9253). Same DITA topicBody template as mist_docs, confirmed via direct sampling, so ingestion/scrape_junos_docs.py reuses that extraction logic verbatim. This is predominantly a physical install/maintenance book (413 'concept' pages, mostly site/cabling/power/safety, plus 268 topic-map index pages); only ~14 pages are first-boot 'configure Junos OS' content -- deeper feature/CLI configuration guidance lives in the general Junos software config guides, a much larger (~24,700-page) corpus already deliberately excluded (see the same note on mist_docs' discovery script). Discover and scrape both junos_ex_hardware and junos_ex_release_notes together with ingestion/discover_junos_urls.py (pre-phase) and ingestion/scrape_junos_docs.py -- one script pair now produces/consumes all eight EX/MX/QFX/SRX hardware+release-notes datasets since they share the same sitemap crawl and scrape mechanics (formerly discover_junos_ex_urls.py/scrape_junos_ex.py, EX-only; generalized in place -- see junos_mx_hardware/junos_qfx_hardware/junos_srx_hardware notes for the MX/QFX/SRX expansion)."
   },
   {
     "source": "junos_ex_release_notes",
@@ -323,15 +323,123 @@
       "https://www.juniper.net/documentation/us/en/software/junos/release-notes/24.4/junos-release-notes-24.4r1/index.html"
     ],
     "output_dir": "ingestion/sources/junos_ex_release_notes",
-    "scraper": "ingestion/scrape_junos_ex.py",
+    "scraper": "ingestion/scrape_junos_docs.py",
     "extra_scripts": [
-      "ingestion/discover_junos_ex_urls.py"
+      "ingestion/discover_junos_urls.py"
     ],
     "extra_script_phases": {
-      "ingestion/discover_junos_ex_urls.py": "pre"
+      "ingestion/discover_junos_urls.py": "pre"
     },
     "url_seed_file": "ingestion/junos_ex_release_notes_urls.json",
-    "notes": "The full Junos release-notes tree is 6,627 pages covering EVERY Junos platform (ACX/EX/MX/NFX/PTX/QFX/SRX/SSR/JRR/vSRX/cSRX), not just switches -- by the same 'bound to this project's switch/AP focus' reasoning already applied to aoscx_release_notes and mist_product_updates, only the 193 pages whose filename carries an explicit 'ex-' platform tag (e.g. ex-new-features-cover.html, ex-open-issues-23.1r1.html, ex-what-changed-22.3r2.html) are kept. Deliberately excluded: ~3,210 other-platform-specific pages (acx-/srx-/vsrx-/csrx-/ptx-/qfx-/mx-/nfx-/ssr-/jrr- filename tags -- routers/firewalls/SD-WAN, out of this project's scope) and ~3,224 platform-generic feature pages (e.g. software-installation-and-upgrade, jweb, system-management, evpn, pki -- may or may not apply to EX, not filterable by filename alone, a candidate for later reconsideration if cross-platform feature content becomes valuable). Same sitemap-crawl/topicBody mechanics as junos_ex_hardware -- both datasets are produced by one run of ingestion/discover_junos_ex_urls.py and scraped by one run of ingestion/scrape_junos_ex.py."
+    "notes": "The full Junos release-notes tree is 6,627 pages covering EVERY Junos platform (ACX/EX/MX/NFX/PTX/QFX/SRX/SSR/JRR/vSRX/cSRX), not just switches -- by the same 'bound to this project's switch/AP focus' reasoning already applied to aoscx_release_notes and mist_product_updates, only the 193 pages whose filename carries an explicit 'ex-' platform tag (e.g. ex-new-features-cover.html, ex-open-issues-23.1r1.html, ex-what-changed-22.3r2.html) are kept. MX/QFX/SRX now have their own equivalent sources (see junos_mx_release_notes/junos_qfx_release_notes/junos_srx_release_notes); still deliberately excluded: ACX/NFX/PTX/SSR/JRR-tagged pages (out of this project's router/switch/AP/firewall scope) and ~3,224 platform-generic feature pages (e.g. software-installation-and-upgrade, jweb, system-management, evpn, pki -- may or may not apply to any one platform, not filterable by filename alone, a candidate for later reconsideration if cross-platform feature content becomes valuable). Same sitemap-crawl/topicBody mechanics as junos_ex_hardware -- both datasets are produced by one run of ingestion/discover_junos_urls.py and scraped by one run of ingestion/scrape_junos_docs.py."
+  },
+  {
+    "source": "junos_mx_hardware",
+    "doc_type": "junos-mx-hardware",
+    "purpose": "Juniper MX-series router hardware install/maintenance guide -- site guidelines, cabling, power, safety, and chassis component replacement, per MX chassis family.",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/hardware/mx480/topics/topic-map/mx480-hardware-overview.html"
+    ],
+    "output_dir": "ingestion/sources/junos_mx_hardware",
+    "scraper": "ingestion/scrape_junos_docs.py",
+    "extra_scripts": [
+      "ingestion/discover_junos_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_junos_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/junos_mx_hardware_urls.json",
+    "notes": "Found via the same juniper.net sitemap crawl as junos_ex_hardware (plain urllib, no Playwright/bot-gate) filtered to /documentation/us/en/hardware/mx* paths, covering every MX router chassis family. Same DITA topicBody template as junos_ex_hardware, confirmed via direct sampling. Added to close the router-coverage gap next to the already-ingested EX/QFX switch and SRX firewall hardware families. Discover and scrape both junos_mx_hardware and junos_mx_release_notes together with ingestion/discover_junos_urls.py (pre-phase) and ingestion/scrape_junos_docs.py, the same shared script pair used for every EX/MX/QFX/SRX source."
+  },
+  {
+    "source": "junos_mx_release_notes",
+    "doc_type": "junos-mx-release-notes",
+    "purpose": "Juniper Junos OS release notes filtered to MX-series-specific pages -- per-version new features, resolved issues, open issues, and what-changed content for the MX router platform only.",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/software/junos/release-notes/24.4/junos-release-notes-24.4r1/index.html"
+    ],
+    "output_dir": "ingestion/sources/junos_mx_release_notes",
+    "scraper": "ingestion/scrape_junos_docs.py",
+    "extra_scripts": [
+      "ingestion/discover_junos_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_junos_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/junos_mx_release_notes_urls.json",
+    "notes": "Same 6,627-page full Junos release-notes tree as junos_ex_release_notes, filtered instead to pages whose filename carries an explicit 'mx-' platform tag (e.g. mx-new-features-cover.html, mx-open-issues-23.1r1.html, mx-what-changed-22.3r2.html). Same sitemap-crawl/topicBody mechanics as junos_mx_hardware -- both datasets are produced by one run of ingestion/discover_junos_urls.py and scraped by one run of ingestion/scrape_junos_docs.py."
+  },
+  {
+    "source": "junos_qfx_hardware",
+    "doc_type": "junos-qfx-hardware",
+    "purpose": "Juniper QFX-series data-center switch hardware install/maintenance guide -- site guidelines, cabling, power, safety, and chassis component replacement, per QFX chassis family.",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/hardware/qfx5120/topics/topic-map/qfx5120-hardware-overview.html"
+    ],
+    "output_dir": "ingestion/sources/junos_qfx_hardware",
+    "scraper": "ingestion/scrape_junos_docs.py",
+    "extra_scripts": [
+      "ingestion/discover_junos_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_junos_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/junos_qfx_hardware_urls.json",
+    "notes": "Found via the same juniper.net sitemap crawl as junos_ex_hardware (plain urllib, no Playwright/bot-gate) filtered to /documentation/us/en/hardware/qfx* paths, covering every QFX data-center switch chassis family. Same DITA topicBody template as junos_ex_hardware, confirmed via direct sampling. Discover and scrape both junos_qfx_hardware and junos_qfx_release_notes together with ingestion/discover_junos_urls.py (pre-phase) and ingestion/scrape_junos_docs.py, the same shared script pair used for every EX/MX/QFX/SRX source."
+  },
+  {
+    "source": "junos_qfx_release_notes",
+    "doc_type": "junos-qfx-release-notes",
+    "purpose": "Juniper Junos OS release notes filtered to QFX-series-specific pages -- per-version new features, resolved issues, open issues, and what-changed content for the QFX data-center switch platform only.",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/software/junos/release-notes/24.4/junos-release-notes-24.4r1/index.html"
+    ],
+    "output_dir": "ingestion/sources/junos_qfx_release_notes",
+    "scraper": "ingestion/scrape_junos_docs.py",
+    "extra_scripts": [
+      "ingestion/discover_junos_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_junos_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/junos_qfx_release_notes_urls.json",
+    "notes": "Same 6,627-page full Junos release-notes tree as junos_ex_release_notes, filtered instead to pages whose filename carries an explicit 'qfx-' platform tag (e.g. qfx-new-features-cover.html, qfx-open-issues-23.1r1.html, qfx-what-changed-22.3r2.html). Same sitemap-crawl/topicBody mechanics as junos_qfx_hardware -- both datasets are produced by one run of ingestion/discover_junos_urls.py and scraped by one run of ingestion/scrape_junos_docs.py."
+  },
+  {
+    "source": "junos_srx_hardware",
+    "doc_type": "junos-srx-hardware",
+    "purpose": "Juniper SRX-series firewall hardware install/maintenance guide -- site guidelines, cabling, power, safety, and chassis component replacement, per physical SRX firewall chassis family. (vSRX/cSRX are virtual-only and have no hardware guide -- see junos_srx_release_notes for their software coverage.)",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/hardware/srx4600/topics/topic-map/srx4600-hardware-overview.html"
+    ],
+    "output_dir": "ingestion/sources/junos_srx_hardware",
+    "scraper": "ingestion/scrape_junos_docs.py",
+    "extra_scripts": [
+      "ingestion/discover_junos_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_junos_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/junos_srx_hardware_urls.json",
+    "notes": "Found via the same juniper.net sitemap crawl as junos_ex_hardware (plain urllib, no Playwright/bot-gate) filtered to /documentation/us/en/hardware/srx* paths, covering every physical SRX firewall chassis family. Same DITA topicBody template as junos_ex_hardware, confirmed via direct sampling. This is the 'firewall stuff' gap closed alongside the MX/QFX router/switch expansion. Discover and scrape both junos_srx_hardware and junos_srx_release_notes together with ingestion/discover_junos_urls.py (pre-phase) and ingestion/scrape_junos_docs.py, the same shared script pair used for every EX/MX/QFX/SRX source."
+  },
+  {
+    "source": "junos_srx_release_notes",
+    "doc_type": "junos-srx-release-notes",
+    "purpose": "Juniper Junos OS release notes filtered to SRX-family firewall pages (physical SRX plus virtual vSRX/cSRX) -- per-version new features, resolved issues, open issues, and what-changed content for the firewall platform.",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/software/junos/release-notes/24.4/junos-release-notes-24.4r1/index.html"
+    ],
+    "output_dir": "ingestion/sources/junos_srx_release_notes",
+    "scraper": "ingestion/scrape_junos_docs.py",
+    "extra_scripts": [
+      "ingestion/discover_junos_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_junos_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/junos_srx_release_notes_urls.json",
+    "notes": "Same 6,627-page full Junos release-notes tree as junos_ex_release_notes, filtered instead to pages whose filename carries an explicit 'srx-', 'vsrx-', or 'csrx-' platform tag (e.g. srx-new-features-cover.html, vsrx-open-issues-23.1r1.html, csrx-what-changed-22.3r2.html) -- the physical and virtual forms of the same firewall product line are kept together in one source. Same sitemap-crawl/topicBody mechanics as junos_srx_hardware -- both datasets are produced by one run of ingestion/discover_junos_urls.py and scraped by one run of ingestion/scrape_junos_docs.py."
   },
   {
     "source": "product_specs",

@@ -16,6 +16,7 @@ Usage:
 import argparse
 import hashlib
 import json
+import re
 import sys
 import uuid
 from pathlib import Path
@@ -32,7 +33,7 @@ from hpe_networking_mcp.pipeline.clients.redis_client import (
     get_client,
     upsert_docs,
 )
-from ingestion.chunking import chunk_text
+from ingestion.chunking import chunk_text_with_breadcrumbs
 
 SOURCES_DIR = Path(__file__).parent / "sources"
 
@@ -64,6 +65,12 @@ SOURCE_META = {
     "mist_product_updates": "mist-product-updates",
     "junos_ex_hardware": "junos-ex-hardware",
     "junos_ex_release_notes": "junos-ex-release-notes",
+    "junos_mx_hardware": "junos-mx-hardware",
+    "junos_mx_release_notes": "junos-mx-release-notes",
+    "junos_qfx_hardware": "junos-qfx-hardware",
+    "junos_qfx_release_notes": "junos-qfx-release-notes",
+    "junos_srx_hardware": "junos-srx-hardware",
+    "junos_srx_release_notes": "junos-srx-release-notes",
     "product_datasheets": "product-datasheet",
 }
 
@@ -136,6 +143,26 @@ def stable_id(rel_path: str, chunk_index: int) -> str:
 
 def content_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+_SOURCE_URL_COMMENT_RE = re.compile(r"<!--\s*source:\s*(\S+?)\s*-->")
+
+
+def extract_source_url(text: str) -> str | None:
+    """Extract a leading scraper provenance comment from source text."""
+    match = _SOURCE_URL_COMMENT_RE.search(text[:500])
+    return match.group(1) if match else None
+
+
+def _file_source_url(path: Path, chunked_text: str) -> str | None:
+    """Recover source URL metadata without changing indexed document text."""
+    if path.suffix.lower() not in (".htm", ".html"):
+        return extract_source_url(chunked_text)
+    try:
+        raw_head = path.read_text(encoding="utf-8", errors="ignore")[:500]
+    except OSError:
+        return None
+    return extract_source_url(raw_head)
 
 
 def _schema_to_text(spec_name: str, schema_name: str, schema: dict) -> str | None:
@@ -219,14 +246,16 @@ def collect_openapi_points(source_dir: Path, doc_type: str = "openapi") -> list[
             if not text or not text.strip():
                 continue
             chunk_key = f"{rel_path}:schema:{schema_name}"
-            records.append({
-                "id": _md5_uuid(chunk_key),
-                "text": text,
-                "source": source_dir.name,
-                "doc_type": doc_type,
-                "file_path": rel_path,
-                "chunk_index": len(records),
-            })
+            records.append(
+                {
+                    "id": _md5_uuid(chunk_key),
+                    "text": text,
+                    "source": source_dir.name,
+                    "doc_type": doc_type,
+                    "file_path": rel_path,
+                    "chunk_index": len(records),
+                }
+            )
 
         # One chunk per endpoint operation
         for api_path, path_item in spec.get("paths", {}).items():
@@ -237,14 +266,16 @@ def collect_openapi_points(source_dir: Path, doc_type: str = "openapi") -> list[
                     continue
                 text = _endpoint_to_text(spec_name, api_path, method, op)
                 chunk_key = f"{rel_path}:path:{method}:{api_path}"
-                records.append({
-                    "id": _md5_uuid(chunk_key),
-                    "text": text,
-                    "source": source_dir.name,
-                    "doc_type": doc_type,
-                    "file_path": rel_path,
-                    "chunk_index": len(records),
-                })
+                records.append(
+                    {
+                        "id": _md5_uuid(chunk_key),
+                        "text": text,
+                        "source": source_dir.name,
+                        "doc_type": doc_type,
+                        "file_path": rel_path,
+                        "chunk_index": len(records),
+                    }
+                )
 
     return records
 
@@ -277,8 +308,9 @@ def collect_points(source_dir: Path, doc_type: str) -> list[dict]:
             # the one file rather than aborting the whole run.
             print(f"  SKIP {path.name}: resolves outside {SOURCES_DIR}")
             continue
-        chunks = chunk_text(file_text)
-        for i, chunk in enumerate(chunks):
+        source_url = _file_source_url(path, file_text)
+        chunks = chunk_text_with_breadcrumbs(file_text)
+        for i, (chunk, breadcrumb) in enumerate(chunks):
             records.append(
                 {
                     "id": stable_id(rel_path, i),
@@ -288,6 +320,8 @@ def collect_points(source_dir: Path, doc_type: str) -> list[dict]:
                     "file_path": rel_path,
                     "chunk_index": i,
                     "content_hash": content_hash(chunk),
+                    "source_url": source_url,
+                    "heading_breadcrumb": breadcrumb,
                 }
             )
     return records
@@ -314,10 +348,7 @@ def upload(records: list[dict], ollama: OllamaClient, client):
             continue
         texts = [r["text"] for r in new]
         vectors = ollama.embed_document(texts)
-        docs = [
-            {**r, "embedding": vec}
-            for r, vec in zip(new, vectors)
-        ]
+        docs = [{**r, "embedding": vec} for r, vec in zip(new, vectors)]
         upsert_docs(client, docs)
         uploaded += len(new)
         print(f"    uploaded {uploaded} new / {skipped} skipped / {len(records)} total")
@@ -346,8 +377,9 @@ def source_uses_structured_index(folder: str, backend: str) -> bool:
     return backend == "lancedb" and folder == "openapi_specs"
 
 
-def upload_lancedb(records: list[dict], ingested_sources: list[str],
-                   parallel: int | None = None) -> None:
+def upload_lancedb(
+    records: list[dict], ingested_sources: list[str], parallel: int | None = None
+) -> None:
     """Full rebuild of the LanceDB docs table: stream embeddings from fastembed
     (one embed pass so parallel workers spawn once), add rows in batches into a
     staging table, assert every ingested source landed >0 chunks (R2 — a
@@ -447,9 +479,11 @@ def upload_lancedb_incremental(
         )
 
     db = lance_client.connect()
-    if "content_hash" not in lance_client.docs_columns(db):
+    required_columns = {"content_hash", "source_url", "heading_breadcrumb"}
+    missing_columns = sorted(required_columns - lance_client.docs_columns(db))
+    if missing_columns:
         print(
-            "  existing docs table has no content_hash column; "
+            f"  existing docs table is missing column(s) {missing_columns}; "
             "performing one full rebuild",
             flush=True,
         )
@@ -472,9 +506,7 @@ def upload_lancedb_incremental(
     # that produced a record. A known-but-missing source dir is in neither, so
     # its rows are preserved; a source dropped from SOURCE_META entirely is
     # "retired" and its leftover rows are swept.
-    walked_sources = set(ingested_sources) | {
-        str(record.get("source") or "") for record in records
-    }
+    walked_sources = set(ingested_sources) | {str(record.get("source") or "") for record in records}
     known_sources = set(SOURCE_META)
     removed = sorted(
         rid
@@ -546,6 +578,19 @@ def upload_lancedb_incremental(
     return True
 
 
+def _required_sources() -> frozenset[str]:
+    """Return source folders required for a safe full prose-index rebuild."""
+    from hpe_networking_mcp.pipeline.clients import advisory_index
+
+    return frozenset(advisory_index.SOURCE_DIRS)
+
+
+def missing_required_sources(sources_dir: Path | None = None) -> list[str]:
+    """List required source folders that are absent from the local corpus."""
+    base = sources_dir if sources_dir is not None else SOURCES_DIR
+    return sorted(name for name in _required_sources() if not (base / name).is_dir())
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--backend", choices=("lancedb", "redis"), default="lancedb")
@@ -561,10 +606,7 @@ def main():
         "--parallel",
         type=int,
         default=None,
-        help=(
-            "fastembed worker processes "
-            "(Linux; macOS safely falls back in-process)"
-        ),
+        help=("fastembed worker processes (Linux; macOS safely falls back in-process)"),
     )
     args = parser.parse_args()
 
@@ -574,12 +616,16 @@ def main():
         )
     if args.backend == "redis" and args.incremental:
         parser.error("--incremental applies only to the lancedb backend")
+    if args.backend == "lancedb" and not args.incremental and not args.dry_run:
+        missing = missing_required_sources(SOURCES_DIR)
+        if missing:
+            raise SystemExit(
+                "FAIL: required source folder(s) missing from ingestion/sources/ "
+                f"-- refusing to replace the docs index: {missing}. Refresh "
+                "them first, or pass --incremental to preserve existing rows."
+            )
 
-    sources = (
-        {args.source: SOURCE_META.get(args.source, "unknown")}
-        if args.source
-        else SOURCE_META
-    )
+    sources = {args.source: SOURCE_META.get(args.source, "unknown")} if args.source else SOURCE_META
 
     all_records: list[dict] = []
     ingested_sources: list[str] = []
@@ -612,9 +658,18 @@ def main():
             parallel=args.parallel,
         )
         if not incremental_done:
+            missing = missing_required_sources(SOURCES_DIR)
+            if missing:
+                raise SystemExit(
+                    "FAIL: required source folder(s) missing from "
+                    "ingestion/sources/ -- refusing the full rebuild fallback "
+                    f"after incremental migration: {missing}. Refresh them "
+                    "first, or restore a compatible existing index."
+                )
             upload_lancedb(all_records, ingested_sources, parallel=args.parallel)
         if openapi_specs_present:
             from hpe_networking_mcp.pipeline.clients import specs_index
+
             print("  rebuilding shared structured SQLite index...")
             print(f"  {specs_index.rebuild_shared()}")
     else:

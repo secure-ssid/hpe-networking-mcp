@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
 """
-Scrape Juniper EX-series hardware guide and EX Junos release-notes pages.
+Scrape Juniper EX/MX/QFX/SRX hardware guide and platform-tagged Junos
+release-notes pages.
 
 Same DITA topicBody template and plain-urllib approach as scrape_mist_docs.py
-(no Playwright needed -- juniper.net is not bot-gated). Reads both
-ingestion/junos_ex_hardware_urls.json and
-ingestion/junos_ex_release_notes_urls.json (written by
-discover_junos_ex_urls.py) and writes markdown to
-sources/junos_ex_hardware/*.md and sources/junos_ex_release_notes/*.md
-respectively, so the two stay distinct RAG sources despite sharing one
-scraper implementation.
+(no Playwright needed -- juniper.net is not bot-gated). Reads the URL seed
+files written by discover_junos_urls.py (one `junos_<platform>_hardware_urls.
+json` and one `junos_<platform>_release_notes_urls.json` per platform) and
+writes markdown to `sources/junos_<platform>_hardware/*.md` and
+`sources/junos_<platform>_release_notes/*.md` respectively, so each platform
+stays its own distinct pair of RAG sources despite sharing one scraper
+implementation.
 
-Usage: python ingestion/scrape_junos_ex.py
+Formerly scrape_junos_ex.py (EX-only); generalized in place to also cover MX
+(routers), QFX (data-center switches), and SRX (firewalls, the "firewall
+stuff" gap) once discover_junos_urls.py proved the same sitemap/DITA pattern
+holds for those platforms too.
+
+Usage: python ingestion/scrape_junos_docs.py [platform ...]
+       (no args scrapes every platform in DATASETS)
 """
 import json
 import re
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -24,9 +32,11 @@ from pathlib import Path
 from urllib.parse import quote, urlsplit, urlunsplit
 
 BASE = Path(__file__).parent
+PLATFORMS = ("ex", "mx", "qfx", "srx")
 DATASETS = {
-    "junos_ex_hardware": BASE / "junos_ex_hardware_urls.json",
-    "junos_ex_release_notes": BASE / "junos_ex_release_notes_urls.json",
+    f"junos_{platform}_{kind}": BASE / f"junos_{platform}_{kind}_urls.json"
+    for platform in PLATFORMS
+    for kind in ("hardware", "release_notes")
 }
 
 HEADERS = {
@@ -99,7 +109,7 @@ def scrape_page(url: str, out_dir: Path) -> str:
 
 def run_dataset(name: str, urls_path: Path) -> None:
     if not urls_path.exists():
-        print(f"skip {name}: {urls_path} not found (run discover_junos_ex_urls.py first)")
+        print(f"skip {name}: {urls_path} not found (run discover_junos_urls.py first)")
         return
     urls = json.loads(urls_path.read_text())
     out_dir = BASE / "sources" / name
@@ -123,7 +133,16 @@ def run_dataset(name: str, urls_path: Path) -> None:
 
 
 def main():
-    for name, urls_path in DATASETS.items():
+    requested = sys.argv[1:]
+    if requested:
+        datasets = {
+            name: path
+            for name, path in DATASETS.items()
+            if any(name.startswith(f"junos_{p}_") for p in requested)
+        }
+    else:
+        datasets = DATASETS
+    for name, urls_path in datasets.items():
         run_dataset(name, urls_path)
 
 

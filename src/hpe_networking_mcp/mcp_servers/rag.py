@@ -27,9 +27,9 @@ from hpe_networking_mcp.pipeline import artifact_contracts as contracts
 from hpe_networking_mcp.pipeline.clients import (
     advisory_index,
     hardware_specs,
-    rag_diagnostics as rag_diagnostics_client,
     specs_index,
 )
+from hpe_networking_mcp.pipeline.clients import rag_diagnostics as rag_diagnostics_client
 
 mcp = MCPServer("rag-core")
 
@@ -111,6 +111,12 @@ _SOURCE_VENDOR: dict[str, str] = {
     "mist_product_updates": "juniper",
     "junos_ex_hardware": "juniper",
     "junos_ex_release_notes": "juniper",
+    "junos_mx_hardware": "juniper",
+    "junos_mx_release_notes": "juniper",
+    "junos_qfx_hardware": "juniper",
+    "junos_qfx_release_notes": "juniper",
+    "junos_srx_hardware": "juniper",
+    "junos_srx_release_notes": "juniper",
     "juniper_lifecycle": "juniper",
     "juniper_security_advisories": "juniper",
     "juniper_kb": "juniper",
@@ -121,14 +127,42 @@ _SOURCE_VENDOR: dict[str, str] = {
 # prose. Generic networking terms (vlan, radius, multicast) are absent on
 # purpose — they say nothing about which vendor is being asked about.
 _VENDOR_HINTS: dict[str, frozenset[str]] = {
-    "juniper": frozenset({
-        "juniper", "mist", "junos", "marvis", "jvd", "mxedge", "tunterm",
-        "apstra", "ex", "qfx", "srx", "ssr", "vjunos", "wxlan",
-    }),
-    "aruba": frozenset({
-        "aruba", "central", "aos", "instant", "clearpass", "hpe", "greenlake",
-        "glp", "iap", "cx", "arubaos", "airwave", "edgeconnect", "silverpeak",
-    }),
+    "juniper": frozenset(
+        {
+            "juniper",
+            "mist",
+            "junos",
+            "marvis",
+            "jvd",
+            "mxedge",
+            "tunterm",
+            "apstra",
+            "ex",
+            "qfx",
+            "srx",
+            "ssr",
+            "vjunos",
+            "wxlan",
+        }
+    ),
+    "aruba": frozenset(
+        {
+            "aruba",
+            "central",
+            "aos",
+            "instant",
+            "clearpass",
+            "hpe",
+            "greenlake",
+            "glp",
+            "iap",
+            "cx",
+            "arubaos",
+            "airwave",
+            "edgeconnect",
+            "silverpeak",
+        }
+    ),
 }
 
 # Cross-vendor hits keep their retrieval score but lose their source boost and
@@ -138,6 +172,11 @@ _VENDOR_HINTS: dict[str, frozenset[str]] = {
 _CROSS_VENDOR_PENALTY = 0.12
 
 SourceFilter = str | tuple[str, ...] | None
+
+_SOURCE_FILTER_RE = re.compile(r"^[a-z0-9_]+$")
+_MAX_SOURCE_FILTERS = 20
+_MAX_EVIDENCE_ANSWER_CHARS = 2400
+_MAX_EVIDENCE_EXCERPT_CHARS = 600
 
 _DOC_TYPE_TO_SOURCE: dict[str, str | tuple[str, ...]] = {
     "developer-docs": "developer_docs",
@@ -155,6 +194,12 @@ _DOC_TYPE_TO_SOURCE: dict[str, str | tuple[str, ...]] = {
     "mist-product-updates": "mist_product_updates",
     "junos-ex-hardware": "junos_ex_hardware",
     "junos-ex-release-notes": "junos_ex_release_notes",
+    "junos-mx-hardware": "junos_mx_hardware",
+    "junos-mx-release-notes": "junos_mx_release_notes",
+    "junos-qfx-hardware": "junos_qfx_hardware",
+    "junos-qfx-release-notes": "junos_qfx_release_notes",
+    "junos-srx-hardware": "junos_srx_hardware",
+    "junos-srx-release-notes": "junos_srx_release_notes",
     "juniper-kb": "juniper_kb",
     "devhub": "devhub",
     "feature-navigator": "feature_navigator",
@@ -220,9 +265,7 @@ def _detect_vendor(query: str) -> str | None:
         tok.strip(".,:;?!()[]{}\"'").lower()
         for tok in query.replace("/", " ").replace("-", " ").split()
     }
-    matched = {
-        vendor for vendor, hints in _VENDOR_HINTS.items() if tokens & hints
-    }
+    matched = {vendor for vendor, hints in _VENDOR_HINTS.items() if tokens & hints}
     return matched.pop() if len(matched) == 1 else None
 
 
@@ -335,8 +378,11 @@ def _search_lancedb(query: str, top_k: int, source_filter: SourceFilter) -> list
         # authoritative-but-lower-ranked docs are typically just outside top_k,
         # and boosting a list already truncated to top_k can only reorder it.
         hits = lance_client.hybrid_search(
-            db, query, query_vector,
-            top_k=max(top_k * 6, 30), source_filter=source_filter,
+            db,
+            query,
+            query_vector,
+            top_k=max(top_k * 6, 30),
+            source_filter=source_filter,
         )
     except (FileNotFoundError, ValueError) as exc:
         return [{"error": str(exc)}]
@@ -350,9 +396,7 @@ def _search_redis(query: str, top_k: int, source_filter: SourceFilter) -> list[d
 
     query_vector = _ollama.embed_query(query)
     # Fetch more candidates so re-ranking has room to promote higher-priority sources
-    candidates = vector_search(
-        _redis, query_vector, top_k=top_k * 3, source_filter=source_filter
-    )
+    candidates = vector_search(_redis, query_vector, top_k=top_k * 3, source_filter=source_filter)
 
     # Re-rank: boosted_score = raw_score + source_boost. Applies even under filters —
     # a filter narrows the candidate set, boosting still orders within it.
@@ -371,6 +415,34 @@ def _search_redis(query: str, top_k: int, source_filter: SourceFilter) -> list[d
     candidates.sort(key=lambda r: r["score"], reverse=True)
     candidates = _boost_model_match(candidates, query)
     return _shape(candidates, top_k)
+
+
+def _normalize_source_filter(source_filter: SourceFilter) -> SourceFilter:
+    """Validate and normalize a comma-separated source filter.
+
+    MCP clients expose this as a string, while internal callers may already
+    provide a tuple. Normalizing both forms keeps the LanceDB and Redis paths
+    on the same safe, bounded contract.
+    """
+    if not source_filter:
+        return None
+
+    raw_values = (source_filter,) if isinstance(source_filter, str) else tuple(source_filter)
+    values: list[str] = []
+    for raw in raw_values:
+        if not isinstance(raw, str):
+            raise ValueError(f"invalid source filter: {source_filter!r}")
+        parts = raw.split(",")
+        if any(not part.strip() for part in parts):
+            raise ValueError(f"invalid source filter: {source_filter!r}")
+        values.extend(part.strip() for part in parts)
+
+    values = list(dict.fromkeys(values))
+    if len(values) > _MAX_SOURCE_FILTERS or any(
+        not _SOURCE_FILTER_RE.fullmatch(value) for value in values
+    ):
+        raise ValueError(f"invalid source filter: {source_filter!r}")
+    return values[0] if len(values) == 1 else tuple(values)
 
 
 @mcp.tool(annotations=READ_ONLY_LOCAL)
@@ -401,9 +473,14 @@ def search_docs(
     top_k = _clamp_top_k(top_k, 20)
 
     # Map legacy doc_type to source name when source is not provided
-    source_filter = source
+    source_filter: SourceFilter = source
     if not source_filter and doc_type:
         source_filter = _DOC_TYPE_TO_SOURCE.get(doc_type)
+
+    try:
+        source_filter = _normalize_source_filter(source_filter)
+    except ValueError as exc:
+        return [{"error": str(exc)}]
 
     if _BACKEND == "redis":
         return _search_redis(query, top_k, source_filter)
@@ -411,7 +488,14 @@ def search_docs(
 
 
 @mcp.tool(annotations=READ_ONLY_LOCAL)
-def lookup_api(query: str, top_k: int = 10) -> list[dict[str, Any]]:
+def lookup_api(
+    query: str,
+    top_k: int = 10,
+    source: str | None = None,
+    platform: str | None = None,
+    version: str | None = None,
+    include_metadata: bool = False,
+) -> list[dict[str, Any]]:
     """Exact Aruba/Mist API lookup — endpoints, schemas, fields, enum values.
 
     Authoritative, lossless answers from the parsed OpenAPI specs (SQLite, no
@@ -426,9 +510,23 @@ def lookup_api(query: str, top_k: int = 10) -> list[dict[str, Any]]:
                "GET /network-monitoring/v1/sites-client-health", or
                "listSitesClientHealthV1").
         top_k: Results to return (default 10, range 1-20).
+        source: Optional exact source family, such as ``openapi_specs`` or
+                ``product_specs``.
+        platform: Optional platform filter, such as ``central``, ``mist``,
+                  ``aoscx``, or ``clearpass``.
+        version: Optional exact software/API version filter.
+        include_metadata: Include platform, version, API version, and source URL
+                          provenance in each hit.
     """
     try:
-        return specs_index.lookup(query, top_k=_clamp_top_k(top_k, 20))
+        return specs_index.lookup(
+            query,
+            top_k=_clamp_top_k(top_k, 20),
+            source=source,
+            platform=platform,
+            version=version,
+            include_metadata=include_metadata,
+        )
     except FileNotFoundError as exc:
         return [{"error": str(exc)}]
 
@@ -729,6 +827,7 @@ def _citation(hit: dict[str, Any]) -> dict[str, Any]:
     }
     for key in (
         "source_url",
+        "heading_breadcrumb",
         "advisory_id",
         "severity",
         "status",
@@ -737,6 +836,9 @@ def _citation(hit: dict[str, Any]) -> dict[str, Any]:
         "published",
         "category",
         "event_type",
+        "platform",
+        "version",
+        "api_version",
     ):
         if hit.get(key) is not None:
             citation[key] = hit[key]
@@ -745,6 +847,91 @@ def _citation(hit: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, list) and value:
             citation[key] = value[:5]
     return citation
+
+
+def _evidence_text(hit: dict[str, Any], mode: str) -> str:
+    if mode == "lookup_advisory":
+        return _summarize_advisory(hit)
+    return str(hit.get("text", "")).strip()
+
+
+def _evidence_boundary_note(hits: list[dict[str, Any]]) -> str:
+    """Flag when merged evidence spans multiple sources/platforms/versions.
+
+    Bounded multi-hit synthesis can silently blend excerpts that do not
+    actually agree with each other -- e.g. two hits from different AOS-CX
+    release trains, or one Central and one Mist source answering the same
+    natural-language question differently. Returning one smoothed-over
+    answer in that case would misrepresent the evidence as a single
+    unambiguous authority. This adds an explicit, short caveat instead of
+    silently merging when the underlying hits disagree on identity.
+    """
+    sources = {
+        h.get("source") or h.get("source_family")
+        for h in hits
+        if h.get("source") or h.get("source_family")
+    }
+    platforms = {h.get("platform") for h in hits if h.get("platform")}
+    versions = {
+        h.get("version") or h.get("api_version")
+        for h in hits
+        if h.get("version") or h.get("api_version")
+    }
+    if len(versions) > 1 or len(platforms) > 1 or len(sources) > 1:
+        return (
+            "Boundary: these excerpts may span different sources, platforms, "
+            "or software versions -- verify applicability to your deployment "
+            "before acting on them.\n\n"
+        )
+    return ""
+
+
+def _bounded_evidence_answer(
+    hits: list[dict[str, Any]],
+    mode: str,
+    limit: int,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Build a bounded answer from distinct retrieved evidence excerpts."""
+    evidence: list[tuple[str, dict[str, Any]]] = []
+    seen: set[str] = set()
+
+    for hit in hits[:limit]:
+        text = _evidence_text(hit, mode)
+        fingerprint = " ".join(text.casefold().split())
+        if not fingerprint or fingerprint in seen:
+            continue
+        seen.add(fingerprint)
+        evidence.append((text, hit))
+
+    if not evidence:
+        return "No matching local documentation was found.", []
+
+    if len(evidence) == 1:
+        text, hit = evidence[0]
+        answer = text[:900] + "…" if len(text) > 900 else text
+        return answer, [hit]
+
+    boundary_note = _evidence_boundary_note([hit for _, hit in evidence])
+    header = "Retrieved evidence excerpts:\n"
+    labels = [f"[{index}] " for index in range(1, len(evidence) + 1)]
+    fixed_chars = (
+        len(boundary_note) + len(header) + sum(map(len, labels)) + 2 * (len(evidence) - 1)
+    )
+    excerpt_limit = min(
+        _MAX_EVIDENCE_EXCERPT_CHARS,
+        max(1, (_MAX_EVIDENCE_ANSWER_CHARS - fixed_chars) // len(evidence)),
+    )
+
+    blocks = []
+    selected = []
+    for label, (text, hit) in zip(labels, evidence, strict=True):
+        excerpt = text
+        if len(excerpt) > excerpt_limit:
+            excerpt = excerpt[: excerpt_limit - 1].rstrip() + "…"
+        blocks.append(f"{label}{excerpt}")
+        selected.append(hit)
+
+    return boundary_note + header + "\n\n".join(blocks), selected
 
 
 @mcp.tool(annotations=READ_ONLY_LOCAL)
@@ -851,15 +1038,10 @@ def ask_docs(
     if "error" in hits[0]:
         return {"answer": hits[0]["error"], "citations": [], "mode": mode}
 
-    top = hits[0]
-    if mode == "lookup_advisory":
-        answer = _summarize_advisory(top)
-    else:
-        text = str(top.get("text", "")).strip()
-        answer = text[:900] + "…" if len(text) > 900 else text
+    answer, evidence_hits = _bounded_evidence_answer(hits, mode, k)
     return {
         "answer": answer,
-        "citations": [_citation(hit) for hit in hits[:k]],
+        "citations": [_citation(hit) for hit in evidence_hits],
         "mode": mode,
     }
 
@@ -930,7 +1112,6 @@ def load_skill(name: str) -> dict[str, Any]:
     return load_skill_payload(name)
 
 
-
 if __name__ == "__main__":
     from hpe_networking_mcp.mcp_servers._cache_hygiene import stable_list_tools
     from hpe_networking_mcp.mcp_servers._middleware import (
@@ -939,6 +1120,7 @@ if __name__ == "__main__":
         SecretTokenizeMiddleware,
         install_middleware,
     )
+
     stable_list_tools(mcp)
     install_middleware(
         mcp,
@@ -949,4 +1131,5 @@ if __name__ == "__main__":
         ],
     )
     from hpe_networking_mcp.mcp_servers.shared import run_server
+
     run_server(mcp)

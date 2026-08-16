@@ -4,9 +4,10 @@ description: >
   Answer questions about HPE Aruba and Juniper Mist networking using the
   local RAG index (hpe-networking-mcp). Use this skill when the user asks
   how-to or concept questions about Aruba Central, Mist, ClearPass, AOS-CX,
-  EX-series switches, APs, gateways, NAC, VLANs, SSIDs, firmware, or any
-  Aruba/Mist/Juniper networking topic. Also use it when the user types
-  /network-docs, /rag, or /hpe-docs before their question.
+  EX/MX/QFX/SRX-series Juniper switches, routers, firewalls (incl. vSRX/
+  cSRX), APs, gateways, NAC, VLANs, SSIDs, firmware, or any Aruba/Mist/
+  Juniper networking topic. Also use it when the user types /network-docs,
+  /rag, or /hpe-docs before their question.
 ---
 
 # network-docs skill
@@ -43,6 +44,12 @@ Narrow with `source=` when the topic is clearly vendor-specific:
 | Mist cloud platform release notes (full history, 2017+) | `mist_product_updates` |
 | Juniper EX-series hardware install/maintenance guide | `junos_ex_hardware` |
 | Junos OS release notes (EX-series-specific only) | `junos_ex_release_notes` |
+| Juniper MX-series router hardware install/maintenance guide | `junos_mx_hardware` |
+| Junos OS release notes (MX-series-specific only) | `junos_mx_release_notes` |
+| Juniper QFX-series data-center switch hardware guide | `junos_qfx_hardware` |
+| Junos OS release notes (QFX-series-specific only) | `junos_qfx_release_notes` |
+| Juniper SRX-series physical firewall hardware guide | `junos_srx_hardware` |
+| Junos OS release notes (SRX-series-specific only, incl. vSRX/cSRX) | `junos_srx_release_notes` |
 | VSG / DC design | `vsg_docs` |
 | Security advisories | `security_advisories` or `juniper_security_advisories` |
 | Lifecycle notices | `lifecycle_notices` or `juniper_lifecycle` |
@@ -100,12 +107,30 @@ Omit `source=` when unsure — the hybrid search will find the best match.
   config guides, a much larger corpus deliberately out of scope (see below).
 - **Junos OS release notes, EX-series only** (`junos_ex_release_notes`):
   per-version new-features/resolved-issues/open-issues/what-changed pages
-  specifically tagged for the EX platform, ~193 pages. The full Junos
-  release-notes tree covers every platform (ACX/MX/NFX/PTX/QFX/SRX/SSR/JRR)
-  at ~6,600 pages; only the EX-tagged subset is ingested — see "What is NOT
-  in the RAG" below.
+  specifically tagged for the EX platform, ~193 pages.
+- **Juniper MX-series hardware guide** (`junos_mx_hardware`): the physical
+  install/maintenance book per MX router chassis (site prep, cabling, power,
+  Routing/Switching Engine and FPC/PIC/MIC replacement), ~1,418 pages across
+  every published MX chassis family.
+- **Junos OS release notes, MX-series only** (`junos_mx_release_notes`):
+  per-version new-features/resolved-issues/what-changed pages tagged for the
+  MX router platform, ~338 pages.
+- **Juniper QFX-series hardware guide** (`junos_qfx_hardware`): the physical
+  install/maintenance book per QFX data-center switch chassis, ~739 pages
+  across every published QFX family.
+- **Junos OS release notes, QFX-series only** (`junos_qfx_release_notes`):
+  per-version new-features/resolved-issues/what-changed pages tagged for the
+  QFX platform, ~388 pages.
+- **Juniper SRX-series hardware guide** (`junos_srx_hardware`): the physical
+  install/maintenance book per SRX firewall chassis, ~706 pages across every
+  published SRX family.
+- **Junos OS release notes, SRX-series only** (`junos_srx_release_notes`):
+  per-version new-features/resolved-issues/what-changed pages tagged for the
+  SRX platform (including vSRX/cSRX tags), ~516 pages.
 - **Juniper hardware datasheets**: EX-series switch specs (EX2300-EX9250)
   and Mist-line AP datasheets (AP21-AP66) — official juniper.net spec pages
+  (MX/QFX/SRX datasheets are a known remaining gap — see "What is NOT in the
+  RAG" below).
 
 ## What is NOT in the RAG (fall back to web search or `lookup_hardware_specs`)
 
@@ -123,20 +148,24 @@ Omit `source=` when unsure — the hybrid search will find the best match.
   already wired into `ask_docs` (a query naming a specific hardware model
   routes there automatically, before RAG).
 - Real-time device state — use monitoring MCP tools instead
-- Junos OS release notes and general software config guides for platforms
-  other than EX (ACX/MX/NFX/PTX/QFX/SRX/SSR/JRR, and vSRX/cSRX) — out of
-  scope for a switch/AP-focused project; only the EX-tagged release-notes
-  subset (`junos_ex_release_notes`) is ingested. Junos' general (non-EX,
-  non-release-notes) software configuration/feature guide corpus is also
-  not ingested — at ~24,700 pages it is far larger than the EX hardware
-  guide, and deeper EX-series CLI/feature configuration beyond
-  `junos_ex_hardware`'s first-boot pages would have to come from there.
-- Platform-generic Junos release-notes pages that are not EX-tagged by
-  filename (e.g. software-installation-and-upgrade, jweb, system-management,
-  evpn, pki — ~3,200 pages) — may or may not apply to EX-series switches but
-  aren't filterable by filename alone; a candidate for later reconsideration.
-- Juniper documentation outside of Mist, KB articles, EX hardware/release
-  notes, and EX/AP datasheets
+- Junos OS general software config guides (CLI/feature configuration beyond
+  first-boot) for EX/MX/QFX/SRX — deeper feature/CLI configuration guidance
+  lives in the general Junos software config-guide corpus (~24,700 pages
+  platform-wide), which remains out of scope; only each platform's hardware
+  install/maintenance guide and platform-tagged release notes are ingested.
+- Junos hardware/release-notes coverage for platforms other than EX/MX/QFX/
+  SRX (ACX/NFX/PTX/SSR/JRR) — out of scope for a switch/router/firewall/AP-
+  focused project.
+- Platform-generic Junos release-notes pages that are not tagged to a
+  specific ingested platform by filename (e.g. software-installation-and-
+  upgrade, jweb, system-management, evpn, pki — ~3,200 pages) — may or may
+  not apply to an ingested platform but aren't filterable by filename alone;
+  a candidate for later reconsideration.
+- MX/QFX/SRX hardware datasheets (quick-reference spec sheets, distinct from
+  the full install/maintenance guides above, which ARE ingested) — not yet
+  scraped; EX and Mist-AP datasheets are already in `product_datasheets`.
+- Juniper documentation outside of Mist, KB articles, EX/MX/QFX/SRX
+  hardware/release notes, and EX/AP datasheets
 
 ## Workflow
 
