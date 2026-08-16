@@ -8,8 +8,7 @@ small models get a reliable `ok=false` signal when something did not happen.
 from __future__ import annotations
 
 import re
-from typing import Any
-
+from typing import Any, Callable
 
 _BLOCKED_STATUS_HTTP = {
     "blocked": 403,
@@ -105,7 +104,35 @@ def _blocked_status(result: dict[str, Any]) -> tuple[bool, int | None]:
 
 
 class ResponseEnvelopeMiddleware:
-    """Wrap error/blocked dict responses as `{ok, status, data, message, tool}`."""
+    """Wrap error/blocked dict responses as `{ok, status, data, message, tool, platform}`.
+
+    ``platform`` and an optional ``hint`` (a short, spec-grounded-when-possible
+    explanation of what the status code means for this API) are both
+    opt-in via constructor resolvers, so the router can wire real backend
+    resolution without this module depending on the router at all, and so a
+    bare ``ResponseEnvelopeMiddleware()`` -- as used directly in unit tests
+    and any caller that hasn't wired resolvers -- keeps its exact original
+    shape: ``platform`` stays ``None`` and the ``hint`` key is omitted
+    entirely rather than set to ``None``.
+    """
+
+    def __init__(
+        self,
+        *,
+        label_resolver: Callable[[str, dict[str, Any]], tuple[str, str, str]] | None = None,
+        platform_resolver: Callable[[str | None], str | None] | None = None,
+        hint_resolver: Callable[[str, int | None, str | None], str | None] | None = None,
+    ) -> None:
+        # label_resolver resolves (target_tool_name, backend_server, capability)
+        # for one call -- built to accept tool_router's own `_router_call_labels`
+        # directly, so a dispatched `invoke_tool`/`invoke_read_tool` failure is
+        # attributed to the *backend* tool/server that actually failed, not the
+        # generic dispatcher name.
+        self._label_resolver = label_resolver
+        # platform_resolver maps that backend server to a platform key -- built
+        # to accept tool_router's own `_server_platform` directly.
+        self._platform_resolver = platform_resolver
+        self._hint_resolver = hint_resolver
 
     def before_call(self, name: str, arguments: dict[str, Any]) -> None:
         return None
@@ -118,14 +145,40 @@ class ResponseEnvelopeMiddleware:
         if not should_wrap:
             return None
 
-        return {
+        target_name = name
+        backend = None
+        if self._label_resolver is not None:
+            try:
+                resolved_target, backend, _capability = self._label_resolver(name, arguments)
+                target_name = resolved_target or name
+            except Exception:
+                target_name, backend = name, None
+
+        platform = None
+        if self._platform_resolver is not None:
+            try:
+                platform = self._platform_resolver(backend)
+            except Exception:
+                platform = None
+
+        envelope: dict[str, Any] = {
             "ok": False,
             "status": status,
             "data": result,
             "message": _message_from(result),
             "tool": name,
-            "platform": None,
+            "platform": platform,
         }
+
+        if self._hint_resolver is not None:
+            try:
+                hint = self._hint_resolver(target_name, status, platform)
+            except Exception:
+                hint = None
+            if hint is not None:
+                envelope["hint"] = hint
+
+        return envelope
 
     def on_error(self, name: str, arguments: dict[str, Any], exc: BaseException) -> None:
         return None

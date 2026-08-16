@@ -83,6 +83,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
 from hpe_networking_mcp.pipeline import artifact_contracts as _artifact_contracts
 from hpe_networking_mcp.pipeline import compliance as _compliance
 from hpe_networking_mcp.pipeline import router_automation as _router_automation
+from hpe_networking_mcp.pipeline.clients import error_help as _error_help
 
 _BACKEND = resolve_rag_backend()
 _ROUTER_MODE = os.getenv("HPE_MCP_ROUTER_MODE", "default").strip().lower()
@@ -2791,6 +2792,15 @@ def _router_call_target(name: str, arguments: dict[str, Any]) -> str | None:
     return target if backend != "router" else "unknown"
 
 
+def _reactive_error_hint(
+    tool_name: str, status_code: int | None, platform: str | None
+) -> str | None:
+    """``ResponseEnvelopeMiddleware`` hint resolver -- thin glue to
+    ``error_help.reactive_hint`` so ``_middleware/response_envelope.py``
+    stays router-agnostic (it never imports ``tool_router`` itself)."""
+    return _error_help.reactive_hint(tool_name, status_code, platform=platform)
+
+
 def _suggest_router_tool(name: str, limit: int) -> list[dict[str, Any]]:
     """Bounded 'did you mean' suggestions for an unknown router tool name."""
     return [
@@ -2850,7 +2860,11 @@ def build_router_middlewares() -> list[Any]:
             lambda: mcp._tool_manager._tools,
             suggestion_provider=_suggest_router_tool,
         ),
-        ResponseEnvelopeMiddleware(),
+        ResponseEnvelopeMiddleware(
+            label_resolver=_router_call_labels,
+            platform_resolver=_server_platform,
+            hint_resolver=_reactive_error_hint,
+        ),
         SecretTokenizeMiddleware(),
         # PII tokenization (opt-in via HPE_MCP_TOKENIZE_PII) must be installed
         # here too, not only on central-nac/clearpass-core: router dispatch

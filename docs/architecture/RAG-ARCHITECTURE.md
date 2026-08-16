@@ -119,7 +119,7 @@ These are correctness/quality fixes; most are inherited or simplified by the Lan
 src/hpe_networking_mcp/pipeline/clients/
   lance_client.py     # open table, hybrid search(query, k, source_filter) -> hits for the default embedded path
   embed_client.py     # fastembed wrapper: embed_document(list) / embed_query(str); model nomic-embed-text-v1.5
-  specs_index.py      # build + query SQLite over OpenAPI specs: get_endpoint / get_schema / get_field / get_enum
+  specs_index.py      # build + query SQLite over OpenAPI specs: get_endpoint / get_schema / get_field / get_enum / get_response_description
 src/hpe_networking_mcp/mcp_servers/
   rag.py              # search_docs (hybrid) + ask_docs (cited) + lookup_api (exact)  — all READ_ONLY
 ingestion/
@@ -142,7 +142,7 @@ This sequence is complete for the default local path. Redis remains optional; Qd
 1. Add deps: `lancedb`, `fastembed`; keep `redis` only for the optional server backend.
 2. `embed_client.py` (fastembed, `nomic-embed-text-v1.5`, `embed_document`/`embed_query` with prefixes — R3).
 3. `lance_client.py`: create a hybrid table (vector + FTS on `text`), `search()` with `source` filter + reranker (R5).
-4. `specs_index.py`: parse `ingestion/sources/openapi_specs/*.json` → SQLite (`endpoints`, `schemas`, `fields` tables) with FTS; query helpers (R2 resolved).
+4. `specs_index.py`: parse `ingestion/sources/openapi_specs/*.json` → SQLite (`endpoints`, `schemas`, `fields`, `responses` tables) with FTS; query helpers (R2 resolved). `responses` backs `get_response_description` — a per-platform, majority-vote status-code meaning consumed by `error_help.reactive_hint` to enrich failed MCP tool calls.
 5. Rewrite `ingest_docs.py`: prose → LanceDB (header-aware chunking R6, batched embeds R4); specs → SQLite. Emit `data/docs.lance` + `data/specs.sqlite`.
 6. `rag.py`: `search_docs` (hybrid), `lookup_api` (exact), `ask_docs` (cited R7). Point `tool_router`'s `aruba_tools` index at LanceDB too.
 7. Re-ingest once; run the eval harness (below) to confirm quality ≥ current.

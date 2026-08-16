@@ -3,7 +3,10 @@
 Vector search is the wrong tool for "what enum values does field X accept" or
 "which endpoint configures Y": those need lossless, authoritative answers.
 This module parses ingestion/sources/openapi_specs/*.json into SQLite with
-FTS5 keyword search, giving exact endpoint / schema / field / enum lookup.
+FTS5 keyword search, giving exact endpoint / schema / field / enum lookup,
+plus a per-platform ``responses`` table backing reactive error hints (see
+``hpe_networking_mcp.pipeline.clients.error_help``) — what a status code
+documents across a platform's API, for a failed tool call.
 Stdlib only — no new dependencies. See docs/architecture/RAG-ARCHITECTURE.md.
 
 Build:   python -m hpe_networking_mcp.pipeline.clients.specs_index --build
@@ -46,6 +49,11 @@ CREATE TABLE IF NOT EXISTS fields (
     field_name TEXT, path TEXT, type TEXT, description TEXT,
     enums TEXT, enum_descriptions TEXT
 );
+CREATE TABLE IF NOT EXISTS responses (
+    id INTEGER PRIMARY KEY,
+    platform TEXT, spec_file TEXT, method TEXT, path TEXT,
+    status_code TEXT, description TEXT
+);
 CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5(
     kind, spec_file, ref, body
 );
@@ -54,7 +62,34 @@ CREATE INDEX IF NOT EXISTS idx_fields_schema ON fields(schema_name);
 CREATE INDEX IF NOT EXISTS idx_endpoints_path ON endpoints(path);
 CREATE INDEX IF NOT EXISTS idx_endpoints_operation_id
     ON endpoints(operation_id COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_responses_platform_code
+    ON responses(platform, status_code);
 """
+
+# Substring hints in an OpenAPI ``servers[0].url`` that reliably identify
+# which product platform a spec belongs to. Data-driven from the specs
+# actually ingested today (Central + Mist) — extend this tuple, not the
+# lookup logic, when a new product's OpenAPI spec is added to
+# ingestion/sources/openapi_specs/. Order matters only if a URL could match
+# more than one entry; none currently do.
+_PLATFORM_SERVER_HINTS: tuple[tuple[str, str], ...] = (
+    ("arubanetworks.com", "central"),
+    ("mist.com", "mist"),
+)
+
+
+def _platform_for_server(server: str | None) -> str | None:
+    """Best-effort platform key for an OpenAPI spec's ``servers[0].url``.
+
+    Returns ``None`` (never a guess) for shared/ambiguous hosts — e.g.
+    ``sso.common.cloud.hpe.com`` is a shared HPE SSO/authorization endpoint
+    reused across specs, not a single product's API surface.
+    """
+    low = (server or "").lower()
+    for needle, platform in _PLATFORM_SERVER_HINTS:
+        if needle in low:
+            return platform
+    return None
 
 
 def connect(db_path: Path = DB_PATH) -> sqlite3.Connection:
@@ -90,6 +125,28 @@ def _walk_fields(node: Any, path: str, depth: int = 0):
             yield from _walk_fields(sub, path, depth + 1)
 
 
+def _response_description(spec: dict, resp: dict) -> str:
+    """A response object's description, resolving a local ``$ref`` first.
+
+    OpenAPI's standard "reusable responses" pattern
+    (https://spec.openapis.org/oas/v3.1.0#components-object) defines shared
+    4xx/5xx shapes once under ``components.responses`` and ``$ref``s them
+    from every operation that returns the same error — exactly the codes
+    (401/403/429) this feature most needs a description for. A response
+    entry with a ``$ref`` has no inline ``description`` of its own, so
+    reading ``resp["description"]`` directly silently drops most responses
+    in specs that use this idiom.
+    """
+    ref = resp.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/components/responses/"):
+        name = ref.rsplit("/", 1)[-1]
+        resolved = spec.get("components", {}).get("responses", {}).get(name)
+        if isinstance(resolved, dict):
+            return resolved.get("description", "") or ""
+        return ""
+    return resp.get("description", "") or ""
+
+
 def _populate_openapi_tables(
     conn: sqlite3.Connection,
     specs_dir: Path,
@@ -100,12 +157,13 @@ def _populate_openapi_tables(
         DROP TABLE IF EXISTS endpoints;
         DROP TABLE IF EXISTS schemas;
         DROP TABLE IF EXISTS fields;
+        DROP TABLE IF EXISTS responses;
         DROP TABLE IF EXISTS fts;
         """
     )
     conn.executescript(_SCHEMA)
 
-    counts = {"specs": 0, "endpoints": 0, "schemas": 0, "fields": 0, "skipped": 0}
+    counts = {"specs": 0, "endpoints": 0, "schemas": 0, "fields": 0, "responses": 0, "skipped": 0}
     for path in sorted(specs_dir.glob("*.json")):
         try:
             spec = json.loads(path.read_text(encoding="utf-8", errors="ignore"))
@@ -117,6 +175,7 @@ def _populate_openapi_tables(
         spec_file = path.name
         servers = spec.get("servers") or []
         server = servers[0].get("url", "") if servers else ""
+        platform = _platform_for_server(server)
 
         for api_path, item in (spec.get("paths") or {}).items():
             if not isinstance(item, dict):
@@ -141,6 +200,24 @@ def _populate_openapi_tables(
                      f"{spec_name} {api_path} {summary} {desc}"),
                 )
                 counts["endpoints"] += 1
+                # Status-code -> documented meaning, grouped by platform so a
+                # failed tool call can be told what e.g. 429/403 mean on the
+                # platform it hit, without matching the specific endpoint.
+                if platform:
+                    for status_code, resp in (op.get("responses") or {}).items():
+                        if not isinstance(resp, dict) or not str(status_code).isdigit():
+                            continue
+                        resp_desc = _response_description(spec, resp)
+                        if not resp_desc:
+                            continue
+                        conn.execute(
+                            "INSERT INTO responses "
+                            "(platform, spec_file, method, path, status_code, description) "
+                            "VALUES (?,?,?,?,?,?)",
+                            (platform, spec_file, method.upper(), api_path,
+                             str(status_code), resp_desc),
+                        )
+                        counts["responses"] += 1
 
         for schema_name, schema in (spec.get("components", {}).get("schemas") or {}).items():
             if not isinstance(schema, dict):
@@ -426,6 +503,65 @@ def get_enum(field_name: str, schema_contains: str | None = None,
          "enum_descriptions": json.loads(r["enum_descriptions"]) if r["enum_descriptions"] else None}
         for r in rows
     ]
+
+
+def get_response_description(
+    platform: str,
+    status_code: int | str,
+    min_share: float = 0.6,
+    db_path: Path = DB_PATH,
+) -> str | None:
+    """The API's own documented meaning of a status code for a platform.
+
+    Returns the most-common response ``description`` for ``(platform,
+    status_code)`` — but only when it dominates (``>= min_share`` of that
+    code's *distinct* documented occurrences) — so a status code with one
+    consistent meaning across the API (429/401/403 on most platforms)
+    enriches safely, while one with genuinely different per-endpoint
+    meanings returns ``None`` (a misleading single sentence) rather than an
+    unreliable guess.
+
+    Deduplicates identical ``(method, path, status_code, description)``
+    rows before voting: Aruba's downloaded spec corpus ships the same
+    operation in more than one overlapping spec file (e.g. a grouped
+    "config" bundle and a narrower per-feature bundle both defining
+    ``DELETE /network-config/v1alpha1/cnac-dpp-reg/{id}``), so counting raw
+    rows would let a single documented endpoint outvote several genuinely
+    distinct ones just because its spec happens to be mirrored more times.
+
+    Never raises: a missing db file, a pre-rebuild index without the
+    ``responses`` table, or a corrupt file all degrade to ``None`` — this is
+    best-effort enrichment, not a query users depend on directly.
+    """
+    if not platform:
+        return None
+    try:
+        conn = connect(db_path)
+    except sqlite3.Error:
+        return None
+    try:
+        rows = conn.execute(
+            "SELECT description, COUNT(*) AS c FROM ("
+            "  SELECT DISTINCT method, path, status_code, description"
+            "  FROM responses"
+            "  WHERE platform = ? AND status_code = ? "
+            "        AND description IS NOT NULL AND description != ''"
+            ") GROUP BY description ORDER BY c DESC",
+            (platform, str(status_code)),
+        ).fetchall()
+    except sqlite3.Error:
+        # Most commonly "no such table: responses" -- a real db built before
+        # this feature existed. Best-effort enrichment degrades to nothing.
+        return None
+    finally:
+        conn.close()
+    if not rows:
+        return None
+    total = sum(r["c"] for r in rows)
+    top = rows[0]
+    if total and (top["c"] / total) >= min_share:
+        return top["description"]
+    return None
 
 
 # ---------------------------------------------------------------------------
