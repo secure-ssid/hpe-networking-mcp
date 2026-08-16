@@ -1,0 +1,932 @@
+[
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2026/july-23rd-2026-updates.html",
+    "title": "July 23, 2026",
+    "year": "2026"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2026/june-2nd-2026-updates.html",
+    "title": "June 2, 2026",
+    "year": "2026"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2026/april-15th-2026-updates.html",
+    "title": "April 15, 2026",
+    "year": "2026"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2026/march-7th-2026-updates.html",
+    "title": "March 7, 2026",
+    "year": "2026"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2026/february-16th-2026-updates.html",
+    "title": "February 16, 2026",
+    "year": "2026"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2025/november-12th-2025-updates.html",
+    "title": "November 12, 2025",
+    "year": "2025"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2025/september-23rd-2025-updates.html",
+    "title": "September 23, 2025",
+    "year": "2025"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2025/august-6th-2025-updates.html",
+    "title": "August 6, 2025",
+    "year": "2025"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2025/june-26th-2025-updates.html",
+    "title": "June 26, 2025",
+    "year": "2025"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2025/may-29th-2025-updates.html",
+    "title": "May 29, 2025",
+    "year": "2025"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2025/may-7th-2025-updates.html",
+    "title": "May 7, 2025",
+    "year": "2025"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2025/april-14th-2025-updates.html",
+    "title": "April 14, 2025",
+    "year": "2025"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2025/february-27th-2025-updates.html",
+    "title": "February 27, 2025",
+    "year": "2025"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2024/december-12th-2024-updates.html",
+    "title": "December 12, 2024",
+    "year": "2024"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2024/november-7th-2024-updates.html",
+    "title": "November 7, 2024",
+    "year": "2024"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2024/september-18th-2024-updates.html",
+    "title": "September 18, 2024",
+    "year": "2024"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2024/july-31st-2024-updates.html",
+    "title": "July 31, 2024",
+    "year": "2024"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2024/june-21st-2024-updates.html",
+    "title": "June 21, 2024",
+    "year": "2024"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2024/may-16th-2024-updates.html",
+    "title": "May 16, 2024",
+    "year": "2024"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2024/march-29th-2024-updates.html",
+    "title": "March 29, 2024",
+    "year": "2024"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2024/march-18th-2024-updates.html",
+    "title": "March 18, 2024",
+    "year": "2024"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2024/february-29th-2024-updates.html",
+    "title": "February 29, 2024",
+    "year": "2024"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2024/january-25th-2024-updates.html",
+    "title": "January 25, 2024",
+    "year": "2024"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/november-21st-2023-updates.html",
+    "title": "November 21, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/november-16th-2023-updates.html",
+    "title": "November 16, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/november-9th-2023-updates.html",
+    "title": "November 9, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/september-28th-2023-updates.html",
+    "title": "September 28, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/august-31st-2023-updates.html",
+    "title": "August 31, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/august-3rd-2023-updates.html",
+    "title": "August 3, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/june-29th-2023-updates.html",
+    "title": "June 29, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/june-8th-2023-updates.html",
+    "title": "June 8, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/may-18th-2023-updates.html",
+    "title": "May 18, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/may-4th-2023-updates.html",
+    "title": "May 4, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/april-20th-2023-updates.html",
+    "title": "April 20, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/march-30th-2023-updates.html",
+    "title": "March 30, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/march-2nd-2023-updates.html",
+    "title": "March 2, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/february-2nd-2023-updates.html",
+    "title": "February 2, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2023/january-12th-2023-updates.html",
+    "title": "January 12, 2023",
+    "year": "2023"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/december-8th-2022-updates.html",
+    "title": "December 8, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/november-4th-2022-updates.html",
+    "title": "November 4, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/october-20th-2022-updates.html",
+    "title": "October 20, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/september-30th-2022-updates.html",
+    "title": "September 30, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/august-25-2022-updates.html",
+    "title": "August 25, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/august-4th-2022-updates.html",
+    "title": "August 4, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/july-21st-2022-updates.html",
+    "title": "July 21, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/july-8th-2022-updates.html",
+    "title": "July 8, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/june-24th-2022-updates.html",
+    "title": "June 24, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/june-9th-2022-updates.html",
+    "title": "June 9, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/april-21st-2022-updates.html",
+    "title": "April 21, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/april-7th-2022-updates.html",
+    "title": "April 7, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/march-24th-2022-updates.html",
+    "title": "March 24, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/march-10th-2022-updates.html",
+    "title": "March 10, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/february-25th-2022-updates.html",
+    "title": "February 25, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/january-28th-2022-updates.html",
+    "title": "January 28, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2022/january-13th-2022-updates.html",
+    "title": "January 13, 2022",
+    "year": "2022"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/october-21st-2021-updates.html",
+    "title": "October 21, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/october-7th-2021-updates.html",
+    "title": "October 7, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/september-23rd-2021-updates.html",
+    "title": "September 23, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/september-9th-2021-updates.html",
+    "title": "September 9, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/august-26th-2021-updates.html",
+    "title": "August 26, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/august-12th-2021-updates.html",
+    "title": "August 12, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/july-29th-2021-updates.html",
+    "title": "July 29, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/july-15th-2021-updates.html",
+    "title": "July 15, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/june-30th-2021-updates.html",
+    "title": "June 30, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/june-17th-2021-updates.html",
+    "title": "June 17, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/june-3rd-2021-updates.html",
+    "title": "June 3, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/may-20th-2021-updates.html",
+    "title": "May 20, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/may-11th-2021-updates.html",
+    "title": "May 11, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/april-22nd-2021-updates.html",
+    "title": "April 22, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/april-8th-2021-updates.html",
+    "title": "April 8, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/march-25th-2021-updates.html",
+    "title": "March 25, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/march-11th-2021-updates.html",
+    "title": "March 11, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/february-25th-2021-updates.html",
+    "title": "February 25, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/february-11th-2021-updates.html",
+    "title": "February 11, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/january-29th-2021-updates.html",
+    "title": "January 29, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2021/january-12th-2021-updates.html",
+    "title": "January 12, 2021",
+    "year": "2021"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/november-19th-2020-updates.html",
+    "title": "November 19, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/november-6th-2020-updates.html",
+    "title": "November 6, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/october-22nd-2020-updates.html",
+    "title": "October 22, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/october-8th-2020-updates.html",
+    "title": "October 8, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/october-1st-2020-updates.html",
+    "title": "October 1, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/september-17th-2020-updates.html",
+    "title": "September 17, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/september-3rd-2020-updates.html",
+    "title": "September 3, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/august-21st-2020-updates.html",
+    "title": "August 21, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/august-6th-2020-updates.html",
+    "title": "August 6, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/july-23rd-2020-updates.html",
+    "title": "July 23, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/july-9th-2020-updates.html",
+    "title": "July 9, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/june-25th-2020-updates.html",
+    "title": "June 25, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/june-11th-2020-updates.html",
+    "title": "June 11, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/may-28th-2020-updates.html",
+    "title": "May 28, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/may-14th-2020-updates.html",
+    "title": "May 14, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/april-30th-2020-updates.html",
+    "title": "April 30, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/april-17th-2020-updates.html",
+    "title": "April 17, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/april-2nd-2020-updates.html",
+    "title": "April 2, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/march-18th-2020-updates.html",
+    "title": "March 18, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/february-25th-2020-updates.html",
+    "title": "February 25, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/february-6th-2020-updates.html",
+    "title": "February 6, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/january-16th-2020-updates.html",
+    "title": "January 16, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2020/january-9th-2020-updates.html",
+    "title": "January 9, 2020",
+    "year": "2020"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/december-12th-2019-updates.html",
+    "title": "December 12, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/december-5th-2019-updates.html",
+    "title": "December 5, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/november-21st-2019-updates.html",
+    "title": "November 21, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/november-14th-2019-updates.html",
+    "title": "November 14, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/november-8th-2019-updates.html",
+    "title": "November 8, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/october-24th-2019-updates.html",
+    "title": "October 24, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/october-17th-2019-updates.html",
+    "title": "October 17, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/october-11th-2019-updates.html",
+    "title": "October 11, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/september-26th-2019-updates.html",
+    "title": "September 26, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/september-19th-2019-updates.html",
+    "title": "September 19, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/september-5th-2019-updates.html",
+    "title": "September 5, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/august-29th-2019-updates.html",
+    "title": "August 29, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/august-22nd-2019-updates.html",
+    "title": "August 22, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/august-8th-2019-updates.html",
+    "title": "August 8, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/august-1st-2019-updates.html",
+    "title": "August 1, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/july-25th-2019-updates.html",
+    "title": "July 25, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/june-21st-2019-updates.html",
+    "title": "June 21, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/june-13th-2019-updates.html",
+    "title": "June 13, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/may-30th-2019-updates.html",
+    "title": "May 30, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/may-23rd-2019-updates.html",
+    "title": "May 23, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/may-16th-2019-updates.html",
+    "title": "May 16, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/may-2nd-2019-updates.html",
+    "title": "May 2, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/april-26th-2019-updates.html",
+    "title": "April 26, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/april-18th-2019-updates.html",
+    "title": "April 18, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/april-5th-2019-updates.html",
+    "title": "April 5, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/march-28th-2019-updates.html",
+    "title": "March 28, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/march-26th-2019-updates.html",
+    "title": "March 26, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/march-7th-2019-updates.html",
+    "title": "March 7, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/february-28th-2019-updates.html",
+    "title": "February 28, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/february-21st-2019-updates.html",
+    "title": "February 21, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/february-14th-2019-updates.html",
+    "title": "February 14, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/february-7th-2019-updates.html",
+    "title": "February 7, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/january-31st-2019-updates.html",
+    "title": "January 31, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/january-24th-2019-updates.html",
+    "title": "January 24, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/january-21st-2019-updates.html",
+    "title": "January 21, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/january-10th-2019-updates.html",
+    "title": "January 10, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2019/january-7th-2019-updates.html",
+    "title": "January 7, 2019",
+    "year": "2019"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/december-20th-2018-updates.html",
+    "title": "December 20, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/december-14th-2018-updates.html",
+    "title": "December 14, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/december-6th-2018-updates.html",
+    "title": "December 6, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/november-29th-2018-updates.html",
+    "title": "November 29, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/november-15th-2018-updates.html",
+    "title": "November 15, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/november-2nd-2018-updates.html",
+    "title": "November 2, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/october-18th-2018-updates.html",
+    "title": "October 18, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/october-11th-2018-updates.html",
+    "title": "October 11, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/september-27th-2018-updates.html",
+    "title": "September 27, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/september-20th-2018-updates.html",
+    "title": "September 20, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/september-13th-2018-updates.html",
+    "title": "September 13, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/september-6th-2018-updates.html",
+    "title": "September 6, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/august-15th-2018-updates.html",
+    "title": "August 15, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/august-2nd-2018-updates.html",
+    "title": "August 2, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/july-26th-2018-updates.html",
+    "title": "July 26, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/july-19th-2018-updates.html",
+    "title": "July 19, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/july-12th-2018-updates.html",
+    "title": "July 12, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/june-28th-2018-updates.html",
+    "title": "June 28, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/june-21st-2018-updates.html",
+    "title": "June 21, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/may-30th-2018-updates.html",
+    "title": "May 30, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/may-14th-2018-updates.html",
+    "title": "May 14, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/may-4th-2018-updates.html",
+    "title": "May 4, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/april-26th-2018-updates.html",
+    "title": "April 26, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/april-19th-2018-updates.html",
+    "title": "April 19, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/april-10th-2018-updates.html",
+    "title": "April 10, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/march-29th-2018-updates.html",
+    "title": "March 29, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/march-20th-2018-updates.html",
+    "title": "March 20, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/february-22nd-2018-updates.html",
+    "title": "February 22, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/february-15th-2018-updates.html",
+    "title": "February 15, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/february-9th-2018-updates.html",
+    "title": "February 9, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/february-5th-2018-updates.html",
+    "title": "February 5, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2018/january-18th-2018-updates.html",
+    "title": "January 18, 2018",
+    "year": "2018"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/december-22nd-2017-updates.html",
+    "title": "December 22, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/december-11th-2017-updates.html",
+    "title": "December 11, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/november-30th-2017-updates.html",
+    "title": "November 30, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/november-22nd-2017-updates.html",
+    "title": "November 22, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/october-17th-2017-updates.html",
+    "title": "October 17, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/october-10th-2017-updates.html",
+    "title": "October 10, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/september-28th-2017-updates.html",
+    "title": "September 28, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/september-18th-2017-updates.html",
+    "title": "September 18, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/september-12th-2017-updates.html",
+    "title": "September 12, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/august-30th-2017-updates.html",
+    "title": "August 30, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/august-24th-2017-updates.html",
+    "title": "August 24, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/august-17th-2017-updates.html",
+    "title": "August 17, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/august-10th-2017-updates.html",
+    "title": "August 10, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/august-4th-2017-updates.html",
+    "title": "August 4, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/july-28th-2017-updates.html",
+    "title": "July 28, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/july-20th-2017-updates.html",
+    "title": "July 20, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/july-14th-2017-updates.html",
+    "title": "July 14, 2017",
+    "year": "2017"
+  },
+  {
+    "url": "https://www.juniper.net/documentation/us/en/software/mist/product-updates/2017/july-7th-2017-updates.html",
+    "title": "July 7, 2017",
+    "year": "2017"
+  }
+]

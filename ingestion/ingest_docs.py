@@ -52,12 +52,18 @@ SOURCE_META = {
     "openapi_specs": "openapi",
     "product_specs": "product-openapi",
     "aos_techdocs": "aos-techdocs",
+    "aoscx_release_notes": "aoscx-release-notes",
+    "aoscx_guides": "aoscx-guides",
+    "clearpass_guide": "clearpass-guide",
     "security_advisories": "security-advisory",
     "lifecycle_notices": "lifecycle",
     "juniper_lifecycle": "lifecycle",
     "juniper_security_advisories": "security-advisory",
     "juniper_kb": "juniper-kb",
     "mist_docs": "mist-docs",
+    "mist_product_updates": "mist-product-updates",
+    "junos_ex_hardware": "junos-ex-hardware",
+    "junos_ex_release_notes": "junos-ex-release-notes",
     "product_datasheets": "product-datasheet",
 }
 

@@ -150,6 +150,57 @@
     "notes": "Discover URLs with ingestion/discover_aos_urls.py and refresh with ingestion/scrape_aos_pw.py."
   },
   {
+    "source": "aoscx_release_notes",
+    "doc_type": "aoscx-release-notes",
+    "purpose": "AOS-CX switch series release notes -- FULL history back to 10.13.xx (Overview, Enhancements, Resolved Issues, Feature Caveats, Known Issues, and 8 other sub-pages per patch) for all 14 published switch series.",
+    "seed_urls": [
+      "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm"
+    ],
+    "output_dir": "ingestion/sources/aoscx_release_notes",
+    "scraper": "ingestion/scrape_aoscx_release_notes.py",
+    "extra_scripts": [
+      "ingestion/discover_aoscx_release_notes_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_aoscx_release_notes_urls.py": "pre"
+    },
+    "notes": "Distinct from aos_techdocs (AOS10 wireless/AP design guides) -- this is the switch OS's own release notes, previously an unaddressed gap. The consolidated portal's <select> dropdown maps each of the 14 switch series (4100i, 5420, 6000, 6100, 6200, 6300/6300L/6400, 8100, 8320, 8325, 8360, 8400, 9300, 9300S/10040, 10000) to a support.hpe.com/hpesc/public/docDisplay?docId=... document holding that series' full multi-year patch history. The portal dropdown host (arubanetworks.com) returns HTTP 403 to plain TLS/headless clients (Akamai) and requires a non-headless Playwright browser with a realistic Chrome UA -- same constraint as aos_techdocs. support.hpe.com is NOT Akamai-fronted; it gates on a client-side anonymous-session JS check instead, a materially weaker/different mechanism that non-headless Playwright also satisfies. By explicit user decision (2026-08, superseding an earlier 'latest patch only' bound) this scrapes the FULL history back to the oldest available major-version group (currently AOS-CX 10.13.xx) and every patch within each group, not just the current release -- measured at ~10,400 pages total across all 14 series (roughly 800-930 pages per full-history series, 290-300 for the two newest/shortest-lived series). Output is laid out as <series-slug>/<patch-slug>/<page-slug>.html (patch is part of the path, not just the page slug, because the same ~13 page titles repeat once per patch). Discover with ingestion/discover_aoscx_release_notes_urls.py and refresh with ingestion/scrape_aoscx_release_notes.py; re-running later picks up any newly published patches/groups incrementally (existing on-disk files are skipped)."
+  },
+  {
+    "source": "aoscx_guides",
+    "doc_type": "aoscx-guides",
+    "purpose": "AOS-CX switch series Fundamentals and CLI Reference guides -- per-switch-series admin/config books and full CLI command reference, distinct from the release-notes changelog.",
+    "seed_urls": [
+      "https://arubanetworking.hpe.com/techdocs/ArubaDocPortal/content/new-portal/aoscx.html"
+    ],
+    "output_dir": "ingestion/sources/aoscx_guides",
+    "scraper": "ingestion/scrape_aoscx_guides.py",
+    "extra_scripts": [
+      "ingestion/discover_aoscx_guides_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_aoscx_guides_urls.py": "pre"
+    },
+    "notes": "Same support.hpe.com/hpesc/public/docDisplay?docId=... viewer and gating mechanics as aoscx_release_notes (Playwright required, not Akamai-fronted, short 1-2s jitter), but these are plain books with no patch-history dimension. The docId list in discover_aoscx_guides_urls.py was assembled from live-verified search citations (each confirmed with a direct Playwright load + page=GUID link count), not guessed, and is deliberately NOT exhaustive across every AOS-CX switch-series generation yet -- 2 Fundamentals Guides (4100i/6000/6100; 5420/6200) and 6 CLI Reference guides (6000/6100, 6200, 6300/6400, 8100/8360, 8400, 10000) confirmed at ~14,574 pages total. Known gaps: CLI Reference for 9300/10040/5420, and Fundamentals Guide for 6300/6400, 8100/8320/8325/8360/9300/10000, and 8400 -- add more (label -> (docId, guide_type)) entries to DOC_IDS as they are found; nothing else needs to change. CLI Reference guides are large (1,300-2,900 pages each, one page per command) because each command's syntax/examples/history render as separate docDisplay pages; a slug-collision guard (short URL-hash suffix on duplicate titles within one guide) avoids generic repeated subsection headings (e.g. 'Examples') overwriting each other. Output is laid out as <guide-slug>/<page-slug>.html. Discover with ingestion/discover_aoscx_guides_urls.py and refresh with ingestion/scrape_aoscx_guides.py."
+  },
+  {
+    "source": "clearpass_guide",
+    "doc_type": "clearpass-guide",
+    "purpose": "ClearPass Policy Manager Online Help -- the standalone on-prem CPPM admin/config guide, distinct from Central's cloud-hosted NAC feature docs (nac_docs).",
+    "seed_urls": [
+      "https://support.hpe.com/hpesc/public/docDisplay?docId=sd00007218en_us"
+    ],
+    "output_dir": "ingestion/sources/clearpass_guide",
+    "scraper": "ingestion/scrape_clearpass_guide.py",
+    "extra_scripts": [
+      "ingestion/discover_clearpass_guide_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_clearpass_guide_urls.py": "pre"
+    },
+    "notes": "nac_docs covers Aruba Central's own cloud-hosted NAC/MAC-registration/MPSK features, not standalone ClearPass Policy Manager (CPPM) -- this source fills that gap. Same support.hpe.com/hpesc/public/docDisplay?docId=... viewer/gating as the AOS-CX guides (Playwright required, short 1-2s jitter). Scoped to the current 6.14 release only (docId sd00007218en_us, confirmed live at 1,243 pages) -- unlike release notes, a Policy Manager user guide is a cumulative 'how it works today' reference, not a per-version changelog, so older major versions (6.11, 6.12, ...) would mostly duplicate the same configuration guidance rather than add distinct historical content. Add an older docId only if a version-specific behavior question needs it. Output is laid out as <page-slug>.html with the same slug-collision guard as aoscx_guides. Discover with ingestion/discover_clearpass_guide_urls.py and refresh with ingestion/scrape_clearpass_guide.py."
+  },
+  {
     "source": "security_advisories",
     "doc_type": "security-advisory",
     "purpose": "Official HPE Aruba Networking CSAF security advisories across hardware, software, cloud, NAC, SD-WAN, and management products.",
@@ -227,6 +278,60 @@
     "extra_script_phases": {
       "ingestion/discover_mist_docs_urls.py": "pre"
     }
+  },
+  {
+    "source": "mist_product_updates",
+    "doc_type": "mist-product-updates",
+    "purpose": "Juniper Mist cloud platform release notes ('Product Updates') -- one page per dated release since 2017, covering Marvis, Access/Wireless/Wired/WAN Assurance, Location Services, and Premium Analytics feature changes. This is the Mist-cloud-platform counterpart to aoscx_release_notes (switch OS release notes) -- distinct from mist_docs (evergreen howto/concept docs).",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/software/mist/product-updates/"
+    ],
+    "output_dir": "ingestion/sources/mist_product_updates",
+    "scraper": "ingestion/scrape_mist_product_updates.py",
+    "extra_scripts": [
+      "ingestion/discover_mist_product_updates_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_mist_product_updates_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/mist_product_updates_urls.json",
+    "notes": "This section is not in juniper.net's normal sitemap (mist_docs' discovery does not find it); instead the site ships a client-side TOC data file at product-updates/__toc.js (a JS variable, trivially convertible to JSON) listing every dated release page. By explicit user decision this keeps the FULL history (186 pages, July 2017 - present) rather than only recent releases, and excludes the parallel 'govcloud' release track (a separate, smaller set of GovCloud-only dated pages, out of scope for general design guidance). Two export templates exist across the 9-year span: pages from roughly 2025 onward are Confluence-exported (div.confluence-cont, with a leading in-page TOC stripped since it is link text, not prose); older pages have no dedicated content wrapper, so the scraper falls back to the whole <body> (minus script/style/survey-widget chrome), confirmed clean via direct sampling. Plain urllib works for both eras (no Akamai/bot gate on this host, unlike the AOS-CX docDisplay path), so this uses a 4-worker pool with a 0.4s per-request delay, same pattern as scrape_mist_docs.py -- no Playwright needed."
+  },
+  {
+    "source": "junos_ex_hardware",
+    "doc_type": "junos-ex-hardware",
+    "purpose": "Juniper EX-series switch hardware install/maintenance guide -- site guidelines, cabling, power, safety, chassis component replacement, and first-boot 'configure Junos OS' pages, per EX chassis family.",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/hardware/ex4400/topics/topic-map/ex4400-configure-junos-os.html"
+    ],
+    "output_dir": "ingestion/sources/junos_ex_hardware",
+    "scraper": "ingestion/scrape_junos_ex.py",
+    "extra_scripts": [
+      "ingestion/discover_junos_ex_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_junos_ex_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/junos_ex_hardware_urls.json",
+    "notes": "Found via the same juniper.net sitemap crawl as mist_docs (plain urllib, no Playwright/bot-gate) filtered to /documentation/us/en/hardware/ex* paths -- confirmed 720 pages across every EX chassis family (ex2300, ex3400, ex4000, ex4100(-f/-h), ex4300, ex4400, ex4600, ex4650, ex9204/9208/9214/9251/9253). Same DITA topicBody template as mist_docs, confirmed via direct sampling, so ingestion/scrape_junos_ex.py reuses that extraction logic verbatim. This is predominantly a physical install/maintenance book (413 'concept' pages, mostly site/cabling/power/safety, plus 268 topic-map index pages); only ~14 pages are first-boot 'configure Junos OS' content -- deeper feature/CLI configuration guidance lives in the general Junos software config guides, a much larger (~24,700-page) corpus already deliberately excluded (see the same note on mist_docs' discovery script). Discover and scrape both junos_ex_hardware and junos_ex_release_notes together with ingestion/discover_junos_ex_urls.py (pre-phase) and ingestion/scrape_junos_ex.py -- one script produces/consumes both datasets since they share the same sitemap crawl and scrape mechanics, but are kept as two separate RAG sources because their content types (hardware install vs. software changelog) differ."
+  },
+  {
+    "source": "junos_ex_release_notes",
+    "doc_type": "junos-ex-release-notes",
+    "purpose": "Juniper Junos OS release notes filtered to EX-series-specific pages -- per-version new features, resolved issues, open issues, and what-changed content for the EX platform only.",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/software/junos/release-notes/24.4/junos-release-notes-24.4r1/index.html"
+    ],
+    "output_dir": "ingestion/sources/junos_ex_release_notes",
+    "scraper": "ingestion/scrape_junos_ex.py",
+    "extra_scripts": [
+      "ingestion/discover_junos_ex_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_junos_ex_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/junos_ex_release_notes_urls.json",
+    "notes": "The full Junos release-notes tree is 6,627 pages covering EVERY Junos platform (ACX/EX/MX/NFX/PTX/QFX/SRX/SSR/JRR/vSRX/cSRX), not just switches -- by the same 'bound to this project's switch/AP focus' reasoning already applied to aoscx_release_notes and mist_product_updates, only the 193 pages whose filename carries an explicit 'ex-' platform tag (e.g. ex-new-features-cover.html, ex-open-issues-23.1r1.html, ex-what-changed-22.3r2.html) are kept. Deliberately excluded: ~3,210 other-platform-specific pages (acx-/srx-/vsrx-/csrx-/ptx-/qfx-/mx-/nfx-/ssr-/jrr- filename tags -- routers/firewalls/SD-WAN, out of this project's scope) and ~3,224 platform-generic feature pages (e.g. software-installation-and-upgrade, jweb, system-management, evpn, pki -- may or may not apply to EX, not filterable by filename alone, a candidate for later reconsideration if cross-platform feature content becomes valuable). Same sitemap-crawl/topicBody mechanics as junos_ex_hardware -- both datasets are produced by one run of ingestion/discover_junos_ex_urls.py and scraped by one run of ingestion/scrape_junos_ex.py."
   },
   {
     "source": "product_specs",

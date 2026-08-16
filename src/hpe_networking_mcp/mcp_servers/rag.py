@@ -96,6 +96,9 @@ _SOURCE_VENDOR: dict[str, str] = {
     "tech_docs": "aruba",
     "techdocs_html": "aruba",
     "aos_techdocs": "aruba",
+    "aoscx_release_notes": "aruba",
+    "aoscx_guides": "aruba",
+    "clearpass_guide": "aruba",
     "devhub": "aruba",
     "feature_navigator": "aruba",
     "security_advisories": "aruba",
@@ -103,6 +106,9 @@ _SOURCE_VENDOR: dict[str, str] = {
     "product_specs": "aruba",
     "mist_specs": "juniper",
     "mist_docs": "juniper",
+    "mist_product_updates": "juniper",
+    "junos_ex_hardware": "juniper",
+    "junos_ex_release_notes": "juniper",
     "juniper_lifecycle": "juniper",
     "juniper_security_advisories": "juniper",
     "juniper_kb": "juniper",
@@ -140,7 +146,13 @@ _DOC_TYPE_TO_SOURCE: dict[str, str | tuple[str, ...]] = {
     "openapi": "openapi_specs",
     "product-openapi": "product_specs",
     "aos-techdocs": "aos_techdocs",
+    "aoscx-release-notes": "aoscx_release_notes",
+    "aoscx-guides": "aoscx_guides",
+    "clearpass-guide": "clearpass_guide",
     "mist-docs": "mist_docs",
+    "mist-product-updates": "mist_product_updates",
+    "junos-ex-hardware": "junos_ex_hardware",
+    "junos-ex-release-notes": "junos_ex_release_notes",
     "juniper-kb": "juniper_kb",
     "devhub": "devhub",
     "feature-navigator": "feature_navigator",
@@ -376,8 +388,10 @@ def search_docs(
         query:    Natural language question or keywords.
         top_k:    Results to return (default 5, range 1-20).
         source:   Filter by source folder — developer_docs, tech_docs, nac_docs,
-                  vsg_docs, techdocs_html, aos_techdocs, security_advisories,
-                  lifecycle_notices, juniper_lifecycle,
+                  vsg_docs, techdocs_html, aos_techdocs, aoscx_release_notes,
+                  aoscx_guides, clearpass_guide, mist_docs, mist_product_updates,
+                  junos_ex_hardware, junos_ex_release_notes,
+                  security_advisories, lifecycle_notices, juniper_lifecycle,
                   juniper_security_advisories, feature_navigator, or
                   product_datasheets.
         doc_type: DEPRECATED — use source instead.
