@@ -14,9 +14,9 @@ whenever an index is rebuilt, and verify with
 
 | Artifact content | Count |
 |---|---:|
-| LanceDB prose chunks | 126,292 |
-| Indexed prose sources | 14 |
-| Declared RAG sources | 16 |
+| LanceDB prose chunks | 262,104 |
+| Indexed prose sources | 28 |
+| Declared RAG sources | 29 |
 | Exact endpoints | 4,106 |
 | Schemas | 8,890 |
 | Fields | 50,675 |
@@ -27,12 +27,13 @@ whenever an index is rebuilt, and verify with
 | Complete backend catalog (+ `design-core`, `interop-core`) | 6,717 |
 | Registered router tool index rows | 6,717 |
 
-The prose index covers 14 of the 16 declared sources: `openapi_specs` is
-parsed only into `data/specs.sqlite` (see below), and `feature_navigator`
-currently contributes no prose chunks. The registered tool index matches the
-complete backend catalog exactly: both include the two credential-free
-local backends (`design-core`, `interop-core`), which are searchable but
-make no vendor API call, matching [`docs/tool-catalog.md`](tool-catalog.md).
+The prose index covers 28 of the 29 declared sources: `openapi_specs` is
+parsed only into `data/specs.sqlite` (see below), while several declared
+sources are metadata/API families or are not present in this local snapshot.
+The registered tool index matches the complete backend catalog exactly: both
+include the two credential-free local backends (`design-core`, `interop-core`),
+which are searchable but make no vendor API call, matching
+[`docs/tool-catalog.md`](tool-catalog.md).
 
 OpenAPI documents are parsed only into SQLite exact lookup. They are not
 embedded into LanceDB, which keeps prose retrieval smaller and avoids lossy

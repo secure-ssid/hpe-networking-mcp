@@ -212,7 +212,7 @@
     "total": 6144
   },
   "rag_sources": {
-    "count": 23,
+    "count": 29,
     "sources": [
       "aos_techdocs",
       "aoscx_guides",
@@ -226,6 +226,12 @@
       "juniper_security_advisories",
       "junos_ex_hardware",
       "junos_ex_release_notes",
+      "junos_mx_hardware",
+      "junos_mx_release_notes",
+      "junos_qfx_hardware",
+      "junos_qfx_release_notes",
+      "junos_srx_hardware",
+      "junos_srx_release_notes",
       "lifecycle_notices",
       "mist_docs",
       "mist_product_updates",
@@ -249,12 +255,12 @@
       "lifecycle_events": 346
     },
     "docs_lance": {
-      "rows": 126292,
-      "source_count": 22,
+      "rows": 262104,
+      "source_count": 28,
       "rows_by_source": {
         "aos_techdocs": 1534,
-        "aoscx_guides": 4764,
-        "aoscx_release_notes": 5081,
+        "aoscx_guides": 52120,
+        "aoscx_release_notes": 39445,
         "clearpass_guide": 3151,
         "developer_docs": 1367,
         "devhub": 354,
@@ -264,6 +270,12 @@
         "juniper_security_advisories": 18,
         "junos_ex_hardware": 12088,
         "junos_ex_release_notes": 1869,
+        "junos_mx_hardware": 21077,
+        "junos_mx_release_notes": 6026,
+        "junos_qfx_hardware": 10330,
+        "junos_qfx_release_notes": 3707,
+        "junos_srx_hardware": 9414,
+        "junos_srx_release_notes": 3538,
         "lifecycle_notices": 1589,
         "mist_docs": 15870,
         "mist_product_updates": 1695,

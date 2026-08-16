@@ -143,7 +143,7 @@ uv run python ingestion/ingest_docs.py
 | `lookup_api` returns an older path/version | `data/specs.sqlite` freshness | `uv run python ingestion/ingest_docs.py` | `lookup_api` returns the current path/version |
 | `ask_docs` misses a security advisory or end-of-sale notice | Security lifecycle sources | `uv run python ingestion/scrape_security_lifecycle.py`, then rebuild `data/docs.lance` | `ask_docs` cites the advisory/notice; see [Source lifecycle coverage](source-lifecycle-coverage.md) for `stale`/`unavailable`/`changed`/`coverage_gap` meanings |
 | macOS docs rebuild stalls in fastembed multiprocessing | A stale rebuild process from an older checkout | Stop the stale process by exact PID, update the checkout, re-run | Current `ingest_docs.py` auto-disables subprocess parallelism on macOS, so the rebuild completes |
-| Docs index is larger than expected | Whether OpenAPI JSON was embedded into the docs index | Rebuild with the current ingestion path | OpenAPI records stay in SQLite only; the prose corpus is 126,292 chunks |
+| Docs index is larger than expected | Whether OpenAPI JSON was embedded into the docs index | Rebuild with the current ingestion path | OpenAPI records stay in SQLite only; the prose corpus is 262,104 chunks |
 
 ## Vendor compatibility
 
