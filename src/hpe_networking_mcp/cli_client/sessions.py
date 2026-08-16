@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -64,6 +65,7 @@ class ConnectedServer:
     profile: ServerProfile
     session: ClientSession
     server_name: str
+    connected_at: float = field(default_factory=time.time)
 
 
 @dataclass

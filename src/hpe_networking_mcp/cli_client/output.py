@@ -22,13 +22,28 @@ _REDACT_KV_RE = re.compile(
     r"(?i)(password|passphrase|token|secret|client_secret|api[-_]?key|authorization)"
     r"(\s*[:=\s]\s*[\"']?)([^\"'\s,;]+)([\"']?)"
 )
+# Basic-auth style userinfo embedded in a URL: scheme://user:password@host
+_URL_USERINFO_RE = re.compile(r"(?i)(https?://[^/\s\"'@]*?:)([^/\s\"'@]+)(@)")
 
 
 def redact_sensitive_text(text: str) -> str:
-    """Redact passwords, tokens, and secrets from logs and displayed output."""
+    """Redact passwords, tokens, secrets, and URL-embedded credentials."""
     if not text:
         return ""
+    text = _URL_USERINFO_RE.sub(r"\1***REDACTED***\3", text)
     return _REDACT_KV_RE.sub(r"\1\2***REDACTED***\4", text)
+
+
+def format_duration(seconds: float) -> str:
+    """Render an elapsed-time span as a short human string (e.g. ``3m12s``)."""
+    total = max(0, int(seconds))
+    hours, remainder = divmod(total, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h{minutes:02d}m"
+    if minutes:
+        return f"{minutes}m{secs:02d}s"
+    return f"{secs}s"
 
 
 def emit_json(payload: Any, *, stream: Any = None) -> None:

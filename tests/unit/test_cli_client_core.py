@@ -199,6 +199,30 @@ def test_mcp_cli_profiles_offline():
     assert main(["--json", "profiles"]) == 0
 
 
+def test_mcp_cli_docs_add_remove_offline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    from hpe_networking_mcp.cli.mcp_cli import main
+
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    src = tmp_path / "note.md"
+    src.write_text("VSX aggregation notes\n", encoding="utf-8")
+
+    assert main(["--json", "docs", "add", str(src), "--collection", "labnotes"]) == 0
+
+    store = DocumentStore()
+    docs = store.list("labnotes")
+    assert len(docs) == 1
+    doc_id = docs[0].id
+
+    # Removing an unknown id fails with exit code 1.
+    assert main(["--json", "docs", "remove", "does-not-exist"]) == 1
+    # Removing the real id succeeds and is idempotent-safe (second call fails).
+    assert main(["--json", "docs", "remove", doc_id]) == 0
+    # `main()` mutates the on-disk store via its own DocumentStore instance, so
+    # re-read a fresh handle rather than reusing the earlier in-memory `store`.
+    assert DocumentStore().list("labnotes") == []
+    assert main(["--json", "docs", "remove", doc_id]) == 1
+
+
 def test_repo_root_launcher_exists():
     from hpe_networking_mcp.cli_client.config import repo_root_from_package
 
@@ -418,6 +442,15 @@ def test_redact_sensitive_text():
     assert "***REDACTED***" in redacted
 
 
+def test_format_duration():
+    from hpe_networking_mcp.cli_client.output import format_duration
+
+    assert format_duration(0) == "0s"
+    assert format_duration(45) == "45s"
+    assert format_duration(90) == "1m30s"
+    assert format_duration(3661) == "1h01m"
+    assert format_duration(-5) == "0s"  # never negative
+
 
 def test_format_tool_schema():
     from hpe_networking_mcp.cli_client.output import format_tool_schema
@@ -483,6 +516,37 @@ def test_command_status_and_tool_explore():
         assert ret_tool == 0
 
     asyncio.run(_run())
+
+
+def test_command_status_reports_transport_and_connected_server(capsys: pytest.CaptureFixture[str]):
+    from hpe_networking_mcp.cli_client.commands import cmd_status
+    from hpe_networking_mcp.cli_client.config import ClientConfig, ServerProfile
+    from hpe_networking_mcp.cli_client.sessions import ConnectedServer, SessionManager
+
+    class MockTool:
+        name = "ask_docs"
+
+    class FakeGroup:
+        tools = {"hpe-networking.ask_docs": MockTool(), "hpe-networking.find_tool": MockTool()}
+
+    mgr = SessionManager(group=FakeGroup())
+    profile = ServerProfile(
+        name="test", transport="http", url="https://admin:hunter2tok@127.0.0.1:8010/mcp"
+    )
+    mgr.connected["test"] = ConnectedServer(
+        profile=profile, session=object(), server_name="hpe-networking-mcp"
+    )
+    cfg = ClientConfig(profiles={"test": profile}, default_profile="test")
+
+    ret = cmd_status(mgr, cfg, current_profile="test", json_mode=True)
+    assert ret == 0
+    captured = json.loads(capsys.readouterr().out)
+    credential_marker = profile.url.split("://", 1)[1].split("@", 1)[0].split(":", 1)[1]
+    assert captured["transport"] == "http"
+    assert captured["connected_server"] == "hpe-networking-mcp"
+    assert captured["tools_by_server"] == {"hpe-networking": 2}
+    assert captured["connected_seconds"] is not None
+    assert credential_marker not in captured["target"]  # embedded credential must be redacted
 
 
 def test_tui_slash_and_natural_language_handling():

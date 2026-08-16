@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 from hpe_networking_mcp.cli_client.ai import get_ai_backend
@@ -16,6 +17,7 @@ from hpe_networking_mcp.cli_client.diagram_workflow import (
 from hpe_networking_mcp.cli_client.documents import DocumentStore
 from hpe_networking_mcp.cli_client.output import (
     console,
+    format_duration,
     format_tool_schema,
     print_docs_table,
     print_error,
@@ -23,6 +25,7 @@ from hpe_networking_mcp.cli_client.output import (
     print_skills_table,
     print_tool_result,
     print_tools_table,
+    redact_sensitive_text,
     tool_result_to_text,
 )
 from hpe_networking_mcp.cli_client.safety import SafetyPolicy
@@ -293,6 +296,20 @@ def cmd_docs_add(
     return 0
 
 
+def cmd_docs_remove(doc_id: str, *, keep_file: bool = False, json_mode: bool = False) -> int:
+    store = DocumentStore()
+    removed = store.remove(doc_id, delete_file=not keep_file)
+    if not removed:
+        print_error(
+            f"no document with id {doc_id!r}",
+            json_mode=json_mode,
+            code="docs_remove_not_found",
+        )
+        return 1
+    print_ok({"removed": doc_id}, json_mode=json_mode, text=f"removed {doc_id}")
+    return 0
+
+
 def cmd_docs_search(query: str, *, collection: str | None = None, json_mode: bool = False) -> int:
     store = DocumentStore()
     hits = store.search(query, collection=collection)
@@ -514,12 +531,23 @@ def cmd_status(
 ) -> int:
     """Display connection status and configuration."""
     prof_name = current_profile or (mgr.active_profile if mgr else None) or cfg.default_profile
+    profile = cfg.profiles.get(prof_name)
     is_connected = mgr is not None and mgr.state == ConnectionState.CONNECTED
-    status_dict = {
+    rec = mgr.connected.get(prof_name) if mgr else None
+    by_server: dict[str, int] = {}
+    for tool_name in (mgr.tools if mgr else {}):
+        prefix = tool_name.split(".", 1)[0] if "." in tool_name else "(unnamespaced)"
+        by_server[prefix] = by_server.get(prefix, 0) + 1
+    status_dict: dict[str, Any] = {
         "connected": is_connected,
         "state": mgr.state.value if mgr else "disconnected",
         "profile": prof_name,
+        "transport": profile.transport if profile else None,
+        "target": redact_sensitive_text(profile.command or profile.url or "") if profile else None,
+        "connected_server": rec.server_name if rec else None,
+        "connected_seconds": (time.time() - rec.connected_at) if rec else None,
         "tools_visible": len(mgr.tools) if mgr else 0,
+        "tools_by_server": by_server,
         "last_error": mgr.last_error if mgr else None,
         "safety": "read-only default",
         "personal_docs_mode": "local metadata + content search",
@@ -533,10 +561,19 @@ def cmd_status(
         "",
         f"- **Connection State:** `{status_dict['state']}`",
         f"- **Active Profile:** `{status_dict['profile']}`",
-        f"- **Visible Tools:** {status_dict['tools_visible']}",
-        f"- **Safety Mode:** {status_dict['safety']}",
-        f"- **Personal Documents:** {status_dict['personal_docs_mode']}",
     ]
+    if profile is not None:
+        target = redact_sensitive_text(profile.command or profile.url or "(unset)")
+        lines.append(f"- **Transport:** `{profile.transport}` → `{target}`")
+    if rec is not None:
+        lines.append(f"- **Connected Server:** {rec.server_name}")
+        lines.append(f"- **Connected For:** {format_duration(time.time() - rec.connected_at)}")
+    lines.append(f"- **Visible Tools:** {status_dict['tools_visible']}")
+    if len(by_server) > 1:
+        for prefix, count in sorted(by_server.items(), key=lambda kv: -kv[1]):
+            lines.append(f"  - `{prefix}`: {count}")
+    lines.append(f"- **Safety Mode:** {status_dict['safety']}")
+    lines.append(f"- **Personal Documents:** {status_dict['personal_docs_mode']}")
     if status_dict["last_error"]:
         lines.append(f"- **Last Connection Error:** [red]{status_dict['last_error']}[/]")
 

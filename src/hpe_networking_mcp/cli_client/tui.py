@@ -39,13 +39,14 @@ from hpe_networking_mcp.cli_client.diagram_workflow import (
     parse_diagram_intent,
 )
 from hpe_networking_mcp.cli_client.output import (
+    format_duration,
     format_tool_schema,
     redact_sensitive_text,
     tool_result_to_text,
 )
 from hpe_networking_mcp.cli_client.repl_input import history_path
 from hpe_networking_mcp.cli_client.safety import SafetyPolicy
-from hpe_networking_mcp.cli_client.sessions import ConnectionState, SessionManager
+from hpe_networking_mcp.cli_client.sessions import SessionManager
 
 COMMAND_SUGGESTIONS = (
     "/help",
@@ -61,6 +62,7 @@ COMMAND_SUGGESTIONS = (
     "/tools",
     "/docs list",
     "/docs add ",
+    "/docs remove ",
     "/docs search ",
     "/docs search-content ",
     "/skills list",
@@ -154,7 +156,8 @@ def normalize_tui_input(line: str) -> list[str]:
     if head == "tools" and (len(argv) == 1 or argv[1] in {"list", "find"}):
         argv[0] = head
         return argv
-    if head == "docs" and len(argv) >= 2 and argv[1] in {"list", "add", "search", "search-content"}:
+    _docs_subcmds = {"list", "add", "remove", "search", "search-content"}
+    if head == "docs" and len(argv) >= 2 and argv[1] in _docs_subcmds:
         argv[0] = head
         return argv
     if head == "skills" and len(argv) >= 2 and argv[1] in {"list", "show"}:
@@ -182,7 +185,7 @@ Use `/` commands for expert controls:
 | `/api <query>` | Find exact API endpoints and schemas |
 | `/find <query>` | Search thousands of backend operations |
 | `/tools` | Show the small router/discovery layer |
-| `/docs list\\|add\\|search` | Manage locally stored personal documents |
+| `/docs list\\|add\\|remove\\|search` | Manage personal documents (`--collection name` to scope) |
 | `/skills list\\|show` | Show guided workflows |
 | `/profiles` | Show available MCP connections |
 | `/status` | View connection state, profile, and tools |
@@ -207,6 +210,7 @@ EXAMPLES_TEXT = """\
 - `/find troubleshoot wireless client`
 - `/docs add ./my-network-notes.md`
 - `/docs search-content EX4400`
+- `/docs remove <id>`
 
 Personal documents are stored locally and searchable across metadata and text.
 """
@@ -916,6 +920,13 @@ class HpeMcpApp(App[int]):
                     f"Stored `{rec.id}` → {rec.collection} ({rec.title}).\n\n"
                     "_Available to `/docs search` and `/docs search-content`._"
                 )
+            if len(argv) >= 3 and argv[1] == "remove":
+                doc_id = argv[2]
+                keep_file = "--keep-file" in argv
+                removed = store.remove(doc_id, delete_file=not keep_file)
+                if not removed:
+                    return f"No document found with id `{doc_id}`."
+                return f"Removed `{doc_id}` from the personal document index."
             if len(argv) >= 3 and argv[1] == "search-content":
                 terms = argv[2:]
                 collection = None
@@ -955,7 +966,10 @@ class HpeMcpApp(App[int]):
                 for d in hits:
                     lines.append(f"- `{d.id}` **{d.title}**")
                 return "\n".join(lines)
-            return "usage: docs list|add <path>|search <q>|search-content <q>"
+            return (
+                "usage: docs list|add <path>|remove <id>|search <q>|"
+                "search-content <q> [--collection name]"
+            )
 
         if head == "profiles":
             lines = ["## Profiles", ""]
@@ -965,16 +979,33 @@ class HpeMcpApp(App[int]):
             return "\n".join(lines)
 
         if head == "status":
-            connected = self.mgr is not None and self.mgr.state == ConnectionState.CONNECTED
             state_str = self.mgr.state.value if self.mgr else "disconnected"
+            profile = self.cfg.profiles.get(self.profile_name)
             lines = [
                 "## Client status\n",
                 f"- MCP connection state: **`{state_str}`**",
                 f"- Active profile: `{self.profile_name}`",
-                f"- Visible router tools: **{len(mgr.tools)}**",
-                "- Safety policy: **read-only default**",
-                "- Personal docs: **local metadata + content search enabled**",
             ]
+            if profile is not None:
+                target = profile.command or profile.url or "(unset)"
+                target_redacted = redact_sensitive_text(target)
+                lines.append(f"- Transport: `{profile.transport}` → `{target_redacted}`")
+                if profile.description:
+                    lines.append(f"- Profile description: {profile.description}")
+            rec = self.mgr.connected.get(self.profile_name) if self.mgr else None
+            if rec is not None:
+                lines.append(f"- Connected server: **{rec.server_name}**")
+                lines.append(f"- Connected for: {format_duration(time.time() - rec.connected_at)}")
+            lines.append(f"- Visible router tools: **{len(mgr.tools)}**")
+            by_server: dict[str, int] = {}
+            for tool_name in mgr.tools:
+                prefix = tool_name.split(".", 1)[0] if "." in tool_name else "(unnamespaced)"
+                by_server[prefix] = by_server.get(prefix, 0) + 1
+            if len(by_server) > 1:
+                for prefix, count in sorted(by_server.items(), key=lambda kv: -kv[1]):
+                    lines.append(f"  - `{prefix}`: {count}")
+            lines.append("- Safety policy: **read-only default**")
+            lines.append("- Personal docs: **local metadata + content search enabled**")
             if self.mgr and self.mgr.last_error:
                 lines.append(f"- Last error: `{self.mgr.last_error}`")
             return "\n".join(lines)

@@ -29,6 +29,7 @@ from hpe_networking_mcp.cli_client.commands import (
     cmd_docs_add,
     cmd_docs_ingest,
     cmd_docs_list,
+    cmd_docs_remove,
     cmd_docs_search,
     cmd_docs_search_content,
     cmd_docs_search_internal,
@@ -140,6 +141,13 @@ def build_parser() -> argparse.ArgumentParser:
     d_add.add_argument("source")
     d_add.add_argument("--collection", default="personal")
     d_add.add_argument("--title", default=None)
+    d_remove = docs_sub.add_parser("remove", help="Remove a stored document by id")
+    d_remove.add_argument("doc_id")
+    d_remove.add_argument(
+        "--keep-file",
+        action="store_true",
+        help="Drop the index entry but keep the stored file on disk",
+    )
     d_search = docs_sub.add_parser("search")
     d_search.add_argument("query", nargs="+")
     d_search.add_argument("--collection", default=None)
@@ -301,6 +309,12 @@ async def _run_connected(args: argparse.Namespace) -> int:
                 args.source,
                 collection=args.collection,
                 title=args.title,
+                json_mode=json_mode,
+            )
+        if args.docs_cmd == "remove":
+            return cmd_docs_remove(
+                args.doc_id,
+                keep_file=args.keep_file,
                 json_mode=json_mode,
             )
         if args.docs_cmd == "search":
@@ -498,7 +512,7 @@ async def run_repl(
                     "  tools                                 list tools\n"
                     "[bold]also[/]\n"
                     "  rag ask | tools list|find | api lookup | invoke-read\n"
-                    "  skills list|show | docs list|add|search\n"
+                    "  skills list|show | docs list|add|remove|search\n"
                     "  connect [profile] | profiles | exit"
                 )
                 continue
@@ -529,7 +543,7 @@ async def run_repl(
                         "  tools [list|find]                     list tools\n"
                         "[bold]also[/]\n"
                         "  rag ask | tools list|find | api lookup | invoke-read\n"
-                        "  skills [list|show] | docs [list|add|search]\n"
+                        "  skills [list|show] | docs [list|add|remove|search]\n"
                         "  status | connect [profile] | profiles | exit\n"
                         "[dim]Note: Any plain question automatically queries RAG docs.[/]"
                     )
@@ -682,6 +696,9 @@ async def run_repl(
                         continue
                     if len(argv) >= 3 and argv[1] == "add":
                         cmd_docs_add(argv[2], json_mode=json_mode)
+                        continue
+                    if len(argv) >= 3 and argv[1] == "remove":
+                        cmd_docs_remove(argv[2], json_mode=json_mode)
                         continue
                     if len(argv) >= 3 and argv[1] == "search":
                         cmd_docs_search(" ".join(argv[2:]), json_mode=json_mode)

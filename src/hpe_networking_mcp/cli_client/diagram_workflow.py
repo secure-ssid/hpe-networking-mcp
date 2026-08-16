@@ -41,42 +41,6 @@ def parse_diagram_intent(prompt: str) -> DiagramPreferences:
         pref.format = "drawio"
 
     # Icon style
-    if "vendor icon" in low or "vendor-icon" in low or "real icon" in low:
-        pref.icon_style = "vendor"
-    elif "generic" in low:
-        pref.icon_style = "generic"
-
-    # Vendor hints
-    if "mist" in low or "juniper" in low:
-        pref.vendor = "mist"
-    elif "cisco" in low:
-        pref.vendor = "cisco"
-    elif "clearpass" in low:
-        pref.vendor = "clearpass"
-    elif "aruba" in low or "cx" in low or "central" in low or "hpe" in low:
-        pref.vendor = "aruba"
-
-    # Live vs manual
-    if "live" in low or "site" in low or "central topology" in low:
-        pref.topology_source = "live"
-        site_m = re.search(r"site(?:-id)?[:=\s]+([a-zA-Z0-9_-]+)", prompt)
-        if site_m:
-            pref.site_id = site_m.group(1)
-
-def parse_diagram_intent(prompt: str) -> DiagramPreferences:
-    """Extract diagram parameters and preferences from natural language."""
-    pref = DiagramPreferences()
-    low = prompt.lower()
-
-    # Format
-    if "graphviz" in low or " dot" in low or "png" in low or "svg" in low:
-        pref.format = "graphviz"
-    elif "next" in low or "nextui" in low or "web" in low or "dashboard" in low:
-        pref.format = "nextui"
-    else:
-        pref.format = "drawio"
-
-    # Icon style
     if "vendor icon" in low or "vendor-icon" in low or "real icon" in low or "vendor" in low:
         pref.icon_style = "vendor"
     elif "generic" in low:

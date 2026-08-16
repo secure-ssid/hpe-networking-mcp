@@ -39,6 +39,7 @@ hpe-mcp version
 hpe-mcp profiles
 hpe-mcp skills list
 hpe-mcp docs add ./notes.md --collection personal
+hpe-mcp docs remove <id>              # or --keep-file to keep the file on disk
 
 # connected one-shots (stdio → local-router profile)
 hpe-mcp tools list
