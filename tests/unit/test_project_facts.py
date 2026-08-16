@@ -189,11 +189,11 @@ def test_published_canonical_counts_match_the_documented_contract():
     tools = TRACKED["tools"]
     router_tools = TRACKED["router_modes"]["tools"]
 
-    assert tools["registered_total"] == 6716  # complete registered backend identities
-    assert tools["platform_backend_total"] == 6704  # platform API total / compatibility floor
+    assert tools["registered_total"] == 6717  # complete registered backend identities
+    assert tools["platform_backend_total"] == 6705  # platform API total / compatibility floor
     assert router_tools["minimal"] == 3
     assert router_tools["default"] == 18
-    assert router_tools["direct_all"] == 6723
+    assert router_tools["direct_all"] == 6724
 
 
 def test_router_mode_probe_environment_is_reproducible():

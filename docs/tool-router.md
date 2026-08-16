@@ -376,9 +376,9 @@ MCP hop.
 |---|---:|
 | Minimal router | 3 client-visible tools |
 | Default router | 18 client-visible tools[^compliance-tool] |
-| Platform API backend index | 6,704 tools |
-| Complete backend index (platform APIs + `design-core` + `interop-core`) | 6,716 tools |
-| Direct-all router | 6,723 client-visible tools |
+| Platform API backend index | 6,705 tools |
+| Complete backend index (platform APIs + `design-core` + `interop-core`) | 6,717 tools |
+| Direct-all router | 6,724 client-visible tools |
 
 </div>
 
@@ -396,9 +396,9 @@ MCP hop.
 The complete catalog spans nine platform surfaces plus RAG, `design-core`,
 and `interop-core`: nine generated manifests contain 6,144 reproducible
 operations (6,127 register as active generated tools; 577 platform curated
-tools bring the platform API backend total to 6,704). Adding the two
+tools bring the platform API backend total to 6,705). Adding the two
 credential-free local backends (`design-core`: 7, `interop-core`: 5) yields
-the complete 6,716-tool registered backend catalog. Minimal mode does not
+the complete 6,717-tool registered backend catalog. Minimal mode does not
 expose that schema surface to the MCP client -- it searches the catalog on
 demand.
 

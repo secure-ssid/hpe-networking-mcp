@@ -24,6 +24,7 @@ Use the router pattern: `find_tool` first, then `invoke_read_tool`.
 | Exact API endpoint / field / enum | `lookup_api` | "what endpoint creates X", "what values does field Y accept" |
 | Broader keyword search, want raw chunks | `search_docs` | exploratory, multiple results wanted |
 | Security advisory / CVE | `lookup_advisory` | CVE IDs, advisory IDs, product vulnerability lookup |
+| Exact hardware datasheet spec | `lookup_hardware_specs` | "CX6300 switching capacity", "EX4400 PoE budget", "AP-635 specs" — curated catalog, not a document search |
 
 ## Source filters for `ask_docs` / `search_docs`
 

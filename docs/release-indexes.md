@@ -23,9 +23,9 @@ whenever an index is rebuilt, and verify with
 | Security advisories | 104 |
 | Lifecycle records | 346 |
 | Generated operation manifests | 6,144 |
-| Platform API backend catalog | 6,704 |
-| Complete backend catalog (+ `design-core`, `interop-core`) | 6,716 |
-| Registered router tool index rows | 6,716 |
+| Platform API backend catalog | 6,705 |
+| Complete backend catalog (+ `design-core`, `interop-core`) | 6,717 |
+| Registered router tool index rows | 6,717 |
 
 The prose index covers 14 of the 16 declared sources: `openapi_specs` is
 parsed only into `data/specs.sqlite` (see below), and `feature_navigator`

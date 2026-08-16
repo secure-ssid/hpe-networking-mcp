@@ -1,13 +1,15 @@
-"""MCP server — Aruba/HPE documentation RAG tools (12 tools).
+"""MCP server — Aruba/HPE documentation RAG tools (13 tools).
 
 Covers: hybrid (vector + BM25) search over ingested Aruba Central developer
 docs, tech docs, NAC docs, VSG docs, and HTML tech docs; exact API
 endpoint/schema/enum lookup via the SQLite specs index; exact structured
 security-advisory/lifecycle lookup, bounded list/filter/pagination, an
-exact-only advisory<->lifecycle correlation, bounded RAG index
-diagnostics (ingestion delta, source freshness, citation completeness),
-local skills/runbook browse+load helpers, and a search over the user's own
-local personal/internal document collection (separate index, never shared).
+exact-only advisory<->lifecycle correlation, an exact curated hardware
+datasheet catalog lookup (CX/EX/AP specs, not part of the document corpus),
+bounded RAG index diagnostics (ingestion delta, source freshness, citation
+completeness), local skills/runbook browse+load helpers, and a search over
+the user's own local personal/internal document collection (separate index,
+never shared).
 
 Default backend is the embedded stack — LanceDB + fastembed, no servers
 needed (`clone -> uv sync -> run`). Set HPE_MCP_RAG_BACKEND=redis for the
@@ -745,18 +747,25 @@ def _citation(hit: dict[str, Any]) -> dict[str, Any]:
     return citation
 
 
+@mcp.tool(annotations=READ_ONLY_LOCAL)
 def lookup_hardware_specs(
     model: str,
 ) -> dict[str, Any]:
     """Look up authoritative hardware datasheet specifications for switches and APs.
 
-    Returns switching capacity, throughput, stacking (VSF/Virtual Chassis),
-    port configurations, PoE wattage, uplinks, architecture, and routing/security
-    features for Aruba CX (6000, 6100, 6200, 6300, 6400, 8325, 8360, 10000),
-    Juniper EX (2300, 4100, 4400, 4650), Aruba APs (635), and Mist APs (45).
+    Exact, curated catalog lookup (no RAG search) — use this INSTEAD of
+    ask_docs/search_docs for hardware datasheet questions, since datasheet
+    PDFs are not part of the ingested document corpus. Returns switching
+    capacity, throughput, stacking (VSF/Virtual Chassis), port configurations,
+    PoE wattage, uplinks, architecture, and routing/security features for
+    Aruba CX (6000, 6100, 6200, 6300, 6400, 8325, 8360, 10000), Juniper EX
+    (2300, 4100, 4400, 4650), Aruba APs (635), and Mist APs (45).
 
     Args:
         model: Hardware model identifier, e.g. "cx6300", "6300", "ex4400", "8360", "ap635".
+
+    On a miss, returns ``{"ok": False, "available_models": [...]}`` listing every
+    catalogued key instead of raising, so a caller can retry with a valid model.
     """
     key = hardware_specs.detect_hardware_query(model) or model.lower().strip()
     spec = hardware_specs.get_hardware_specs(key)

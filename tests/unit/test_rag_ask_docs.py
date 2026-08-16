@@ -290,3 +290,31 @@ def test_ask_docs_ap_models_do_not_cross_contaminate():
     assert "AP-555" in out_555["answer"]
     assert "AP-505" not in out_555["answer"]
 
+
+
+def test_lookup_hardware_specs_is_registered_as_an_mcp_tool():
+    """Regression test: lookup_hardware_specs was fully implemented (and
+    already referenced by name in migration_planner's recommended_tools) but
+    had no @mcp.tool decorator, so it was uncallable through find_tool /
+    invoke_read_tool despite ask_docs's internal routing working correctly.
+    """
+    import asyncio
+
+    tools = asyncio.run(rag.mcp.list_tools())
+    names = {t.name for t in tools}
+    assert "lookup_hardware_specs" in names
+
+
+def test_lookup_hardware_specs_returns_full_spec_for_known_model():
+    out = rag.lookup_hardware_specs("cx6300")
+    assert out["ok"] is True
+    assert out["model"] == "cx6300"
+    assert "specs" in out
+    assert "880 Gbps" in out["formatted"]
+
+
+def test_lookup_hardware_specs_unknown_model_lists_available_models():
+    out = rag.lookup_hardware_specs("not-a-real-switch")
+    assert out["ok"] is False
+    assert "cx6300" in out["available_models"]
+    assert "ex4400" in out["available_models"]

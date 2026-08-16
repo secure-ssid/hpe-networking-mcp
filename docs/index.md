@@ -6,7 +6,7 @@ ArubaOS 8, EdgeConnect, UXI, and Axis backends. This page is a task-based
 front door for three audiences: people trying MCP for the first time, Aruba
 network operators, and hpe-networking-mcp developers.
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,716 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,144 generated operations, 6,717 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
 
 Whatever backend does the work, an MCP client sees only three router tools
 under the recommended `minimal` profile — the banner's "3 minimal router
@@ -227,7 +227,7 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | 6,144 generated operations (6,127 active) / 589 curated / 6,716 backend tools / 6,723 direct-all |
+| Tool catalog | 6,144 generated operations (6,127 active) / 589 curated / 6,717 backend tools / 6,724 direct-all |
 | Capability totals (platform APIs) | 3,153 read, 165 diagnostic, 2,544 write, 842 destructive |
 | RAG | 126,292 prose chunks in LanceDB |
 | Structured lookup | 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 346 lifecycle records |
@@ -238,7 +238,7 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 </div>
 
 <figure class="docs-figure">
-  <img src="assets/platform-coverage.svg" alt="The low-token router searches 6,716 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms">
+  <img src="assets/platform-coverage.svg" alt="The low-token router searches 6,717 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms">
   <figcaption>Every platform is opt-in except Central, GLP, and RAG, which load by default under the minimal router profile.</figcaption>
 </figure>
 

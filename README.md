@@ -7,7 +7,7 @@
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-0969da)](https://secure-ssid.github.io/hpe-networking-mcp/)
 [![Release](https://img.shields.io/github/v/release/secure-ssid/hpe-networking-mcp?display_name=tag)](https://github.com/secure-ssid/hpe-networking-mcp/releases)
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,716 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](docs/assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,144 generated operations, 6,717 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](docs/assets/hpe-networking-mcp-hero.svg)
 
 The banner tracks the current backend catalog: a large tool surface stays
 available on demand, while the MCP client itself only ever sees three router
@@ -88,7 +88,7 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | Non-additive profiles: 369 core tools / 2830 read-only optional starters / 5810 read-write optional starters; platform API backend total: 6,704; complete backend index: 6,716; direct-all: 6,723 |
+| Tool catalog | Non-additive profiles: 370 core tools / 2831 read-only optional starters / 5811 read-write optional starters; platform API backend total: 6,705; complete backend index: 6,717; direct-all: 6,724 |
 | RAG | 126,292 prose chunks; 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 346 lifecycle records |
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud |
 | Safety | Per-platform write gates, dry-run + confirmation, HTTP host/origin and bearer controls, credential-gated live-test config |
@@ -198,12 +198,12 @@ The full repository map, including generated/git-ignored paths, lives in
 
 ```bash
 uv run pytest tests/unit -q
-uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6704
+uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6705
 ```
 
-`--min-tools 6704` is the platform API compatibility floor (the 6,704
+`--min-tools 6705` is the platform API compatibility floor (the 6,705
 vendor-facing platform API tools), not the complete registered backend total
-of 6,716 — validation passes at or above the floor. See
+of 6,717 — validation passes at or above the floor. See
 [Tool catalog](docs/tool-catalog.md) for both totals.
 
 The release helper runs unit tests, optional RAG/API eval when indexes exist, tool catalog floor checks, and local tool-index freshness checks. Unit tests also include static guards for the active MCP/pipeline code, committed low-token MCP config examples, local-only config files, router product/toolset docs, bounded generic read-only GET tools, MCP list default bounds, RAG/search top_k bounds, public tool-count claims, tool-count docstrings, rendered RAG/index doc-fact claims, tracked Markdown local links and images, Pages sitemap and robots metadata, documented router example arguments, product workflow tool-name tables, and wizard optional-product env tables.
