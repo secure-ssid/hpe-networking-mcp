@@ -593,20 +593,17 @@ def list_alert_configs(scope_id: str, scope_type: str = "GLOBAL") -> dict[str, A
         raise ValueError(f"scope_type must be one of: {allowed}")
     return get_client().get(
         "/network-notifications/v1/alert-config",
-        params={"scopeId": scope, "scopeType": scope_kind},
+        params={"scope-id": scope, "scope-type": scope_kind},
     )
 
 
 @mcp.tool(annotations=READ_ONLY)
 def list_insights(
-    filter: str | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> dict[str, Any]:
     """List Central Insights recommendation-style observations."""
     params: dict[str, Any] = {"limit": clamp_limit(limit, default=100), "offset": max(0, offset)}
-    if filter:
-        params["filter"] = filter
     return get_client().get("/network-notifications/v1/insights", params=params)
 
 

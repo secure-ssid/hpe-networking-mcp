@@ -239,7 +239,7 @@ def test_list_alert_configs_calls_expected_endpoint(monkeypatch):
     assert result == {"items": []}
     client.get.assert_called_once_with(
         "/network-notifications/v1/alert-config",
-        params={"scopeId": "global-scope", "scopeType": "GLOBAL"},
+        params={"scope-id": "global-scope", "scope-type": "GLOBAL"},
     )
 
 
@@ -258,16 +258,12 @@ def test_list_insights_calls_expected_endpoint(monkeypatch):
     client.get.return_value = {"items": []}
     monkeypatch.setattr(monitoring, "get_client", lambda: client)
 
-    result = monitoring.list_insights(
-        filter="severity eq 'HIGH'",
-        limit=500,
-        offset=5,
-    )
+    result = monitoring.list_insights(limit=500, offset=5)
 
     assert result == {"items": []}
     client.get.assert_called_once_with(
         "/network-notifications/v1/insights",
-        params={"limit": 200, "offset": 5, "filter": "severity eq 'HIGH'"},
+        params={"limit": 200, "offset": 5},
     )
 
 
