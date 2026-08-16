@@ -564,7 +564,9 @@ def _enabled_optional_products(products: str, toolsets: str | None) -> set[str]:
 
 
 def _port_listening(host: str, port: int) -> bool:
-    target = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
+    # Substitutes a wildcard bind address with loopback for the outbound
+    # connect_ex() probe below; this never binds a socket to all interfaces.
+    target = "127.0.0.1" if host in {"0.0.0.0", "::"} else host  # nosec B104
     try:
         addresses = socket.getaddrinfo(target, port, type=socket.SOCK_STREAM)
     except OSError:

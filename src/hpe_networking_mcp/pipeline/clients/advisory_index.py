@@ -301,7 +301,9 @@ def lookup_advisories(
     if advisory_id:
         clauses.append("LOWER(advisory_id) = LOWER(?)")
         params.append(advisory_id)
-    sql = "SELECT * FROM advisories WHERE " + " AND ".join(clauses)
+    # clauses are static parameterized fragments ("col = ?"); every actual
+    # value is bound through params below, never interpolated into sql.
+    sql = "SELECT * FROM advisories WHERE " + " AND ".join(clauses)  # nosec B608
     sql += " ORDER BY current_release DESC, advisory_id DESC LIMIT ?"
     params.append(200 if minimum else limit)
 
@@ -482,7 +484,12 @@ def list_advisories(
         clauses.append("source_family = ?")
         params.append(source_family)
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-    sql = f"SELECT * FROM advisories {where} ORDER BY current_release DESC, advisory_id DESC"
+    # clauses are static parameterized fragments ("col = ?"); every actual
+    # value is bound through params below, never interpolated into sql.
+    sql = (
+        f"SELECT * FROM advisories {where} "  # nosec B608
+        "ORDER BY current_release DESC, advisory_id DESC"
+    )
 
     conn = _connect(db_path)
     try:
@@ -591,10 +598,12 @@ def list_lifecycle_events(
         clauses.append("source_family = ?")
         params.append(source_family)
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    # clauses are static parameterized fragments ("col = ?"); every actual
+    # value is bound through params below, never interpolated into sql.
     sql = (
         "SELECT notice_id, title, category, published, event_type, source_url, "
         "source_family, file_path, product_skus, replacement_skus "
-        f"FROM lifecycle_events {where} ORDER BY published DESC, notice_id DESC"
+        f"FROM lifecycle_events {where} ORDER BY published DESC, notice_id DESC"  # nosec B608
     )
 
     conn = _connect(db_path)

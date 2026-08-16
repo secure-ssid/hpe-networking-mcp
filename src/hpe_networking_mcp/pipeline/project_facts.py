@@ -543,7 +543,11 @@ def specs_counts(path: Path = SPECS_DB_PATH) -> dict[str, int]:
     connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     try:
         for table in SPECS_TABLES:
-            counts[table] = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            # table is always one of the hardcoded SPECS_TABLES constant
+            # above, never external/user input.
+            counts[table] = connection.execute(
+                f"SELECT COUNT(*) FROM {table}"  # nosec B608
+            ).fetchone()[0]
     finally:
         connection.close()
     return counts

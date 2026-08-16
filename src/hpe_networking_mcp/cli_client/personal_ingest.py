@@ -113,7 +113,8 @@ def default_personal_data_dir() -> Path:
 
 
 def _md5_uuid(key: str) -> str:
-    return str(uuid.UUID(hashlib.md5(key.encode()).hexdigest()))
+    """Deterministic row id from a stable key -- not a security/cryptographic use."""
+    return str(uuid.UUID(hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()))
 
 
 def _content_hash(text: str) -> str:

@@ -96,6 +96,7 @@ Changelog = "https://github.com/secure-ssid/hpe-networking-mcp/blob/main/CHANGEL
 
 [dependency-groups]
 dev = ["pytest>=9.1.1", "ruff>=0.8.0"]
+security = ["bandit>=1.9.0", "pip-audit>=2.9.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -111,6 +112,16 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.bandit]
+# CI gates on medium+ severity only (see .github/workflows/security.yml).
+# Low-severity findings (assert usage in application code, subprocess
+# invocation, try/except/pass, etc.) are common, low-risk patterns in this
+# CLI/pipeline codebase and are tracked as background noise, not a release
+# gate. Every medium+ finding is either fixed or annotated inline with a
+# scoped `# nosec <TEST_ID>` plus a one-line justification comment at the
+# exact flagged line -- never a blanket test-id skip here.
+exclude_dirs = ["tests", ".venv", "build", "dist"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

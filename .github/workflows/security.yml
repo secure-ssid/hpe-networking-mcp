@@ -1,0 +1,102 @@
+name: Security
+
+# SAST (bandit) and dependency vulnerability (pip-audit) gates.
+#
+# Secret scanning and Dependabot security updates are already enabled at the
+# repository level (Settings -> Security) and need no workflow file. This
+# workflow only covers what a repo setting can't: static analysis of our own
+# code and a point-in-time CVE check on the resolved dependency set on every
+# push/PR, plus a weekly schedule so a newly disclosed CVE is caught even
+# without a code change.
+#
+# A container/image scan (e.g. trivy) is deferred until a Dockerfile exists
+# for this project -- there is no image to scan yet.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bandit:
+    name: Bandit (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install security tooling
+        run: uv sync --group security
+
+      # Gate on medium+ severity only; see [tool.bandit] in pyproject.toml
+      # for the rationale and the inline `# nosec` policy for confirmed
+      # false positives. Low-severity findings are non-blocking background
+      # noise for this CLI/pipeline codebase.
+      - name: Run bandit (fails on medium+ severity)
+        run: |
+          uv run bandit -r src/ -ll -f json -o outputs/security/bandit-report.json
+          uv run bandit -r src/ -ll
+
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: security-bandit-report
+          path: outputs/security/bandit-report.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  pip-audit:
+    name: pip-audit (dependency CVEs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install project and security tooling
+        run: uv sync --group dev --group security
+
+      # Audits the resolved, synced environment directly (no separate
+      # requirements.txt export) so results always match what CI actually
+      # installs. Our own unpublished package is expected to be skipped.
+      - name: Run pip-audit
+        run: |
+          mkdir -p outputs/security
+          uv run pip-audit --format json > outputs/security/pip-audit-report.json
+          uv run pip-audit
+
+      - name: Upload pip-audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: security-pip-audit-report
+          path: outputs/security/pip-audit-report.json
+          if-no-files-found: warn
+          retention-days: 90
