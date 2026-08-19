@@ -31,6 +31,7 @@ from urllib.parse import quote
 
 from hpe_networking_mcp.mcp_servers.openapi_gen.manifest import load_manifest, manifest_exists
 from hpe_networking_mcp.mcp_servers.openapi_gen.naming import digest, snake
+from hpe_networking_mcp.mcp_servers.openapi_gen.preflight import build_write_impact
 from hpe_networking_mcp.mcp_servers.shared import DESTRUCTIVE, DIAGNOSTIC, IDEMPOTENT_WRITE, READ_ONLY, WRITE
 
 # Executor protocols (implemented per platform in the backend module).
@@ -460,7 +461,13 @@ def _make_read_tool(op: dict[str, Any], read_executor: ReadExecutor) -> Callable
     return _tool
 
 
-def _make_write_tool(op: dict[str, Any], write_executor: WriteExecutor) -> Callable[..., Any]:
+def _make_write_tool(
+    op: dict[str, Any],
+    write_executor: WriteExecutor,
+    *,
+    read_executor: ReadExecutor | None = None,
+    supports_get: bool = False,
+) -> Callable[..., Any]:
     specs = _param_specs(op, reserved=_WRITE_RESERVED_ARG_NAMES)
     method = op["method"]
     template = op["path"]
@@ -486,9 +493,25 @@ def _make_write_tool(op: dict[str, Any], write_executor: WriteExecutor) -> Calla
         body = kwargs.get("body")
         dry_run = bool(kwargs.get("dry_run", True))
         confirm = bool(kwargs.get("confirm", False))
-        return await write_executor(
+        result = await write_executor(
             name, method, path, query, headers, body, content_type, dry_run, confirm
         )
+        # Advisory only: annotate the dry-run preview with the keys this write
+        # would silently delete. Never runs on execute, never blocks a write.
+        if (
+            dry_run
+            and supports_get
+            and read_executor is not None
+            and isinstance(result, dict)
+            and result.get("dry_run") is True
+            and "error" not in result
+        ):
+            impact = await build_write_impact(
+                read_executor, method, path, headers, body
+            )
+            if impact is not None:
+                return {**result, "impact": impact}
+        return result
 
     signature, annotations = _build_signature(
         specs,
@@ -596,6 +619,13 @@ def register_generated_tools(
 
     existing = set(mcp._tool_manager._tools.keys())
     registered: list[str] = []
+    # A write can only be preflighted when the same path is readable, which the
+    # manifest already tells us -- so this self-configures per platform.
+    get_paths = {
+        operation["path"]
+        for operation in manifest.get("operations", [])
+        if operation["method"] == "GET"
+    }
     for op in manifest.get("operations", []):
         name = op["name"]
         if name in existing:
@@ -612,7 +642,12 @@ def register_generated_tools(
             fn = _make_diagnostic_tool(op, write_executor)
             annotations = DIAGNOSTIC
         else:
-            fn = _make_write_tool(op, write_executor)
+            fn = _make_write_tool(
+                op,
+                write_executor,
+                read_executor=read_executor,
+                supports_get=op["path"] in get_paths,
+            )
             if capability == "destructive":
                 annotations = DESTRUCTIVE
             elif op["method"] == "PUT":
