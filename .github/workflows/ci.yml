@@ -145,6 +145,9 @@ jobs:
           uv run python scripts/download_indexes.py
           --manifest .github/index-bundle.json
 
+      - name: Rebuild the tool catalog index
+        run: uv run python scripts/ingest_tools.py --complete-catalog
+
       - name: Reconcile downloaded index manifests
         run: uv run python scripts/package_indexes.py --write-local-manifests
 
@@ -154,6 +157,7 @@ jobs:
           --skip-tests
           --strict-rag
           --strict-tool-index
+          --ignore-index-facts
           --catalog-products all
           --min-tools 6703
 

@@ -64,6 +64,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="fail when the local data/ indexes are missing instead of skipping index facts",
     )
     parser.add_argument(
+        "--ignore-indexes",
+        action="store_true",
+        help=(
+            "do not compare indexes.* facts even when data/ is present "
+            "(CI against a pinned older index bundle)"
+        ),
+    )
+    parser.add_argument(
         "--skip-router-modes",
         action="store_true",
         help=(
@@ -118,7 +126,12 @@ def main() -> int:
         print(f"Canonical project facts: {exc}", file=sys.stderr)
         return 1
 
-    problems = project_facts.compare(tracked, current, require_indexes=args.require_indexes)
+    problems = project_facts.compare(
+        tracked,
+        current,
+        require_indexes=args.require_indexes,
+        ignore_indexes=args.ignore_indexes,
+    )
     if problems:
         print("Canonical project facts are stale:")
         for problem in problems:

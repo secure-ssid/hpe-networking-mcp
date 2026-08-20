@@ -277,6 +277,19 @@ def test_compare_rejects_a_stale_schema_version():
     assert "schema_version" in problems[0]
 
 
+def test_compare_ignore_indexes_skips_corpus_drift():
+    drifted = json.loads(json.dumps(TRACKED))
+    drifted["indexes"]["docs_lance"]["rows"] = 1
+
+    ignored = project_facts.compare(
+        TRACKED, drifted, require_indexes=True, ignore_indexes=True
+    )
+    compared = project_facts.compare(TRACKED, drifted, require_indexes=True)
+
+    assert ignored == []
+    assert any("indexes.docs_lance.rows" in problem for problem in compared)
+
+
 def test_compare_requires_indexes_in_strict_mode():
     index_free = json.loads(json.dumps(TRACKED))
     index_free["indexes"] = None
