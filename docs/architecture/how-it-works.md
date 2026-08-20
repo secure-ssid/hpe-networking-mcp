@@ -77,7 +77,7 @@ an optional server backend.
 
 The current corpus is **392,471** prose chunks, **4,106** endpoints,
 **8,890** schemas, **50,675** fields, **104** advisories, and **345**
-lifecycle records across **16** declared RAG sources.
+lifecycle records across **18** declared RAG sources.
 
 ## How a live call runs
 

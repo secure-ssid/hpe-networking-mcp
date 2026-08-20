@@ -220,7 +220,7 @@
     "total": 6144
   },
   "rag_sources": {
-    "count": 16,
+    "count": 18,
     "sources": [
       "aos_techdocs",
       "developer_docs",
@@ -229,7 +229,9 @@
       "juniper_kb",
       "juniper_lifecycle",
       "juniper_security_advisories",
+      "junos_cli",
       "lifecycle_notices",
+      "mist_api_docs",
       "mist_docs",
       "nac_docs",
       "openapi_specs",
