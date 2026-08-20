@@ -237,6 +237,14 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="fail if the local LanceDB tools index is missing",
     )
+    parser.add_argument(
+        "--ignore-index-facts",
+        action="store_true",
+        help=(
+            "compare code-derived project facts only; skip indexes.* even when "
+            "data/ exists (CI against a pinned older docs/API bundle)"
+        ),
+    )
     return parser
 
 
@@ -299,6 +307,8 @@ def main() -> int:
     facts_command = [sys.executable, "scripts/project_facts.py"]
     if strict:
         facts_command.append("--require-indexes")
+    if args.ignore_index_facts:
+        facts_command.append("--ignore-indexes")
     print("\n==> Canonical project facts", flush=True)
     subprocess.run(facts_command, cwd=ROOT, check=True, env=_strict_env())
 

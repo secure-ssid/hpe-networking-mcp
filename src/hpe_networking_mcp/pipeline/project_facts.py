@@ -706,6 +706,7 @@ def compare(
     current: dict[str, Any],
     *,
     require_indexes: bool,
+    ignore_indexes: bool = False,
 ) -> list[str]:
     """Return human-readable drift between a tracked and a fresh snapshot.
 
@@ -715,6 +716,9 @@ def compare(
         require_indexes: Fail when the fresh snapshot has no index-derived
             facts. When False, index facts are skipped (no-data checkout)
             rather than reported as drift.
+        ignore_indexes: Skip comparing ``indexes.*`` even when local
+            artifacts exist. Used by CI against a pinned older release
+            bundle whose corpus is not the developer workstation snapshot.
 
     Returns:
         A list of difference descriptions; empty means no drift.
@@ -726,8 +730,8 @@ def compare(
             f"{SCHEMA_VERSION}; regenerate it"
         ]
 
-    skip_indexes = current.get("indexes") is None
-    if skip_indexes and require_indexes:
+    skip_indexes = current.get("indexes") is None or ignore_indexes
+    if current.get("indexes") is None and require_indexes:
         problems.append(
             "no local indexes found: strict validation requires data/specs.sqlite and "
             "data/docs.lance"
