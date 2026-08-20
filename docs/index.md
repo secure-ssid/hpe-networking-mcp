@@ -12,6 +12,13 @@ Whatever backend does the work, an MCP client sees only three router tools
 under the recommended `minimal` profile — the banner's "3 minimal router
 tools" figure is the number that matters most for context budget.
 
+<figure class="docs-figure">
+  <img src="assets/diagrams/how-mcp-rag-works.svg" alt="MCP client using find_tool, invoke_read_tool, and invoke_tool to reach RAG indexes or live vendor APIs">
+  <figcaption>Three router tools. RAG answers docs/API questions locally. Live Central/GLP calls happen only after find_tool selects them.</figcaption>
+</figure>
+
+See [How MCP and RAG work](architecture/how-it-works.md) for the full path.
+
 ## Who it's for
 
 <div class="audience-grid" markdown="1">
@@ -90,6 +97,11 @@ python3 scripts/setup_wizard.py --yes --skip-credentials
 ```
 
 Expected outcome: dependencies install, local git-ignored config files are created, and the wizard reports each completed phase without contacting Central or GLP.
+
+<figure class="docs-figure">
+  <img src="assets/diagrams/setup-wizard-flow.svg" alt="Six compact setup wizard phases: install, credentials, products, MCP configs, catalog, and doctor">
+  <figcaption>The wizard stays local. Skip any phase with flags such as <code>--skip-credentials</code>.</figcaption>
+</figure>
 
   </div>
 </div>
