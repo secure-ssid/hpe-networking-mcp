@@ -1,33 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="820" viewBox="0 0 1400 820" role="img" aria-labelledby="title desc">
-  <title id="title">hpe-networking-mcp guided setup preview</title>
-  <desc id="desc">The setup wizard installs dependencies, configures Central and GreenLake, selects optional products and write access, builds up to 6,700 backend tools, writes MCP client configs, and runs the local doctor.</desc>
-  <defs>
-    <style>
-      .title { font: 700 54px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #eaf6ff; }
-      .subtitle { font: 600 29px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #70cfff; }
-      .mono { font: 25px "SFMono-Regular", Consolas, monospace; fill: #e8eef8; }
-      .dim { font: 23px "SFMono-Regular", Consolas, monospace; fill: #9eb0ca; }
-      .ok { font: 23px "SFMono-Regular", Consolas, monospace; fill: #75f2b2; }
-      .info { font: 23px "SFMono-Regular", Consolas, monospace; fill: #ffe28a; }
-    </style>
-  </defs>
-  <rect width="1400" height="820" fill="#071020"/>
-  <rect x="40" y="40" width="1320" height="740" rx="28" fill="#101b2e" stroke="#41556f" stroke-width="3"/>
-  <text x="80" y="125" class="title">hpe-networking-mcp 0.7.0 guided setup</text>
-  <text x="80" y="174" class="subtitle">Low-token HPE Networking MCP toolkit</text>
-  <rect x="80" y="220" width="1240" height="500" rx="18" fill="#020817" stroke="#526984" stroke-width="2"/>
-  <circle cx="118" cy="258" r="9" fill="#ff5f56"/>
-  <circle cx="148" cy="258" r="9" fill="#ffbd2e"/>
-  <circle cx="178" cy="258" r="9" fill="#27c93f"/>
-
-  <text x="112" y="320" class="mono">$ python3 scripts/setup_wizard.py --with-products</text>
-  <text x="112" y="365" class="dim">Repository: ~/hpe-networking-mcp</text>
-  <text x="112" y="407" class="ok">+ Install locked dependencies with uv</text>
-  <text x="112" y="449" class="ok">+ Configure Central and GreenLake credentials without echo</text>
-  <text x="112" y="491" class="ok">+ Enable ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis</text>
-  <text x="112" y="533" class="ok">+ Choose read-only or guarded read-write product access</text>
-  <text x="112" y="575" class="ok">+ Create stdio and streamable HTTP MCP client configs</text>
-  <text x="112" y="617" class="ok">+ Build up to 6,700 backend catalog tools</text>
-  <text x="112" y="659" class="ok">+ Run doctor checks for paths, indexes, HTTP, and products</text>
-  <text x="112" y="705" class="info">HTTP endpoint: http://127.0.0.1:8010/mcp</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 720 168" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title desc" style="max-width: 720px; height: auto;">
+  <title id="title">hpe-networking-mcp setup wizard</title>
+  <desc id="desc">Compact wizard path: install, credentials, optional products, MCP configs, catalog, doctor.</desc>
+  <rect width="720" height="168" rx="16" fill="#071020"/>
+  <text x="24" y="36" fill="#eaf6ff" font-size="16" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-weight="700">setup_wizard.py</text>
+  <text x="24" y="58" fill="#70cfff" font-size="12" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">Local only. No vendor API calls until you add credentials.</text>
+  <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="12" text-anchor="middle">
+    <rect x="18" y="80" width="100" height="56" rx="10" fill="#101b2e" stroke="#41556f"/>
+    <text x="68" y="113" fill="#eaf6ff">Install</text>
+    <rect x="132" y="80" width="100" height="56" rx="10" fill="#101b2e" stroke="#41556f"/>
+    <text x="182" y="113" fill="#eaf6ff">Credentials</text>
+    <rect x="246" y="80" width="100" height="56" rx="10" fill="#101b2e" stroke="#41556f"/>
+    <text x="296" y="113" fill="#eaf6ff">Products</text>
+    <rect x="360" y="80" width="100" height="56" rx="10" fill="#101b2e" stroke="#41556f"/>
+    <text x="410" y="113" fill="#eaf6ff">MCP configs</text>
+    <rect x="474" y="80" width="100" height="56" rx="10" fill="#101b2e" stroke="#41556f"/>
+    <text x="524" y="113" fill="#eaf6ff">Catalog</text>
+    <rect x="588" y="80" width="114" height="56" rx="10" fill="#157878"/>
+    <text x="645" y="113" fill="#eaf6ff">Doctor</text>
+  </g>
 </svg>

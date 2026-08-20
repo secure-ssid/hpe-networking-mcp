@@ -158,9 +158,9 @@ verify setup independently with the local doctor.
 </div>
 
 <figure class="docs-figure">
-  <img src="assets/diagrams/terminal-setup-wizard-completion.svg"
-       alt="Example terminal output showing the hpe-networking-mcp setup wizard completing successfully">
-  <figcaption>The generated terminal example shows the completion pattern. Keep using the copyable command above; exact phase counts can vary by selected options.</figcaption>
+  <img src="assets/diagrams/setup-wizard-flow.svg"
+       alt="Six compact setup wizard phases: install, credentials, products, MCP configs, catalog, and doctor">
+  <figcaption>The wizard is a short local path. Skip any phase with flags such as <code>--skip-credentials</code> or <code>--skip-catalog</code>.</figcaption>
 </figure>
 
 ## 2. Try it credential-free

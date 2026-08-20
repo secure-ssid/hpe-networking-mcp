@@ -59,6 +59,10 @@ ACCESSIBILITY = {
         "Router discovery and safety flow",
         "Decision flow from find_tool through read, diagnostic, write, and destructive dispatch with dry-run, confirmation, and write gates.",
     ),
+    "setup-wizard-flow": (
+        "Setup wizard phases",
+        "Six compact wizard phases: install, credentials, optional products, MCP client configs, tool catalog, and the local doctor.",
+    ),
     "runtime-overview": (
         "hpe-networking-mcp runtime overview",
         "High-level flow from a user and MCP client through the low-token router, tool catalog, Central/GLP/RAG, Central Streaming, optional products, local indexes, and vendor APIs.",
