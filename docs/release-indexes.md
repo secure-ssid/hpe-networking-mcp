@@ -27,7 +27,7 @@ whenever an index is rebuilt, and verify with
 | Complete backend catalog (+ Central Streaming, local GLP preflight, `design-core`, `interop-core`) | 6,722 |
 | Registered router tool index rows | 6,722 |
 
-The prose index contains 30 source partitions from the 18 declared refresh
+The prose index contains 30 source partitions from the 16 declared refresh
 sources; `openapi_specs` is parsed only into `data/specs.sqlite` (see below),
 and `feature_navigator` currently contributes no prose chunks. The registered tool index matches the
 complete backend catalog exactly: both include the two credential-free
