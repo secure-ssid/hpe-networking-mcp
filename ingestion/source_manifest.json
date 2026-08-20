@@ -226,6 +226,45 @@
     }
   },
   {
+    "source": "junos_cli",
+    "doc_type": "junos-cli",
+    "purpose": "Complete official Junos CLI reference pages, including configuration statements, operational commands, syntax, hierarchy, and release information.",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/software/junos/cli-reference/index.html",
+      "https://www.juniper.net/documentation/us/en/software/junos/cli-reference/__toc.js"
+    ],
+    "output_dir": "ingestion/sources/junos_cli",
+    "scraper": "ingestion/scrape_junos_cli.py",
+    "extra_scripts": [
+      "ingestion/discover_junos_cli_urls.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_junos_cli_urls.py": "pre"
+    },
+    "url_seed_file": "ingestion/junos_cli_urls.json",
+    "notes": "discover_junos_cli_urls.py parses Juniper's official __toc.js into the current complete page inventory (about 11,700 pages). scrape_junos_cli.py fetches server-rendered .topicBody content with a bounded worker pool, extracts #topic-content, converts it to Markdown with Pandoc, preserves source URLs, and supports --skip-existing for resumable refreshes. The generated source directory is git-ignored."
+  },
+  {
+    "source": "mist_api_docs",
+    "doc_type": "mist-api-docs",
+    "purpose": "Complete Juniper Mist HTTP API reference prose, endpoint descriptions, authentication guidance, examples, models, enums, webhook events, and walkthroughs.",
+    "seed_urls": [
+      "https://www.juniper.net/documentation/us/en/software/mist/api/",
+      "https://www.juniper.net/documentation/us/en/software/mist/api/static/js/portal.js",
+      "https://www.juniper.net/documentation/us/en/software/mist/api/static/docs/mist-api-HTTP_CURL_V1.json"
+    ],
+    "output_dir": "ingestion/sources/mist_api_docs",
+    "scraper": "ingestion/scrape_mist_api_docs.py",
+    "extra_scripts": [
+      "ingestion/discover_mist_api_docs.py"
+    ],
+    "extra_script_phases": {
+      "ingestion/discover_mist_api_docs.py": "pre"
+    },
+    "url_seed_file": "ingestion/mist_api_docs_urls.json",
+    "notes": "The public API route is an APIMatic shell. discover_mist_api_docs.py resolves portal.js to the canonical generated JSON asset, validates its Sections document, and records the asset URL. scrape_mist_api_docs.py downloads that asset once and renders all 506 virtual $h/ pages, including nested endpoint/model/reference content, into stable Markdown files. The generated source directory is git-ignored; the canonical asset URL is retained in each file for freshness/provenance."
+  },
+  {
     "source": "product_specs",
     "doc_type": "product-openapi",
     "purpose": "OpenAPI specs for the non-Central Aruba developer-portal products: AOS-CX, AOS-8, Central 2.x, ClearPass, UXI, Fabric Composer, and EdgeConnect Orchestrator.",

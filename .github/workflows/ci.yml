@@ -145,6 +145,9 @@ jobs:
           uv run python scripts/download_indexes.py
           --manifest .github/index-bundle.json
 
+      - name: Reconcile downloaded index manifests
+        run: uv run python scripts/package_indexes.py --write-local-manifests
+
       - name: Validate strict RAG, exact API, and tool-index contract
         run: >-
           uv run python scripts/validate_release.py
