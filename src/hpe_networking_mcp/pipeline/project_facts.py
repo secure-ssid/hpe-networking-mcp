@@ -57,8 +57,19 @@ SPECS_TABLES = ("endpoints", "schemas", "fields", "advisories", "lifecycle_event
 
 #: Backends that ship no vendor API surface (local translation/diagram
 #: helpers). They are registered tools but are excluded from the published
-#: "platform backend catalog" total, matching docs/capability-gap-matrix.md.
+#: platform API catalog.
 CREDENTIAL_FREE_LOCAL_SERVERS = ("design-core", "interop-core")
+
+#: Protocol-only vendor surfaces are callable backends but are not represented
+#: by the REST/OpenAPI operation manifests used for platform coverage totals.
+PROTOCOL_ONLY_SERVERS = ("central-streaming",)
+
+#: Curated diagnostics that intentionally inspect local configuration/cache
+#: state and make no vendor API call, even though they live beside vendor
+#: workflows in a platform backend.
+NON_API_LOCAL_TOOLS = {
+    "glp-core": frozenset({"glp_preflight"}),
+}
 
 FULL_WRITE_GATE_ENV = {
     "HPE_MCP_READONLY": "0",
@@ -273,6 +284,14 @@ def tool_facts(*, identities: dict[str, list[str]] | None = None) -> dict[str, A
     registered_names = {name for names in identities.values() for name in names}
     registered_generated = registered_names & generated_names
     local_total = sum(by_server.get(server, 0) for server in CREDENTIAL_FREE_LOCAL_SERVERS)
+    protocol_only_total = sum(
+        by_server.get(server, 0) for server in PROTOCOL_ONLY_SERVERS
+    )
+    non_api_local: dict[str, int] = {}
+    for server, tool_names in NON_API_LOCAL_TOOLS.items():
+        registered = set(identities.get(server, []))
+        non_api_local[server] = len(registered & tool_names)
+    non_api_local_total = sum(non_api_local.values())
     total = sum(by_server.values())
     return {
         "catalog_env": dict(sorted(CATALOG_ENV.items())),
@@ -284,8 +303,20 @@ def tool_facts(*, identities: dict[str, list[str]] | None = None) -> dict[str, A
         "credential_free_local": {
             server: by_server.get(server, 0) for server in CREDENTIAL_FREE_LOCAL_SERVERS
         },
-        "platform_backend_total": total - local_total,
-        "platform_curated_total": total - len(registered_generated) - local_total,
+        "protocol_only": {
+            server: by_server.get(server, 0) for server in PROTOCOL_ONLY_SERVERS
+        },
+        "non_api_local": non_api_local,
+        "platform_backend_total": (
+            total - local_total - protocol_only_total - non_api_local_total
+        ),
+        "platform_curated_total": (
+            total
+            - len(registered_generated)
+            - local_total
+            - protocol_only_total
+            - non_api_local_total
+        ),
         "interop_tools": by_server.get("interop-core", 0),
     }
 

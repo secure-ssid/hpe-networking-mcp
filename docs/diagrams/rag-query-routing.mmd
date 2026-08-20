@@ -1,0 +1,17 @@
+flowchart TD
+    q["User question"]
+    api{"Exact API / enum / path?"}
+    cve{"CVE or advisory ID?"}
+    live{"Live device or tenant state?"}
+    lookup["lookup_api<br/>specs.sqlite"]
+    advisory["lookup_advisory"]
+    docs["ask_docs / search_docs<br/>docs.lance"]
+    tool["find_tool then invoke_read_tool"]
+
+    q --> api
+    api -->|yes| lookup
+    api -->|no| cve
+    cve -->|yes| advisory
+    cve -->|no| live
+    live -->|no| docs
+    live -->|yes| tool

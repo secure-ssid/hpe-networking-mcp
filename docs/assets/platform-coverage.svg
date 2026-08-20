@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
   <title id="title">hpe-networking-mcp platform and tool coverage</title>
-  <desc id="desc">The low-token router searches 6,715 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms.</desc>
+  <desc id="desc">The low-token router searches 6,722 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#071426"/>
@@ -22,20 +22,20 @@
   <g transform="translate(60 150)">
     <rect width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
     <text x="22" y="38" class="boxTitle">Aruba Central</text>
-    <text x="22" y="72" class="count">1,924 tools</text>
+    <text x="22" y="72" class="count">1,926 tools</text>
     <text x="22" y="101" class="boxText">config, monitoring, NAC, ops</text>
     <text x="22" y="124" class="boxText">routing, rollback, diagnostics</text>
 
     <rect x="275" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
     <text x="297" y="38" class="boxTitle">GreenLake Platform</text>
-    <text x="297" y="72" class="count">1,011 tools</text>
+    <text x="297" y="72" class="count">1,014 tools</text>
     <text x="297" y="101" class="boxText">devices, grouping, audit, users</text>
     <text x="297" y="124" class="boxText">RBAC, events, locations, SCIM</text>
 
     <rect x="550" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
     <text x="572" y="38" class="boxTitle">RAG + OpenAPI</text>
-    <text x="572" y="72" class="count">11 tools</text>
-    <text x="572" y="101" class="boxText">96,256 prose chunks</text>
+    <text x="572" y="72" class="count">12 tools</text
+    <text x="572" y="101" class="boxText">392,471 prose chunks</text>
     <text x="572" y="124" class="boxText">4,106 exact API endpoints</text>
 
     <rect x="825" width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
@@ -82,7 +82,7 @@
 
     <rect x="550" y="330" width="525" height="140" rx="18" fill="#69e2d7"/>
     <text x="580" y="372" class="router">Catalog tiers</text>
-    <text x="580" y="408" class="router">6,144 generated | 6,715 backend | 6,722 direct-all</text>
+    <text x="580" y="408" class="router">6,144 generated | 6,722 backend | 6,729 direct-all</text>
     <text x="580" y="444" class="router">Writes remain dry-run and confirmation gated</text>
   </g>
 </svg>

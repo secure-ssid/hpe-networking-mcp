@@ -16,6 +16,7 @@ import json
 import os
 import re
 import sqlite3
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -452,6 +453,8 @@ _EXACT_ENDPOINT_RE = re.compile(
     re.IGNORECASE,
 )
 _OPERATION_ID_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]{1,255}$")
+_LOOKUP_CACHE_MAX = 128
+_lookup_cache: OrderedDict[tuple[Any, ...], list[dict[str, Any]]] = OrderedDict()
 
 # Tight, curated domain synonyms — Aruba docs use these interchangeably
 # (specs say "wlan"/"essid" where users say "SSID"). Synonyms join the SAME
@@ -563,7 +566,7 @@ def lookup(query: str, top_k: int = 10, db_path: Path = DB_PATH) -> list[dict[st
         )
     top_k = max(1, min(20, top_k))
     try:
-        return _lookup(query, top_k, db_path)
+        return _cached_lookup(query, top_k, db_path)
     except sqlite3.Error as exc:
         # A present-but-unreadable DB (corrupt file, or the empty/schemaless
         # window an interrupted --build leaves behind) must not crash the MCP
@@ -572,6 +575,30 @@ def lookup(query: str, top_k: int = 10, db_path: Path = DB_PATH) -> list[dict[st
             f"specs index at {db_path} is unreadable ({exc}) — rebuild it with "
             f"`{_FULL_REBUILD_COMMAND}`"
         ) from exc
+
+
+def _db_fingerprint(db_path: Path) -> tuple[int, int]:
+    stat = Path(db_path).stat()
+    return int(stat.st_mtime_ns), int(stat.st_size)
+
+
+def clear_lookup_cache() -> None:
+    """Drop the process-local lookup cache (tests / index rebuilds)."""
+    _lookup_cache.clear()
+
+
+def _cached_lookup(query: str, top_k: int, db_path: Path) -> list[dict[str, Any]]:
+    key = (str(db_path), query.strip(), top_k, _db_fingerprint(db_path))
+    cached = _lookup_cache.get(key)
+    if cached is not None:
+        _lookup_cache.move_to_end(key)
+        return [dict(hit) for hit in cached]
+    hits = _lookup(query, top_k, db_path)
+    _lookup_cache[key] = [dict(hit) for hit in hits]
+    _lookup_cache.move_to_end(key)
+    while len(_lookup_cache) > _LOOKUP_CACHE_MAX:
+        _lookup_cache.popitem(last=False)
+    return [dict(hit) for hit in hits]
 
 
 def _lookup(query: str, top_k: int, db_path: Path) -> list[dict[str, Any]]:

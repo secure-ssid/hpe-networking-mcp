@@ -244,3 +244,27 @@ def test_token_cache_write_failure_preserves_prior_cache(tmp_path, monkeypatch):
     assert manager.cache_file.read_text() == good
     assert not list(tmp_path.glob("*.tmp"))
     assert _json.loads(good)["access_token"] == "first"
+
+
+def test_token_metadata_excludes_secret_and_reports_expiry(tmp_path, monkeypatch):
+    monkeypatch.setenv("TOKEN_CACHE_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        "hpe_networking_mcp.pipeline.clients.token_manager.httpx.post",
+        lambda url, data=None, headers=None, timeout=None: _TokenResponse("secret-token"),
+    )
+    manager = TokenManager(
+        client_id="client-id",
+        client_secret="secret",
+        token_url="https://sso.example.com/token",
+        cache_key="metadata",
+    )
+
+    manager.get_access_token()
+    metadata = manager.metadata()
+
+    assert metadata["token_present"] is True
+    assert metadata["token_valid"] is True
+    assert metadata["token_age_seconds"] is not None
+    assert metadata["expires_in_seconds"] is not None
+    assert "secret-token" not in str(metadata)
+    assert "secret" not in str(metadata)

@@ -121,6 +121,7 @@ _BACKENDS_BASE = {
     "central-monitoring": "hpe_networking_mcp.mcp_servers.monitoring",
     "central-nac": "hpe_networking_mcp.mcp_servers.nac",
     "central-ops": "hpe_networking_mcp.mcp_servers.ops",
+    "central-streaming": "hpe_networking_mcp.mcp_servers.central_streaming",
     "glp-core": "hpe_networking_mcp.mcp_servers.glp",
     "rag-core": "hpe_networking_mcp.mcp_servers.rag",
 }
@@ -153,6 +154,7 @@ _SERVER_PLATFORMS = {
     "central-monitoring": "central",
     "central-nac": "central",
     "central-ops": "central",
+    "central-streaming": "central",
     "central-generated": "central",
     "glp-core": "glp",
     "rag-core": "rag",
@@ -168,7 +170,13 @@ _TOOLSET_BACKENDS = {
     "ops": {"central-ops"},
     "glp": {"glp-core"},
     "rag": {"rag-core"},
-    "central": {"central-config", "central-monitoring", "central-nac", "central-ops"},
+    "central": {
+        "central-config",
+        "central-monitoring",
+        "central-nac",
+        "central-ops",
+        "central-streaming",
+    },
     "central-generated": {"central-generated"},
     "interop": {"interop-core"},
     "clearpass": {"clearpass-core"},
@@ -416,6 +424,17 @@ def _discovery_metadata(tool: Any, server: str | None, schema: dict[str, Any]) -
                 if value is not None
             }
         )
+        metadata.setdefault("classification", "generated-only")
+        metadata.setdefault("router_profile", "opt-in")
+    if "limit" in properties and "offset" in properties:
+        metadata["pagination"] = "limit-offset"
+    elif "cursor" in properties:
+        metadata["pagination"] = "cursor"
+    limit_schema = properties.get("limit")
+    if isinstance(limit_schema, dict) and "default" in limit_schema:
+        metadata["default_limit"] = limit_schema["default"]
+    if any(key in properties for key in ("region", "glp_region")):
+        metadata["region_required"] = True
     contract = _execution_contract(tool, server, schema)
     if contract is not None:
         metadata["execution_contract"] = contract
@@ -673,6 +692,10 @@ _STOPWORDS = {"list", "get", "set", "find", "the", "a", "an", "of", "for", "to",
               "with", "from", "into", "via", "use", "using", "please", "make",
               "create", "build", "generate"}
 
+# Distinctive scope/identity terms. Used only to boost a name-overlapping hit
+# whose schema actually accepts the same parameter — never as sole evidence.
+_SCOPE_QUERY_TERMS = {"serial", "site", "workspace", "scope", "region"}
+
 
 def _query_tokens(query: str) -> set[str]:
     """Tokenize a find_tool query for high-precision name overlap.
@@ -723,6 +746,8 @@ def _keyword_hits(query: str, limit: int, include_schema: bool = False) -> list[
     q_tokens = _query_tokens(query)
     if not q_tokens:
         return []
+    generated_records = _generated_records()
+    q_low = query.lower()
     scored: list[tuple[float, Any]] = []
     for name, tool in _tool_index.items():
         if _optional_write_disabled(name, tool) or _readonly_blocks(tool):
@@ -745,6 +770,23 @@ def _keyword_hits(query: str, limit: int, include_schema: bool = False) -> list[
         score = float(len(combined_overlap)) + precision
         if len(name_overlap) >= 2:
             score += 0.15
+        generated = generated_records.get(name)
+        if generated:
+            op_id = str(generated.get("operation_id") or "").lower()
+            op_key = str(generated.get("operation_key") or "").lower()
+            if op_id and op_id == q_low:
+                score += 8.0
+            elif op_id and op_id in q_low:
+                score += 4.0
+            if op_key and op_key in q_low:
+                score += 8.0
+            elif op_key:
+                path = op_key.split(" ", 1)[-1]
+                if path and path in q_low:
+                    score += 3.0
+        schema = tool.parameters if isinstance(tool.parameters, dict) else {}
+        param_names = {str(param).lower() for param in (schema.get("properties") or {})}
+        score += 0.35 * len(q_tokens & _SCOPE_QUERY_TERMS & param_names)
         scored.append((score, tool))
     scored.sort(key=lambda x: x[0], reverse=True)
     out = []
@@ -774,6 +816,81 @@ def _annotation_flags(tool: Any) -> dict[str, bool]:
     }
 
 
+def _exact_discovery_hit(query: str, include_schema: bool = False) -> dict[str, Any] | None:
+    """Bridge exact METHOD /path or operationId queries to generated tools.
+
+    Returns a compact discovery record even when the generated backend is not
+    in the current router profile (classification=generated-only, currently
+    enabled=False). Live tools are hydrated from the loaded catalog.
+    """
+    try:
+        from hpe_networking_mcp.pipeline.clients.capability_coverage import (
+            lookup_exact_query,
+        )
+
+        record = lookup_exact_query(query)
+    except Exception:
+        return None
+    if not record or not record.get("generated_tool"):
+        return None
+    name = str(record["generated_tool"])
+    _load_all_backends()
+    tool = _tool_index.get(name)
+    server = _tool_backend_names.get(name)
+    file_path = None
+    if record.get("source_file") and record.get("key"):
+        file_path = f"openapi_specs/{record['source_file']}#{record['key']}"
+    if tool is not None:
+        schema = tool.parameters if isinstance(tool.parameters, dict) else {}
+        item = {
+            "name": name,
+            "server": server,
+            "description": (getattr(tool, "description", None) or record.get("summary") or "").strip(),
+            "params": list((schema.get("properties") or {}).keys()),
+            "score": 100.0,
+            "match": "exact",
+            **_discovery_metadata(tool, server, schema),
+        }
+        if include_schema:
+            item["schema"] = schema
+    else:
+        capability = record.get("capability") or "read"
+        item = {
+            "name": name,
+            "server": None,
+            "description": record.get("summary") or "",
+            "params": [],
+            "score": 100.0,
+            "match": "exact",
+            "platform": record.get("platform"),
+            "capability": capability,
+            "recommended_dispatcher": (
+                "invoke_read_tool" if capability == "read" else "invoke_tool"
+            ),
+            "requires_write_enablement": capability in {"write", "destructive"},
+            "currently_enabled": False,
+            "supports_dry_run": False,
+            "supports_confirm": False,
+            "requires_confirmation": capability == "destructive",
+            "origin": "generated",
+            "read_only": capability == "read",
+            "destructive": capability == "destructive",
+            "idempotent": False,
+            "operation_id": record.get("operation_id"),
+            "operation_key": record.get("key"),
+            "hint": (
+                "Generated-only (opt-in). Not in the current router profile; "
+                "use lookup_api or enable the generated backend."
+            ),
+        }
+    item.setdefault("classification", record.get("classification"))
+    item.setdefault("router_profile", record.get("router_profile"))
+    item.setdefault("family", record.get("family"))
+    if file_path:
+        item.setdefault("file_path", file_path)
+    return item
+
+
 @mcp.tool(annotations=READ_ONLY)
 def find_tool(
     query: str,
@@ -789,13 +906,14 @@ def find_tool(
 
     Call this first when you need an action. The returned `name` is what you
     pass to invoke_read_tool for read-only tools or invoke_tool for writes.
-    Results are deduplicated; semantic matches are annotated match='semantic',
-    name-overlap matches match='keyword', and safety flags mirror backend
-    ToolAnnotations. Results are compact by default; set include_schema=True
-    only when you need the full JSON schema for a selected tool. Optional
-    platform, server, normalized capability, curated/generated origin, and
-    exact OpenAPI operation-ID filters apply to both keyword and semantic
-    matches.
+    Results are deduplicated; exact METHOD /path or operationId matches are
+    annotated match='exact' (including generated-only tools disabled by the
+    current profile), semantic matches match='semantic', name-overlap matches
+    match='keyword', and safety flags mirror backend ToolAnnotations. Results
+    are compact by default; set include_schema=True only when you need the
+    full JSON schema for a selected tool. Optional platform, server,
+    normalized capability, curated/generated origin, and exact OpenAPI
+    operation-ID filters apply to exact, keyword, and semantic matches.
 
     Args:
         query: What you want to do. e.g. "create a VLAN", "disconnect a client".
@@ -817,10 +935,24 @@ def find_tool(
     by_name: dict[str, dict[str, Any]] = {}
     semantic_error: str | None = None
 
+    exact_hit = _exact_discovery_hit(query, include_schema=include_schema)
+    if exact_hit is not None and _matches_discovery_filters(
+        exact_hit,
+        platform=platform,
+        server=server,
+        capability=capability,
+        origin=origin,
+        operation_id=operation_id,
+    ):
+        by_name[exact_hit["name"]] = exact_hit
+
     keyword_candidates = _keyword_hits(
         query, min(max(top_k * 4, 20), 50), include_schema=include_schema
     )
+    keyword_added = 0
     for h in keyword_candidates:
+        if h["name"] in by_name:
+            continue
         if not _matches_discovery_filters(
             h,
             platform=platform,
@@ -831,7 +963,8 @@ def find_tool(
         ):
             continue
         by_name[h["name"]] = h
-        if len(by_name) >= kw_budget:
+        keyword_added += 1
+        if keyword_added >= kw_budget:
             break
 
     # The semantic pass may fill every slot the keyword pass left open. This

@@ -33,7 +33,11 @@ ACCESSIBILITY = {
     ),
     "data-index-flow": (
         "Documentation and index data flow",
-        "Official documentation and OpenAPI sources flow through ingestion into the docs, specifications, and tool indexes used by RAG and router discovery.",
+        "Official documentation, OpenAPI, and advisory sources flow through ingestion into docs.lance, specs.sqlite, and tools.lance for RAG and router discovery.",
+    ),
+    "how-mcp-rag-works": (
+        "How MCP and RAG work",
+        "An MCP client uses find_tool, invoke_read_tool, and invoke_tool. Reads reach local RAG indexes or live vendor APIs; writes reach vendor APIs only.",
     ),
     "discovery-dispatch": (
         "Tool discovery and dispatch sequence",
@@ -42,6 +46,10 @@ ACCESSIBILITY = {
     "optional-products-map": (
         "Choose an optional product backend",
         "Map from common network automation goals to the ClearPass, Mist, Apstra, ArubaOS 8, EdgeConnect, UXI, and Axis backends.",
+    ),
+    "rag-query-routing": (
+        "RAG and live-tool query routing",
+        "Exact API questions use lookup_api, advisory IDs use lookup_advisory, how-to questions use ask_docs, and live device state uses find_tool then invoke_read_tool.",
     ),
     "quickstart-journey": (
         "hpe-networking-mcp quickstart journey",
@@ -53,7 +61,7 @@ ACCESSIBILITY = {
     ),
     "runtime-overview": (
         "hpe-networking-mcp runtime overview",
-        "High-level flow from a user and MCP client through the low-token router, tool catalog, core and optional backends, local indexes, and vendor APIs.",
+        "High-level flow from a user and MCP client through the low-token router, tool catalog, Central/GLP/RAG, Central Streaming, optional products, local indexes, and vendor APIs.",
     ),
     "troubleshooting-tree": (
         "hpe-networking-mcp troubleshooting decision tree",

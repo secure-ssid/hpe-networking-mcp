@@ -25,7 +25,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from bs4 import BeautifulSoup
 
-from ingestion.chunking import chunk_text
 from hpe_networking_mcp.pipeline.clients.ollama_client import OllamaClient
 from hpe_networking_mcp.pipeline.clients.redis_client import (
     DOCS_INDEX,
@@ -33,6 +32,7 @@ from hpe_networking_mcp.pipeline.clients.redis_client import (
     get_client,
     upsert_docs,
 )
+from ingestion.chunking import chunk_text
 
 SOURCES_DIR = Path(__file__).parent / "sources"
 
@@ -56,6 +56,8 @@ SOURCE_META = {
     "juniper_security_advisories": "security-advisory",
     "juniper_kb": "juniper-kb",
     "mist_docs": "mist-docs",
+    "junos_cli": "junos-cli",
+    "mist_api_docs": "mist-api-docs",
 }
 
 # Source folders holding OpenAPI JSON rather than prose. `openapi_specs` is

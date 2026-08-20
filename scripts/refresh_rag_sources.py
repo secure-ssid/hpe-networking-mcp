@@ -237,7 +237,8 @@ def extra_script_steps(entry: dict, phase: str) -> list[Step]:
     ``"pre"``/``"post"``); anything unlisted defaults to ``"post"``, which is
     the historical behaviour. ``pre`` exists because the discovery scripts
     (``discover_vsg_urls.py``, ``discover_aos_urls.py``,
-    ``discover_mist_docs_urls.py``) *write* the URL inventory their scraper
+    ``discover_mist_docs_urls.py``, ``discover_junos_cli_urls.py``,
+    ``discover_mist_api_docs.py``) *write* the URL inventory their scraper
     then reads -- running them after the scrape refreshed nothing.
     Declaration order inside a phase is preserved.
     """

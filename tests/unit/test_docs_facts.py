@@ -7,7 +7,7 @@ count and the ``data/specs.sqlite`` structured counts (endpoints, schemas,
 fields, advisories, lifecycle records) are hand-copied into several
 "current state" pages as prose, not just a table cell. Those copies drifted
 once already: several pages still cited a pre-refresh 51,737-chunk /
-3,796-endpoint snapshot long after the local index was rebuilt to 96,256
+3,796-endpoint snapshot long after the local index was rebuilt to 392,471
 chunks / 4,106 endpoints.
 
 This module is the render-level counterpart to
@@ -108,7 +108,11 @@ def _expected_snippets() -> list[tuple[Path, str]]:
         ),
         (
             REPO_ROOT / "docs" / "architecture" / "RAG-ARCHITECTURE.md",
-            f"**Current evaluated corpus:** {chunks} prose chunks",
+            f"**Current indexed corpus:** {chunks} prose chunks",
+        ),
+        (
+            REPO_ROOT / "docs" / "architecture" / "how-it-works.md",
+            f"The current corpus is **{chunks}** prose chunks, **{endpoints}** endpoints,",
         ),
         (
             REPO_ROOT / "docs" / "architecture" / "system-overview.md",
@@ -171,11 +175,12 @@ def test_release_notes_and_live_eval_pages_are_excluded_from_the_current_state_c
 # across README and most of docs/ -- it conflated the platform-API-only
 # subtotal (design-core/interop-core excluded, matching
 # docs/capability-gap-matrix.md) with the complete registered backend total
-# (design-core + interop-core included). The correct numbers are: 6,703
-# platform API tools, 6,715 complete registered backend tools, and 6,722
-# direct-all client-visible tools (6,715 + 7 router-native-only tools).
-# These checks catch a regression to the old, wrong numbers anywhere in the
-# active documentation surface, not just the specific pages fixed once.
+# (design-core + interop-core included). Those historical corrections are
+# intentionally preserved here as regression context; the current counts are
+# derived from docs/project-facts.json and checked by the live documentation
+# assertions below. These checks catch a regression to the old, wrong numbers
+# anywhere in the active documentation surface, not just the specific pages
+# fixed once.
 # ---------------------------------------------------------------------------
 
 #: Pages that intentionally freeze a point-in-time snapshot and must not be
@@ -296,11 +301,11 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
         ),
         (
             REPO_ROOT / "docs" / "tool-catalog.md",
-            f"| **Platform API backend total** | **3,152** | **{platform_backend_total:,}** |",
+            f"| **Platform API backend total** | **3,156** | **{platform_backend_total:,}** |",
         ),
         (
             REPO_ROOT / "docs" / "tool-catalog.md",
-            f"| **Complete backend total** | **3,164** | **{registered_total:,}** |",
+            f"| **Complete backend total** | **3,170** | **{registered_total:,}** |",
         ),
         (
             REPO_ROOT / "docs" / "tool-router.md",
@@ -313,8 +318,9 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
         ),
         (
             REPO_ROOT / "docs" / "tool-router.md",
-            f"| Complete backend index (platform APIs + `design-core` + "
-            f"`interop-core`) | {registered_total:,} tools |",
+            f"| Complete backend index (platform APIs + Central Streaming + "
+            f"local GLP preflight + `design-core` + `interop-core`) | "
+            f"{registered_total:,} tools |",
         ),
         (
             REPO_ROOT / "docs" / "tool-router.md",

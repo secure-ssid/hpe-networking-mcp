@@ -185,16 +185,26 @@ def expanded_index(tmp_path):
 ### CVE-2024-99999
 """
     )
-    # Real Juniper security bulletins render as plain tables, not the
-    # "- key: value" bullet metadata the parser looks for — no severity,
-    # status, or release date is extracted. This mirrors that exactly.
+    # Real Juniper security bulletins render as Salesforce chrome: H1 is
+    # "Article Detail", labels and values sit on adjacent lines, not CSAF
+    # "- key: value" bullets.
     (juniper_sec / "apstra.md").write_text(
         """<!-- source: https://example.test/apstra -->
 
-# Apstra Security Bulletin CVE-2025-13914
+# Article Detail
 
-Product Affected: Apstra 5.x
-Severity: High
+Skip to Main Content
+2026-04 Security Bulletin: Apstra: SSH host key validation (CVE-2025-13914)
+Article ID
+JSA107862
+Created
+2026-04-08
+Last Updated
+2026-04-08
+Product Affected
+This issue affects all versions of Apstra.
+Severity
+High
 """
     )
     (lifecycle / "123-ap.md").write_text(
@@ -225,17 +235,17 @@ Severity: High
 - Product SKU: J1234A; Product Description: Old switch; Replacement Product SKU: N/A
 """
     )
-    # Real Juniper lifecycle pages render as a table too — no bullet
-    # metadata, so category/published/SKUs all come back empty.
+    # Real Juniper lifecycle pages flatten HTML tables: last-updated date
+    # and SKUs are unlabeled lines, not "- Published:" / "- Product SKU:".
     (juniper_life / "mist-edge.md").write_text(
         """<!-- source: https://example.test/mist-edge -->
 
 # Juniper Mist Access Points and Mist Edge Dates & Milestones
 
-Product
-EOL Announced
-Mist Edge
-01/01/2024
+Last updated:
+31 Jul 2026
+SKU Description
+AP43-US, AP43-WW, ME-X1
 """
     )
 
@@ -263,20 +273,25 @@ def test_list_advisories_filters_by_source_family_and_date_range(expanded_index)
     juniper_only = advisory_index.list_advisories(
         source_family="juniper_security_advisories", db_path=db_path
     )
-    # No bullet metadata -> current_release/initial_release are both None,
-    # so a date-ranged query never (falsely) includes this record.
     assert juniper_only["total_matched"] == 1
-    ranged_excludes_juniper = advisory_index.list_advisories(
+    assert juniper_only["results"][0]["advisory_id"] == "JSA107862"
+    assert juniper_only["results"][0]["severity"] == "High"
+    assert juniper_only["results"][0]["current_release"] == "2026-04-08"
+    assert juniper_only["results"][0]["title"].startswith("2026-04 Security Bulletin")
+    ranged_includes_juniper = advisory_index.list_advisories(
         source_family="juniper_security_advisories", since="2000-01-01", db_path=db_path
     )
-    assert ranged_excludes_juniper["total_matched"] == 0
+    assert ranged_includes_juniper["total_matched"] == 1
 
 
 def test_list_advisories_min_severity_and_pagination(expanded_index):
     db_path = expanded_index
 
     critical_only = advisory_index.list_advisories(min_severity="high", db_path=db_path)
-    assert [r["advisory_id"] for r in critical_only["results"]] == ["HPESBNW04987"]
+    assert {r["advisory_id"] for r in critical_only["results"]} == {
+        "HPESBNW04987",
+        "JSA107862",
+    }
 
     page1 = advisory_index.list_advisories(limit=1, offset=0, db_path=db_path)
     page2 = advisory_index.list_advisories(limit=1, offset=1, db_path=db_path)
@@ -340,7 +355,8 @@ def test_list_lifecycle_events_filters_by_sku_category_and_date(expanded_index):
         source_family="juniper_lifecycle", db_path=db_path
     )
     assert juniper_only["total_matched"] == 1
-    assert juniper_only["results"][0]["product_skus"] == []
+    assert "AP43-US" in juniper_only["results"][0]["product_skus"]
+    assert juniper_only["results"][0]["published"]
 
 
 def test_list_lifecycle_sku_filters_treat_like_wildcards_literally(expanded_index):
@@ -402,7 +418,7 @@ def test_correlate_advisory_lifecycle_requires_identifier(expanded_index):
         advisory_index.correlate_advisory_lifecycle(db_path=db_path)
 
 
-def test_citation_completeness_reveals_juniper_metadata_gap(expanded_index):
+def test_citation_completeness_fills_juniper_chrome_metadata(expanded_index):
     db_path = expanded_index
 
     result = advisory_index.citation_completeness(db_path=db_path)
@@ -414,16 +430,15 @@ def test_citation_completeness_reveals_juniper_metadata_gap(expanded_index):
 
     juniper_sec = result["advisories"]["juniper_security_advisories"]
     assert juniper_sec["total"] == 1
-    assert juniper_sec["severity"] == 0
-    assert juniper_sec["current_release"] == 0
-    # source_url and advisory_id still resolve even without bullet metadata.
+    assert juniper_sec["severity"] == 1
+    assert juniper_sec["current_release"] == 1
     assert juniper_sec["source_url"] == 1
     assert juniper_sec["advisory_id"] == 1
 
     juniper_life = result["lifecycle_events"]["juniper_lifecycle"]
     assert juniper_life["total"] == 1
-    assert juniper_life["published"] == 0
-    assert juniper_life["product_skus"] == 0
+    assert juniper_life["published"] == 1
+    assert juniper_life["product_skus"] == 1
 
 
 def test_list_advisories_missing_index_has_actionable_error(tmp_path):
@@ -448,3 +463,123 @@ def test_citation_completeness_missing_index_has_actionable_error(tmp_path):
 
     with pytest.raises(FileNotFoundError, match="Structured advisory/lifecycle index"):
         advisory_index.citation_completeness(db_path=db_path)
+
+def test_extracts_hpe_sku_from_description_when_table_missing(tmp_path):
+    sources = tmp_path / "sources"
+    lifecycle = sources / "lifecycle_notices"
+    lifecycle.mkdir(parents=True)
+    (lifecycle / "110-hp-10500.md").write_text(
+        """<!-- source: https://example.test/eos.xml -->
+
+# HP 10500 4-port 10GbE XFP EA Module
+
+- Notice ID: 110
+- Product category: Switches
+- Published: September 4, 2014
+
+## Lifecycle announcement
+
+HP will End of Sale the following SKU
+JC624A on December 31, 2014.
+"""
+    )
+
+    db_path = tmp_path / "specs.sqlite"
+    advisory_index.build(sources, db_path)
+
+    rows = advisory_index.list_lifecycle_events(
+        product_sku="JC624A", db_path=db_path
+    )
+    assert rows["total_matched"] == 1
+    assert rows["results"][0]["notice_id"] == "110"
+    assert rows["results"][0]["product_skus"] == ["JC624A"]
+
+
+def test_skips_lifecycle_policy_rollup(tmp_path):
+    sources = tmp_path / "sources"
+    lifecycle = sources / "lifecycle_notices"
+    lifecycle.mkdir(parents=True)
+    (lifecycle / "hpe-networking-lifecycle-policy.md").write_text(
+        """<!-- source: https://example.test/policy -->
+
+# HPE Networking product lifecycle policy
+
+HPE Networking End of Life Information
+"""
+    )
+    (lifecycle / "123-ap.md").write_text(
+        """<!-- source: https://example.test/eos.xml -->
+
+# Aruba AP lifecycle notice
+
+- Notice ID: 123
+- Published: 2024-03-01
+
+## Affected and replacement products
+
+- Product SKU: AP-635
+"""
+    )
+
+    db_path = tmp_path / "specs.sqlite"
+    counts = advisory_index.build(sources, db_path)
+
+    assert counts["lifecycle_events"] == 1
+    listed = advisory_index.list_lifecycle_events(db_path=db_path)
+    assert listed["total_matched"] == 1
+    assert listed["results"][0]["notice_id"] == "123"
+
+
+def test_indexes_aruba_hardware_eos_pdf_skus(tmp_path):
+    sources = tmp_path / "sources"
+    lifecycle = sources / "lifecycle_notices"
+    lifecycle.mkdir(parents=True)
+    (lifecycle / "aruba-hardware-end-of-sale-list.md").write_text(
+        """<!-- source: https://example.test/aruba-eos.pdf -->
+
+# HPE Aruba hardware End of Sale list
+
+JG295A
+Switches
+JL384A
+Updated on 5/6/2020 Page 1 of 25
+"""
+    )
+
+    db_path = tmp_path / "specs.sqlite"
+    advisory_index.build(sources, db_path)
+
+    listed = advisory_index.list_lifecycle_events(db_path=db_path)
+    assert listed["total_matched"] == 1
+    skus = listed["results"][0]["product_skus"]
+    assert "JG295A" in skus
+    assert "JL384A" in skus
+    assert listed["results"][0]["published"]
+
+
+def test_correlate_empty_products_is_unresolved(tmp_path):
+    sources = tmp_path / "sources"
+    security = sources / "security_advisories"
+    security.mkdir(parents=True)
+    (security / "empty-products.md").write_text(
+        """<!-- source: https://example.test/empty -->
+
+# Advisory with CVEs only
+
+- Advisory ID: HPESBNW05999
+- Aggregate severity: High
+- Current release: 2026-01-01
+
+### CVE-2026-00001
+"""
+    )
+
+    db_path = tmp_path / "specs.sqlite"
+    advisory_index.build(sources, db_path)
+
+    result = advisory_index.correlate_advisory_lifecycle(
+        advisory_id="HPESBNW05999", db_path=db_path
+    )
+    entry = result["advisories"][0]
+    assert entry["exact_matches"] == []
+    assert entry["unresolved_products"] == ["(no product listed)"]

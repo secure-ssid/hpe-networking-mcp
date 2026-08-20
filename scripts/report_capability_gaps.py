@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hpe_networking_mcp.pipeline.clients.capability_coverage import PROTOCOL_ONLY
+from hpe_networking_mcp.pipeline.project_facts import NON_API_LOCAL_TOOLS
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_DIR = ROOT / "src" / "hpe_networking_mcp" / "mcp_servers" / "openapi_gen" / "manifests"
 BENCHMARK_PATH = ROOT / "docs" / "capability-benchmark-snapshot.json"
@@ -201,9 +204,13 @@ def curated_capabilities(module_names: tuple[str, ...]) -> Counter[str]:
     counts: Counter[str] = Counter()
     for module_name in module_names:
         path = ROOT / "src" / "hpe_networking_mcp" / "mcp_servers" / module_name
+        server_name = "glp-core" if path.stem == "glp" else f"{path.stem}-core"
+        excluded_tools = NON_API_LOCAL_TOOLS.get(f"{server_name}", frozenset())
         tree = ast.parse(path.read_text())
         for node in ast.walk(tree):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if node.name in excluded_tools:
                 continue
             for decorator in node.decorator_list:
                 if not (
@@ -380,6 +387,30 @@ def render_report() -> str:
             "minimal-router "
             "tools are a separate client-visible dispatch surface, not three additional "
             "backend capabilities.",
+            "",
+            "## Protocol-only capabilities",
+            "",
+            "These capabilities are documented by RAG but are not REST/OpenAPI "
+            "operations. They are tracked separately from manifest totals and map "
+            "to curated transport/workflow tools when one exists.",
+            "",
+            "| Platform | Family | Protocol | Subscription | Curated tool | "
+            "Endpoints | Documentation sources |",
+            "|---|---|---|---|---|---|---|",
+        ]
+    )
+    for capability in PROTOCOL_ONLY:
+        endpoints = "<br>".join(capability.get("endpoints") or ["—"])
+        sources = "<br>".join(capability.get("documentation_sources") or ["—"])
+        lines.append(
+            f"| {capability.get('platform', '—')} | "
+            f"{capability.get('family', '—')} | "
+            f"{capability.get('protocol', '—')} | "
+            f"{capability.get('subscription', '—')} | "
+            f"`{capability['curated_tool']}` | {endpoints} | {sources} |"
+        )
+    lines.extend(
+        [
             "",
             "### Intentional exclusions",
             "",

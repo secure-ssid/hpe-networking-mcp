@@ -31,6 +31,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,7 @@ from hpe_networking_mcp.pipeline import artifact_contracts as contracts
 ROOT = repo_root()
 SOURCES_DIR = ROOT / "ingestion" / "sources"
 DEFAULT_FRESHNESS_ARTIFACT = ROOT / "outputs" / "source-freshness.json"
+FRESHNESS_MAX_AGE_DAYS = 7
 
 # The source families this diagnostic is scoped to. Kept in sync with
 # src/hpe_networking_mcp/pipeline/clients/advisory_index.SOURCE_DIRS, which indexes the same
@@ -257,9 +259,16 @@ def freshness_summary(
     for entry in data["entries"]:
         status_counts[entry["status"]] = status_counts.get(entry["status"], 0) + 1
 
+    generated = datetime.fromisoformat(str(data["generated_at"]))
+    if generated.tzinfo is None:
+        generated = generated.replace(tzinfo=timezone.utc)
+    age_days = max(0, (datetime.now(timezone.utc) - generated).days)
+
     return {
         "generated_at": data["generated_at"],
         "schema_version": data["schema_version"],
         "status_counts": status_counts,
         "entries": data["entries"],
+        "age_days": age_days,
+        "artifact_stale": age_days >= FRESHNESS_MAX_AGE_DAYS,
     }

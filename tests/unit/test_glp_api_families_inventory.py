@@ -25,7 +25,7 @@ _TOOL_DEF_RE = re.compile(r"@mcp\.tool\([^\n]*\)\n(?:async )?def (\w+)")
 
 # Meta/introspection tools that describe the inventory rather than being
 # entries within it.
-_META_TOOLS = {"glp_write_status", "list_glp_api_families"}
+_META_TOOLS = {"glp_preflight", "glp_write_status", "list_glp_api_families"}
 
 # The 10 service-catalog reads added to close the Reporting/Service-Catalog
 # coverage gap (list_glp_api_families previously omitted these even though

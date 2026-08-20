@@ -89,6 +89,7 @@ class TokenManager:
 
         self.access_token: Optional[str] = None
         self.token_expires_at: Optional[float] = None
+        self.token_cached_at: Optional[float] = None
         self._refresh_lock = threading.RLock()
         # Bumped on every successful refresh. Used to collapse concurrent
         # 401-triggered force_refresh calls into a single network round
@@ -133,19 +134,24 @@ class TokenManager:
                 return
             self.access_token = data.get("access_token")
             self.token_expires_at = data.get("expires_at")
+            self.token_cached_at = data.get("cached_at")
             if self.token_expires_at and time.time() < (self.token_expires_at - self.expiry_buffer):
                 logger.debug("Loaded valid token from cache (%s)", self.cache_file)
             else:
                 logger.debug("Cached token expired (%s)", self.cache_file)
                 self.access_token = None
                 self.token_expires_at = None
+                self.token_cached_at = None
         except Exception as exc:
             logger.warning("Failed to load token cache %s: %s", self.cache_file, exc)
             self.access_token = None
             self.token_expires_at = None
+            self.token_cached_at = None
 
     def _save_token_to_cache(self) -> None:
         try:
+            cached_at = self.token_cached_at or time.time()
+            self.token_cached_at = cached_at
             # Write to a per-process temp file (0600 so tokens aren't
             # world-readable), then atomically os.replace() into place: the
             # cache file is shared across processes (MCP servers + pipeline
@@ -166,7 +172,7 @@ class TokenManager:
                         {
                             "access_token": self.access_token,
                             "expires_at": self.token_expires_at,
-                            "cached_at": time.time(),
+                            "cached_at": cached_at,
                             "cache_fingerprint": self.cache_fingerprint,
                         },
                         f,
@@ -198,6 +204,7 @@ class TokenManager:
             self.access_token = token_data["access_token"]
             expires_in = token_data.get("expires_in", 7200)
             self.token_expires_at = time.time() + expires_in
+            self.token_cached_at = time.time()
             self._generation += 1
             self._save_token_to_cache()
             logger.info(
@@ -273,3 +280,36 @@ class TokenManager:
         if not self.access_token or not self.token_expires_at:
             return False
         return time.time() < (self.token_expires_at - self.expiry_buffer)
+
+    def metadata(self, now: float | None = None) -> dict[str, object]:
+        """Return non-secret token/cache metadata for diagnostics.
+
+        The access token and client credentials are intentionally omitted.
+        This is safe for preflight/status tools that need to distinguish
+        missing configuration, an uncached token, and an expiring token
+        without forcing a refresh or making a network request.
+        """
+        current = time.time() if now is None else now
+        expires_in = (
+            self.token_expires_at - current
+            if self.token_expires_at is not None
+            else None
+        )
+        age = (
+            current - self.token_cached_at
+            if self.token_cached_at is not None
+            else None
+        )
+        return {
+            "token_present": bool(self.access_token),
+            "token_valid": self.is_token_valid() if now is None else bool(
+                self.access_token
+                and self.token_expires_at
+                and current < (self.token_expires_at - self.expiry_buffer)
+            ),
+            "generation": self._generation,
+            "expires_at": self.token_expires_at,
+            "expires_in_seconds": max(0.0, expires_in) if expires_in is not None else None,
+            "token_age_seconds": max(0.0, age) if age is not None else None,
+            "expiry_buffer_seconds": self.expiry_buffer,
+        }

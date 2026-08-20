@@ -1,0 +1,16 @@
+flowchart LR
+    client["MCP client"]
+    find["find_tool"]
+    read["invoke_read_tool"]
+    write["invoke_tool"]
+    catalog["tools.lance"]
+    rag["RAG indexes<br/>docs.lance + specs.sqlite"]
+    live["Central / GLP / optional APIs"]
+
+    client --> find
+    client --> read
+    client --> write
+    find --> catalog
+    read --> rag
+    read --> live
+    write --> live

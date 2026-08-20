@@ -21,14 +21,14 @@ def test_capability_report_counts_and_classification_are_deterministic():
     assert first == second
     assert sum(row["generated"] for row in rows) == 6144
     assert sum(row["registered_generated"] for row in rows) == 6127
-    assert sum(row["curated"] for row in rows) == 576
-    assert sum(row["registered"] for row in rows) == 6703
+    assert sum(row["curated"] for row in rows) == 581
+    assert sum(row["registered"] for row in rows) == 6708
 
     capabilities = sum((row["capabilities"] for row in rows), report_capability_gaps.Counter())
     assert capabilities == {
-        "read": 3152,
+        "read": 3156,
         "diagnostic": 165,
-        "write": 2544,
+        "write": 2545,
         "destructive": 842,
     }
     assert "| Executable backend tools | **4,109**" in first

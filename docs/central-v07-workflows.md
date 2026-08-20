@@ -63,6 +63,8 @@ telemetry profile family.
 | Tool | Annotation | Notes |
 |---|---|---|
 | `plan_config_health_remediation` | `READ_ONLY` | Bounded scan (`max_devices_scanned` ≤ 200) of `list_devices_config_health` + `get_device_config_issues`; makes no config changes |
+| `plan_device_troubleshooting` | `READ_ONLY` | Bounded per-device telemetry plan over inventory, health, config issues, events, and active alerts; recommends existing tools only and never executes writes |
+| `plan_site_troubleshooting` | `READ_ONLY` | Bounded site ranking from inventory and active alerts; recommends `plan_device_troubleshooting` for top serials and never executes writes |
 | `execute_config_health_remediation` | `IDEMPOTENT_WRITE` | Chunks ≤200 serials into groups of ≤50 (the `resyncCfgDevices` schema max) and resyncs each chunk independently — one chunk's failure never aborts the rest; reads back `get_device_config_issues` per serial in each successful chunk |
 
 `resync_device_config` now enforces the same 50-serial schema bound

@@ -1,12 +1,16 @@
 # Low-token tool router
 
+For the MCP + RAG mental model, start with
+[How MCP and RAG work](architecture/how-it-works.md). This page is the
+router contract.
+
 `src/hpe_networking_mcp/mcp_servers/tool_router.py` is the recommended MCP entrypoint. Instead of
 exposing every backend tool to the client up front, it exposes a small
 **discovery/dispatch** surface and loads backend tools on demand.
 
 <figure class="docs-figure">
   <img src="assets/diagrams/router-safety-flow.svg" alt="Flowchart titled Router discovery and safety flow. A task request goes to find_tool, which classifies the selected tool's capability. Read capability dispatches through invoke_read_tool; diagnostic capability dispatches through invoke_tool; both go straight to backend dispatch. Write and destructive capability first require a dry-run preview, then a gate check asking whether the tool is enabled by the global and platform gates. A no answer returns a blocked response with the next action; a yes, reviewed answer dispatches to the backend.">
-  <figcaption>Every call starts at <code>find_tool</code>. Read and diagnostic capabilities dispatch immediately; write and destructive capabilities must clear the global/platform write gate before the backend is ever reached.</figcaption>
+  <figcaption>Every call starts at <code>find_tool</code>. Read and diagnostic capabilities dispatch immediately; write and destructive capabilities need a dry-run preview, the platform write gate, and confirmation before the backend is reached.</figcaption>
 </figure>
 
 ## Daily workflow
@@ -376,9 +380,9 @@ MCP hop.
 |---|---:|
 | Minimal router | 3 client-visible tools |
 | Default router | 18 client-visible tools[^compliance-tool] |
-| Platform API backend index | 6,703 tools |
-| Complete backend index (platform APIs + `design-core` + `interop-core`) | 6,715 tools |
-| Direct-all router | 6,722 client-visible tools |
+| Platform API backend index | 6,708 tools |
+| Complete backend index (platform APIs + Central Streaming + local GLP preflight + `design-core` + `interop-core`) | 6,722 tools |
+| Direct-all router | 6,729 client-visible tools |
 
 </div>
 
@@ -395,10 +399,11 @@ MCP hop.
 
 The complete catalog spans nine platform surfaces plus RAG, `design-core`,
 and `interop-core`: nine generated manifests contain 6,144 reproducible
-operations (6,127 register as active generated tools; 576 platform curated
-tools bring the platform API backend total to 6,703). Adding the two
-credential-free local backends (`design-core`: 7, `interop-core`: 5) yields
-the complete 6,715-tool registered backend catalog. Minimal mode does not
+operations (6,127 register as active generated tools; 577 platform curated
+tools bring the REST/OpenAPI platform API backend total to 6,708). The
+protocol-only `central-streaming` backend adds one vendor-facing tool. Adding
+the two credential-free local backends (`design-core`: 7, `interop-core`: 5)
+yields the complete 6,722-tool registered backend catalog. Minimal mode does not
 expose that schema surface to the MCP client -- it searches the catalog on
 demand.
 

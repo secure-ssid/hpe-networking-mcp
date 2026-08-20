@@ -214,6 +214,32 @@ def test_freshness_summary_rejects_malformed_artifact(tmp_path):
         rag_diagnostics.freshness_summary(path)
 
 
+def test_freshness_summary_flags_stale_artifact(tmp_path):
+    artifact_path = tmp_path / "source-freshness.json"
+    contracts.write_artifact(
+        artifact_path,
+        contracts.SOURCE_FRESHNESS_RESULT,
+        {
+            "generated_at": "2026-08-12T12:06:57+00:00",
+            "entries": [
+                {
+                    "source": "aruba_advisories",
+                    "count": 101,
+                    "minimum": 90,
+                    "status": "fresh",
+                    "drift_detected": False,
+                    "detail": "",
+                }
+            ],
+        },
+    )
+
+    result = rag_diagnostics.freshness_summary(artifact_path)
+
+    assert result["artifact_stale"] is True
+    assert result["age_days"] >= 7
+
+
 def test_full_corpus_delta_covers_every_known_vector_source_family(tmp_path, monkeypatch):
     sources_dir = tmp_path / "sources"
     data_dir = tmp_path / "data"

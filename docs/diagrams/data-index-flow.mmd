@@ -1,11 +1,11 @@
 flowchart LR
-    sources["Official docs<br/>OpenAPI sources"]
-    ingest["Ingestion scripts<br/>chunk + normalize"]
-    docs["docs.lance<br/>hybrid retrieval"]
-    specs["specs.sqlite<br/>exact API lookup"]
-    tools["tools.lance<br/>tool discovery"]
-    rag["RAG backend<br/>ask_docs / search_docs / lookup_api"]
-    router["Tool router<br/>find_tool"]
+    sources["Official docs<br/>OpenAPI / advisories"]
+    ingest["Ingestion<br/>chunk + parse"]
+    docs["docs.lance<br/>hybrid prose"]
+    specs["specs.sqlite<br/>API + advisories"]
+    tools["tools.lance<br/>tool catalog"]
+    rag["RAG tools<br/>ask_docs / lookup_api"]
+    router["Router<br/>find_tool"]
 
     sources --> ingest
     ingest --> docs

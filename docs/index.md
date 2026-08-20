@@ -6,7 +6,7 @@ ArubaOS 8, EdgeConnect, UXI, and Axis backends. This page is a task-based
 front door for three audiences: people trying MCP for the first time, Aruba
 network operators, and hpe-networking-mcp developers.
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,715 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,144 generated operations, 6,722 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
 
 Whatever backend does the work, an MCP client sees only three router tools
 under the recommended `minimal` profile — the banner's "3 minimal router
@@ -43,7 +43,8 @@ Apstra, AOS8, EdgeConnect, and UXI tasks.
 ### hpe-networking-mcp developers
 
 Extending a backend, adding a tool, or reviewing the router internals. Start
-with [System overview](architecture/system-overview.md) and
+with [How MCP and RAG work](architecture/how-it-works.md),
+[System overview](architecture/system-overview.md), and
 [Tool router](tool-router.md).
 
 </div>
@@ -227,10 +228,10 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | 6,144 generated operations (6,127 active) / 588 curated / 6,715 backend tools / 6,722 direct-all |
-| Capability totals (platform APIs) | 3,152 read, 165 diagnostic, 2,544 write, 842 destructive |
-| RAG | 96,256 prose chunks in LanceDB |
-| Structured lookup | 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 346 lifecycle records |
+| Tool catalog | 6,144 generated operations (6,127 active) / 595 curated / 6,722 backend tools / 6,729 direct-all |
+| Capability totals (platform APIs) | 3,156 read, 165 diagnostic, 2,545 write, 842 destructive |
+| RAG | 392,471 prose chunks in LanceDB |
+| Structured lookup | 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 345 lifecycle records |
 | API provenance | Aruba ReadMe registries, official Mist/Apstra sources, pinned GLP and EdgeConnect snapshots, SHA-pinned Axis generator |
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud |
 | Safety | Per-platform gates, dry-run writes, confirmation, HTTP host/origin and bearer controls, credential-gated live-test config, versioned/redacted artifact contracts |
@@ -238,7 +239,7 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 </div>
 
 <figure class="docs-figure">
-  <img src="assets/platform-coverage.svg" alt="The low-token router searches 6,715 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms">
+  <img src="assets/platform-coverage.svg" alt="The low-token router searches 6,722 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms">
   <figcaption>Every platform is opt-in except Central, GLP, and RAG, which load by default under the minimal router profile.</figcaption>
 </figure>
 
@@ -265,6 +266,7 @@ comparisons.
 | Fix setup, credentials, HTTP, or catalog issues | [Troubleshooting](troubleshooting.md) |
 | Download or package prebuilt RAG/OpenAPI indexes | [Prebuilt RAG/OpenAPI indexes](release-indexes.md) |
 | Browse all backend counts and coverage | [Tool catalog](tool-catalog.md) |
+| See how MCP and RAG work | [How MCP and RAG work](architecture/how-it-works.md) |
 | See architecture, data, and safety diagrams | [System overview](architecture/system-overview.md) |
 | Review RAG/OpenAPI lookup design | [RAG architecture](architecture/RAG-ARCHITECTURE.md) |
 

@@ -73,6 +73,14 @@
       ]
     },
     {
+      "name": "central-streaming MCP server",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "hpe_networking_mcp.mcp_servers.central_streaming"
+      ]
+    },
+    {
       "name": "glp-core MCP server",
       "runtimeExecutable": "python",
       "runtimeArgs": [

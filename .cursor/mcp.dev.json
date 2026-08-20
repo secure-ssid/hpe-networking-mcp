@@ -1,5 +1,5 @@
 {
-  "_note": "Dev variant: exposes the 6 core Central/GLP servers directly for full introspection. Optional product starters stay opt-in through the router. Copy over mcp.json while debugging a specific tool, or use alongside the router for raw access.",
+  "_note": "Dev variant: exposes the 7 core Central/GLP servers directly for full introspection. Optional product starters stay opt-in through the router. Copy over mcp.json while debugging a specific tool, or use alongside the router for raw access.",
   "mcpServers": {
     "central-monitoring": {
       "command": "${workspaceFolder}/.venv/bin/python3",
@@ -31,6 +31,15 @@
     "central-nac": {
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": ["${workspaceFolder}/src/hpe_networking_mcp/mcp_servers/nac.py"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src",
+        "CREDS_PATH": "${workspaceFolder}/config/credentials.yaml"
+      }
+    },
+    "central-streaming": {
+      "command": "${workspaceFolder}/.venv/bin/python3",
+      "args": ["${workspaceFolder}/src/hpe_networking_mcp/mcp_servers/central_streaming.py"],
       "cwd": "${workspaceFolder}",
       "env": {
         "PYTHONPATH": "${workspaceFolder}/src",

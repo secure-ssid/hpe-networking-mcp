@@ -111,6 +111,46 @@ Workflow:
 5. Recommend next read-only checks first; avoid destructive actions unless explicitly requested."""
 
     @mcp.prompt(
+        name="device_troubleshooting_plan",
+        description="Build a bounded read-only troubleshooting plan for one device serial.",
+    )
+    def device_troubleshooting_plan(serial_number: str, hours: str = "24") -> str:
+        return (
+            f"Build a bounded troubleshooting plan for device `{serial_number}` "
+            f"over `{hours}` hours.\n\n"
+            "Use `find_tool` then `invoke_read_tool` on `plan_device_troubleshooting`.\n"
+            "Workflow:\n"
+            "1. Call `plan_device_troubleshooting` with the serial. Do not guess extra APIs.\n"
+            "2. Follow `recommended_reads` first, then `recommended_diagnostics`.\n"
+            "3. Treat `recommended_writes` as dry-run previews only "
+            "(`dry_run=True`, `confirm=False`).\n"
+            "4. Never call `recommended_destructive` tools unless the user explicitly "
+            "confirms the device, ports, and blast radius.\n"
+            "5. Keep the answer as: observations, evidence, next safe MCP call, "
+            "and what not to do.\n"
+            "The planner is read-only and sets execute=False on every remediation "
+            "suggestion."
+        )
+
+    @mcp.prompt(
+        name="site_troubleshooting_plan",
+        description="Build a bounded read-only troubleshooting plan for one site.",
+    )
+    def site_troubleshooting_plan(site_name: str) -> str:
+        return (
+            f"Build a bounded troubleshooting plan for site `{site_name}`.\n\n"
+            "Use `find_tool` then `invoke_read_tool` on `plan_site_troubleshooting`.\n"
+            "Workflow:\n"
+            "1. Call `plan_site_troubleshooting` with the site name or site id.\n"
+            "2. Review `priority_devices` ordered by score. Do not guess extra APIs.\n"
+            "3. For the top serials, call `plan_device_troubleshooting` "
+            "(or use `include_device_plans=True`).\n"
+            "4. Follow nested recommended_reads / diagnostics first.\n"
+            "5. Never run writes or destructive tools unless the user confirms.\n"
+            "The site planner is read-only and does not execute remediations."
+        )
+
+    @mcp.prompt(
         name="compare_site_health",
         description="Compare multiple sites and rank them by health/risk.",
     )

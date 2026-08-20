@@ -13,6 +13,7 @@ src/hpe_networking_mcp/mcp_servers/
   config.py            Config tools — SSIDs, VLANs, profiles, webhooks, firmware
   ops.py               Ops tools — reboots, ping, cable test, PoE bounce, GLP mgmt
   nac.py               NAC tools — MAC reg, MPSK, visitors, auth servers, AAA profiles, AAA test
+  central_streaming.py Central Streaming tools — bounded WSS event collection
   glp.py               GreenLake Platform tools — devices, subscriptions, users, audit logs, workspaces, reporting, service catalog, guarded GLP GET
   rag.py               RAG tools — ask_docs/search_docs (LanceDB hybrid) + lookup_api (exact OpenAPI lookup, SQLite)
   interop.py           interop-core — credential-free Central <-> Mist concept translation + bounded trend normalization (always loaded)
@@ -53,7 +54,7 @@ outputs/               Reports and results
 state/                 Pipeline state store (idempotent runs)
 .cursor/
   mcp.json             Router-only entry (hpe-networking-mcp) — low token overhead
-  mcp.dev.json         6 core Central/GLP servers directly — full introspection for debugging
+  mcp.dev.json         7 core Central/GLP servers directly — full introspection for debugging
 .mcp.json.example       Generic stdio MCP client example — router minimal mode
 .mcp.http.json.example  Generic streamable HTTP MCP client example
 .claude/launch.json    Optional launch profiles — minimal router (`HPE_MCP_TOOLSETS=central,glp,rag`) plus direct debug servers
@@ -62,8 +63,8 @@ state/                 Pipeline state store (idempotent runs)
 
 ## MCP tools (`src/hpe_networking_mcp/mcp_servers/`)
 
-Six core Aruba domain servers — `monitoring.py`, `config.py`, `ops.py`, `nac.py`, `glp.py`, `rag.py` — each registered in `.cursor/mcp.dev.json`. For day-to-day use, `tool_router.py` is the single entrypoint registered in `.cursor/mcp.json`, `.claude/launch.json`, or copied from `.vscode/mcp.json.example`, and proxies to enabled backends.
-Tools follow `verb_noun` naming — no prefix. The server name provides context (`central-monitoring`, `central-config`, `central-ops`, `central-nac`, `glp-core`, `rag-core`).
+Seven core Aruba domain servers — `monitoring.py`, `config.py`, `ops.py`, `nac.py`, `central_streaming.py`, `glp.py`, `rag.py` — each registered in `.cursor/mcp.dev.json`. For day-to-day use, `tool_router.py` is the single entrypoint registered in `.cursor/mcp.json`, `.claude/launch.json`, or copied from `.vscode/mcp.json.example`, and proxies to enabled backends.
+Tools follow `verb_noun` naming — no prefix. The server name provides context (`central-monitoring`, `central-config`, `central-ops`, `central-nac`, `central-streaming`, `glp-core`, `rag-core`).
 
 Optional product starters (`clearpass`, `mist`, `apstra`, `aos8`, `edgeconnect`, `uxi`) are loaded only when enabled with `HPE_MCP_PRODUCTS` or `HPE_MCP_TOOLSETS`. Keep new product backends opt-in so default tool-list token cost stays low.
 Use router `invoke_read_tool` for read-only dispatch. Keep router `invoke_tool` annotated `DESTRUCTIVE`; it is a generic dispatcher and can reach destructive backend tools.
@@ -129,7 +130,7 @@ Legacy `source_account` / `target_account` names are still accepted for the cros
 
 ## Adding new MCP tools
 
-1. Pick the right domain server: `monitoring.py`, `config.py`, `ops.py`, `nac.py`, `glp.py`, or `rag.py`. The `tool_router.py` auto-exposes tools from enabled backends; add router mapping only for a new backend module/toolset.
+1. Pick the right domain server: `monitoring.py`, `config.py`, `ops.py`, `nac.py`, `central_streaming.py`, `glp.py`, or `rag.py`. The `tool_router.py` auto-exposes tools from enabled backends; add router mapping only for a new backend module/toolset.
 2. Add `@mcp.tool(annotations=READ_ONLY|DIAGNOSTIC|DESTRUCTIVE|IDEMPOTENT_WRITE)` with verb_noun naming, no prefix. Import the annotation constant from `hpe_networking_mcp.mcp_servers.shared`.
 3. Use thin wrapper — delegate to `src/hpe_networking_mcp/pipeline/clients/` or inline API call.
 4. Keep output bounded for MCP clients:

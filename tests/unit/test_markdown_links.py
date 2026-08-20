@@ -22,12 +22,14 @@ CORE_VISUAL_DOCS = {
     "docs/troubleshooting.md",
     "docs/optional-products.md",
     "docs/architecture/system-overview.md",
+    "docs/architecture/how-it-works.md",
 }
 BACKEND_MODULES = [
     "hpe_networking_mcp.mcp_servers.config",
     "hpe_networking_mcp.mcp_servers.monitoring",
     "hpe_networking_mcp.mcp_servers.nac",
     "hpe_networking_mcp.mcp_servers.ops",
+    "hpe_networking_mcp.mcp_servers.central_streaming",
     "hpe_networking_mcp.mcp_servers.glp",
     "hpe_networking_mcp.mcp_servers.rag",
     "hpe_networking_mcp.mcp_servers.clearpass",

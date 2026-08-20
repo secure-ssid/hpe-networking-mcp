@@ -21,6 +21,7 @@ def test_build_backends_default_has_core_only(monkeypatch):
     monkeypatch.delenv("HPE_MCP_TOOLSETS", raising=False)
     backends = router._build_backends()
     assert "central-config" in backends
+    assert "central-streaming" in backends
     assert "clearpass-core" not in backends
 
 
@@ -74,6 +75,7 @@ def test_build_backends_toolsets_can_enable_optional_products(monkeypatch):
     monkeypatch.setenv("HPE_MCP_TOOLSETS", "central,clearpass,apstra")
     backends = router._build_backends()
     assert "central-monitoring" in backends
+    assert "central-streaming" in backends
     assert "glp-core" not in backends
     assert backends.get("clearpass-core") == "hpe_networking_mcp.mcp_servers.clearpass"
     assert backends.get("apstra-core") == "hpe_networking_mcp.mcp_servers.apstra"

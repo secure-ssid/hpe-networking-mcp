@@ -10,7 +10,7 @@ HPE_MCP_TOOLSETS=central,glp,rag
 
 This exposes only `find_tool`, `invoke_read_tool`, and `invoke_tool` in
 minimal mode while still letting the router reach the backend catalog on
-demand. The complete index can contain 6,715 backend tools, while minimal
+demand. The complete index can contain 6,722 backend tools, while minimal
 mode keeps only three discovery/dispatch tools in client context.
 
 By the end of this page you will have picked the right transport for your
@@ -127,8 +127,8 @@ profile — no copy step needed:
 ```
 
 Use `.cursor/mcp.dev.json` only when debugging direct backend servers — it
-registers the six core Aruba servers (`central-monitoring`, `central-config`,
-`central-ops`, `central-nac`, `glp-core`, `rag-core`) plus
+registers the seven core Aruba servers (`central-monitoring`, `central-config`,
+`central-ops`, `central-nac`, `central-streaming`, `glp-core`, `rag-core`) plus
 `central-generated` directly, so it costs more tool-list context than
 the router profile. Copy it over `mcp.json` only while debugging one tool.
 
@@ -182,7 +182,8 @@ the same minimal router setup:
 ```
 
 The remaining profiles in that file are direct debug servers
-(`central-monitoring`, `central-config`, `central-ops`, `central-nac`, `glp-core`)
+(`central-monitoring`, `central-config`, `central-ops`, `central-nac`,
+`central-streaming`, `glp-core`)
 plus two CLI launch entries for the migration pipeline and SSID builder —
 use those only when debugging a specific backend or script outside the
 router.

@@ -1,5 +1,5 @@
 """MCP server — GreenLake Platform (GLP): inventory, licensing, users, and
-service catalog (105 curated + 906 active generated tools; 920 in provenance manifest).
+service catalog (108 curated + 906 active generated tools; 920 in provenance manifest).
 
 Covers: GLP device lifecycle (v1 + v2beta1), device grouping summaries,
 subscription assignment/bulk-add, auto-subscription-setting reads/updates,
@@ -22,12 +22,17 @@ Uses the target_account (glp_account) credentials.
 import asyncio
 import os
 import re
+import time
+from datetime import datetime, timezone
 from typing import Any, Literal
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from mcp.server.mcpserver import MCPServer
 
-from hpe_networking_mcp.mcp_servers.openapi_gen.http_exec import make_read_executor, make_write_executor
+from hpe_networking_mcp.mcp_servers.openapi_gen.http_exec import (
+    make_read_executor,
+    make_write_executor,
+)
 from hpe_networking_mcp.mcp_servers.shared import (
     DESTRUCTIVE,
     IDEMPOTENT_WRITE,
@@ -41,7 +46,12 @@ from hpe_networking_mcp.mcp_servers.shared import (
     safe_api_path,
 )
 from hpe_networking_mcp.pipeline.clients.glp_client import (
+    _IN_PROGRESS_STATES,
+    _TERMINAL_FAILURE_STATES,
+    _TERMINAL_SUCCESS_STATES,
     _V2BETA1_WRITES_FLAG,
+    _extract_task_status,
+    _task_failure_detail,
     _writes_enabled,
     glp_write_gate_message,
 )
@@ -73,6 +83,216 @@ _SENSITIVE_QUERY_PARAMS = {"unredacted"}
 # for either the opt-in generated GLP tools or the curated region-aware
 # family tools below -- trusted GLP auth is always injected last.
 _GLP_AUTH_HEADER_NAMES = {"authorization", "cookie"}
+
+
+def _url_origin(value: str) -> str | None:
+    parsed = urlsplit(value.strip())
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def _token_preflight_metadata(target_ctx: Any) -> dict[str, Any]:
+    """Read GLP token-cache metadata without refreshing or exposing secrets."""
+    fields = {
+        "client_id": bool(target_ctx.client_id),
+        "client_secret": bool(target_ctx.client_secret),
+        "token_url": bool(target_ctx.glp_token_url),
+        "workspace_id": bool(target_ctx.glp_workspace_id),
+    }
+    if not all(fields.values()):
+        return {
+            "status": "not_configured",
+            "configured_fields": fields,
+            "token_present": False,
+            "token_valid": False,
+            "network_probe": "not_run",
+        }
+
+    from hpe_networking_mcp.pipeline.clients.token_manager import TokenManager
+
+    manager = TokenManager(
+        client_id=target_ctx.client_id,
+        client_secret=target_ctx.client_secret,
+        token_url=target_ctx.glp_token_url,
+        cache_context=f"{target_ctx.glp_base_url}|{target_ctx.glp_workspace_id}",
+        cache_key="glp",
+        expiry_buffer=60,
+    )
+    metadata = manager.metadata()
+    expires_at = metadata.get("expires_at")
+    if isinstance(expires_at, (int, float)):
+        metadata["expires_at_utc"] = datetime.fromtimestamp(
+            expires_at, tz=timezone.utc
+        ).isoformat()
+    metadata.pop("expires_at", None)
+    metadata.update(
+        {
+            "status": "ready_cached" if metadata["token_valid"] else "configured_unverified",
+            "configured_fields": fields,
+            "network_probe": "not_run",
+        }
+    )
+    return metadata
+
+
+def _glp_rate_limit_preflight() -> dict[str, Any]:
+    """Return only rate metadata already observed by this process."""
+    import hpe_networking_mcp.mcp_servers.shared as shared
+
+    client = shared._glp_client
+    if client is None:
+        return {
+            "status": "not_observed",
+            "source": "process",
+            "detail": "No GLP API response has been observed in this process.",
+        }
+    observed = client._client.rate_limit_status()
+    if observed is None:
+        return {
+            "status": "not_observed",
+            "source": "process",
+            "detail": "The GLP client has no response with rate-limit headers yet.",
+        }
+    return {"status": "observed", "source": "process", **observed}
+
+
+def _glp_region_preflight(region: str | None) -> dict[str, Any]:
+    families: dict[str, Any] = {}
+    for family, hosts in _GLP_FAMILY_HOSTS.items():
+        valid_regions = sorted(
+            {
+                name
+                for name, host in {
+                    **_GLP_REGIONAL_API_HOSTS,
+                    **_GLP_REGIONAL_DATA_HOSTS,
+                }.items()
+                if host in hosts
+            }
+        )
+        selected_host = None
+        if region:
+            try:
+                selected_host = _glp_family_server_for_region(family, region)
+            except ValueError:
+                pass
+        families[family] = {
+            "status": "ready" if selected_host else "region_required",
+            "configured_region": region,
+            "selected_host": selected_host,
+            "valid_regions": valid_regions,
+            "hosts": list(hosts),
+            "live_probe": "not_run",
+        }
+    return {
+        "configured_region": region,
+        "status": "configured" if region else "not_configured",
+        "families": families,
+    }
+
+
+def _glp_family_server_for_region(family: str, region: str) -> str:
+    """Resolve a family host from an explicit region without reading env."""
+    hosts = _GLP_FAMILY_HOSTS[family]
+    lookup = (
+        _GLP_REGIONAL_DATA_HOSTS
+        if any(".data.cloud.hpe.com" in host for host in hosts)
+        else _GLP_REGIONAL_API_HOSTS
+    )
+    selected = lookup.get(region)
+    if selected not in hosts:
+        raise ValueError(f"{region!r} is not valid for {family}")
+    return selected
+
+
+@mcp.tool(annotations=READ_ONLY)
+def glp_preflight() -> dict[str, Any]:
+    """Report local GLP configuration and readiness without making API calls.
+
+    Shows non-secret credential-field presence, workspace scope, host origins,
+    token-cache expiry metadata, observed rate-limit headers, write-gate state,
+    and region-specific family routing. Live RBAC/endpoint availability is
+    intentionally marked unprobed; use a read-only GLP operation to verify it.
+    """
+    from hpe_networking_mcp.mcp_servers.shared import platform_write_gate_state
+    from hpe_networking_mcp.pipeline.config import build_account_contexts
+
+    creds_path = os.environ.get("CREDS_PATH", "config/credentials.yaml")
+    try:
+        _, target_ctx = build_account_contexts(creds_path)
+    except (OSError, TypeError, ValueError) as exc:
+        return {
+            "status": "configuration_error",
+            "network_calls": 0,
+            "errors": [str(exc)],
+            "warnings": [],
+        }
+
+    credential_fields = {
+        "client_id": bool(target_ctx.client_id),
+        "client_secret": bool(target_ctx.client_secret),
+        "workspace_id": bool(target_ctx.glp_workspace_id),
+        "token_url": bool(target_ctx.glp_token_url),
+        "base_url": bool(target_ctx.glp_base_url),
+    }
+    missing = [name for name, present in credential_fields.items() if not present]
+    token = _token_preflight_metadata(target_ctx)
+    region = os.environ.get("GLP_GENERATED_REGION", "").strip().lower() or None
+    regional = _glp_region_preflight(region)
+    configured = not missing
+    status = (
+        "ready_cached"
+        if configured and token.get("token_valid")
+        else "configured_unverified"
+        if configured
+        else "not_configured"
+    )
+    errors = [
+        f"Missing GLP configuration field: {field}."
+        for field in missing
+    ]
+    warnings = [
+        "Live endpoint and RBAC checks were not performed; this is a local-only preflight."
+    ]
+    if regional["status"] != "configured":
+        warnings.append(
+            "GLP_GENERATED_REGION is unset; region-aware service families remain unavailable "
+            "until a valid region is selected."
+        )
+    write_gate = platform_write_gate_state("glp")
+    write_gate["platform"] = "glp"
+    return {
+        "status": status,
+        "network_calls": 0,
+        "credentials": {
+            "configured_fields": credential_fields,
+            "workspace": {
+                "id": target_ctx.glp_workspace_id or None,
+                "scope_configured": bool(target_ctx.glp_workspace_id),
+            },
+            "base_url_origin": _url_origin(target_ctx.glp_base_url),
+            "token_url_origin": _url_origin(target_ctx.glp_token_url),
+        },
+        "token": token,
+        "rate_limit": _glp_rate_limit_preflight(),
+        "region": regional,
+        "endpoint_families": {
+            "global": {
+                "status": "configured" if configured else "not_configured",
+                "base_url_origin": _url_origin(target_ctx.glp_base_url),
+                "live_probe": "not_run",
+                "path_prefixes": list(_GLP_GET_PREFIXES),
+            },
+            "regional": regional["families"],
+        },
+        "rbac": {
+            "status": "not_probed",
+            "detail": "Run a bounded read-only GLP operation to verify required roles.",
+        },
+        "write_gate": write_gate,
+        "errors": errors,
+        "warnings": warnings,
+    }
 
 
 @mcp.tool(annotations=READ_ONLY)
@@ -1668,7 +1888,7 @@ def _glp_family_read_executor(family: str):
 def _glp_family_write_executor(family: str):
     executor = _GLP_FAMILY_WRITE_EXECUTORS.get(family)
     if executor is None:
-        executor = make_write_executor(
+        raw_executor = make_write_executor(
             resolve=_glp_family_resolver(family),
             allowed_prefixes=lambda f=family: _GLP_FAMILY_PREFIXES[f],
             writes_allowed=lambda: platform_writes_allowed("glp"),
@@ -1680,8 +1900,27 @@ def _glp_family_write_executor(family: str):
             not_configured="GLP not configured",
             refresh_auth=_glp_family_refresh_auth,
         )
+        async def _execute(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            result = await raw_executor(*args, **kwargs)
+            return _glp_family_write_result(family, result)
+
+        executor = _execute
         _GLP_FAMILY_WRITE_EXECUTORS[family] = executor
     return executor
+
+
+def _glp_family_write_result(family: str, result: Any) -> dict[str, Any]:
+    """Add explicit family/host metadata to a regional write result."""
+    if not isinstance(result, dict):
+        result = {"data": result}
+    output = dict(result)
+    try:
+        host_origin = _glp_family_server(family)
+    except ValueError:
+        host_origin = _url_origin(str(output.get("url", "")))
+    output["family"] = family
+    output["host_origin"] = host_origin
+    return output
 
 
 async def _glp_family_get(
@@ -1694,14 +1933,32 @@ async def _glp_family_get(
 ) -> dict[str, Any]:
     """Bounded, region-aware GET for one curated GLP service family."""
     try:
+        host_origin = _glp_family_server(family)
+    except ValueError as exc:
+        return {
+            "data": None,
+            "family": family,
+            "host_origin": None,
+            "endpoint_used": path,
+            "errors": [str(exc)],
+        }
+    try:
         safe_path = safe_api_path(path, _GLP_FAMILY_PREFIXES[family])
     except ValueError as exc:
-        return {"data": None, "endpoint_used": path, "errors": [f"Invalid path. {exc}"]}
+        return {
+            "data": None,
+            "family": family,
+            "host_origin": host_origin,
+            "endpoint_used": path,
+            "errors": [f"Invalid path. {exc}"],
+        }
     safe_params, warnings = _safe_read_params(params)
     result = await _glp_family_read_executor(family)("GET", safe_path, safe_params, {})
     if "error" in result:
         payload: dict[str, Any] = {
             "data": None,
+            "family": family,
+            "host_origin": host_origin,
             "endpoint_used": safe_path,
             "errors": [result["error"]],
         }
@@ -1719,6 +1976,8 @@ async def _glp_family_get(
         )
     payload = {
         "data": data,
+        "family": family,
+        "host_origin": host_origin,
         "endpoint_used": safe_path,
         "status_code": status_code,
         "errors": errors,
@@ -1726,6 +1985,274 @@ async def _glp_family_get(
     if warnings:
         payload["warnings"] = warnings
     return payload
+
+
+_GLP_ASYNC_OPERATION_PATHS: dict[str, dict[str, str]] = {
+    "compute-ops-mgmt": {
+        "v1": "/compute-ops-mgmt/v1/async-operations/{id}",
+        "v1beta1": "/compute-ops-mgmt/v1beta1/async-operations/{id}",
+    },
+    "data-services": {
+        "v1beta1": "/data-services/v1beta1/async-operations/{id}",
+    },
+}
+_GLP_ASYNC_MAX_TIMEOUT = 600
+_GLP_ASYNC_MAX_INTERVAL = 30.0
+_GLP_ASYNC_MIN_INTERVAL = 0.25
+
+
+def _glp_async_response(
+    *,
+    family: str,
+    api_version: str,
+    operation_id: str,
+    path: str,
+    host_origin: str | None,
+    status: str,
+    attempts: int,
+    started: float,
+    last_state: str | None = None,
+    data: Any = None,
+    errors: list[str] | None = None,
+    warnings: list[str] | None = None,
+) -> dict[str, Any]:
+    response: dict[str, Any] = {
+        "status": status,
+        "family": family,
+        "api_version": api_version,
+        "operation_id": operation_id,
+        "host_origin": host_origin,
+        "endpoint_used": path,
+        "attempts": attempts,
+        "elapsed_seconds": round(max(0.0, time.monotonic() - started), 3),
+        "last_state": last_state,
+        "data": redact_sensitive(data),
+        "errors": errors or [],
+    }
+    if warnings:
+        response["warnings"] = warnings
+    return response
+
+
+@mcp.tool(annotations=READ_ONLY)
+async def poll_glp_async_operation(
+    family: Literal["compute-ops-mgmt", "data-services"],
+    operation_id: str,
+    api_version: Literal["v1", "v1beta1"] = "v1",
+    timeout_seconds: int = 300,
+    interval_seconds: float = 5.0,
+) -> dict[str, Any]:
+    """Poll a region-aware GLP async operation with bounded status handling.
+
+    Supports the manifest-backed Compute Ops Management v1/v1beta1 and Data
+    Services v1beta1 async-operation resources. The selected family must have
+    a valid ``GLP_GENERATED_REGION``; polling never treats a malformed or
+    unknown response as success and returns explicit terminal, timeout, or
+    request-error status.
+    """
+    started = time.monotonic()
+    paths = _GLP_ASYNC_OPERATION_PATHS.get(family, {})
+    path_template = paths.get(api_version)
+    if path_template is None:
+        return _glp_async_response(
+            family=family,
+            api_version=api_version,
+            operation_id=operation_id,
+            path="",
+            host_origin=None,
+            status="validation_error",
+            attempts=0,
+            started=started,
+            errors=[
+                f"{family} does not expose async-operation API version {api_version!r}; "
+                f"choose one of {sorted(paths)}."
+            ],
+        )
+    if not isinstance(operation_id, str) or not operation_id.strip():
+        return _glp_async_response(
+            family=family,
+            api_version=api_version,
+            operation_id=operation_id,
+            path=path_template,
+            host_origin=None,
+            status="validation_error",
+            attempts=0,
+            started=started,
+            errors=["operation_id must not be empty."],
+        )
+    if (
+        isinstance(timeout_seconds, bool)
+        or not isinstance(timeout_seconds, int)
+        or timeout_seconds < 1
+        or timeout_seconds > _GLP_ASYNC_MAX_TIMEOUT
+    ):
+        return _glp_async_response(
+            family=family,
+            api_version=api_version,
+            operation_id=operation_id,
+            path=path_template,
+            host_origin=None,
+            status="validation_error",
+            attempts=0,
+            started=started,
+            errors=[
+                f"timeout_seconds must be between 1 and {_GLP_ASYNC_MAX_TIMEOUT}."
+            ],
+        )
+    if (
+        isinstance(interval_seconds, bool)
+        or not isinstance(interval_seconds, (int, float))
+        or not _GLP_ASYNC_MIN_INTERVAL <= interval_seconds <= _GLP_ASYNC_MAX_INTERVAL
+    ):
+        return _glp_async_response(
+            family=family,
+            api_version=api_version,
+            operation_id=operation_id,
+            path=path_template,
+            host_origin=None,
+            status="validation_error",
+            attempts=0,
+            started=started,
+            errors=[
+                "interval_seconds must be between "
+                f"{_GLP_ASYNC_MIN_INTERVAL} and {_GLP_ASYNC_MAX_INTERVAL}."
+            ],
+        )
+
+    path = path_template.format(id=_path_part(operation_id))
+    last_state: str | None = None
+    unknown_states: set[str] = set()
+    deadline = started + timeout_seconds
+    attempts = 0
+
+    while True:
+        result = await _glp_family_get(family, path, list_key=None)
+        attempts += 1
+        host_origin = result.get("host_origin")
+        errors = result.get("errors") or []
+        if errors:
+            return _glp_async_response(
+                family=family,
+                api_version=api_version,
+                operation_id=operation_id,
+                path=path,
+                host_origin=host_origin,
+                status="request_error",
+                attempts=attempts,
+                started=started,
+                last_state=last_state,
+                data=result.get("data"),
+                errors=[str(error) for error in errors],
+            )
+
+        data = result.get("data")
+        state = _extract_task_status(data)
+        if state is None:
+            return _glp_async_response(
+                family=family,
+                api_version=api_version,
+                operation_id=operation_id,
+                path=path,
+                host_origin=host_origin,
+                status="malformed",
+                attempts=attempts,
+                started=started,
+                data=data,
+                errors=[
+                    "GLP async-operation response has no usable status/state field."
+                ],
+            )
+        last_state = state
+        if state in _TERMINAL_SUCCESS_STATES:
+            return _glp_async_response(
+                family=family,
+                api_version=api_version,
+                operation_id=operation_id,
+                path=path,
+                host_origin=host_origin,
+                status="succeeded",
+                attempts=attempts,
+                started=started,
+                last_state=state,
+                data=data,
+            )
+        if state in _TERMINAL_FAILURE_STATES:
+            return _glp_async_response(
+                family=family,
+                api_version=api_version,
+                operation_id=operation_id,
+                path=path,
+                host_origin=host_origin,
+                status="failed",
+                attempts=attempts,
+                started=started,
+                last_state=state,
+                data=data,
+                errors=[_task_failure_detail(data)],
+            )
+        if state not in _IN_PROGRESS_STATES:
+            unknown_states.add(state)
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            warnings = [
+                f"Unrecognized states observed: {sorted(unknown_states)}."
+            ] if unknown_states else None
+            return _glp_async_response(
+                family=family,
+                api_version=api_version,
+                operation_id=operation_id,
+                path=path,
+                host_origin=host_origin,
+                status="timeout",
+                attempts=attempts,
+                started=started,
+                last_state=last_state,
+                data=data,
+                errors=[
+                    "Async operation did not reach a terminal state within "
+                    f"{timeout_seconds}s."
+                ],
+                warnings=warnings,
+            )
+        await asyncio.sleep(min(interval_seconds, remaining))
+
+
+@mcp.tool(annotations=IDEMPOTENT_WRITE)
+async def cancel_glp_async_operation(
+    operation_id: str,
+    dry_run: bool = True,
+    confirm: bool = False,
+) -> dict[str, Any]:
+    """Cancel a Compute Ops Management v1 async operation.
+
+    Cancellation is guarded by the GLP write gate and defaults to a dry-run
+    preview. Execute only with ``dry_run=False`` and ``confirm=True``. The
+    result includes the selected regional family/host metadata so a caller
+    can distinguish a planned or rejected cancellation from a completed API
+    request.
+    """
+    if not isinstance(operation_id, str) or not operation_id.strip():
+        return _glp_family_write_result(
+            "compute-ops-mgmt",
+            {
+                "status": "validation_error",
+                "errors": ["operation_id must not be empty."],
+            },
+        )
+    path = f"/compute-ops-mgmt/v1/async-operations/{_path_part(operation_id)}/cancel"
+    executor = _glp_family_write_executor("compute-ops-mgmt")
+    return await executor(
+        "cancel_glp_async_operation",
+        "POST",
+        path,
+        {},
+        {},
+        None,
+        "application/json",
+        dry_run,
+        confirm,
+    )
 
 
 # ── Compute Ops Management ───────────────────────────────────────────────────
@@ -2431,6 +2958,7 @@ def list_glp_api_families() -> dict[str, Any]:
     region_aware_family_tools = [
         "list_glp_compute_servers", "get_glp_compute_server", "list_glp_compute_server_alerts",
         "list_glp_compute_groups", "list_glp_compute_jobs",
+        "cancel_glp_async_operation",
         "list_glp_storage_systems", "get_glp_storage_system", "list_glp_storage_system_types",
         "list_glp_block_storage_volumes", "get_glp_block_storage_volume",
         "list_glp_block_storage_hosts",
@@ -2442,6 +2970,7 @@ def list_glp_api_families() -> dict[str, Any]:
         "list_glp_backup_vm_protection_groups", "run_glp_backup_protection_job",
         "list_glp_data_services_issues", "get_glp_data_services_issue",
         "list_glp_data_services_async_operations", "list_glp_data_services_storage_locations",
+        "poll_glp_async_operation",
     ]
     return {
         "guarded_get_prefixes": list(_GLP_GET_PREFIXES),
@@ -2483,7 +3012,8 @@ def list_glp_api_families() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Generated GreenLake (GLP) tools (see src/hpe_networking_mcp/mcp_servers/openapi_gen). The committed
+# Generated GreenLake (GLP) tools (see
+# src/hpe_networking_mcp/mcp_servers/openapi_gen). The committed
 # manifest at src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/glp.json is derived from the
 # MIT-licensed nowireless4u/hpe-networking-mcp project's vendored HPE GreenLake
 # OpenAPI specs (raw specs are proprietary and NOT committed — see the manifest
@@ -2494,7 +3024,7 @@ def list_glp_api_families() -> dict[str, Any]:
 # _glp_generated_enabled below) except in `direct` router mode with the
 # `glp`/`all` toolset, so the default curated glp-core catalog stays small.
 #
-# The 105 curated GLP tools above are the confirmed-working, hand-tuned surface;
+# The 108 curated GLP tools above are the confirmed-working, hand-tuned surface;
 # the generated glp_* tools broaden coverage to the full workspace/inventory/
 # licensing/service-catalog/storage/compute surface. Generated writes stay
 # fail-closed behind the same HPE_MCP_GLP_V2BETA1_WRITES gate and default to
@@ -2608,7 +3138,7 @@ def _glp_generated_enabled() -> bool:
 
     Opt-in and **default OFF**: unlike the optional-product starter backends,
     the ~920 generated GLP tools are a very large surface, so we keep the
-    default ``glp-core`` catalog to the 105 curated tools and only expand when
+    default ``glp-core`` catalog to the 108 curated tools and only expand when
     an operator sets ``HPE_MCP_GLP_GENERATED_TOOLS`` truthy. (Central's
     generated tools live on a separate ``central-generated`` server, so
     they can default on without inflating a shared catalog; the GLP generated
@@ -2637,7 +3167,10 @@ def _register_generated_glp_tools() -> list[str]:
     global GENERATED_GLP_TOOLS
     if GENERATED_GLP_TOOLS:
         return GENERATED_GLP_TOOLS
-    from hpe_networking_mcp.mcp_servers.openapi_gen.http_exec import make_read_executor, make_write_executor
+    from hpe_networking_mcp.mcp_servers.openapi_gen.http_exec import (
+        make_read_executor,
+        make_write_executor,
+    )
     from hpe_networking_mcp.mcp_servers.openapi_gen.manifest import load_manifest, manifest_exists
     from hpe_networking_mcp.mcp_servers.openapi_gen.runtime import register_generated_tools
 

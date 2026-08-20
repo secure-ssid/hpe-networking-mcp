@@ -160,10 +160,10 @@ def test_scim_reads_use_one_based_pagination_and_bound_redacted_output(monkeypat
     assert result["data"]["_pagination"]["limit"] == 2
 
 
-def test_curated_glp_tool_count_is_105():
-    # 76 pre-v0.7 curated tools + 29 v0.7 GLP-depth additions (compute-ops-mgmt,
+def test_curated_glp_tool_count_is_108():
+    # 76 pre-v0.7 curated tools + 32 GLP-depth additions (compute-ops-mgmt,
     # storage-fleet, block-storage, virtualization, backup-recovery,
     # data-services curated reads/writes, plus plan_glp_reconciliation) — see
     # src/hpe_networking_mcp/mcp_servers/glp.py module docstring and list_glp_api_families.
     curated = set(glp.mcp._tool_manager._tools) - set(glp.GENERATED_GLP_TOOLS)
-    assert len(curated) == 105
+    assert len(curated) == 108

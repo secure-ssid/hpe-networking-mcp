@@ -273,6 +273,26 @@ def create_tools_table(db, rows: list[dict[str, Any]], table_name: str = TOOLS_T
     return table
 
 
+def merge_tools_rows(
+    db,
+    rows: list[dict[str, Any]],
+    table_name: str = TOOLS_TABLE,
+) -> None:
+    """Upsert already-embedded tool rows by stable tool identity."""
+    if not rows:
+        return
+    table = tools_table(db, table_name)
+    if table is None:
+        create_tools_table(db, rows, table_name)
+        return
+    (
+        table.merge_insert("id")
+        .when_matched_update_all()
+        .when_not_matched_insert_all()
+        .execute(rows)
+    )
+
+
 def tools_table(db, table_name: str = TOOLS_TABLE):
     """Return the tools table, or None if it hasn't been built yet."""
     try:
