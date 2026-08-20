@@ -37,6 +37,7 @@ SERVERS = [
     ("central-monitoring", "hpe_networking_mcp.mcp_servers.monitoring"),
     ("central-nac", "hpe_networking_mcp.mcp_servers.nac"),
     ("central-ops", "hpe_networking_mcp.mcp_servers.ops"),
+    ("central-streaming", "hpe_networking_mcp.mcp_servers.central_streaming"),
     ("glp-core", "hpe_networking_mcp.mcp_servers.glp"),
     ("rag-core", "hpe_networking_mcp.mcp_servers.rag"),
     # Credential-free and always loaded by the router (tool_router's

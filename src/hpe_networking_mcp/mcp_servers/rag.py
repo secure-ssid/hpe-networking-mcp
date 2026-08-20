@@ -1,12 +1,13 @@
-"""MCP server — Aruba/HPE documentation RAG tools (11 tools).
+"""MCP server — Aruba/HPE documentation RAG tools (12 tools).
 
 Covers: hybrid (vector + BM25) search over ingested Aruba Central developer
-docs, tech docs, NAC docs, VSG docs, and HTML tech docs; exact API
-endpoint/schema/enum lookup via the SQLite specs index; exact structured
-security-advisory/lifecycle lookup, bounded list/filter/pagination, an
-exact-only advisory<->lifecycle correlation, bounded RAG index
-diagnostics (ingestion delta, source freshness, citation completeness),
-and local skills/runbook browse+load helpers.
+docs, tech docs, NAC docs, VSG docs, HTML tech docs, Junos CLI, and Mist
+API reference prose; exact API endpoint/schema/enum lookup via the SQLite
+specs index with generated-tool coverage; compact Central/GLP API-family
+summaries; exact structured security-advisory/lifecycle lookup, bounded
+list/filter/pagination, an exact-only advisory<->lifecycle correlation,
+bounded RAG index diagnostics (ingestion delta, source freshness, citation
+completeness), and local skills/runbook browse+load helpers.
 
 Default backend is the embedded stack — LanceDB + fastembed, no servers
 needed (`clone -> uv sync -> run`). Set HPE_MCP_RAG_BACKEND=redis for the
@@ -23,6 +24,11 @@ from hpe_networking_mcp.mcp_servers.skills import list_skills_payload, load_skil
 from hpe_networking_mcp.pipeline import artifact_contracts as contracts
 from hpe_networking_mcp.pipeline.clients import advisory_index, specs_index
 from hpe_networking_mcp.pipeline.clients import rag_diagnostics as rag_diagnostics_client
+from hpe_networking_mcp.pipeline.clients.capability_coverage import (
+    annotate_lookup_hits,
+    list_families,
+    parse_exact_api_query,
+)
 
 mcp = MCPServer("rag-core")
 
@@ -59,12 +65,17 @@ _SOURCE_BOOST: dict[str, float] = {
     "openapi_specs": 0.16,
     "mist_specs": 0.16,
     "developer_docs": 0.10,
-    # Juniper prose is left unboosted deliberately. Giving it developer_docs'
-    # 0.10 measurably cost eval mrr (0.654 -> 0.629) because the fixtures are
-    # Aruba-only, so the harm is measurable while the benefit is not. Within a
-    # Juniper query the ordering that matters — mist_specs above mist_docs —
-    # already mirrors Aruba's openapi_specs above tech_docs.
+    # Official Mist API reference prose (endpoints, webhooks, examples). Kept
+    # below mist_specs so the OpenAPI JSON still wins exact field/enum ties.
+    "mist_api_docs": 0.10,
+    # Juniper howto prose is left unboosted deliberately. Giving mist_docs
+    # developer_docs' 0.10 measurably cost eval mrr (0.654 -> 0.629) because
+    # the fixtures are Aruba-only, so the harm is measurable while the benefit
+    # is not. Within a Juniper query the ordering that matters — mist_specs
+    # above mist_api_docs above mist_docs — already mirrors Aruba's
+    # openapi_specs above developer_docs above tech_docs.
     "mist_docs": 0.0,
+    "junos_cli": 0.0,
     "vsg_docs": 0.06,
     "nac_docs": 0.04,
     "tech_docs": 0.0,
@@ -98,6 +109,8 @@ _SOURCE_VENDOR: dict[str, str] = {
     "product_specs": "aruba",
     "mist_specs": "juniper",
     "mist_docs": "juniper",
+    "mist_api_docs": "juniper",
+    "junos_cli": "juniper",
     "juniper_lifecycle": "juniper",
     "juniper_security_advisories": "juniper",
     "juniper_kb": "juniper",
@@ -134,6 +147,8 @@ _DOC_TYPE_TO_SOURCE: dict[str, str] = {
     "aos-techdocs": "aos_techdocs",
     "mist-docs": "mist_docs",
     "juniper-kb": "juniper_kb",
+    "junos-cli": "junos_cli",
+    "mist-api-docs": "mist_api_docs",
     "devhub": "devhub",
 }
 _API_QUERY_HINTS = {
@@ -229,7 +244,19 @@ def _boost_sources(hits: list[dict[str, Any]], query: str = "") -> list[dict[str
             h["score"] = norm - _CROSS_VENDOR_PENALTY
         else:
             h["score"] = norm + _SOURCE_BOOST.get(key, 0.0)
-    hits.sort(key=lambda h: h["score"], reverse=True)
+    parsed = parse_exact_api_query(query)
+    needle = None
+    if parsed and parsed[0] == "endpoint":
+        method, path = parsed[1]
+        needle = f"{method} {path}".lower()
+
+    def _exact_path_hit(hit: dict[str, Any]) -> bool:
+        if not needle:
+            return False
+        blob = f"{hit.get('file_path', '')} {hit.get('text', '')}".lower()
+        return needle in blob
+
+    hits.sort(key=lambda h: (not _exact_path_hit(h), -h.get("score", 0.0)))
     return hits
 
 
@@ -295,8 +322,8 @@ def search_docs(
         top_k:    Results to return (default 5, range 1-20).
         source:   Filter by source folder — developer_docs, tech_docs, nac_docs,
                   vsg_docs, techdocs_html, aos_techdocs, security_advisories,
-                  lifecycle_notices, juniper_lifecycle, or
-                  juniper_security_advisories.
+                  lifecycle_notices, juniper_lifecycle,
+                  juniper_security_advisories, junos_cli, or mist_api_docs.
         doc_type: DEPRECATED — use source instead.
     """
     top_k = _clamp_top_k(top_k, 20)
@@ -329,9 +356,34 @@ def lookup_api(query: str, top_k: int = 10) -> list[dict[str, Any]]:
         top_k: Results to return (default 10, range 1-20).
     """
     try:
-        return specs_index.lookup(query, top_k=_clamp_top_k(top_k, 20))
+        hits = specs_index.lookup(query, top_k=_clamp_top_k(top_k, 20))
     except FileNotFoundError as exc:
         return [{"error": str(exc)}]
+    return annotate_lookup_hits(hits)
+
+
+@mcp.tool(annotations=READ_ONLY_LOCAL)
+def list_api_families(
+    platform: str = "central",
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Compact generated API-family summaries for Central or GLP.
+
+    Discover a family (firmware, audit-log, network-config, …) and a few
+    sample generated tools without loading the full generated catalog.
+    Generated operations stay opt-in in the recommended router profile;
+    use find_tool / lookup_api to reach a specific operation.
+
+    Args:
+        platform: ``central`` or ``glp`` (default central).
+        limit: Families per page (default 50, range 1-200).
+        offset: Families to skip (default 0).
+    """
+    name = (platform or "central").strip().lower()
+    if name not in {"central", "glp"}:
+        return {"error": f"unsupported platform {platform!r}; use central or glp"}
+    return list_families(name, limit=limit, offset=offset)
 
 
 @mcp.tool(annotations=READ_ONLY)

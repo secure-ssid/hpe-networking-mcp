@@ -108,7 +108,7 @@ HPE_MCP_TOOLSETS=central,glp,rag
 | Need to rebuild the tool catalog | — | `uv run python scripts/ingest_tools.py` | Router catalog reflects the currently enabled toolsets/products |
 | Need optional products in the catalog | `HPE_MCP_PRODUCTS` | `uv run python scripts/ingest_tools.py --products clearpass,mist` | `find_tool` can locate the selected optional product tools |
 | `find_tool` cannot locate an expected optional product tool | `HPE_MCP_PRODUCTS` matches the products the catalog was built with | Rebuild the catalog with the same `--products` list | `find_tool` returns the expected tool |
-| Release validation expects the full read-write catalog (6,715 tools) | Stale access-profile, write-gate, product, or generated-tool environment values | `uv run python scripts/ingest_tools.py --complete-catalog` | Catalog rebuilds under the canonical pinned environment at the full read-write tool count (the validate-release tool-catalog floor is a platform API compatibility floor of 6,703, not the exact complete-catalog count) |
+| Release validation expects the full read-write catalog (6,722 tools) | Stale access-profile, write-gate, product, or generated-tool environment values | `uv run python scripts/ingest_tools.py --complete-catalog` | Catalog rebuilds under the canonical pinned environment at the full read-write tool count (the validate-release tool-catalog floor is a REST/OpenAPI platform API compatibility floor of 6,708, not the exact complete-catalog count) |
 
 First useful call, once the catalog is built:
 
@@ -143,7 +143,7 @@ uv run python ingestion/ingest_docs.py
 | `lookup_api` returns an older path/version | `data/specs.sqlite` freshness | `uv run python ingestion/ingest_docs.py` | `lookup_api` returns the current path/version |
 | `ask_docs` misses a security advisory or end-of-sale notice | Security lifecycle sources | `uv run python ingestion/scrape_security_lifecycle.py`, then rebuild `data/docs.lance` | `ask_docs` cites the advisory/notice; see [Source lifecycle coverage](source-lifecycle-coverage.md) for `stale`/`unavailable`/`changed`/`coverage_gap` meanings |
 | macOS docs rebuild stalls in fastembed multiprocessing | A stale rebuild process from an older checkout | Stop the stale process by exact PID, update the checkout, re-run | Current `ingest_docs.py` auto-disables subprocess parallelism on macOS, so the rebuild completes |
-| Docs index is larger than expected | Whether OpenAPI JSON was embedded into the docs index | Rebuild with the current ingestion path | OpenAPI records stay in SQLite only; the prose corpus is 96,256 chunks |
+| Docs index is larger than expected | Whether OpenAPI JSON was embedded into the docs index | Rebuild with the current ingestion path | OpenAPI records stay in SQLite only; the prose corpus is 392,471 chunks |
 
 ## Vendor compatibility
 

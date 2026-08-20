@@ -11,7 +11,8 @@
 - plan_glp_reconciliation: read-only, cross-resource reconciliation/
   planning composite over devices/subscriptions/users/role-assignments/
   scope-groups/audit-logs/reporting-statuses.
-- The hpe_networking_mcp.pipeline.live_test_config / hpe_networking_mcp.pipeline.artifact_contracts integration
+- The hpe_networking_mcp.pipeline.live_test_config /
+  hpe_networking_mcp.pipeline.artifact_contracts integration
   used by scripts/evaluate_glp_070_depth.py.
 
 All host/region data is cross-checked against the committed manifest
@@ -350,6 +351,126 @@ def test_401_triggers_token_refresh_then_retries(monkeypatch):
     assert out["errors"] == []
 
 
+def test_regional_async_poll_returns_host_and_bounded_timeout(monkeypatch):
+    _patch_glp(monkeypatch)
+    monkeypatch.setenv("GLP_GENERATED_REGION", "us-west")
+    captured: dict = {}
+    _fake_httpx(monkeypatch, captured, payload={"status": "running"})
+
+    out = asyncio.run(
+        _fn("poll_glp_async_operation")(
+            family="compute-ops-mgmt",
+            operation_id="job-123",
+            api_version="v1",
+            timeout_seconds=1,
+            interval_seconds=0.25,
+        )
+    )
+
+    assert out["status"] == "timeout"
+    assert out["family"] == "compute-ops-mgmt"
+    assert out["host_origin"] == "https://us-west.api.greenlake.hpe.com"
+    assert out["endpoint_used"].endswith("/compute-ops-mgmt/v1/async-operations/job-123")
+    assert out["attempts"] >= 1
+
+
+def test_regional_async_poll_normalizes_success_and_failure(monkeypatch):
+    _patch_glp(monkeypatch)
+    monkeypatch.setenv("GLP_GENERATED_REGION", "eu-west")
+
+    class SequenceResp:
+        calls = 0
+
+        def __init__(self):
+            type(self).calls += 1
+            self.status_code = 200
+            self.headers = {"content-type": "application/json"}
+            self.text = "{}"
+
+        def json(self):
+            return (
+                {"state": "running"}
+                if type(self).calls == 1
+                else {"state": "completed", "result": {"id": "job-123"}}
+            )
+
+    captured: dict = {}
+    _fake_httpx(monkeypatch, captured, resp_cls=SequenceResp)
+    success = asyncio.run(
+        _fn("poll_glp_async_operation")(
+            family="data-services",
+            operation_id="job-123",
+            api_version="v1beta1",
+            timeout_seconds=2,
+            interval_seconds=0.25,
+        )
+    )
+    assert success["status"] == "succeeded"
+    assert success["last_state"] == "completed"
+    assert success["host_origin"] == "https://eu-west.api.greenlake.hpe.com"
+
+    class FailedResp:
+        status_code = 200
+        headers = {"content-type": "application/json"}
+        text = "{}"
+
+        def json(self):
+            return {"status": "failed", "message": "job failed"}
+
+    _fake_httpx(monkeypatch, captured, resp_cls=FailedResp)
+    failure = asyncio.run(
+        _fn("poll_glp_async_operation")(
+            family="data-services",
+            operation_id="job-123",
+            api_version="v1beta1",
+            timeout_seconds=1,
+            interval_seconds=0.25,
+        )
+    )
+    assert failure["status"] == "failed"
+    assert "job failed" in failure["errors"][0]
+
+
+def test_regional_async_poll_rejects_malformed_or_missing_region(monkeypatch):
+    _patch_glp(monkeypatch)
+    malformed_capture: dict = {}
+
+    class MalformedResp:
+        status_code = 200
+        headers = {"content-type": "application/json"}
+        text = "{}"
+
+        def json(self):
+            return {"id": "job-123"}
+
+    _fake_httpx(monkeypatch, malformed_capture, resp_cls=MalformedResp)
+    monkeypatch.setenv("GLP_GENERATED_REGION", "us-west")
+    malformed = asyncio.run(
+        _fn("poll_glp_async_operation")(
+            family="compute-ops-mgmt",
+            operation_id="job-123",
+            api_version="v1",
+            timeout_seconds=1,
+            interval_seconds=0.25,
+        )
+    )
+    assert malformed["status"] == "malformed"
+    assert malformed["errors"]
+
+    monkeypatch.delenv("GLP_GENERATED_REGION")
+    missing_region = asyncio.run(
+        _fn("poll_glp_async_operation")(
+            family="compute-ops-mgmt",
+            operation_id="job-123",
+            api_version="v1",
+            timeout_seconds=1,
+            interval_seconds=0.25,
+        )
+    )
+    assert missing_region["status"] == "request_error"
+    assert any("GLP_GENERATED_REGION" in error for error in missing_region["errors"])
+
+
 def test_429_retries_read(monkeypatch):
     _patch_glp(monkeypatch)
     monkeypatch.setenv("GLP_GENERATED_REGION", "us-west")
@@ -405,6 +526,8 @@ def test_vm_power_dry_run_default_previews_without_network(monkeypatch):
     out = asyncio.run(_fn("set_glp_virtual_machine_power")(vm_id="vm1", action="power-on"))
     assert out["dry_run"] is True
     assert out["url"].endswith("/virtualization/v1beta1/virtual-machines/vm1/power-on")
+    assert out["family"] == "virtualization"
+    assert out["host_origin"] == "https://us-west.api.greenlake.hpe.com"
 
 
 def test_vm_power_requires_confirm_when_not_dry_run(monkeypatch):
@@ -433,6 +556,63 @@ def test_vm_power_executes_with_confirm(monkeypatch):
     )
     assert out["status_code"] == 200
     assert cap["method"] == "POST"
+    assert out["family"] == "virtualization"
+    assert out["host_origin"] == "https://us-west.api.greenlake.hpe.com"
+
+
+def test_regional_async_poll_rejects_invalid_direct_argument_types(monkeypatch):
+    _patch_glp(monkeypatch)
+
+    invalid_timeout = asyncio.run(
+        _fn("poll_glp_async_operation")(
+            family="compute-ops-mgmt",
+            operation_id="job-123",
+            timeout_seconds=True,
+            interval_seconds=0.25,
+        )
+    )
+    assert invalid_timeout["status"] == "validation_error"
+
+    invalid_interval = asyncio.run(
+        _fn("poll_glp_async_operation")(
+            family="compute-ops-mgmt",
+            operation_id="job-123",
+            timeout_seconds=1,
+            interval_seconds="fast",
+        )
+    )
+    assert invalid_interval["status"] == "validation_error"
+
+    invalid_id = asyncio.run(
+        _fn("poll_glp_async_operation")(
+            family="compute-ops-mgmt",
+            operation_id=None,
+            timeout_seconds=1,
+            interval_seconds=0.25,
+        )
+    )
+    assert invalid_id["status"] == "validation_error"
+
+
+def test_cancel_regional_async_operation_is_guarded_and_region_aware(monkeypatch):
+    monkeypatch.setenv("HPE_MCP_GLP_V2BETA1_WRITES", "1")
+    _patch_glp(monkeypatch)
+    monkeypatch.setenv("GLP_GENERATED_REGION", "us-west")
+    out = asyncio.run(
+        _fn("cancel_glp_async_operation")(operation_id="job-123")
+    )
+    assert out["dry_run"] is True
+    assert out["path"].endswith("/compute-ops-mgmt/v1/async-operations/job-123/cancel")
+    assert out["family"] == "compute-ops-mgmt"
+    assert out["host_origin"] == "https://us-west.api.greenlake.hpe.com"
+
+    monkeypatch.delenv("HPE_MCP_GLP_V2BETA1_WRITES", raising=False)
+    blocked = asyncio.run(
+        _fn("cancel_glp_async_operation")(
+            operation_id="job-123", dry_run=False, confirm=True
+        )
+    )
+    assert blocked["status"] in {"FORBIDDEN", "blocked"}
 
 
 def test_vm_power_bulk_partial_failure_reporting(monkeypatch):

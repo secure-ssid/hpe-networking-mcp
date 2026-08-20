@@ -1224,11 +1224,11 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
         ``True`` if a gate was installed (or refreshed), ``False`` if this
         server needs no standalone gate.
     """
-    validate_access_profile_environment()
     server_name = str(getattr(mcp_instance, "name", "")).strip().lower()
-    platform = platform_for_server_name(server_name)
     if server_name == "hpe-networking-mcp":
         return False
+    validate_access_profile_environment()
+    platform = platform_for_server_name(server_name)
     if platform is None and not global_readonly_enabled():
         return False
 

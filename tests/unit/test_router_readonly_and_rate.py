@@ -295,6 +295,7 @@ class TestStandaloneGateReadonly:
         # The router must NOT be gated (platform None), or its DESTRUCTIVE-
         # annotated invoke_tool dispatcher would be wholesale-blocked and could
         # no longer dispatch read/diagnostic tools.
+        monkeypatch.delenv("HPE_MCP_PRODUCT_ACCESS", raising=False)
         monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "safe-read-only")
         router_mcp = _GateMCP("hpe-networking-mcp", {})
         assert sh.install_platform_write_gate(router_mcp) is False

@@ -19,6 +19,7 @@ JavaScript.
 | [example-prompts.md](example-prompts.md) | Complete scenarios with calls, expected shapes, and safety labels |
 | [troubleshooting.md](troubleshooting.md) | Outcome-driven setup, authentication, transport, catalog, and RAG fixes |
 | [optional-products.md](optional-products.md) | Optional product matrix, wizard behavior, env vars, and safety surface |
+| [architecture/how-it-works.md](architecture/how-it-works.md) | Canonical MCP + RAG mental model: router tools, indexes vs live APIs, dry-run/gates |
 | [architecture/system-overview.md](architecture/system-overview.md) | Runtime, data, transport, and safety architecture |
 | [product-workflows.md](product-workflows.md) | Typed ClearPass/Mist/Apstra/AOS8/EdgeConnect/UXI workflow roadmap |
 | [aos8-migration-contract-matrix.md](aos8-migration-contract-matrix.md) | Authoritative AOS8-to-Classic/New Central migration contract matrix gating 0.5.0 implementation |
@@ -110,7 +111,7 @@ uv run python scripts/ingest_tools.py
 # Include optional product starters in the tool catalog
 uv run python scripts/ingest_tools.py --products all
 
-# Include every guarded write tool (6,715 backend tools)
+# Include every guarded write tool (6,722 backend tools)
 uv run python scripts/ingest_tools.py --complete-catalog
 
 # Start the model-agnostic HTTP MCP router
@@ -123,7 +124,7 @@ uv run hpe-mcp-doctor
 uv run pytest tests/unit -q
 
 # Run the full local release gate
-uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6703
+uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6708
 ```
 
 The wizard can run `uv sync`, choose common Central API gateways, fill secrets
@@ -132,4 +133,4 @@ the product selector to local stdio MCP configs. The HTTP helper safely loads
 expected `.env` assignments first and exits with listener details instead of
 starting a duplicate router when the selected port is already in use.
 
-The release helper enforces the documented tool catalog floor and checks local LanceDB tool-index freshness when `data/tools.lance` exists. `--min-tools 6703` is the platform API compatibility floor (the 6,703 vendor-facing platform API tools), not the complete registered backend total of 6,715 — validation passes at or above the floor; see [Tool catalog](tool-catalog.md) for both totals. The unit suite also carries static regression guards for async-safe MCP tools, shared `httpx` client boundaries, project metadata (`hpe-networking-mcp` package name with no direct sync SDK/`requests` runtime dependencies), committed low-token MCP config examples, local-only config files, router product/toolset docs, bounded generic read-only GET tools, MCP list default bounds, RAG/search top_k bounds, public tool-count claims, tool-count docstrings, rendered RAG/index doc-fact claims, tracked Markdown local links and images, Pages sitemap and robots metadata, documented router example arguments, product workflow tool-name tables, and wizard optional-product env tables.
+The release helper enforces the documented tool catalog floor and checks local LanceDB tool-index freshness when `data/tools.lance` exists. `--min-tools 6708` is the platform API compatibility floor (the 6,708 vendor-facing platform API tools), not the complete registered backend total of 6,722, which also includes the protocol-only Central Streaming tool, the local GLP preflight diagnostic, and credential-free local tools — validation passes at or above the floor; see [Tool catalog](tool-catalog.md) for both totals. The unit suite also carries static regression guards for async-safe MCP tools, shared `httpx` client boundaries, project metadata (`hpe-networking-mcp` package name with no direct sync SDK/`requests` runtime dependencies), committed low-token MCP config examples, local-only config files, router product/toolset docs, bounded generic read-only GET tools, MCP list default bounds, RAG/search top_k bounds, public tool-count claims, tool-count docstrings, rendered RAG/index doc-fact claims, tracked Markdown local links and images, Pages sitemap and robots metadata, documented router example arguments, product workflow tool-name tables, and wizard optional-product env tables.

@@ -2,11 +2,12 @@ flowchart LR
     user["User / operator"]
     client["MCP client"]
     router["Low-token router<br/>3-tool minimal surface"]
-    catalog["Tool catalog<br/>6,700 backend tools"]
+    catalog["Tool catalog<br/>6,722 backend tools"]
     core["Central / GLP / RAG"]
+    streaming["Central Streaming WSS"]
     optional["Optional products"]
     indexes["LanceDB + SQLite"]
-    apis["Vendor APIs"]
+    apis["Vendor REST APIs"]
 
     user --> client --> router
     router --> catalog
@@ -14,4 +15,5 @@ flowchart LR
     router --> optional
     core --> indexes
     core --> apis
+    core --> streaming
     optional --> apis

@@ -7,7 +7,7 @@
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-0969da)](https://secure-ssid.github.io/hpe-networking-mcp/)
 [![Release](https://img.shields.io/github/v/release/secure-ssid/hpe-networking-mcp?display_name=tag)](https://github.com/secure-ssid/hpe-networking-mcp/releases)
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,715 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](docs/assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,144 generated operations, 6,722 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](docs/assets/hpe-networking-mcp-hero.svg)
 
 The banner tracks the current backend catalog: a large tool surface stays
 available on demand, while the MCP client itself only ever sees three router
@@ -32,7 +32,7 @@ This README stays intentionally short; canonical guides live under `docs/`.
 |---|---|
 | A first-time MCP user | The [five-minute credential-free quickstart](#five-minute-credential-free-quickstart) below, then [Getting started](docs/getting-started.md) |
 | An Aruba network operator | [Example prompts](docs/example-prompts.md) and [typed product workflows](docs/product-workflows.md) |
-| An hpe-networking-mcp developer | [Architecture overview](docs/architecture/system-overview.md) and [Contributing guide](CONTRIBUTING.md) |
+| An hpe-networking-mcp developer | [How MCP and RAG work](docs/architecture/how-it-works.md), [Architecture overview](docs/architecture/system-overview.md), and [Contributing guide](CONTRIBUTING.md) |
 
 ## Five-minute credential-free quickstart
 
@@ -88,8 +88,8 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | Non-additive profiles: 368 core tools / 2829 read-only optional starters / 5809 read-write optional starters; platform API backend total: 6,703; complete backend index: 6,715; direct-all: 6,722 |
-| RAG | 96,256 prose chunks; 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 346 lifecycle records |
+| Tool catalog | Non-additive profiles: 375 core tools / 2836 read-only optional starters / 5816 read-write optional starters; REST/OpenAPI platform API backend total: 6,708; protocol-only Central Streaming: 1; complete backend index: 6,722; direct-all: 6,729 |
+| RAG | 392,471 prose chunks; 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 345 lifecycle records |
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud |
 | Safety | Per-platform write gates, dry-run + confirmation, HTTP host/origin and bearer controls, credential-gated live-test config |
 
@@ -198,12 +198,14 @@ The full repository map, including generated/git-ignored paths, lives in
 
 ```bash
 uv run pytest tests/unit -q
-uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6703
+uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6708
 ```
 
-`--min-tools 6703` is the platform API compatibility floor (the 6,703
-vendor-facing platform API tools), not the complete registered backend total
-of 6,715 — validation passes at or above the floor. See
+`--min-tools 6708` is the platform API compatibility floor (the
+6,708 vendor-facing platform API tools), not the complete registered backend
+total of 6,722, which also includes the protocol-only Central Streaming tool,
+the local GLP preflight diagnostic, and credential-free local tools —
+validation passes at or above the floor. See
 [Tool catalog](docs/tool-catalog.md) for both totals.
 
 The release helper runs unit tests, optional RAG/API eval when indexes exist, tool catalog floor checks, and local tool-index freshness checks. Unit tests also include static guards for the active MCP/pipeline code, committed low-token MCP config examples, local-only config files, router product/toolset docs, bounded generic read-only GET tools, MCP list default bounds, RAG/search top_k bounds, public tool-count claims, tool-count docstrings, rendered RAG/index doc-fact claims, tracked Markdown local links and images, Pages sitemap and robots metadata, documented router example arguments, product workflow tool-name tables, and wizard optional-product env tables.

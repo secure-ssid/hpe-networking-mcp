@@ -174,6 +174,14 @@ class TestLookup:
         )
         assert "Update device firmware settings" in hits[0]["text"]
 
+    def test_lookup_cache_returns_independent_copies(self, db):
+        specs_index.clear_lookup_cache()
+        first = specs_index.lookup("patch /device-firmware", db_path=db)
+        first[0]["text"] = "mutated"
+        second = specs_index.lookup("patch /device-firmware", db_path=db)
+        assert "mutated" not in second[0]["text"]
+        assert second[0]["kind"] == "endpoint"
+
     def test_exact_operation_id_is_case_insensitive(self, db):
         hits = specs_index.lookup("UPDATEDEVICEFIRMWARE", db_path=db)
 

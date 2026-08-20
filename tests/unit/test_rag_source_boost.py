@@ -81,11 +81,31 @@ def test_unknown_source_gets_no_boost():
     assert _boost_sources(hits)[0]["source"] == "nac_docs"
 
 
+def test_mist_api_docs_outrank_unboosted_mist_prose_on_a_tie():
+    hits = [_hit("mist_docs", 0.02), _hit("mist_api_docs", 0.02), _hit("junos_cli", 0.02)]
+    ranked = [h["source"] for h in _boost_sources(hits)]
+    assert ranked[0] == "mist_api_docs"
+    assert ranked[-1] in {"mist_docs", "junos_cli"}
+
+
 def test_boost_ordering_matches_table_priority():
     """Equal relevance means the table's ordering decides the ranking."""
     sources = ["openapi_specs", "developer_docs", "vsg_docs", "nac_docs", "tech_docs"]
     ranked = [h["source"] for h in _boost_sources([_hit(s, 0.02) for s in sources])]
     assert ranked == sorted(sources, key=lambda s: -_SOURCE_BOOST.get(s, 0.0))
+
+
+def test_exact_method_path_promotes_matching_hit_over_higher_relevance():
+    hits = [
+        _hit("mist_docs", 0.03, "guide.md"),
+        _hit(
+            "openapi_specs",
+            0.011,
+            "openapi_specs/firmware.json#GET /firmware/v1/compliance",
+        ),
+    ]
+    ranked = _boost_sources(hits, "GET /firmware/v1/compliance")
+    assert ranked[0]["file_path"].endswith("GET /firmware/v1/compliance")
 
 
 # ---------------------------------------------------------------------------

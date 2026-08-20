@@ -19,6 +19,7 @@
       "central-monitoring": "hpe_networking_mcp.mcp_servers.monitoring",
       "central-nac": "hpe_networking_mcp.mcp_servers.nac",
       "central-ops": "hpe_networking_mcp.mcp_servers.ops",
+      "central-streaming": "hpe_networking_mcp.mcp_servers.central_streaming",
       "glp-core": "hpe_networking_mcp.mcp_servers.glp",
       "rag-core": "hpe_networking_mcp.mcp_servers.rag"
     },
@@ -47,6 +48,7 @@
       "central-monitoring",
       "central-nac",
       "central-ops",
+      "central-streaming",
       "clearpass-core",
       "design-core",
       "edgeconnect-core",
@@ -95,6 +97,7 @@
       "central-monitoring": "central",
       "central-nac": "central",
       "central-ops": "central",
+      "central-streaming": "central",
       "clearpass-core": "clearpass",
       "design-core": "design",
       "edgeconnect-core": "edgeconnect",
@@ -128,34 +131,41 @@
       "HPE_MCP_UXI_GENERATED_TOOLS": "1",
       "HPE_MCP_UXI_WRITES": "1"
     },
-    "registered_total": 6715,
+    "registered_total": 6722,
     "by_server": {
       "aos8-core": 311,
       "apstra-core": 155,
       "axis-core": 47,
       "central-config": 80,
       "central-generated": 1677,
-      "central-monitoring": 88,
+      "central-monitoring": 90,
       "central-nac": 38,
       "central-ops": 41,
+      "central-streaming": 1,
       "clearpass-core": 845,
       "design-core": 7,
       "edgeconnect-core": 1270,
-      "glp-core": 1011,
+      "glp-core": 1014,
       "interop-core": 5,
       "mist-core": 1080,
-      "rag-core": 11,
+      "rag-core": 12,
       "uxi-core": 49
     },
     "generated_registered": 6127,
     "generated_excluded": 17,
-    "curated_total": 588,
+    "curated_total": 595,
     "credential_free_local": {
       "design-core": 7,
       "interop-core": 5
     },
-    "platform_backend_total": 6703,
-    "platform_curated_total": 576,
+    "protocol_only": {
+      "central-streaming": 1
+    },
+    "non_api_local": {
+      "glp-core": 1
+    },
+    "platform_backend_total": 6708,
+    "platform_curated_total": 581,
     "interop_tools": 5
   },
   "router_modes": {
@@ -189,7 +199,7 @@
     "tools": {
       "minimal": 3,
       "default": 18,
-      "direct_all": 6722,
+      "direct_all": 6729,
       "default_recommended_profile": 18
     },
     "direct_all_added_native_tools": 7
@@ -210,7 +220,7 @@
     "total": 6144
   },
   "rag_sources": {
-    "count": 16,
+    "count": 18,
     "sources": [
       "aos_techdocs",
       "developer_docs",
@@ -219,7 +229,9 @@
       "juniper_kb",
       "juniper_lifecycle",
       "juniper_security_advisories",
+      "junos_cli",
       "lifecycle_notices",
+      "mist_api_docs",
       "mist_docs",
       "nac_docs",
       "openapi_specs",
@@ -237,21 +249,37 @@
       "schemas": 8890,
       "fields": 50675,
       "advisories": 104,
-      "lifecycle_events": 346
+      "lifecycle_events": 345
     },
     "docs_lance": {
-      "rows": 96256,
-      "source_count": 14,
+      "rows": 392471,
+      "source_count": 30,
       "rows_by_source": {
         "aos_techdocs": 1534,
+        "aoscx_guides": 52120,
+        "aoscx_release_notes": 39445,
+        "clearpass_guide": 3151,
         "developer_docs": 1367,
         "devhub": 354,
+        "feature_navigator": 1272,
         "juniper_kb": 1808,
         "juniper_lifecycle": 15,
         "juniper_security_advisories": 18,
+        "junos_cli": 62314,
+        "junos_ex_hardware": 12088,
+        "junos_ex_release_notes": 1869,
+        "junos_mx_hardware": 21077,
+        "junos_mx_release_notes": 6026,
+        "junos_qfx_hardware": 10330,
+        "junos_qfx_release_notes": 3707,
+        "junos_srx_hardware": 9414,
+        "junos_srx_release_notes": 3538,
         "lifecycle_notices": 1589,
-        "mist_docs": 15870,
+        "mist_api_docs": 48064,
+        "mist_docs": 35859,
+        "mist_product_updates": 1695,
         "nac_docs": 1156,
+        "product_datasheets": 116,
         "product_specs": 8773,
         "security_advisories": 2506,
         "tech_docs": 34365,
@@ -260,23 +288,24 @@
       }
     },
     "tools_lance": {
-      "rows": 6715,
+      "rows": 6722,
       "rows_by_server": {
         "aos8-core": 311,
         "apstra-core": 155,
         "axis-core": 47,
         "central-config": 80,
         "central-generated": 1677,
-        "central-monitoring": 88,
+        "central-monitoring": 90,
         "central-nac": 38,
         "central-ops": 41,
+        "central-streaming": 1,
         "clearpass-core": 845,
         "design-core": 7,
         "edgeconnect-core": 1270,
-        "glp-core": 1011,
+        "glp-core": 1014,
         "interop-core": 5,
         "mist-core": 1080,
-        "rag-core": 11,
+        "rag-core": 12,
         "uxi-core": 49
       }
     }

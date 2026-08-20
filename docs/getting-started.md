@@ -5,6 +5,9 @@ local setup, a low-token MCP router running, an MCP client connected to it,
 and one confirmed successful tool call. Every step below tells you exactly
 what to expect before you move on.
 
+How the three router tools, RAG indexes, and live APIs fit together is in
+[How MCP and RAG work](architecture/how-it-works.md).
+
 <figure class="docs-figure">
   <img src="assets/diagrams/quickstart-journey.svg"
        alt="Six steps from cloning hpe-networking-mcp through setup, doctor checks, MCP connection, tool discovery, and a safe read-only call.">
@@ -367,7 +370,7 @@ HPE_MCP_TOOLSETS=central,glp,rag
 ```
 
 This exposes only the router discovery/dispatch surface and keeps tool-list
-token cost low. The router can search 6,715 backend tools when all platforms
+token cost low. The router can search 6,722 backend tools when all platforms
 and guarded writes are indexed, while minimal mode exposes only three
 client-visible tools: `find_tool`, `invoke_read_tool`, and `invoke_tool`.
 
@@ -394,7 +397,7 @@ Include optional product starters:
 uv run python scripts/ingest_tools.py --products all
 ```
 
-The safe default hides optional write tools. Build all 6,715 backend tools only
+The safe default hides optional write tools. Build all 6,722 backend tools only
 for an intentional lab read/write profile:
 
 ```bash
@@ -481,12 +484,14 @@ check [troubleshooting.md](troubleshooting.md) for the matching fix.
 python3 scripts/setup_wizard.py --yes --skip-credentials --skip-catalog
 uv run hpe-mcp-doctor
 uv run pytest tests/unit -q
-uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6703
+uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6708
 ```
 
-`--min-tools 6703` is the platform API compatibility floor (the 6,703
-vendor-facing platform API tools), not the complete registered backend total
-of 6,715 — validation passes at or above the floor. See
+`--min-tools 6708` is the platform API compatibility floor (the
+6,708 vendor-facing platform API tools), not the complete registered backend
+total of 6,722, which also includes the protocol-only Central Streaming tool,
+the local GLP preflight diagnostic, and credential-free local tools —
+validation passes at or above the floor. See
 [tool-catalog.md](tool-catalog.md) for both totals.
 
 `scripts/doctor.py` is a non-mutating local setup diagnostic. It checks Python
@@ -517,9 +522,9 @@ uv run python ingestion/ingest_docs.py
 
 Built indexes live under `data/` and are git-ignored.
 
-The current rebuilt snapshot contains 96,256 prose chunks and a structured
+The current rebuilt snapshot contains 392,471 prose chunks and a structured
 index with 4,106 endpoints, 8,890 schemas, 50,675 fields,
-104 security advisories, and 346 lifecycle records.
+104 security advisories, and 345 lifecycle records.
 
 ## Optional product starters
 

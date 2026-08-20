@@ -1,5 +1,9 @@
 # hpe-networking-mcp system overview
 
+For the current mental model — three router tools, RAG vs live APIs, dry-run
+and write gates, and read-only planners — start with
+[How MCP and RAG work](how-it-works.md). This page is the runtime map.
+
 hpe-networking-mcp places a small MCP router in front of Aruba Central, GreenLake,
 documentation indexes, and opt-in product backends. Users discover a capability
 first, then dispatch the selected tool through a read-only or guarded write
@@ -16,10 +20,11 @@ path.
 |---|---|
 | MCP client | Sends natural-language tasks and tool calls over stdio or streamable HTTP |
 | `hpe-networking-mcp` | Discovers tools, validates dispatch, applies safety rules, and bounds responses |
-| Core backends | Central monitoring/config/ops/NAC, GreenLake Platform, and RAG |
-| Optional backends | ClearPass, Mist, Apstra, ArubaOS 8, EdgeConnect, UXI, and Axis when enabled |
-| Local indexes | Hybrid documentation retrieval, exact OpenAPI lookup, and semantic tool discovery |
-| Vendor APIs | External systems reached by async HTTP clients |
+| Core backends | Central monitoring/config/ops/NAC, Central Streaming (WSS), GreenLake Platform, and RAG |
+| Always-on local | `interop-core` Central ↔ Mist translation (no vendor credentials) |
+| Optional backends | ClearPass, Mist, Apstra, ArubaOS 8, EdgeConnect, UXI, Axis, and design when enabled |
+| Local indexes | Hybrid documentation retrieval, exact OpenAPI/advisory lookup, and semantic tool discovery |
+| Vendor APIs | External REST systems reached by async HTTP clients; Streaming uses a bounded WSS collector |
 
 The normal MCP profile keeps the client-visible surface small:
 
@@ -34,7 +39,7 @@ Optional products are disabled until explicitly enabled:
 HPE_MCP_PRODUCTS=clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design
 ```
 
-The full catalog contains 6,144 generated operations and 6,715 backend tools
+The full catalog contains 6,144 generated operations and 6,722 backend tools
 when every platform and guarded write is indexed. Minimal mode exposes only
 `find_tool`, `invoke_read_tool`, and `invoke_tool` to the MCP client.
 
@@ -159,11 +164,12 @@ OpenAPI inputs are reproducible:
   `mistsys/mist_openapi` repository and SHA-256 verified.
 - Weekly CI checks detect registry hash or Mist upstream drift.
 - Structured OpenAPI records are stored only in `data/specs.sqlite`; the
-  96,256-row LanceDB table remains a prose retrieval corpus.
+  392,471-row LanceDB table remains a prose retrieval corpus.
 
 <div class="docs-next" markdown="1">
 ### Continue
 
+- [How MCP and RAG work](how-it-works.md)
 - [Set up hpe-networking-mcp](../getting-started.md)
 - [Understand the router](../tool-router.md)
 - [Explore optional products](../optional-products.md)

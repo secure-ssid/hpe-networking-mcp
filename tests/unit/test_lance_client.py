@@ -123,6 +123,21 @@ class TestToolsTable:
         empty = lc.connect(tmp_path / "empty")
         assert lc.search_tools(empty, "anything", _vec(99)) == []
 
+    def test_merge_tool_rows_upserts_without_rebuilding_table(self, db):
+        rows = [
+            {"id": "t1", "server": "central-config", "name": "create_vlan",
+             "description": "Updated VLAN creation", "schema_json": "{}",
+             "fts_text": "create vlan updated", "vector": _vec(4)},
+            {"id": "t3", "server": "glp-core", "name": "glp_preflight",
+             "description": "Inspect local GLP readiness", "schema_json": "{}",
+             "fts_text": "glp preflight local readiness", "vector": _vec(6)},
+        ]
+        lc.merge_tools_rows(db, rows)
+
+        assert lc.tool_count(db) == 2
+        hits = lc.search_tools(db, "local GLP readiness", _vec(99), top_k=1)
+        assert hits[0]["name"] == "glp_preflight"
+
 
 class TestPromoteStagingTable:
     def test_swap_replaces_live_and_drops_staging(self, tmp_path):

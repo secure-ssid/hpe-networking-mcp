@@ -1,4 +1,4 @@
-"""MCP server — Aruba Central monitoring and operational health tools (88 tools).
+"""MCP server — Aruba Central monitoring and operational health tools (90 tools).
 
 Covers: sites, devices, clients, alerts, events, scopes, inventory,
 audit logs, device health/trends, switch ports/VLANs/PoE, AP radios/ports,
@@ -11,10 +11,14 @@ manifest-confirmed report create/get/update/delete and report-run
 delete/download-link execution), client onboarding events, best-effort
 notification-rule CRUD, and a guarded read-only `central_get` escape hatch
 for the Monitoring/Notifications/Reporting/Services/Troubleshooting
-registries in the committed Central manifest, and a bounded config-health
+registries in the committed Central manifest, a bounded config-health
 remediation workflow (plan_config_health_remediation +
 execute_config_health_remediation: chunked resync with per-chunk read-back
-and partial-failure reporting).
+and partial-failure reporting), and a bounded per-device
+telemetry-to-remediation planner (plan_device_troubleshooting) that maps
+live health/alerts/events onto existing read, diagnostic, and gated
+remediation tools without executing writes, plus a bounded site planner
+(plan_site_troubleshooting) that ranks devices from inventory and alerts.
 
 Cursor pagination note: clients/radios/BSSIDs/gateways/WLANs/alerts/device-inventory
 paginate with a `next` cursor (not offset) per the v1 reference docs — list
@@ -1773,6 +1777,659 @@ def execute_config_health_remediation(
         "chunks_succeeded": succeeded,
         "chunks_failed": len(chunks) - succeeded,
         "results": results,
+    }
+
+
+_MAX_TROUBLESHOOT_ALERTS = 50
+_MAX_TROUBLESHOOT_EVENTS = 50
+_MAX_TROUBLESHOOT_HOURS = 168
+_MAX_SITE_DEVICES = 10
+_MAX_SITE_DEVICE_SCAN = 200
+_MAX_SITE_ALERTS = 50
+_ALERT_SEVERITY_SCORES = {
+    "CRITICAL": 50,
+    "HIGH": 50,
+    "MAJOR": 30,
+    "MINOR": 10,
+    "WARNING": 10,
+}
+_DEVICE_FAMILY_AP = "ap"
+_DEVICE_FAMILY_SWITCH = "switch"
+_DEVICE_FAMILY_GATEWAY = "gateway"
+_OFFLINE_STATUSES = {
+    "DOWN",
+    "OFFLINE",
+    "DISCONNECTED",
+    "UNREACHABLE",
+    "INACTIVE",
+    "NOT_CONNECTED",
+}
+_CONFIG_HEALTHY_STATUSES = {"SYNCHRONIZED", "COMPLIANT", "IN_SYNC", "HEALTHY", "SUCCESS"}
+
+
+def _device_family(device: dict[str, Any] | None) -> str:
+    raw = ""
+    if isinstance(device, dict):
+        raw = str(
+            device.get("deviceType")
+            or device.get("deviceFunction")
+            or device.get("persona")
+            or ""
+        )
+    key = raw.upper()
+    if "ACCESS_POINT" in key or key in {"AP", "CAMPUS_AP"}:
+        return _DEVICE_FAMILY_AP
+    if "GATEWAY" in key or "MOBILITY" in key:
+        return _DEVICE_FAMILY_GATEWAY
+    if "SWITCH" in key or key in {"CX", "AOS-S", "AOS_S"}:
+        return _DEVICE_FAMILY_SWITCH
+    return "unknown"
+
+
+def _switch_bundle_device_type(device: dict[str, Any] | None) -> str | None:
+    if not isinstance(device, dict):
+        return None
+    raw = " ".join(
+        str(device.get(key) or "")
+        for key in ("deviceType", "model", "firmwareVersion", "osVersion", "softwareVersion")
+    ).upper()
+    if "AOS-S" in raw or "AOS_S" in raw:
+        return "aos-s"
+    if "AOS-CX" in raw or "AOS_CX" in raw or " CX" in f" {raw}":
+        return "cx"
+    return None
+
+
+def _record_serial(record: dict[str, Any]) -> str:
+    for key in ("serialNumber", "serial", "serial_number", "deviceSerial"):
+        value = record.get(key)
+        if value not in (None, ""):
+            return str(value)
+    nested = record.get("device")
+    if isinstance(nested, dict):
+        return _record_serial(nested)
+    return ""
+
+
+def _compact_text(value: Any, limit: int = 160) -> str | None:
+    if value in (None, ""):
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    return text if len(text) <= limit else text[: limit - 3] + "..."
+
+
+def _status_token(*values: Any) -> str:
+    for value in values:
+        if value in (None, ""):
+            continue
+        return str(value).strip().upper()
+    return ""
+
+
+def _plan_action(
+    name: str,
+    capability: str,
+    reason: str,
+    arguments: dict[str, Any],
+    *,
+    requires_confirmation: bool = False,
+) -> dict[str, Any]:
+    dispatcher = "invoke_read_tool" if capability == "read" else "invoke_tool"
+    action: dict[str, Any] = {
+        "name": name,
+        "capability": capability,
+        "dispatcher": dispatcher,
+        "reason": reason,
+        "arguments": arguments,
+        "execute": False,
+    }
+    if requires_confirmation:
+        action["requires_confirmation"] = True
+    return action
+
+
+def _extend_unique(bucket: list[dict[str, Any]], action: dict[str, Any]) -> None:
+    if any(existing["name"] == action["name"] for existing in bucket):
+        return
+    bucket.append(action)
+
+
+@mcp.tool(annotations=READ_ONLY)
+def plan_device_troubleshooting(
+    serial_number: str,
+    hours: int = 24,
+    max_alerts: int = 20,
+    max_events: int = 20,
+    site_id: str | None = None,
+) -> dict[str, Any]:
+    """Build a bounded, read-only telemetry-to-remediation plan for one device.
+
+    Composes existing Central tools only: find_device, get_device_health,
+    get_device_config_issues, list_events, and list_active_alerts. It never
+    executes diagnostics or writes. Recommended next steps point at already
+    registered read, diagnostic, and gated remediation tools. Destructive
+    suggestions always set execute=False and requires_confirmation=True.
+    """
+    serial = serial_number.strip()
+    if not serial:
+        raise ValueError("serial_number must be a non-empty string")
+    if not (1 <= hours <= _MAX_TROUBLESHOOT_HOURS):
+        raise ValueError(f"hours must be between 1 and {_MAX_TROUBLESHOOT_HOURS}")
+    if not (1 <= max_alerts <= _MAX_TROUBLESHOOT_ALERTS):
+        raise ValueError(f"max_alerts must be between 1 and {_MAX_TROUBLESHOOT_ALERTS}")
+    if not (1 <= max_events <= _MAX_TROUBLESHOOT_EVENTS):
+        raise ValueError(f"max_events must be between 1 and {_MAX_TROUBLESHOOT_EVENTS}")
+
+    errors: list[str] = []
+    observations: list[str] = []
+    recommended_reads: list[dict[str, Any]] = []
+    recommended_diagnostics: list[dict[str, Any]] = []
+    recommended_writes: list[dict[str, Any]] = []
+    recommended_destructive: list[dict[str, Any]] = []
+
+    device: dict[str, Any] | None = None
+    try:
+        found = find_device(serial)
+        device = found if isinstance(found, dict) else None
+    except Exception as exc:
+        errors.append(f"find_device: {exc}")
+        device = None
+
+    family = _device_family(device)
+    device_status = _status_token(
+        (device or {}).get("status"),
+        (device or {}).get("deviceStatus"),
+        (device or {}).get("connectionStatus"),
+    )
+    resolved_site = site_id or (
+        str(
+            (device or {}).get("siteId")
+            or (device or {}).get("site_id")
+            or (device or {}).get("scopeId")
+            or ""
+        ).strip()
+        or None
+    )
+    if device is None:
+        observations.append("Device inventory lookup returned no record.")
+    else:
+        observations.append(
+            f"Inventory status={device_status or 'UNKNOWN'} family={family}."
+        )
+
+    health: dict[str, Any] | None = None
+    try:
+        health = get_device_health(serial)
+    except Exception as exc:
+        errors.append(f"get_device_health: {exc}")
+    health_status = ""
+    if isinstance(health, dict):
+        if health.get("error"):
+            errors.append(f"get_device_health: {health['error']}")
+        payload = health.get("health")
+        first = payload[0] if isinstance(payload, list) and payload else payload
+        if isinstance(first, dict):
+            health_status = _status_token(
+                first.get("configStatus"),
+                first.get("status"),
+                first.get("configHealthStatus"),
+                first.get("healthStatus"),
+            )
+        observations.append(
+            f"Health endpoint={health.get('endpoint_used') or 'none'} "
+            f"status={health_status or 'UNKNOWN'}."
+        )
+
+    issues: dict[str, Any] | None = None
+    try:
+        issues = get_device_config_issues(serial)
+    except Exception as exc:
+        errors.append(f"get_device_config_issues: {exc}")
+    issue_items = _items_from_collection(issues)
+    if isinstance(issues, dict) and issues.get("error"):
+        errors.append(f"get_device_config_issues: {issues['error']}")
+        issue_items = []
+    if issue_items:
+        observations.append(f"Config-health active issues: {len(issue_items)}.")
+
+    events_payload: dict[str, Any] | list[Any] | None = None
+    try:
+        events_payload = list_events(serial, hours=hours, limit=max_events)
+    except Exception as exc:
+        errors.append(f"list_events: {exc}")
+    event_items = _items_from_collection(events_payload)
+    compact_events = []
+    event_blob = ""
+    for event in event_items[:max_events]:
+        name = str(event.get("eventName") or event.get("name") or event.get("type") or "")
+        description = _compact_text(event.get("description") or event.get("message"))
+        compact_events.append(
+            {
+                "name": name or None,
+                "description": description,
+                "time": event.get("timeAt") or event.get("timestamp") or event.get("time"),
+            }
+        )
+        event_blob += f" {name} {description or ''}"
+    event_blob = event_blob.lower()
+    if compact_events:
+        observations.append(f"Recent events in last {hours}h: {len(compact_events)}.")
+
+    alerts_payload: dict[str, Any] | list[Any] | None = None
+    try:
+        alerts_payload = list_active_alerts(site_id=resolved_site, limit=max_alerts)
+    except Exception as exc:
+        errors.append(f"list_active_alerts: {exc}")
+    alert_items = _items_from_collection(alerts_payload)
+    if isinstance(alerts_payload, dict) and alerts_payload.get("error"):
+        errors.append(f"list_active_alerts: {alerts_payload['error']}")
+        alert_items = []
+    compact_alerts = []
+    alert_blob = ""
+    for alert in alert_items:
+        alert_serial = _record_serial(alert)
+        haystack = " ".join(
+            str(alert.get(key) or "")
+            for key in ("name", "title", "description", "alertType", "type")
+        ).lower()
+        if alert_serial:
+            if alert_serial.lower() != serial.lower():
+                continue
+        elif serial.lower() not in haystack:
+            continue
+        title = str(
+            alert.get("name")
+            or alert.get("title")
+            or alert.get("alertType")
+            or alert.get("type")
+            or ""
+        )
+        compact_alerts.append(
+            {
+                "key": alert.get("key") or alert.get("id"),
+                "severity": alert.get("severity"),
+                "name": title or None,
+                "status": alert.get("status"),
+            }
+        )
+        alert_blob += f" {title} {alert.get('severity') or ''}"
+        if len(compact_alerts) >= max_alerts:
+            break
+    alert_blob = alert_blob.lower()
+    if compact_alerts:
+        observations.append(f"Active alerts matching this serial: {len(compact_alerts)}.")
+
+    evidence = f"{device_status} {health_status} {event_blob} {alert_blob}".lower()
+    config_unhealthy = bool(issue_items) or (
+        bool(health_status) and health_status not in _CONFIG_HEALTHY_STATUSES
+    )
+    offline = device_status in _OFFLINE_STATUSES or "down" in evidence or "offline" in evidence
+
+    args = {"serial_number": serial}
+    _extend_unique(
+        recommended_reads,
+        _plan_action(
+            "get_device_health",
+            "read",
+            "Re-check live inventory/config-health after the current snapshot.",
+            args,
+        ),
+    )
+    if family == _DEVICE_FAMILY_AP or "radio" in evidence or "wlan" in evidence:
+        _extend_unique(
+            recommended_reads,
+            _plan_action(
+                "get_wireless_metrics",
+                "read",
+                "Inspect RF/client/utilization metrics for this AP.",
+                args,
+            ),
+        )
+        _extend_unique(
+            recommended_reads,
+            _plan_action("list_radios", "read", "Inspect radio state for this AP.", args),
+        )
+    if family == _DEVICE_FAMILY_SWITCH or any(
+        token in evidence for token in ("interface", "poe", "cable", "link")
+    ):
+        _extend_unique(
+            recommended_reads,
+            _plan_action(
+                "list_switch_ports",
+                "read",
+                "Inspect switch interface/PoE state before any port action.",
+                args,
+            ),
+        )
+    if "tunnel" in evidence or "gre" in evidence or "ipsec" in evidence:
+        _extend_unique(
+            recommended_reads,
+            _plan_action(
+                "list_ap_tunnels",
+                "read",
+                "Inspect AP tunnel telemetry mentioned by recent events/alerts.",
+                args,
+            ),
+        )
+    if any(token in evidence for token in ("onboarding", "roam", "flap", "client")):
+        _extend_unique(
+            recommended_reads,
+            _plan_action(
+                "detect_client_flapping",
+                "read",
+                "Check whether client onboarding/roaming events look like flapping.",
+                {"serial_number": serial, "hours": hours},
+            ),
+        )
+        _extend_unique(
+            recommended_reads,
+            _plan_action(
+                "list_clients",
+                "read",
+                "List clients currently or recently on this device.",
+                {"serial_number": serial, "limit": 50},
+            ),
+        )
+    if "ssh" in evidence:
+        _extend_unique(
+            recommended_reads,
+            _plan_action(
+                "detect_ssh_brute_force",
+                "read",
+                "Recent SSH failure events were present; inspect clustered sources.",
+                {"serial_number": serial, "hours": hours},
+            ),
+        )
+
+    if family == _DEVICE_FAMILY_SWITCH:
+        bundle_type = _switch_bundle_device_type(device)
+        bundle_args: dict[str, Any] = {"serial_number": serial}
+        if bundle_type:
+            bundle_args["device_type"] = bundle_type
+        _extend_unique(
+            recommended_diagnostics,
+            _plan_action(
+                "run_troubleshooting_bundle",
+                "diagnostic",
+                (
+                    "Run the bounded CX/AOS-S LLDP/ARP/ping/show bundle."
+                    if bundle_type
+                    else (
+                        "Switch family detected; confirm device_type=cx or "
+                        "aos-s before the bundle."
+                    )
+                ),
+                bundle_args,
+            ),
+        )
+    if any(token in evidence for token in ("cable", "tdr", "interface", "link")):
+        _extend_unique(
+            recommended_diagnostics,
+            _plan_action(
+                "cable_test",
+                "diagnostic",
+                "Interface/cable symptoms were present; run TDR after the user supplies ports.",
+                {"serial_number": serial},
+            ),
+        )
+
+    if config_unhealthy:
+        _extend_unique(
+            recommended_writes,
+            _plan_action(
+                "execute_config_health_remediation",
+                "write",
+                "Config-health is not synchronized; preview a resync with dry_run=True first.",
+                {
+                    "serial_numbers": [serial],
+                    "dry_run": True,
+                    "confirm": False,
+                },
+                requires_confirmation=True,
+            ),
+        )
+    if any(token in evidence for token in ("poe",)):
+        _extend_unique(
+            recommended_destructive,
+            _plan_action(
+                "poe_bounce",
+                "destructive",
+                "PoE symptoms were present. Do not execute unless the user confirms the port list.",
+                {"serial_number": serial},
+                requires_confirmation=True,
+            ),
+        )
+    if (
+        any(token in evidence for token in ("link", "interface"))
+        and family == _DEVICE_FAMILY_SWITCH
+    ):
+        _extend_unique(
+            recommended_destructive,
+            _plan_action(
+                "port_bounce",
+                "destructive",
+                "Link/interface symptoms were present. Bounce only after confirming the port.",
+                {"serial_number": serial},
+                requires_confirmation=True,
+            ),
+        )
+    if offline:
+        _extend_unique(
+            recommended_destructive,
+            _plan_action(
+                "reboot_device",
+                "destructive",
+                "Device appears down/offline. Reboot is last-resort and needs confirmation.",
+                args,
+                requires_confirmation=True,
+            ),
+        )
+
+    return {
+        "serial_number": serial,
+        "site_id": resolved_site,
+        "device_family": family,
+        "device_status": device_status or None,
+        "health_status": health_status or None,
+        "hours": hours,
+        "observations": observations,
+        "alerts": compact_alerts,
+        "events": compact_events,
+        "config_issue_count": len(issue_items),
+        "recommended_reads": recommended_reads,
+        "recommended_diagnostics": recommended_diagnostics,
+        "recommended_writes": recommended_writes,
+        "recommended_destructive": recommended_destructive,
+        "errors": errors,
+        "next_step": (
+            "Call the recommended_reads / recommended_diagnostics tools first. "
+            "Writes and destructive tools stay execute=False until the user confirms; "
+            "config resync must use dry_run=True before confirm=True."
+        ),
+    }
+
+
+def _alert_severity_score(severity: Any) -> int:
+    return _ALERT_SEVERITY_SCORES.get(str(severity or "").strip().upper(), 0)
+
+
+@mcp.tool(annotations=READ_ONLY)
+def plan_site_troubleshooting(
+    site_id: str | None = None,
+    site_name: str | None = None,
+    max_devices: int = 5,
+    max_alerts: int = 20,
+    include_device_plans: bool = False,
+) -> dict[str, Any]:
+    """Build a bounded, read-only troubleshooting plan for one site.
+
+    Composes get_site_health_summary, list_devices, and list_active_alerts.
+    Devices are ranked by offline/down status and matching alert severity.
+    This tool never executes diagnostics or writes. By default it only
+    recommends plan_device_troubleshooting for the top devices; set
+    include_device_plans=True to attach those nested read-only plans
+    (still execute=False) for up to max_devices (1-10).
+    """
+    if not (1 <= max_devices <= _MAX_SITE_DEVICES):
+        raise ValueError(f"max_devices must be between 1 and {_MAX_SITE_DEVICES}")
+    if not (1 <= max_alerts <= _MAX_SITE_ALERTS):
+        raise ValueError(f"max_alerts must be between 1 and {_MAX_SITE_ALERTS}")
+    if not (site_id and site_id.strip()) and not (site_name and site_name.strip()):
+        raise ValueError("Provide site_id or site_name")
+
+    errors: list[str] = []
+    observations: list[str] = []
+
+    summary: dict[str, Any] | None = None
+    try:
+        summary = get_site_health_summary(site_id=site_id, site_name=site_name)
+    except Exception as exc:
+        errors.append(f"get_site_health_summary: {exc}")
+        summary = None
+    if isinstance(summary, dict) and summary.get("error"):
+        return {
+            "error": summary["error"],
+            "site_id": site_id,
+            "site_name": site_name,
+            "priority_devices": [],
+            "recommended_reads": [],
+            "errors": errors,
+            "next_step": "Resolve the site with list_sites or get_site_health_summary.",
+        }
+
+    resolved_id = None
+    resolved_name = site_name
+    if isinstance(summary, dict):
+        resolved_id = summary.get("site_id") or site_id
+        resolved_name = summary.get("site") or site_name
+        devices_meta = summary.get("devices") if isinstance(summary.get("devices"), dict) else {}
+        alerts_meta = summary.get("alerts") if isinstance(summary.get("alerts"), dict) else {}
+        observations.append(
+            f"Site inventory devices={devices_meta.get('total', 0)} "
+            f"alerts={alerts_meta.get('total', 0)}."
+        )
+
+    devices_payload: list[dict[str, Any]] | dict[str, Any] | None = None
+    try:
+        devices_payload = list_devices(
+            site_id=str(resolved_id) if resolved_id else None,
+            limit=_MAX_SITE_DEVICE_SCAN,
+        )
+    except Exception as exc:
+        errors.append(f"list_devices: {exc}")
+    device_items = _items_from_collection(devices_payload)
+
+    alerts_payload: dict[str, Any] | list[Any] | None = None
+    try:
+        alerts_payload = list_active_alerts(
+            site_id=str(resolved_id) if resolved_id else None,
+            limit=max_alerts,
+        )
+    except Exception as exc:
+        errors.append(f"list_active_alerts: {exc}")
+    if isinstance(alerts_payload, dict) and alerts_payload.get("error"):
+        errors.append(f"list_active_alerts: {alerts_payload['error']}")
+        alert_items: list[dict[str, Any]] = []
+    else:
+        alert_items = _items_from_collection(alerts_payload)
+
+    alerts_by_serial: dict[str, list[dict[str, Any]]] = {}
+    unscoped_alerts = 0
+    for alert in alert_items:
+        serial = _record_serial(alert)
+        compact = {
+            "key": alert.get("key") or alert.get("id"),
+            "severity": alert.get("severity"),
+            "name": alert.get("name") or alert.get("title") or alert.get("alertType"),
+        }
+        if serial:
+            alerts_by_serial.setdefault(serial.upper(), []).append(compact)
+        else:
+            unscoped_alerts += 1
+    if unscoped_alerts:
+        observations.append(f"Active alerts without a device serial: {unscoped_alerts}.")
+
+    ranked: list[dict[str, Any]] = []
+    for device in device_items:
+        serial = _record_serial(device)
+        if not serial:
+            continue
+        status = _status_token(device.get("status"), device.get("deviceStatus"))
+        family = _device_family(device)
+        matched = alerts_by_serial.get(serial.upper(), [])
+        score = 0
+        if status in _OFFLINE_STATUSES:
+            score += 100
+        score += sum(_alert_severity_score(item.get("severity")) for item in matched)
+        if score <= 0:
+            continue
+        ranked.append(
+            {
+                "serial_number": serial,
+                "name": device.get("deviceName") or device.get("name"),
+                "device_family": family,
+                "status": status or None,
+                "score": score,
+                "alert_count": len(matched),
+                "alerts": matched[:5],
+                "next_tool": _plan_action(
+                    "plan_device_troubleshooting",
+                    "read",
+                    "Build a per-device read-only remediation plan for this serial.",
+                    {"serial_number": serial, "site_id": resolved_id},
+                ),
+            }
+        )
+    ranked.sort(key=lambda item: (-int(item["score"]), str(item["serial_number"])))
+    priority = ranked[:max_devices]
+    observations.append(
+        f"Ranked {len(ranked)} symptomatic devices; returning top {len(priority)}."
+    )
+
+    recommended_reads = [
+        _plan_action(
+            "get_site_health_summary",
+            "read",
+            "Re-check the site-wide health snapshot.",
+            {"site_id": resolved_id} if resolved_id else {"site_name": resolved_name},
+        )
+    ]
+    if priority:
+        recommended_reads.append(priority[0]["next_tool"])
+
+    device_plans: list[dict[str, Any]] = []
+    if include_device_plans:
+        for item in priority:
+            serial = item["serial_number"]
+            try:
+                plan = plan_device_troubleshooting(
+                    serial,
+                    site_id=str(resolved_id) if resolved_id else None,
+                )
+            except Exception as exc:
+                errors.append(f"plan_device_troubleshooting {serial}: {exc}")
+                continue
+            device_plans.append({"serial_number": serial, "plan": plan})
+
+    return {
+        "site_id": resolved_id,
+        "site": resolved_name,
+        "scanned_devices": len(device_items),
+        "symptomatic_devices": len(ranked),
+        "observations": observations,
+        "priority_devices": priority,
+        "device_plans": device_plans,
+        "recommended_reads": recommended_reads,
+        "errors": errors,
+        "next_step": (
+            "Call plan_device_troubleshooting for the highest-score serials. "
+            "Those nested plans are read-only; do not run destructive tools "
+            "unless the user confirms."
+            if priority
+            else "No symptomatic devices were ranked. Re-check get_site_health_summary."
+        ),
     }
 
 

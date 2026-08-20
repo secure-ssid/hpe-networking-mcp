@@ -14,22 +14,22 @@ whenever an index is rebuilt, and verify with
 
 | Artifact content | Count |
 |---|---:|
-| LanceDB prose chunks | 96,256 |
-| Indexed prose sources | 14 |
-| Declared RAG sources | 16 |
+| LanceDB prose chunks | 392,471 |
+| Indexed prose sources | 30 |
+| Declared RAG sources | 18 |
 | Exact endpoints | 4,106 |
 | Schemas | 8,890 |
 | Fields | 50,675 |
 | Security advisories | 104 |
-| Lifecycle records | 346 |
+| Lifecycle records | 345 |
 | Generated operation manifests | 6,144 |
-| Platform API backend catalog | 6,703 |
-| Complete backend catalog (+ `design-core`, `interop-core`) | 6,715 |
-| Registered router tool index rows | 6,715 |
+| Platform API backend catalog | 6,708 |
+| Complete backend catalog (+ Central Streaming, local GLP preflight, `design-core`, `interop-core`) | 6,722 |
+| Registered router tool index rows | 6,722 |
 
-The prose index covers 14 of the 16 declared sources: `openapi_specs` is
-parsed only into `data/specs.sqlite` (see below), and `feature_navigator`
-currently contributes no prose chunks. The registered tool index matches the
+The prose index contains 30 source partitions from the 18 declared refresh
+sources; `openapi_specs` is parsed only into `data/specs.sqlite` (see below),
+and `feature_navigator` currently contributes no prose chunks. The registered tool index matches the
 complete backend catalog exactly: both include the two credential-free
 local backends (`design-core`, `interop-core`), which are searchable but
 make no vendor API call, matching [`docs/tool-catalog.md`](tool-catalog.md).

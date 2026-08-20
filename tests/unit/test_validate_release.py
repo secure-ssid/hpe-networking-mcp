@@ -114,9 +114,10 @@ def test_release_all_catalog_pins_generated_tools_and_restores_env(monkeypatch):
 def test_public_docs_tool_counts_match_catalog():
     # Profile counts are core-only / optional-all; ignore developer .env
     # product selection so the public docs stay the authority.
-    previous_products = os.environ.pop("HPE_MCP_PRODUCTS", None)
+    previous_products = os.environ.get("HPE_MCP_PRODUCTS")
     previous_access = os.environ.get("HPE_MCP_PRODUCT_ACCESS")
     try:
+        os.environ["HPE_MCP_PRODUCTS"] = ""
         core_count = len(ingest_tools._collect())
         os.environ["HPE_MCP_PRODUCT_ACCESS"] = "read-only"
         read_only_count = len(ingest_tools._collect("all"))

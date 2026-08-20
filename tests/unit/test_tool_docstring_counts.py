@@ -71,7 +71,9 @@ def test_module_docstring_tool_counts_match_registered_tools():
 
 
 def test_public_tool_count_claims_match_registered_catalog(monkeypatch):
-    monkeypatch.delenv("HPE_MCP_PRODUCTS", raising=False)
+    # An optional-product selector in the developer's .env must not change
+    # the documented core profile count.
+    monkeypatch.setenv("HPE_MCP_PRODUCTS", "")
     core_count = len(ingest_tools._collect())
     monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-only")
     read_only_count = len(ingest_tools._collect("all"))

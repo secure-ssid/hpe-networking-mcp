@@ -14,7 +14,7 @@ You are the MCP server engineer for the `hpe-networking-mcp` repo. You know this
 - `src/hpe_networking_mcp/mcp_servers/prompts.py` — router-level MCP Prompts for guided NOC workflows.
 - `src/hpe_networking_mcp/mcp_servers/_middleware/` — null stripping, async rate limiting, unknown-tool suggestions, failure envelopes, optional MAC normalization.
 - `src/hpe_networking_mcp/mcp_servers/ops.py` — `central-ops` — device troubleshooting + actions (22 tools).
-- `src/hpe_networking_mcp/mcp_servers/glp.py` — `glp-core` — GreenLake inventory/licensing/users plus guarded `glp_get` (12 tools). GLP write tools fail closed unless `HPE_MCP_GLP_V2BETA1_WRITES=1`.
+- `src/hpe_networking_mcp/mcp_servers/glp.py` — `glp-core` — GreenLake inventory/licensing/users, local `glp_preflight`, plus guarded `glp_get` (108 curated tools). GLP write tools fail closed unless `HPE_MCP_GLP_V2BETA1_WRITES=1`.
 - `src/hpe_networking_mcp/mcp_servers/{monitoring,config,nac,rag}.py` — core Central/RAG servers.
 - `src/hpe_networking_mcp/mcp_servers/{clearpass,mist,apstra,aos8,edgeconnect,uxi}.py` — optional product starter backends.
 - `.mcp.json.example` / `.cursor/mcp.json` / `.claude/launch.json` / `.vscode/mcp.json.example` — lean stdio client registration: router minimal mode with `HPE_MCP_TOOLSETS=central,glp,rag`.

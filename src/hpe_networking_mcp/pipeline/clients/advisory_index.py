@@ -72,6 +72,12 @@ CREATE INDEX idx_lifecycle_notice_id ON lifecycle_events(notice_id);
 _SOURCE_RE = re.compile(r"<!--\s*source:\s*(.*?)\s*-->")
 _BULLET_RE = re.compile(r"^- ([^:]+):\s*(.*)$")
 _CVE_RE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
+_JSA_RE = re.compile(r"\bJSA\d{5,}\b", re.IGNORECASE)
+_HPE_SKU_RE = re.compile(r"\b[A-Z]{1,2}\d{3,4}[A-Z](?:[A-Z0-9]{0,4})?\b")
+_JUNIPER_SKU_RE = re.compile(
+    r"\b(?:MIST-)?(?:AP|ME)[A-Z0-9]*(?:-[A-Z0-9]+)+\b|\bB-AP[A-Z0-9-]+\b"
+)
+_UPDATED_ON_RE = re.compile(r"Updated on\s+(\d{1,2}/\d{1,2}/\d{4})", re.IGNORECASE)
 _SEVERITY_RANK = {
     "unknown": 0,
     "none": 0,
@@ -82,6 +88,40 @@ _SEVERITY_RANK = {
     "important": 3,
     "critical": 4,
 }
+_CHROME_TITLES = frozenset({"article detail", "juniper support portal - home", "home"})
+_NAV_LINES = frozenset(
+    {
+        "skip to main content",
+        "home",
+        "knowledge",
+        "quick links",
+        "expand search",
+        "log in",
+        "knowledge base",
+        "back",
+        "print",
+        "report a security vulnerability",
+        "article detail",
+    }
+)
+_SKIP_LIFECYCLE_STEMS = frozenset({"hpe-networking-lifecycle-policy"})
+_LABEL_ALIASES = {
+    "article id": "advisory id",
+    "advisory id": "advisory id",
+    "aggregate severity": "aggregate severity",
+    "severity": "aggregate severity",
+    "created": "initial release",
+    "initial release": "initial release",
+    "last updated": "current release",
+    "current release": "current release",
+    "status": "status",
+    "notice id": "notice id",
+    "product category": "product category",
+    "published": "published",
+    "product affected": "product affected",
+}
+_PRODUCT_NAME_HINTS = ("Juniper Apstra", "Mist Cloud", "Apstra", "Mist")
+_UNLISTED_PRODUCT = "(no product listed)"
 
 
 def _severity_rank(min_severity: str | None) -> int | None:
@@ -108,10 +148,22 @@ def _connect(db_path: Path) -> sqlite3.Connection:
 
 
 def _title(text: str, fallback: str) -> str:
+    heading = ""
     for line in text.splitlines():
         if line.startswith("# "):
-            return line[2:].strip() or fallback
-    return fallback
+            heading = line[2:].strip()
+            break
+    if heading and heading.casefold() not in _CHROME_TITLES:
+        return heading
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or stripped.startswith("<!--"):
+            continue
+        if stripped.casefold() in _NAV_LINES:
+            continue
+        if "security bulletin" in stripped.casefold() or len(stripped) > 40:
+            return stripped
+    return heading or fallback
 
 
 def _source_url(text: str) -> str:
@@ -119,12 +171,51 @@ def _source_url(text: str) -> str:
     return match.group(1).strip() if match else ""
 
 
+def _store_label(values: dict[str, str], raw_label: str, raw_value: str) -> None:
+    mapped = _LABEL_ALIASES.get(raw_label.strip().casefold())
+    value = raw_value.strip()
+    if not mapped or not value:
+        return
+    values.setdefault(mapped, value)
+    if mapped == "current release":
+        values.setdefault("published", value)
+
+
 def _metadata(text: str) -> dict[str, str]:
     values: dict[str, str] = {}
-    for line in text.splitlines():
-        match = _BULLET_RE.match(line.strip())
+    lines = [line.strip() for line in text.splitlines()]
+    for line in lines:
+        match = _BULLET_RE.match(line)
         if match:
             values[match.group(1).strip().lower()] = match.group(2).strip()
+
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if not line or line.startswith("#") or line.startswith("<!--"):
+            index += 1
+            continue
+        if ":" in line:
+            label, _, value = line.partition(":")
+            if value.strip():
+                _store_label(values, label, value)
+                index += 1
+                continue
+            if index + 1 < len(lines) and lines[index + 1]:
+                _store_label(values, label, lines[index + 1])
+                index += 2
+                continue
+        if line.casefold() in _LABEL_ALIASES and index + 1 < len(lines):
+            nxt = lines[index + 1]
+            if nxt and nxt.casefold() not in _LABEL_ALIASES and not nxt.startswith("#"):
+                _store_label(values, line, nxt)
+                index += 2
+                continue
+        index += 1
+
+    updated = _UPDATED_ON_RE.search(text)
+    if updated:
+        values.setdefault("published", updated.group(1))
     return values
 
 
@@ -149,6 +240,24 @@ def _json_list(value: str | None) -> list[str]:
     return [str(item) for item in parsed] if isinstance(parsed, list) else []
 
 
+def _advisory_products(text: str, metadata: dict[str, str]) -> list[str]:
+    products = _section_bullets(text, "Product catalog")
+    if products:
+        return products
+    affected = metadata.get("product affected", "")
+    if not affected:
+        return []
+    found = [name for name in _PRODUCT_NAME_HINTS if re.search(rf"\b{re.escape(name)}\b", affected)]
+    return found or [affected]
+
+
+def _advisory_id(metadata: dict[str, str], text: str, fallback: str) -> str:
+    if metadata.get("advisory id"):
+        return metadata["advisory id"]
+    match = _JSA_RE.search(text)
+    return match.group(0).upper() if match else fallback
+
+
 def _parse_lifecycle_skus(text: str) -> tuple[list[str], list[str]]:
     products: set[str] = set()
     replacements: set[str] = set()
@@ -162,6 +271,9 @@ def _parse_lifecycle_skus(text: str) -> tuple[list[str], list[str]]:
                 products.add(value.strip())
             elif normalized == "replacement product sku":
                 replacements.add(value.strip())
+    if not products:
+        products.update(_HPE_SKU_RE.findall(text))
+        products.update(_JUNIPER_SKU_RE.findall(text))
     return sorted(products), sorted(replacements)
 
 
@@ -190,14 +302,17 @@ def build(
             if not text:
                 counts["skipped"] += 1
                 continue
+            if kind == "lifecycle" and path.stem in _SKIP_LIFECYCLE_STEMS:
+                counts["skipped"] += 1
+                continue
             relative = str(path.relative_to(sources_dir))
             title = _title(text, path.stem)
             metadata = _metadata(text)
             source_url = _source_url(text)
 
             if kind == "security":
-                advisory_id = metadata.get("advisory id") or path.stem
-                products = _section_bullets(text, "Product catalog")
+                advisory_id = _advisory_id(metadata, text, path.stem)
+                products = _advisory_products(text, metadata)
                 cves = sorted({match.upper() for match in _CVE_RE.findall(text)})
                 conn.execute(
                     """
@@ -231,6 +346,11 @@ def build(
 
             product_skus, replacement_skus = _parse_lifecycle_skus(text)
             notice_id = metadata.get("notice id") or path.stem
+            published = (
+                metadata.get("published")
+                or metadata.get("current release")
+                or metadata.get("last updated")
+            )
             conn.execute(
                 """
                 INSERT INTO lifecycle_events (
@@ -243,7 +363,7 @@ def build(
                     notice_id,
                     title,
                     metadata.get("product category"),
-                    metadata.get("published"),
+                    published,
                     "end-of-sale/end-of-life",
                     source_url,
                     source_family,
@@ -364,23 +484,22 @@ def lookup_lifecycle(
     ]
 
 
-# ---------------------------------------------------------------------------
-# v0.7 — bounded exact list/search, cross-linking, and citation-completeness
-# diagnostics. These add filterable *listing* on top of the identifier-
-# required lookup_advisories/lookup_lifecycle above: every listing here is
-# bounded (limit <= MAX_LIST_LIMIT) and every filter is an exact/normalized
-# match against stored fields — never a fuzzy/semantic rank.
-# ---------------------------------------------------------------------------
-
 MAX_LIST_LIMIT = 200
 
 # Known-format exact date parsing only. Covers the ISO instants the Aruba
 # CSAF advisories use (only the leading YYYY-MM-DD is significant for a date
-# *range*) and the "Month D, YYYY" prose dates the legacy HPE lifecycle
-# notices use. Anything else returns None — never guessed at — so it simply
-# cannot participate in a since/until range filter.
+# *range*), the "Month D, YYYY" prose dates the legacy HPE lifecycle
+# notices use, Juniper "D Mon YYYY" / "M/D/YYYY" table dates, and the
+# "Updated on M/D/YYYY" stamp on the Aruba hardware EoS PDF. Anything else
+# returns None — never guessed at — so it simply cannot participate in a
+# since/until range filter.
 _ISO_DATE_FMT = "%Y-%m-%d"
-_PROSE_DATE_FMT = "%B %d, %Y"
+_DATE_FORMATS = (
+    "%B %d, %Y",
+    "%d %b %Y",
+    "%d %B %Y",
+    "%m/%d/%Y",
+)
 
 
 def _parse_exact_date(value: str | None) -> date | None:
@@ -392,10 +511,12 @@ def _parse_exact_date(value: str | None) -> date | None:
         return datetime.strptime(text[:10], _ISO_DATE_FMT).date()
     except ValueError:
         pass
-    try:
-        return datetime.strptime(text, _PROSE_DATE_FMT).date()
-    except ValueError:
-        return None
+    for fmt in _DATE_FORMATS:
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
 
 
 def _in_date_range(value: str | None, since: date | None, until: date | None) -> bool:
@@ -718,7 +839,10 @@ def correlate_advisory_lifecycle(
     for advisory in advisories:
         exact_matches: list[dict[str, Any]] = []
         unresolved: list[str] = []
-        for prod in advisory.get("products", []):
+        products = advisory.get("products") or []
+        if not products:
+            unresolved.append(_UNLISTED_PRODUCT)
+        for prod in products:
             hits = sku_index.get(_normalize_evidence(prod))
             if hits:
                 for hit in hits[:10]:

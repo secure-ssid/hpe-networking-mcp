@@ -14,14 +14,14 @@ The ArubaOS 8-to-Classic/New Central migration rows below are gated by the autho
 
 | Surface | Tool count |
 |---|---:|
-| Central generated + curated configuration, monitoring, NAC, and operations | 1,924 |
-| GreenLake Platform | 1,011 |
-| RAG/OpenAPI | 11 |
+| Central generated + curated configuration, monitoring, NAC, and operations | 1,926 |
+| GreenLake Platform | 1,014 |
+| RAG/OpenAPI | 12 |
 | Optional products, read-only annotated | 1,773 |
 | Optional products, guarded writes included | 3,757 |
-| **Platform API backend catalog** | **6,703** |
+| **Platform API backend catalog** | **6,708** |
 | `design-core` + `interop-core` (credential-free, no vendor API) | 12 |
-| **Complete backend catalog** | **6,715** |
+| **Complete backend catalog** | **6,722** |
 
 ## Promotion rule
 
@@ -33,6 +33,14 @@ Promote a generic GET pattern to a typed tool when it is:
 | Easy to type safely | Clear parameters and bounded output |
 | Useful across tenants | More than a one-off lab endpoint |
 | Write/destructive | Needs explicit MCP annotations and confirmation |
+
+## Central implemented workflows
+
+| Workflow | Tool | Notes |
+|---|---|---|
+| Central Streaming event collection | `central_collect_streaming_events` | Bounded read-only WSS collection for AP Monitoring, Audit Trail, Geofence, Location, and Location Analytics; validates the Advance Tier preflight and event filters, uses the shared OAuth token, reconnects with backoff, redacts output, and enforces event, input/output-byte, and elapsed-time bounds. Binary CloudEvents are reported as bounded opaque protobuf payloads until topic descriptors are bundled. |
+| Per-device telemetry-to-remediation plan | `plan_device_troubleshooting` | Read-only composite over `find_device`, `get_device_health`, `get_device_config_issues`, `list_events`, and `list_active_alerts`. Maps live symptoms onto existing read/diagnostic tools and gated remediations; never executes writes or destructive ops. |
+| Per-site telemetry-to-remediation plan | `plan_site_troubleshooting` | Read-only ranking of site devices from `get_site_health_summary`, `list_devices`, and `list_active_alerts`. Points at `plan_device_troubleshooting` for the top serials; nested plans are opt-in and still execute=False. |
 
 ## GreenLake Platform implemented starters
 
@@ -289,13 +297,12 @@ vendor specifications and live target behavior remain authoritative.
 
 | Rank | Capability | Recommended scope | Evidence |
 |---:|---|---|---|
-| 1 | Central Streaming API collector | Add a bounded, authenticated WSS collector for AP monitoring and geofence topics, including CloudEvents/protobuf decoding, event/byte/time caps, and an explicit Advanced-subscription prerequisite. | `developer_docs/developer_arubanetworks_com_new-central_docs_streaming-api-connection-management.md`, `developer_docs/developer_arubanetworks_com_new-central_docs_streaming-api-event-ap-monitoring.md` |
-| 2 | Better low-token tool ranking | Add BM25 as a deterministic ranking layer beside the current keyword and semantic passes, while retaining compact results and the read/diagnostic/write/destructive gates. Do not replace the router with an upstream generic dispatcher that exposes full schemas or weakens write controls. | [FastMCP Tool Search](https://github.com/PrefectHQ/fastmcp/blob/main/docs/servers/transforms/tool-search.mdx) |
-| 3 | Plain-language OpenAPI summaries | Add an endpoint-family summary tier between `find_tool` and exact `lookup_api` results so an agent can disambiguate a large API without loading full schemas. | [janwilmake/openapi-mcp-server](https://github.com/janwilmake/openapi-mcp-server) |
-| 4 | Generated router trajectory evals | Extend `openapi_gen` to emit framework-neutral YAML smoke cases that grade tool selection, argument construction, correctness, and hallucination across `find_tool` -> dispatch trajectories. | [cnoe-io/openapi-mcp-codegen](https://github.com/cnoe-io/openapi-mcp-codegen) |
-| 5 | Git-incremental vendor-source RAG | Index official SDKs and example repositories alongside documentation, recording repository URL and commit provenance and refreshing only changed files. | [kvncampos/nautobot_mcp](https://github.com/kvncampos/nautobot_mcp) |
-| 6 | Telemetry-to-remediation plans | Correlate alerts, audit trails, and state-of-truth data into read-only drift findings, then produce dry-run remediation plans that require the existing confirmation and platform write gates before execution. | Concept demonstrated by [kiskander/mcp-splunk-meraki](https://github.com/kiskander/mcp-splunk-meraki); no license, so do not reuse its code |
-| 7 | Generated-backend provenance parity | Normalize source-pin/provenance checks for Mist, Axis, and EdgeConnect, then promote high-value typed workflows such as EdgeConnect SD-WAN-AI sessions and Apstra blueprint commit/rollback. | `src/hpe_networking_mcp/mcp_servers/openapi_gen/provenance/`, `scripts/check_generated_tool_manifests.py` |
+| 1 | Better low-token tool ranking | Add BM25 as a deterministic ranking layer beside the current keyword and semantic passes, while retaining compact results and the read/diagnostic/write/destructive gates. Do not replace the router with an upstream generic dispatcher that exposes full schemas or weakens write controls. | [FastMCP Tool Search](https://github.com/PrefectHQ/fastmcp/blob/main/docs/servers/transforms/tool-search.mdx) |
+| 2 | Plain-language OpenAPI summaries | Add an endpoint-family summary tier between `find_tool` and exact `lookup_api` results so an agent can disambiguate a large API without loading full schemas. | [janwilmake/openapi-mcp-server](https://github.com/janwilmake/openapi-mcp-server) |
+| 3 | Generated router trajectory evals | Extend `openapi_gen` to emit framework-neutral YAML smoke cases that grade tool selection, argument construction, correctness, and hallucination across `find_tool` -> dispatch trajectories. | [cnoe-io/openapi-mcp-codegen](https://github.com/cnoe-io/openapi-mcp-codegen) |
+| 4 | Git-incremental vendor-source RAG | Index official SDKs and example repositories alongside documentation, recording repository URL and commit provenance and refreshing only changed files. | [kvncampos/nautobot_mcp](https://github.com/kvncampos/nautobot_mcp) |
+| 5 | Telemetry-to-remediation plans | Correlate alerts, audit trails, and state-of-truth data into read-only drift findings, then produce dry-run remediation plans that require the existing confirmation and platform write gates before execution. | Concept demonstrated by [kiskander/mcp-splunk-meraki](https://github.com/kiskander/mcp-splunk-meraki); no license, so do not reuse its code |
+| 6 | Generated-backend provenance parity | Normalize source-pin/provenance checks for Mist, Axis, and EdgeConnect, then promote high-value typed workflows such as EdgeConnect SD-WAN-AI sessions and Apstra blueprint commit/rollback. | `src/hpe_networking_mcp/mcp_servers/openapi_gen/provenance/`, `scripts/check_generated_tool_manifests.py` |
 
 ## Design constraints
 
