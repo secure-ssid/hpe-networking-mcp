@@ -1,5 +1,11 @@
-# Credentials — never commit
+# Credentials — never commit.
+# `.env.*` is a catch-all: setup_wizard.py and manual edits leave backups such as
+# .env.bak.<ts>, .env.broken.<ts>, .env.pre-<change>.<ts>. Those carry live tokens.
+# Only explicitly-negated template files may be tracked.
 .env
+.env.*
+!.env.example
+!.env.*.example
 config/credentials.yaml
 .token_cache_*.json
 
