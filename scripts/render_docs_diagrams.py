@@ -248,6 +248,25 @@ def _render_flow_svg(source: Path) -> str:
     return svg[start:]
 
 
+def _pin_intrinsic_size(svg: str) -> str:
+    """Replace Mermaid's ``width="100%"`` with the viewBox's real dimensions.
+
+    A percentage width leaves an SVG with no intrinsic size, so an ``<img>``
+    falls back to the 300x150 CSS default and any container stretches it to
+    whatever width happens to be available. Pinning the viewBox extent lets the
+    artifact size itself, exactly like the Graphviz-rendered flow diagrams.
+    """
+    box = re.search(r'viewBox="\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)"', svg)
+    if box is None:
+        raise RuntimeError("Mermaid output has no viewBox to size from")
+    width, height = round(float(box.group(1))), round(float(box.group(2)))
+    match = SVG_OPEN_RE.search(svg)
+    if match is None:
+        raise RuntimeError("Mermaid output has no <svg> root")
+    attrs = re.sub(r'\s(?:width|height)="[^"]*"', "", match.group(1))
+    return f'{svg[: match.start()]}<svg{attrs} width="{width}" height="{height}">{svg[match.end() :]}'
+
+
 def render() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     for source in sorted(SOURCE_DIR.glob("*.json")):
@@ -282,7 +301,7 @@ def render() -> None:
                 cwd=ROOT,
                 check=True,
             )
-            output.write_text(_decorate_svg(temporary.read_text(), source))
+            output.write_text(_decorate_svg(_pin_intrinsic_size(temporary.read_text()), source))
     for source in sorted(SOURCE_DIR.glob("*.term")):
         if source.stem not in TERMINAL_ACCESSIBILITY:
             raise SystemExit(f"Missing accessibility metadata for {source.name}")
