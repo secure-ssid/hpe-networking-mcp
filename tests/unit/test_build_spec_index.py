@@ -247,3 +247,82 @@ def test_default_source_dirs_prefers_a_live_scrape(tmp_path, monkeypatch):
         "product_specs": tmp_path / "product_specs",
     })
     assert specs_index.default_source_dirs()["openapi_specs"] == scraped
+
+
+# Room for the readable prefix (source family, scope, version, schema name) and
+# the 32-hex digest, and nothing like room for a field list. The longest name in
+# the corpus is well under this; the point of the ceiling is that re-inlining the
+# payload — which reached 179,344 bytes per row — cannot pass.
+_IDENTITY_CEILING = 512
+
+
+def test_stored_identity_is_bounded(built):
+    """The identity may not carry the schema's field list.
+
+    It is written to ``schemas.identity`` and repeated on every one of that
+    schema's ``fields`` rows, so an inlined field list is stored once per
+    field: the corpus' 31,432 field rows held 73.5 MB of it, and
+    ``idx_fields_identity`` indexed the same text again for 107.6 MB more.
+    """
+    out, _ = built
+    conn = sqlite3.connect(f"file:{out}?mode=ro", uri=True)
+    try:
+        widest_field = conn.execute(
+            "SELECT MAX(LENGTH(schema_identity)) FROM fields"
+        ).fetchone()[0]
+        widest_schema = conn.execute("SELECT MAX(LENGTH(identity)) FROM schemas").fetchone()[0]
+        # A serialized field list always contains ``[[``; a digest never can.
+        inlined = conn.execute(
+            "SELECT COUNT(*) FROM fields WHERE schema_identity LIKE '%[[%'"
+        ).fetchone()[0]
+    finally:
+        conn.close()
+    assert widest_field <= _IDENTITY_CEILING, widest_field
+    assert widest_schema <= _IDENTITY_CEILING, widest_schema
+    assert inlined == 0
+
+
+def test_identity_still_separates_schemas_that_differ_only_in_fields(built):
+    """Bounding the identity must not blunt what it is for.
+
+    Aruba ships one schema name in several overlapping spec files, so the name
+    alone cannot identify it. Two field lists that differ must still land on
+    two identities, or ``get_schema`` would fold unrelated schemas together.
+    """
+    common = {
+        "source_family": "openapi_specs",
+        "platform": "central",
+        "server": None,
+        "version": "v26.04",
+        "spec_version": None,
+        "schema_name": "Wlan",
+    }
+    one = specs_index._schema_identity(**common, field_rows=[("ssid", "string", None, None)])
+    two = specs_index._schema_identity(**common, field_rows=[("ssid", "integer", None, None)])
+    again = specs_index._schema_identity(**common, field_rows=[("ssid", "string", None, None)])
+    assert one != two
+    assert one == again
+    # Field order is not part of the schema's meaning; the field set is.
+    pair = [("ssid", "string", None, None), ("vlan", "integer", None, None)]
+    assert specs_index._schema_identity(
+        **common, field_rows=pair
+    ) == specs_index._schema_identity(**common, field_rows=list(reversed(pair)))
+
+
+def test_identity_is_reproducible_across_builds(built, rebuilt):
+    """A digest computed with ``hash()`` would be salted per process.
+
+    ``test_build_is_deterministic`` covers this through the whole-row digest;
+    this pins the identity column by itself, because it is the one column
+    whose value is derived rather than copied out of the spec.
+    """
+    first, _ = built
+    second, _ = rebuilt
+    query = "SELECT identity FROM schemas ORDER BY spec_file, name, identity"
+    left = sqlite3.connect(f"file:{first}?mode=ro", uri=True)
+    right = sqlite3.connect(f"file:{second}?mode=ro", uri=True)
+    try:
+        assert left.execute(query).fetchall() == right.execute(query).fetchall()
+    finally:
+        left.close()
+        right.close()
