@@ -144,9 +144,8 @@ The main CI workflow has two release-related tiers:
   catalog/facts gate on Python 3.10, 3.11, and 3.12 on Linux plus Python 3.12
   on macOS.
 - `Strict tool index` rebuilds the tool catalog from committed OpenAPI specs
-  and runs `--strict-tool-index`. Repository administrators enable it with the
-  Actions variable `HPE_MCP_STRICT_INDEX_ENABLED=true`; it then runs on
-  pushes, pull requests, and manual CI dispatches.
+  and runs `--strict-tool-index`. It needs no published artifact and no opt-in
+  variable, so it runs on every push and pull request as a required check.
 
 The package job also builds wheel/sdist, installs the wheel into a fresh
 environment, and smoke-runs all four `hpe-mcp-*` console scripts.
