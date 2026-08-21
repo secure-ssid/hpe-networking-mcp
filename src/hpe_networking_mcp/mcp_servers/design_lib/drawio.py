@@ -14,16 +14,23 @@ _ROLE_SHAPE: dict[str, str] = {
     "internet": "shape=mxgraph.networks.cloud;fillColor=#E1D5E7;strokeColor=#9673A6;",
     "firewall": "shape=mxgraph.cisco.security.firewall;fillColor=#F8CECC;strokeColor=#B85450;",
     "router": "shape=mxgraph.cisco.routers.router;fillColor=#FFE6CC;strokeColor=#D79B00;",
-    "core_switch": "shape=mxgraph.cisco.switches.workgroup_switch;fillColor=#D5E8D4;strokeColor=#82B366;",
-    "agg_switch": "shape=mxgraph.cisco.switches.workgroup_switch;fillColor=#D5E8D4;strokeColor=#82B366;",
-    "access_switch": "shape=mxgraph.cisco.switches.workgroup_switch;fillColor=#FFF2CC;strokeColor=#D6B656;",
+    "core_switch": "shape=mxgraph.cisco.switches.workgroup_switch;fillColor=#D5E8D4;"
+                   "strokeColor=#82B366;",
+    "agg_switch": "shape=mxgraph.cisco.switches.workgroup_switch;fillColor=#D5E8D4;"
+                  "strokeColor=#82B366;",
+    "access_switch": "shape=mxgraph.cisco.switches.workgroup_switch;fillColor=#FFF2CC;"
+                     "strokeColor=#D6B656;",
     "gateway": "shape=mxgraph.cisco.misc.gatekeeper;fillColor=#FFE6CC;strokeColor=#D79B00;",
-    "campus_ap": "shape=mxgraph.cisco.wireless.wireless_access_point;fillColor=#DAE8FC;strokeColor=#6C8EBF;",
-    "mist_ap": "shape=mxgraph.cisco.wireless.wireless_access_point;fillColor=#E1D5E7;strokeColor=#9673A6;",
+    "campus_ap": "shape=mxgraph.cisco.wireless.wireless_access_point;fillColor=#DAE8FC;"
+                 "strokeColor=#6C8EBF;",
+    "mist_ap": "shape=mxgraph.cisco.wireless.wireless_access_point;fillColor=#E1D5E7;"
+               "strokeColor=#9673A6;",
     "clearpass": "shape=mxgraph.cisco.servers.server;fillColor=#F5F5F5;strokeColor=#666666;",
-    "controller": "shape=mxgraph.cisco.controllers_and_modules.system_controller;fillColor=#DAE8FC;strokeColor=#6C8EBF;",
+    "controller": "shape=mxgraph.cisco.controllers_and_modules.system_controller;fillColor=#DAE8FC;"
+                  "strokeColor=#6C8EBF;",
     "server": "shape=mxgraph.cisco.servers.server;fillColor=#F5F5F5;strokeColor=#666666;",
-    "client": "shape=mxgraph.cisco.computers_and_peripherals.pc;fillColor=#F5F5F5;strokeColor=#666666;",
+    "client": "shape=mxgraph.cisco.computers_and_peripherals.pc;fillColor=#F5F5F5;"
+              "strokeColor=#666666;",
     "generic": "rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;",
 }
 

@@ -350,7 +350,10 @@ class TestConcurrency:
 
         async def _run():
             await asyncio.gather(
-                *[srv._tool_manager.call_tool("fast_tool", {"x": i}, Context(mcp_server=srv)) for i in range(50)]
+                *[
+                    srv._tool_manager.call_tool("fast_tool", {"x": i}, Context(mcp_server=srv))
+                    for i in range(50)
+                ]
             )
 
         asyncio.run(_run())

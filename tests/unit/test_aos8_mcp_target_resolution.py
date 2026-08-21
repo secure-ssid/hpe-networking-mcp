@@ -609,7 +609,8 @@ def test_role_assignment_verification_production_dispatcher_bounds_1000_item_bac
         return result
 
     monkeypatch.setattr(
-        "hpe_networking_mcp.mcp_servers.config.list_config_assignments", _counting_list_config_assignments
+        "hpe_networking_mcp.mcp_servers.config.list_config_assignments",
+        _counting_list_config_assignments,
     )
 
     service = aos8._aos8_migration_orchestrator()

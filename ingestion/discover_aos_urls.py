@@ -74,7 +74,10 @@ def main():
                 break
 
     if not isinstance(data, list):
-        raise SystemExit(f"Unexpected index shape: {type(data)} keys={list(data)[:5] if hasattr(data,'__iter__') else '?'}")
+        raise SystemExit(
+            f"Unexpected index shape: {type(data)} "
+            f"keys={list(data)[:5] if hasattr(data,'__iter__') else '?'}"
+        )
 
     print(f"Index has {len(data)} entries")
 
@@ -82,7 +85,10 @@ def main():
     per_book: dict[str, set[str]] = {b: set() for b in BOOKS}
     skipped = 0
     for entry in data:
-        uri = entry.get("ref") or entry.get("uri") or entry.get("url") or entry.get("href") or entry.get("permalink")
+        uri = (
+            entry.get("ref") or entry.get("uri") or entry.get("url")
+            or entry.get("href") or entry.get("permalink")
+        )
         if not uri:
             skipped += 1
             continue

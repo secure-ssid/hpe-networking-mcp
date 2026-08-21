@@ -106,7 +106,9 @@ def test_gateway_iperf_uses_async_helper(monkeypatch):
 
 def test_gateway_ping_sweep_validates_packet_size_range():
     async def _run():
-        return await ops.gateway_ping_sweep("GW1", "1.1.1.1", start_packet_size=100, end_packet_size=50, sweep_interval=10)
+        return await ops.gateway_ping_sweep(
+            "GW1", "1.1.1.1", start_packet_size=100, end_packet_size=50, sweep_interval=10
+        )
 
     try:
         asyncio.run(_run())
@@ -127,7 +129,9 @@ def test_gateway_ping_sweep_uses_async_helper(monkeypatch):
     monkeypatch.setattr(ops, "atroubleshoot_async", fake_async)
 
     result = asyncio.run(
-        ops.gateway_ping_sweep("GW1", "1.1.1.1", start_packet_size=50, end_packet_size=100, sweep_interval=10, count=3)
+        ops.gateway_ping_sweep(
+            "GW1", "1.1.1.1", start_packet_size=50, end_packet_size=100, sweep_interval=10, count=3
+        )
     )
 
     assert result["status"] == "COMPLETED"

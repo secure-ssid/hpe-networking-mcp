@@ -44,7 +44,9 @@ class _FakeAsyncClient:
         return _FakeAsyncClient.responder("POST", url, json, headers, None)
 
     async def request(self, method, url, headers=None, params=None, json=None):
-        _FakeAsyncClient.calls.append((method, url, {"headers": headers, "params": params, "json": json}))
+        _FakeAsyncClient.calls.append(
+            (method, url, {"headers": headers, "params": params, "json": json})
+        )
         return _FakeAsyncClient.responder(method, url, json, headers, params)
 
 
@@ -243,7 +245,9 @@ def test_apstra_create_connectivity_template_preview(monkeypatch):
     client = _install_fake_client(monkeypatch, lambda *a: pytest.fail("unexpected network call"))
 
     out = asyncio.run(
-        apstra.apstra_create_connectivity_template("bp1", {"label": "New-CT", "policy_type": "junos"})
+        apstra.apstra_create_connectivity_template(
+            "bp1", {"label": "New-CT", "policy_type": "junos"}
+        )
     )
     assert out["dry_run"] is True
     assert out["method"] == "PUT"

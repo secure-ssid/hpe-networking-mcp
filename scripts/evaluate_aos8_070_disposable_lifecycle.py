@@ -75,7 +75,8 @@ class LifecycleKind:
 
     `object_type`/`build_payload` are only meaningful when
     `adapter_mapping_verified` is True: they build a synthetic, lab-owned
-    candidate dict in the exact shape `hpe_networking_mcp.pipeline.aos8_migration.build_migration_plan`
+    candidate dict in the exact shape
+    `hpe_networking_mcp.pipeline.aos8_migration.build_migration_plan`
     would have produced, which `NewCentralAdapter.candidate_action` maps
     the same way it would for a real migration candidate -- this harness
     never duplicates or approximates the adapter's own mapping logic.

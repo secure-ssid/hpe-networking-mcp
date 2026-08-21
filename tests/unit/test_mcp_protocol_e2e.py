@@ -275,7 +275,8 @@ def test_blocked_write_envelope_survives_the_wire(monkeypatch):
     ResponseEnvelopeMiddleware {ok, status, data, message, tool} shape --
     proving the whole middleware chain, not just the raw tool function,
     runs on a real protocol-boundary call."""
-    monkeypatch.setenv("HPE_MCP_MIST_WRITES", "0")  # explicit disable — .env sets PRODUCT_ACCESS=read-write as fallback
+    # explicit disable — .env sets PRODUCT_ACCESS=read-write as fallback
+    monkeypatch.setenv("HPE_MCP_MIST_WRITES", "0")
 
     async def _run():
         server = _build_server()

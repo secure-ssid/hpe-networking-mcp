@@ -24,7 +24,9 @@ def test_s1_discover_unmanaged_found_via_mcp(
     source_ctx.mcp_client.get_device_by_serial.return_value = {
         "model": "CX-6300", "firmwareVersion": "10.10.0"
     }
-    result = DiscoverStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = DiscoverStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
     assert result.status == StageStatus.SUCCESS
     assert record_unmanaged.model == "CX-6300"
 
@@ -33,8 +35,12 @@ def test_s1_discover_unmanaged_falls_back_to_glp(
     record_unmanaged, source_ctx, target_ctx, state, run_id
 ):
     source_ctx.mcp_client.get_device_by_serial.return_value = None
-    source_ctx.glp_client.get_device.return_value = {"model": "CX-8360", "firmwareVersion": "10.9.0"}
-    result = DiscoverStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    source_ctx.glp_client.get_device.return_value = {
+        "model": "CX-8360", "firmwareVersion": "10.9.0"
+    }
+    result = DiscoverStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
     assert result.status == StageStatus.SUCCESS
     assert record_unmanaged.model == "CX-8360"
 
@@ -42,21 +48,27 @@ def test_s1_discover_unmanaged_falls_back_to_glp(
 def test_s1_discover_not_found(record_unmanaged, source_ctx, target_ctx, state, run_id):
     source_ctx.mcp_client.get_device_by_serial.return_value = None
     source_ctx.glp_client.get_device.return_value = None
-    result = DiscoverStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = DiscoverStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
     assert result.status == StageStatus.FAILED
     assert "DISCOVERY_FAILED" in result.error
 
 
 def test_s1_discover_classic_central(record_classic_central, source_ctx, target_ctx, state, run_id):
     source_ctx.central_client.get.return_value = {"model": "CX-6300", "firmwareVersion": "10.10.0"}
-    result = DiscoverStage()._execute(record_classic_central, run_id, source_ctx, target_ctx, state, False)
+    result = DiscoverStage()._execute(
+        record_classic_central, run_id, source_ctx, target_ctx, state, False
+    )
     assert result.status == StageStatus.SUCCESS
 
 
 def test_s1_discover_resume_skip(record_unmanaged, source_ctx, target_ctx, state, run_id):
     """Stage should be skipped if already succeeded."""
     from hpe_networking_mcp.pipeline.models import StageStatus
-    state.set_stage_status(record_unmanaged.serial_number, run_id, "s1_discover", StageStatus.SUCCESS)
+    state.set_stage_status(
+        record_unmanaged.serial_number, run_id, "s1_discover", StageStatus.SUCCESS
+    )
     result = DiscoverStage().run(record_unmanaged, run_id, source_ctx, target_ctx, state)
     assert result.status == StageStatus.SKIPPED
 
@@ -71,7 +83,9 @@ def test_s2_validate_passes(record_unmanaged, source_ctx, target_ctx, state, run
     target_ctx.mcp_client.get_site_by_name.return_value = {"siteId": "site-123"}
     target_ctx.mcp_client.get_alerts.return_value = []
     target_ctx.central_client.get.return_value = {"data": [{"group": "Onboarding"}]}
-    result = ValidateStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = ValidateStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
     assert result.status == StageStatus.SUCCESS
     assert record_unmanaged.site_id == "site-123"
 
@@ -82,7 +96,9 @@ def test_s2_validate_already_provisioned_fails(
     target_ctx.mcp_client.get_device_by_serial.return_value = {"isProvisioned": "YES"}
     target_ctx.mcp_client.get_site_by_name.return_value = {"siteId": "site-123"}
     target_ctx.central_client.get.return_value = {"data": [{"group": "Onboarding"}]}
-    result = ValidateStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = ValidateStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
     assert result.status == StageStatus.FAILED
     assert "already provisioned" in result.error
 
@@ -94,7 +110,9 @@ def test_s2_validate_missing_group_fails(
     target_ctx.mcp_client.get_site_by_name.return_value = None
     target_ctx.mcp_client.get_alerts.return_value = []
     target_ctx.central_client.get.return_value = {"data": [{"group": "OtherGroup"}]}
-    result = ValidateStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = ValidateStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
     assert result.status == StageStatus.FAILED
     assert "VALIDATION_FAILED" in result.error
 
@@ -107,7 +125,9 @@ def test_s2_validate_missing_group_fails(
 def test_s3_offboard_skipped_for_unmanaged(
     record_unmanaged, source_ctx, target_ctx, state, run_id
 ):
-    result = OffboardStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = OffboardStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
     assert result.status == StageStatus.SKIPPED
 
 
@@ -129,7 +149,9 @@ def test_s4_transfer_skipped_for_same_account(
     record_unmanaged, source_ctx, target_ctx, state, run_id
 ):
     assert record_unmanaged.target_account == TargetAccount.SAME
-    result = TransferStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = TransferStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
     assert result.status == StageStatus.SKIPPED
 
 
@@ -177,11 +199,14 @@ def _setup_s6_mocks(target_ctx, switch_group_name="Switches"):
 
     target_ctx.central_client.get.side_effect = _get
     target_ctx.central_client.post.return_value = {}
-    target_ctx.mcp_client.get_device_scope_id.return_value = "12345"  # numeric string — required by scope-map
+    # numeric string — required by scope-map
+    target_ctx.mcp_client.get_device_scope_id.return_value = "12345"
     target_ctx.mcp_client.get_site_by_name.return_value = {"siteId": "site-abc"}
 
 
-def test_s6_vlan_push_access_switch(record_unmanaged, source_ctx, target_ctx, state, run_id, tmp_path):
+def test_s6_vlan_push_access_switch(
+    record_unmanaged, source_ctx, target_ctx, state, run_id, tmp_path
+):
     """VLANs from config file are posted when persona is ACCESS_SWITCH."""
     vlan_cfg = tmp_path / "switch.cfg"
     vlan_cfg.write_text("vlan 10\nvlan 20\n")
@@ -189,7 +214,9 @@ def test_s6_vlan_push_access_switch(record_unmanaged, source_ctx, target_ctx, st
     record_unmanaged.scope_id = "12345"
     _setup_s6_mocks(target_ctx)
 
-    result = ConfigureStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = ConfigureStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
 
     assert result.status == StageStatus.SUCCESS
     assert result.data["vlans_pushed"] == 2
@@ -198,7 +225,9 @@ def test_s6_vlan_push_access_switch(record_unmanaged, source_ctx, target_ctx, st
     assert any("layer2-vlan" in c for c in post_calls)
 
 
-def test_s6_vlan_push_skipped_for_non_access(record_classic_central, source_ctx, target_ctx, state, run_id, tmp_path):
+def test_s6_vlan_push_skipped_for_non_access(
+    record_classic_central, source_ctx, target_ctx, state, run_id, tmp_path
+):
     """VLANs are not pushed when persona is not ACCESS_SWITCH."""
     vlan_cfg = tmp_path / "switch.cfg"
     vlan_cfg.write_text("vlan 10\nvlan 20\n")
@@ -206,7 +235,9 @@ def test_s6_vlan_push_skipped_for_non_access(record_classic_central, source_ctx,
     record_classic_central.scope_id = "12345"
     _setup_s6_mocks(target_ctx)
 
-    result = ConfigureStage()._execute(record_classic_central, run_id, source_ctx, target_ctx, state, False)
+    result = ConfigureStage()._execute(
+        record_classic_central, run_id, source_ctx, target_ctx, state, False
+    )
 
     assert result.status == StageStatus.SUCCESS
     assert result.data["vlans_pushed"] == 0
@@ -219,7 +250,9 @@ def test_s6_vlan_push_skipped_when_no_file(record_unmanaged, source_ctx, target_
     record_unmanaged.scope_id = "12345"
     _setup_s6_mocks(target_ctx)
 
-    result = ConfigureStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = ConfigureStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
 
     assert result.status == StageStatus.SUCCESS
     assert result.data["vlans_pushed"] == 0
@@ -236,7 +269,9 @@ def test_s6_vlan_interface_push(record_unmanaged, source_ctx, target_ctx, state,
     record_unmanaged.scope_id = "12345"
     _setup_s6_mocks(target_ctx)
 
-    result = ConfigureStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = ConfigureStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
 
     assert result.status == StageStatus.SUCCESS
     assert result.data["vlan_interfaces_pushed"] == 2
@@ -253,12 +288,16 @@ def test_s6_vlan_interface_push(record_unmanaged, source_ctx, target_ctx, state,
     assert not any("vlan-interfaces/50" in c and "ipv4" in c for c in post_calls)
 
 
-def test_s6_vlan_interface_skipped_when_no_file(record_unmanaged, source_ctx, target_ctx, state, run_id):
+def test_s6_vlan_interface_skipped_when_no_file(
+    record_unmanaged, source_ctx, target_ctx, state, run_id
+):
     """No VLAN interface push if vlan_interface_config_file is None."""
     record_unmanaged.scope_id = "12345"
     _setup_s6_mocks(target_ctx)
 
-    result = ConfigureStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = ConfigureStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
 
     assert result.status == StageStatus.SUCCESS
     assert result.data["vlan_interfaces_pushed"] == 0
@@ -270,7 +309,9 @@ def test_s6_device_profiles_created(record_unmanaged, source_ctx, target_ctx, st
     _setup_s6_mocks(target_ctx)
     target_ctx.device_profiles_created = False
 
-    result = ConfigureStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = ConfigureStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
 
     assert result.status == StageStatus.SUCCESS
     post_calls = [str(c) for c in target_ctx.central_client.post.call_args_list]
@@ -288,20 +329,26 @@ def test_s6_device_profiles_created(record_unmanaged, source_ctx, target_ctx, st
     assert target_ctx.device_profiles_created is True
 
 
-def test_s6_device_profiles_skipped_second_device(record_unmanaged, source_ctx, target_ctx, state, run_id):
+def test_s6_device_profiles_skipped_second_device(
+    record_unmanaged, source_ctx, target_ctx, state, run_id
+):
     """Device profiles are NOT re-created when device_profiles_created is already True."""
     record_unmanaged.scope_id = "12345"
     _setup_s6_mocks(target_ctx)
     target_ctx.device_profiles_created = True  # already done in prior device
 
-    result = ConfigureStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = ConfigureStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
 
     assert result.status == StageStatus.SUCCESS
     post_calls = [str(c) for c in target_ctx.central_client.post.call_args_list]
     assert not any("device-profile" in c for c in post_calls)
 
 
-def test_s6_device_profile_duplicate_is_silent(record_unmanaged, source_ctx, target_ctx, state, run_id):
+def test_s6_device_profile_duplicate_is_silent(
+    record_unmanaged, source_ctx, target_ctx, state, run_id
+):
     """A 'duplicate' error on profile POST is silently skipped and stage still succeeds."""
     record_unmanaged.scope_id = "12345"
     _setup_s6_mocks(target_ctx)
@@ -313,7 +360,9 @@ def test_s6_device_profile_duplicate_is_silent(record_unmanaged, source_ctx, tar
     exc.response = resp
     target_ctx.central_client.post.side_effect = exc
 
-    result = ConfigureStage()._execute(record_unmanaged, run_id, source_ctx, target_ctx, state, False)
+    result = ConfigureStage()._execute(
+        record_unmanaged, run_id, source_ctx, target_ctx, state, False
+    )
 
     assert result.status == StageStatus.SUCCESS
     assert target_ctx.device_profiles_created is True
@@ -360,7 +409,8 @@ def test_s8_verify_passes(record_unmanaged, source_ctx, target_ctx, state, run_i
 
 
 def test_s8_verify_offline_is_warning_only(record_unmanaged, source_ctx, target_ctx, state, run_id):
-    # OFFLINE status is a warning, not a hard failure — device still passes if provisioned + firmware ok
+    # OFFLINE status is a warning, not a hard failure — device still passes if
+    # provisioned + firmware ok
     target_ctx.mcp_client.get_device_by_serial.return_value = {
         "isProvisioned": "YES",
         "status": "OFFLINE",
@@ -371,7 +421,9 @@ def test_s8_verify_offline_is_warning_only(record_unmanaged, source_ctx, target_
     assert result.status == StageStatus.SUCCESS
 
 
-def test_s8_verify_fails_config_out_of_sync(record_unmanaged, source_ctx, target_ctx, state, run_id):
+def test_s8_verify_fails_config_out_of_sync(
+    record_unmanaged, source_ctx, target_ctx, state, run_id
+):
     target_ctx.mcp_client.get_device_by_serial.return_value = {
         "isProvisioned": "YES",
         "status": "ONLINE",

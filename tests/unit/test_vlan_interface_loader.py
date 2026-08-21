@@ -75,7 +75,10 @@ def test_no_vlan_interfaces():
 
 def test_multiple_helpers_only_last_wins():
     # Only one helper-address per interface is tracked
-    text = "interface vlan 5\n    ip address 10.0.0.1/24\n    ip helper-address 1.1.1.1\n    ip helper-address 2.2.2.2\n"
+    text = (
+        "interface vlan 5\n    ip address 10.0.0.1/24\n"
+        "    ip helper-address 1.1.1.1\n    ip helper-address 2.2.2.2\n"
+    )
     result = parse_vlan_interfaces(text)
     assert result[0]["helper_address"] == "2.2.2.2"
 

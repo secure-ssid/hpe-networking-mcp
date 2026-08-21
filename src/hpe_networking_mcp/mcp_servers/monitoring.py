@@ -1030,7 +1030,8 @@ def list_scopes(
                         warnings.append(
                             warning(
                                 endpoint,
-                                f"terminal page reported total {total} after {raw_items_seen} records",
+                                f"terminal page reported total {total} "
+                                f"after {raw_items_seen} records",
                             )
                         )
                         source_truncated = True
@@ -1063,7 +1064,8 @@ def list_scopes(
                     warnings.append(
                         warning(
                             endpoint,
-                            f"response omitted continuation offset with {total - raw_items_seen} records remaining",
+                            f"response omitted continuation offset with "
+                            f"{total - raw_items_seen} records remaining",
                         )
                     )
                     source_truncated = True
@@ -1071,7 +1073,8 @@ def list_scopes(
                     warnings.append(
                         warning(
                             endpoint,
-                            f"response total {total} is smaller than {raw_items_seen} records received",
+                            f"response total {total} is smaller than "
+                            f"{raw_items_seen} records received",
                         )
                     )
                     source_truncated = True

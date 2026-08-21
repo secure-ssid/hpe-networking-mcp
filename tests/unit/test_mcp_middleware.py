@@ -59,7 +59,9 @@ def _call(srv: MCPServer, name: str, args: dict[str, Any]):
 
 
 def _call_converted(srv: MCPServer, name: str, args: dict[str, Any]):
-    return asyncio.run(srv._tool_manager.call_tool(name, args, Context(mcp_server=srv), convert_result=True))
+    return asyncio.run(
+        srv._tool_manager.call_tool(name, args, Context(mcp_server=srv), convert_result=True)
+    )
 
 
 # ---------------------------------------------------------------------------

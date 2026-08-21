@@ -13,7 +13,8 @@ Auth/env:
 The curated `/gms/rest/*` and `/rest/json/*` compatibility tools remain behind
 `EDGECONNECT_ALLOW_LEGACY_API`. In addition, 1,216 generated direct tools are
 registered from the reviewed EdgeConnect 9.7-derived operation manifest in
-`src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/edgeconnect.json`; those current operations
+`src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/edgeconnect.json`; those
+current operations
 do not pass through the legacy compatibility gate.
 """
 

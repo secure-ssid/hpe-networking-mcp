@@ -307,7 +307,9 @@ def test_aos8_get_retries_once_after_401_with_fresh_login(monkeypatch):
         "logged_in_at": aos8.time.time(),
         "expires_at": aos8.time.time() + 600,
     }
-    get_responses = [_JsonResp(status_code=401, payload={"error": "expired"}), _JsonResp(payload={"ok": True})]
+    get_responses = [
+        _JsonResp(status_code=401, payload={"error": "expired"}), _JsonResp(payload={"ok": True})
+    ]
 
     calls = {}
 

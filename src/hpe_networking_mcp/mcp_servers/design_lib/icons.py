@@ -31,7 +31,8 @@ _DRAWIO_ROLE_STYLE: dict[str, str] = {
     "campus_ap": "ellipse;fillColor=#DAE8FC;strokeColor=#6C8EBF;",
     "mist_ap": "ellipse;fillColor=#E1D5E7;strokeColor=#9673A6;",
     "clearpass": "shape=cylinder3;size=12;fillColor=#F5F5F5;strokeColor=#666666;",
-    "core_switch": "shape=mxgraph.cisco.switches.workgroup_switch;fillColor=#D5E8D4;strokeColor=#82B366;",
+    "core_switch": "shape=mxgraph.cisco.switches.workgroup_switch;fillColor=#D5E8D4;"
+                   "strokeColor=#82B366;",
 }
 
 

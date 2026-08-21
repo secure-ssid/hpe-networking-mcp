@@ -21,7 +21,11 @@ HEADERS = {
 
 def load_urls():
     import os
-    path = "/tmp/techdocs_missing.json" if os.path.exists("/tmp/techdocs_missing.json") else "/tmp/techdocs_urls.json"
+    path = (
+        "/tmp/techdocs_missing.json"
+        if os.path.exists("/tmp/techdocs_missing.json")
+        else "/tmp/techdocs_urls.json"
+    )
     with open(path) as f:
         return json.load(f)
 

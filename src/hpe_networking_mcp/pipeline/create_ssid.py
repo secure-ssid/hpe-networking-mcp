@@ -162,11 +162,15 @@ def _build_ssid_body(
         },
         "g-legacy-rates": {
             "basic-rates": ["RATE_12MB", "RATE_24MB"],
-            "tx-rates": ["RATE_12MB", "RATE_18MB", "RATE_24MB", "RATE_36MB", "RATE_48MB", "RATE_54MB"],
+            "tx-rates": [
+                "RATE_12MB", "RATE_18MB", "RATE_24MB", "RATE_36MB", "RATE_48MB", "RATE_54MB"
+            ],
         },
         "a-legacy-rates": {
             "basic-rates": ["RATE_12MB", "RATE_24MB"],
-            "tx-rates": ["RATE_12MB", "RATE_18MB", "RATE_24MB", "RATE_36MB", "RATE_48MB", "RATE_54MB"],
+            "tx-rates": [
+                "RATE_12MB", "RATE_18MB", "RATE_24MB", "RATE_36MB", "RATE_48MB", "RATE_54MB"
+            ],
         },
         "high-efficiency": {
             "enable": True,
@@ -303,7 +307,9 @@ def build_underlay_ssid(
     endpoint = f"/network-config/v1/wlan-ssids/{url_name}"
 
     if dry_run:
-        logger.info("[dry-run] Would POST %s with vlan_ids=%s opmode=%s", endpoint, vlan_ids, opmode)
+        logger.info(
+            "[dry-run] Would POST %s with vlan_ids=%s opmode=%s", endpoint, vlan_ids, opmode
+        )
         result["created"] = True  # pretend success for reporting
     else:
         try:
@@ -313,7 +319,9 @@ def build_underlay_ssid(
         except Exception as exc:
             resp_text = getattr(getattr(exc, "response", None), "text", "") or str(exc)
             if "duplicate" in resp_text.lower() or "already exists" in resp_text.lower():
-                logger.warning("SSID '%s' already exists — skipping create, continuing to scope-map", ssid_name)
+                logger.warning(
+                    "SSID '%s' already exists — skipping create, continuing to scope-map", ssid_name
+                )
                 result["created"] = True  # treat as success
             else:
                 result["errors"].append(f"create_ssid: {exc}")
@@ -336,7 +344,8 @@ def build_underlay_ssid(
 
     if dry_run:
         logger.info(
-            "[dry-run] Would POST /network-config/v1/scope-maps — %s scope=%s resource=wlan-ssids/%s",
+            "[dry-run] Would POST /network-config/v1/scope-maps — %s scope=%s "
+            "resource=wlan-ssids/%s",
             persona, scope_id, ssid_name,
         )
         result["scope_mapped"] = True
@@ -516,7 +525,9 @@ def build_overlay_ssid(
                 ]
             }
             if dry_run:
-                logger.info("[dry-run] Would scope-map %s → %s scope=%s", resource, persona, r_scope_id)
+                logger.info(
+                    "[dry-run] Would scope-map %s → %s scope=%s", resource, persona, r_scope_id
+                )
             else:
                 try:
                     central_client.post("/network-config/v1/scope-maps", data=role_scope_map)
@@ -524,7 +535,9 @@ def build_overlay_ssid(
                 except Exception as exc:
                     resp_text = getattr(getattr(exc, "response", None), "text", "") or str(exc)
                     if "already exists" in resp_text.lower():
-                        logger.warning("Scope-map for %s (%s) already exists — skipping", resource, persona)
+                        logger.warning(
+                            "Scope-map for %s (%s) already exists — skipping", resource, persona
+                        )
                     else:
                         result["errors"].append(f"scope_map_role ({resource}/{persona}): {exc}")
                         logger.error("Failed to scope-map %s (%s): %s", resource, persona, exc)
@@ -546,7 +559,9 @@ def build_overlay_ssid(
             except Exception as exc:
                 resp_text = getattr(getattr(exc, "response", None), "text", "") or str(exc)
                 if "duplicate" in resp_text.lower() or "already exists" in resp_text.lower():
-                    logger.warning("macauth object '%s' already exists — continuing", aaa_profile_name)
+                    logger.warning(
+                        "macauth object '%s' already exists — continuing", aaa_profile_name
+                    )
                 else:
                     result["errors"].append(f"create_macauth: {exc}")
                     logger.error("Failed to create macauth object '%s': %s", aaa_profile_name, exc)
@@ -562,13 +577,21 @@ def build_overlay_ssid(
         }
         aaa_endpoint = f"/network-config/v1alpha1/aaa-profile/{quote(aaa_profile_name, safe='')}"
         if dry_run:
-            logger.info("[dry-run] Would POST %s (AAA profile, server-group=%s)", aaa_endpoint, mac_auth_server_group)
+            logger.info(
+                "[dry-run] Would POST %s (AAA profile, server-group=%s)",
+                aaa_endpoint,
+                mac_auth_server_group,
+            )
             result["aaa_profile_created"] = True
         else:
             try:
                 central_client.post(aaa_endpoint, data=aaa_payload)
                 result["aaa_profile_created"] = True
-                logger.info("Created AAA profile '%s' → server-group '%s'", aaa_profile_name, mac_auth_server_group)
+                logger.info(
+                    "Created AAA profile '%s' → server-group '%s'",
+                    aaa_profile_name,
+                    mac_auth_server_group,
+                )
             except Exception as exc:
                 resp_text = getattr(getattr(exc, "response", None), "text", "") or str(exc)
                 if "duplicate" in resp_text.lower() or "already exists" in resp_text.lower():
@@ -639,7 +662,9 @@ def build_overlay_ssid(
             logger.info("[dry-run] Would PATCH policy-groups to add '%s'", effective_policy)
         else:
             logger.info("[dry-run] Using existing policy '%s' (skipping creation)", policy_name)
-        logger.info("[dry-run] Would scope-map policies/%s → CAMPUS_AP + MOBILITY_GW", effective_policy)
+        logger.info(
+            "[dry-run] Would scope-map policies/%s → CAMPUS_AP + MOBILITY_GW", effective_policy
+        )
     else:
         if not policy_name:
             # Create a new allow-all policy named after the SSID
@@ -696,10 +721,14 @@ def build_overlay_ssid(
             except Exception as exc:
                 resp_text = getattr(getattr(exc, "response", None), "text", "") or str(exc)
                 if "already exists" in resp_text.lower():
-                    logger.warning("Scope-map for policies/%s (%s) already exists", effective_policy, persona)
+                    logger.warning(
+                        "Scope-map for policies/%s (%s) already exists", effective_policy, persona
+                    )
                 else:
                     result["errors"].append(f"scope_map_policy ({persona}): {exc}")
-                    logger.error("Failed to scope-map policy '%s' (%s): %s", effective_policy, persona, exc)
+                    logger.error(
+                        "Failed to scope-map policy '%s' (%s): %s", effective_policy, persona, exc
+                    )
 
     # ------------------------------------------------------------------
     # Step 2: Create wlan-ssid
@@ -743,7 +772,10 @@ def build_overlay_ssid(
                     "denylist": False,
                 },
             )
-            logger.info("Patched MAC-auth defaults on SSID '%s' (include-ssid=true, denylist=false)", ssid_name)
+            logger.info(
+                "Patched MAC-auth defaults on SSID '%s' (include-ssid=true, denylist=false)",
+                ssid_name,
+            )
         except Exception as exc:
             result["errors"].append(f"patch_macauth_defaults: {exc}")
             logger.error("Failed to patch MAC-auth defaults on SSID '%s': %s", ssid_name, exc)
@@ -766,24 +798,39 @@ def build_overlay_ssid(
                 if "auth-precedence" not in auth:
                     auth["auth-precedence"] = ["MAC_AUTH", "DOT1X"]
                 central_client.put(gw_aaa_endpoint, data=aaa_obj)
-                logger.info("Normalized active GW AAA profile '%s' for SSID '%s'", gw_profile, ssid_name)
+                logger.info(
+                    "Normalized active GW AAA profile '%s' for SSID '%s'", gw_profile, ssid_name
+                )
 
                 # Clean up helper profile created by this function when Central chose
                 # a different active profile name.
                 if aaa_profile_name != gw_profile:
-                    helper_ep = f"/network-config/v1alpha1/aaa-profile/{quote(aaa_profile_name, safe='')}"
+                    helper_ep = (
+                        f"/network-config/v1alpha1/aaa-profile/"
+                        f"{quote(aaa_profile_name, safe='')}"
+                    )
                     try:
                         central_client.delete(helper_ep)
-                        logger.info("Deleted helper AAA profile '%s' (active profile is '%s')", aaa_profile_name, gw_profile)
+                        logger.info(
+                            "Deleted helper AAA profile '%s' (active profile is '%s')",
+                            aaa_profile_name,
+                            gw_profile,
+                        )
                     except Exception as exc:
                         resp_text = getattr(getattr(exc, "response", None), "text", "") or str(exc)
                         if "404" in resp_text or "not found" in resp_text.lower():
                             logger.info("Helper AAA profile '%s' already absent", aaa_profile_name)
                         else:
                             result["errors"].append(f"cleanup_helper_aaa: {exc}")
-                            logger.error("Failed to delete helper AAA profile '%s': %s", aaa_profile_name, exc)
+                            logger.error(
+                                "Failed to delete helper AAA profile '%s': %s",
+                                aaa_profile_name,
+                                exc,
+                            )
             else:
-                result["errors"].append("normalize_gw_profile: missing gw-profile on created overlay SSID")
+                result["errors"].append(
+                    "normalize_gw_profile: missing gw-profile on created overlay SSID"
+                )
         except Exception as exc:
             result["errors"].append(f"normalize_gw_profile: {exc}")
             logger.error("Failed to normalize active GW AAA profile for '%s': %s", ssid_name, exc)
@@ -845,7 +892,12 @@ def build_overlay_ssid(
             ]
         }
         if dry_run:
-            logger.info("[dry-run] Would POST scope-maps — %s scope=%s resource=%s", persona, scope_id, resource)
+            logger.info(
+                "[dry-run] Would POST scope-maps — %s scope=%s resource=%s",
+                persona,
+                scope_id,
+                resource,
+            )
         else:
             try:
                 central_client.post("/network-config/v1/scope-maps", data=scope_map_body)

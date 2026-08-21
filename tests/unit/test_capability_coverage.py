@@ -143,14 +143,18 @@ def test_list_families_pages_and_includes_protocol_only_streaming():
     assert second["index_digest"]
     mutated = coverage.list_families("central", limit=1, offset=1)
     mutated["families"][0]["family"] = "mutated"
-    assert coverage.list_families("central", limit=1, offset=1)["families"][0]["family"] == "firmware"
+    assert (
+        coverage.list_families("central", limit=1, offset=1)["families"][0]["family"]
+        == "firmware"
+    )
 
 
 def test_lookup_api_annotates_generated_hits(monkeypatch):
     monkeypatch.setattr(
         rag.specs_index,
         "lookup",
-        lambda query, top_k=10, *, source=None, platform=None, version=None, include_metadata=False: [
+        lambda query, top_k=10, *, source=None, platform=None, version=None,
+        include_metadata=False: [
             {
                 "text": "GET /firmware/v1/compliance",
                 "source": "openapi_specs",

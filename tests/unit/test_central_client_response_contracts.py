@@ -143,7 +143,9 @@ class TestDeprecationWarningDeduplication:
         headers = {"Deprecation": "true", "Sunset": "Wed, 11 Nov 2026 23:59:59 GMT"}
         client.session.request.side_effect = [_response(200, headers=headers) for _ in range(5)]
 
-        with caplog.at_level(logging.WARNING, logger="hpe_networking_mcp.pipeline.clients.central_client"):
+        with caplog.at_level(
+            logging.WARNING, logger="hpe_networking_mcp.pipeline.clients.central_client"
+        ):
             for _ in range(5):
                 client.get("/deprecated-endpoint")
 
@@ -158,7 +160,9 @@ class TestDeprecationWarningDeduplication:
         headers = {"Deprecation": "true"}
         client.session.request.side_effect = [_response(200, headers=headers) for _ in range(4)]
 
-        with caplog.at_level(logging.WARNING, logger="hpe_networking_mcp.pipeline.clients.central_client"):
+        with caplog.at_level(
+            logging.WARNING, logger="hpe_networking_mcp.pipeline.clients.central_client"
+        ):
             client.get("/a")
             client.get("/a")
             client.get("/b")
@@ -171,11 +175,17 @@ class TestDeprecationWarningDeduplication:
         reset_deprecation_warning_cache()
         client = _client(tmp_path, monkeypatch)
         client.session.request.side_effect = [
-            _response(200, headers={"Deprecation": "true", "Sunset": "Wed, 11 Nov 2026 23:59:59 GMT"}),
-            _response(200, headers={"Deprecation": "true", "Sunset": "Fri, 01 Jan 2027 00:00:00 GMT"}),
+            _response(
+                200, headers={"Deprecation": "true", "Sunset": "Wed, 11 Nov 2026 23:59:59 GMT"}
+            ),
+            _response(
+                200, headers={"Deprecation": "true", "Sunset": "Fri, 01 Jan 2027 00:00:00 GMT"}
+            ),
         ]
 
-        with caplog.at_level(logging.WARNING, logger="hpe_networking_mcp.pipeline.clients.central_client"):
+        with caplog.at_level(
+            logging.WARNING, logger="hpe_networking_mcp.pipeline.clients.central_client"
+        ):
             client.get("/a")
             client.get("/a")
 
@@ -192,7 +202,9 @@ class TestMalformedJsonDiagnostics:
     def test_html_error_page_with_200_raises(self, tmp_path, monkeypatch):
         client = _client(tmp_path, monkeypatch)
         client.session.request.side_effect = [
-            _response(200, headers={"Content-Type": "text/html"}, text="<html>gateway timeout</html>")
+            _response(
+                200, headers={"Content-Type": "text/html"}, text="<html>gateway timeout</html>"
+            )
         ]
 
         with pytest.raises(ResponseParseError) as exc:

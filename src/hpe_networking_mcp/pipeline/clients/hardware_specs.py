@@ -13,11 +13,13 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "family": "AOS-CX Access & Aggregation Switches",
         "switching_capacity": "Up to 880 Gbps (standard) / 1,760 Gbps (modular chassis)",
         "throughput": "Up to 660 Mpps / 1,310 Mpps",
-        "stacking": "Virtual Switching Framework (VSF) up to 10 switches; up to 400 Gbps stacking bandwidth",
+        "stacking": "Virtual Switching Framework (VSF) up to 10 switches; up to 400 Gbps stacking "
+                    "bandwidth",
         "uplinks": "Built-in 4x 1/10/25/50GbE SFP56 or modular 100GbE QSFP28",
         "access_ports": "24 or 48 ports: 10/100/1000BASE-T, SmartRate (1/2.5/5GbE), or 1G/10G SFP+",
         "poe": "IEEE 802.3bt Class 8 (up to 90W/port PoE) with modular dynamic power supplies",
-        "architecture": "Aruba Gen7 ASIC, AOS-CX modular OS, embedded Network Analytics Engine (NAE)",
+        "architecture": "Aruba Gen7 ASIC, AOS-CX modular OS, embedded Network Analytics Engine "
+                        "(NAE)",
         "layer3_features": "BGP, EVPN-VXLAN, OSPF, VRF-lite / multiple VRFs, Dynamic Segmentation",
     },
     "cx6200": {
@@ -70,10 +72,12 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "throughput": "Up to 11.4 Bpps throughput",
         "stacking": "VSX (Virtual Switching Extension) High Availability dual-chassis pair",
         "uplinks": "Modular line cards supporting 1GbE, 10GbE, 25GbE, 40GbE, 50GbE, and 100GbE",
-        "access_ports": "Up to 480 ports of 10/100/1000BASE-T, SmartRate multi-gigabit, or high-density SFP56",
+        "access_ports": "Up to 480 ports of 10/100/1000BASE-T, SmartRate multi-gigabit, or "
+                        "high-density SFP56",
         "poe": "High-density IEEE 802.3bt Class 8 (up to 90W/port PoE) with N+N power redundancy",
         "architecture": "Aruba Gen7 ASIC, AOS-CX carrier-class architecture with VSX live-sync",
-        "layer3_features": "Full Layer 3 routing: BGP, EVPN-VXLAN, OSPF, IS-IS, VRFs, Dynamic Segmentation",
+        "layer3_features": "Full Layer 3 routing: BGP, EVPN-VXLAN, OSPF, IS-IS, VRFs, Dynamic "
+                           "Segmentation",
     },
     "cx8360": {
         "model": "Aruba CX 8360 Switch Series (8360-32Y4C / 8360-16Y2C / 8360-48XT4C)",
@@ -86,7 +90,8 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "access_ports": "32x 10G/25GbE SFP28, 48x 10GBASE-T, or 12x 40/100G QSFP28 ports",
         "poe": "Non-PoE (Core/Agg/Data Center switch)",
         "architecture": "AOS-CX modular OS with wire-speed Layer 2 and Layer 3 performance, NAE",
-        "layer3_features": "BGP, EVPN-VXLAN distributed overlay, OSPF, IS-IS, VRF-lite, Dynamic Segmentation",
+        "layer3_features": "BGP, EVPN-VXLAN distributed overlay, OSPF, IS-IS, VRF-lite, Dynamic "
+                           "Segmentation",
     },
     "cx8325": {
         "model": "Aruba CX 8325 Switch Series (8325-48Y8C / 8325-32C)",
@@ -98,21 +103,25 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "uplinks": "8x 40G/100GbE QSFP28 ports (or 32x 40/100GbE on 32C)",
         "access_ports": "48x 1/10/25GbE SFP28 ports",
         "poe": "Non-PoE (Core/Data Center)",
-        "architecture": "High-density 1U switch with redundant hot-swappable power supplies and fans",
+        "architecture": "High-density 1U switch with redundant hot-swappable power supplies and "
+                        "fans",
         "layer3_features": "BGP, EVPN-VXLAN, OSPF, multi-VRF, RoCEv2, DCB/PFC",
     },
     "cx10000": {
         "model": "Aruba CX 10000 Switch Series with AMD Pensando DPU",
         "vendor": "Aruba / HPE",
         "family": "Distributed Services Switch (SmartSwitch)",
-        "switching_capacity": "3.2 Tbps switching capacity with 800 Gbps stateful firewall / telemetry throughput",
+        "switching_capacity": "3.2 Tbps switching capacity with 800 Gbps stateful firewall / "
+                              "telemetry throughput",
         "throughput": "Up to 2,000 Mpps",
         "stacking": "VSX active-active HA multichassis",
         "uplinks": "6x 40G/100GbE QSFP28 uplinks",
         "access_ports": "48x 10G/25GbE SFP28 ports",
         "poe": "Non-PoE (Distributed Services DC/Campus)",
-        "architecture": "AOS-CX integrated with AMD Pensando Elba DPU for stateful microsegmentation and NAT",
-        "layer3_features": "Stateful Firewall, Zero Trust microsegmentation, EVPN-VXLAN, BGP, telemetry export",
+        "architecture": "AOS-CX integrated with AMD Pensando Elba DPU for stateful "
+                        "microsegmentation and NAT",
+        "layer3_features": "Stateful Firewall, Zero Trust microsegmentation, EVPN-VXLAN, BGP, "
+                           "telemetry export",
     },
     "ex4400": {
         "model": "Juniper Networks EX4400 Switch Series (EX4400-48P / EX4400-24P / EX4400-48F)",
@@ -120,12 +129,16 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "family": "Cloud-Ready AI-Powered Access Switch",
         "switching_capacity": "Up to 704 Gbps switching capacity",
         "throughput": "Up to 523 Mpps throughput",
-        "stacking": "Virtual Chassis (VC) up to 10 switches; 2x 100GbE dedicated virtual chassis ports (400 Gbps VC)",
+        "stacking": "Virtual Chassis (VC) up to 10 switches; 2x 100GbE dedicated virtual chassis "
+                    "ports (400 Gbps VC)",
         "uplinks": "Modular uplink extension options: 4x 10G/25GbE SFP28 or 1x 100GbE QSFP28",
-        "access_ports": "24 or 48 ports: 10/100/1000BASE-T, Multi-Gigabit (100M/1G/2.5G/5G/10GbE), or SFP",
+        "access_ports": "24 or 48 ports: 10/100/1000BASE-T, Multi-Gigabit (100M/1G/2.5G/5G/10GbE), "
+                        "or SFP",
         "poe": "IEEE 802.3bt Class 8 (up to 90W/port PoE) with PoE++ and Fast/Perpetual PoE",
-        "architecture": "Junos OS driven by Mist AI, native telemetry streaming, hardware-based Flow-based telemetry",
-        "layer3_features": "EVPN-VXLAN to the access edge, Group-Based Policies (GBP), OSPF, BGP, VRF, MACsec AES-256",
+        "architecture": "Junos OS driven by Mist AI, native telemetry streaming, hardware-based "
+                        "Flow-based telemetry",
+        "layer3_features": "EVPN-VXLAN to the access edge, Group-Based Policies (GBP), OSPF, BGP, "
+                           "VRF, MACsec AES-256",
     },
     "ex4100": {
         "model": "Juniper Networks EX4100 Switch Series (EX4100 / EX4100-F)",
@@ -135,10 +148,12 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "throughput": "Up to 250 Mpps",
         "stacking": "Virtual Chassis (VC) up to 10 switches using 4x 10GbE/25GbE SFP28 ports",
         "uplinks": "4x 10GbE or 4x 25GbE SFP28 fixed uplinks",
-        "access_ports": "24 or 48 ports 10/100/1000BASE-T (or Multi-Gigabit on EX4100-Multi-Gig models)",
+        "access_ports": "24 or 48 ports 10/100/1000BASE-T (or Multi-Gigabit on EX4100-Multi-Gig "
+                        "models)",
         "poe": "IEEE 802.3bt Class 6/8 (up to 30W/60W/90W PoE)",
         "architecture": "Junos OS with native Mist AI cloud telemetry and zero-touch provisioning",
-        "layer3_features": "EVPN-VXLAN, OSPF, BGP, static routing, Group-Based Policy (GBP), MACsec",
+        "layer3_features": "EVPN-VXLAN, OSPF, BGP, static routing, Group-Based Policy (GBP), "
+                           "MACsec",
     },
     "ex2300": {
         "model": "Juniper Networks EX2300 Switch Series",
@@ -150,7 +165,8 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "uplinks": "4x 1GbE/10GbE SFP+ fixed uplinks",
         "access_ports": "12, 24, or 48 ports 10/100/1000BASE-T",
         "poe": "IEEE 802.3at PoE+ (up to 30W/port)",
-        "architecture": "Junos OS, compact and fanless models available for quiet branch deployments",
+        "architecture": "Junos OS, compact and fanless models available for quiet branch "
+                        "deployments",
         "layer3_features": "Layer 2 switching, static routing, RIP, OSPFv2",
     },
     "ex4650": {
@@ -163,7 +179,8 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "uplinks": "8x 40GbE / 100GbE QSFP28 uplinks",
         "access_ports": "48x 10GbE/25GbE SFP28 ports",
         "poe": "Non-PoE (Aggregation/Core)",
-        "architecture": "Junos OS with Mist AI cloud telemetry, redundant hot-swappable power supplies and fans",
+        "architecture": "Junos OS with Mist AI cloud telemetry, redundant hot-swappable power "
+                        "supplies and fans",
         "layer3_features": "EVPN-VXLAN, BGP, OSPF, IS-IS, VRF, MACsec AES-256",
     },
     "ex4000": {
@@ -204,62 +221,78 @@ HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
         "family": "Wi-Fi 6 (802.11ax) Compact Dual-Radio Campus AP",
         "radios": "Dual-radio 2x2:2 MU-MIMO on both 2.4GHz and 5GHz",
         "ethernet_ports": "1x GbE (10/100/1000BASE-T) Ethernet uplink port",
-        "poe": "IEEE 802.3af PoE (Class 3, reduced-feature mode) or 802.3at PoE+ (Class 4, full function)",
-        "features": "Compact entry-level Wi-Fi 6 AP, Bluetooth 5 / Zigbee IoT radio, Aruba Central / Mobility Conductor managed",
+        "poe": "IEEE 802.3af PoE (Class 3, reduced-feature mode) or 802.3at PoE+ (Class 4, full "
+               "function)",
+        "features": "Compact entry-level Wi-Fi 6 AP, Bluetooth 5 / Zigbee IoT radio, Aruba Central "
+                    "/ Mobility Conductor managed",
     },
     "ap515": {
         "model": "Aruba AP-515 Campus Access Point",
         "vendor": "Aruba / HPE",
         "family": "Wi-Fi 6 (802.11ax) Dual-Radio Campus AP",
         "radios": "Dual-radio 4x4:4 MU-MIMO on both 2.4GHz and 5GHz",
-        "ethernet_ports": "1x SmartRate 1G/2.5GbE port + 1x GbE (10/100/1000BASE-T) port, plus USB for IoT dongles",
+        "ethernet_ports": "1x SmartRate 1G/2.5GbE port + 1x GbE (10/100/1000BASE-T) port, plus USB "
+                          "for IoT dongles",
         "poe": "IEEE 802.3at PoE+ (Class 4) or 802.3bt PoE (Class 5) for full function",
-        "features": "Mid-range high-capacity Wi-Fi 6 AP, Bluetooth 5 / Zigbee IoT radio, USB port for third-party IoT modules",
+        "features": "Mid-range high-capacity Wi-Fi 6 AP, Bluetooth 5 / Zigbee IoT radio, USB port "
+                    "for third-party IoT modules",
     },
     "ap535": {
         "model": "Aruba AP-535 Campus Access Point",
         "vendor": "Aruba / HPE",
         "family": "Wi-Fi 6 (802.11ax) Dual-Radio High-Performance Campus AP",
-        "radios": "Dual-radio 4x4:4 MU-MIMO, flexible radio can run 2.4GHz+5GHz or dual 5GHz for high-density deployments",
+        "radios": "Dual-radio 4x4:4 MU-MIMO, flexible radio can run 2.4GHz+5GHz or dual 5GHz for "
+                  "high-density deployments",
         "ethernet_ports": "1x SmartRate 1G/2.5GbE Ethernet uplink port",
         "poe": "IEEE 802.3at PoE+ (Class 4) or 802.3bt PoE (Class 5/6) for full function",
-        "features": "High-density flexible-radio design, Bluetooth 5 / Zigbee IoT radio, USB port for IoT dongles",
+        "features": "High-density flexible-radio design, Bluetooth 5 / Zigbee IoT radio, USB port "
+                    "for IoT dongles",
     },
     "ap545": {
         "model": "Aruba AP-545 Campus Access Point",
         "vendor": "Aruba / HPE",
         "family": "Wi-Fi 6 (802.11ax) Tri-Radio Campus AP with Security Radio",
-        "radios": "Tri-radio: 2.4GHz (4x4) + 5GHz (4x4) client radios plus a dedicated third radio usable for scanning/security or as a client-serving radio",
+        "radios": "Tri-radio: 2.4GHz (4x4) + 5GHz (4x4) client radios plus a dedicated third radio "
+                  "usable for scanning/security or as a client-serving radio",
         "ethernet_ports": "1x SmartRate 1G/2.5GbE port + 1x GbE (10/100/1000BASE-T) port",
         "poe": "IEEE 802.3at PoE+ (Class 4) or 802.3bt PoE (Class 5/6) for full function",
-        "features": "High-performance tri-radio AP, integrated WIDS/WIPS-capable third radio, Bluetooth 5 / Zigbee IoT radio",
+        "features": "High-performance tri-radio AP, integrated WIDS/WIPS-capable third radio, "
+                    "Bluetooth 5 / Zigbee IoT radio",
     },
     "ap555": {
         "model": "Aruba AP-555 Campus Access Point",
         "vendor": "Aruba / HPE",
         "family": "Wi-Fi 6 (802.11ax) Tri-Radio Flagship Campus AP",
-        "radios": "Tri-radio: 2.4GHz (4x4) + 5GHz (4x4) client radios plus a dedicated full-time security/spectrum-analysis radio (4x4)",
+        "radios": "Tri-radio: 2.4GHz (4x4) + 5GHz (4x4) client radios plus a dedicated full-time "
+                  "security/spectrum-analysis radio (4x4)",
         "ethernet_ports": "2x SmartRate 1G/2.5GbE Ethernet ports (uplink / link aggregation)",
-        "poe": "IEEE 802.3bt PoE (Class 6, full function) or 802.3at PoE+ (Class 4, reduced-feature mode)",
-        "features": "Aruba's highest-throughput Wi-Fi 6 indoor AP, dedicated always-on security radio, Bluetooth 5 / Zigbee IoT radio",
+        "poe": "IEEE 802.3bt PoE (Class 6, full function) or 802.3at PoE+ (Class 4, "
+               "reduced-feature mode)",
+        "features": "Aruba's highest-throughput Wi-Fi 6 indoor AP, dedicated always-on security "
+                    "radio, Bluetooth 5 / Zigbee IoT radio",
     },
     "ap635": {
         "model": "Aruba AP-635 Campus Access Point",
         "vendor": "Aruba / HPE",
         "family": "Wi-Fi 6E (802.11ax) Tri-Radio Campus AP",
-        "radios": "Tri-radio 2.4GHz (2x2), 5GHz (2x2), and 6GHz (2x2) with up to 3.9 Gbps combined peak rate",
+        "radios": "Tri-radio 2.4GHz (2x2), 5GHz (2x2), and 6GHz (2x2) with up to 3.9 Gbps combined "
+                  "peak rate",
         "ethernet_ports": "2x SmartRate 1G/2.5GbE Ethernet ports (uplink / failover)",
         "poe": "IEEE 802.3at PoE (Class 4) or 802.3bt PoE (Class 5)",
-        "features": "Ultra-Tri-Band filtering, GPS receiver for location, Bluetooth 5 & Zigbee IoT radios",
+        "features": "Ultra-Tri-Band filtering, GPS receiver for location, Bluetooth 5 & Zigbee IoT "
+                    "radios",
     },
     "ap45": {
         "model": "Juniper Mist AP45 Access Point",
         "vendor": "Juniper Networks / Mist AI",
         "family": "Wi-Fi 6E (802.11ax) Tri-Band Enterprise AP with AI Engine",
-        "radios": "Tri-band 2.4GHz (4x4), 5GHz (4x4), and 6GHz (4x4) with dedicated 4th scanning radio",
-        "ethernet_ports": "1x 100M/1G/2.5G/5GbE Multi-Gigabit Ethernet uplink + 1x 1GbE auxiliary port",
+        "radios": "Tri-band 2.4GHz (4x4), 5GHz (4x4), and 6GHz (4x4) with dedicated 4th scanning "
+                  "radio",
+        "ethernet_ports": "1x 100M/1G/2.5G/5GbE Multi-Gigabit Ethernet uplink + 1x 1GbE auxiliary "
+                          "port",
         "poe": "IEEE 802.3bt Class 5 PoE or 802.3at PoE+",
-        "features": "Virtual BLE (vBLE) 16-element antenna array, Mist AI Marvis automated RF optimization, dynamic packet capture",
+        "features": "Virtual BLE (vBLE) 16-element antenna array, Mist AI Marvis automated RF "
+                    "optimization, dynamic packet capture",
     },
 }
 

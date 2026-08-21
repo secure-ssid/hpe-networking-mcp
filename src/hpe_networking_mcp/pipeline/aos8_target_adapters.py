@@ -79,7 +79,8 @@ class TargetContext:
     # Accepted only via the orchestrator's stateless `preview()` -- never
     # via `create_run()`/`apply()`, which reject a non-empty value here
     # with a clear error rather than persisting it (or a hash/count of it).
-    # See `hpe_networking_mcp.pipeline.aos8_migration_orchestrator._reject_persisted_operator_context`.
+    # See `hpe_networking_mcp.pipeline.aos8_migration_orchestrator
+    # ._reject_persisted_operator_context`.
     external_object_references: Mapping[str, Mapping[str, str]] = field(
         default_factory=dict
     )
@@ -1340,12 +1341,14 @@ class NewCentralAdapter(BaseCentralTargetAdapter):
             invocation="tool",
             name="create_role",
             arguments=common,
-            provenance="hpe_networking_mcp.mcp_servers.config.create_role: POST /network-config/v1/roles/{name}",
+            provenance="hpe_networking_mcp.mcp_servers.config.create_role: POST "
+                       "/network-config/v1/roles/{name}",
         )
         update = replace(
             create,
             name="update_role",
-            provenance="hpe_networking_mcp.mcp_servers.config.update_role: PUT /network-config/v1/roles/{name}",
+            provenance="hpe_networking_mcp.mcp_servers.config.update_role: PUT "
+                       "/network-config/v1/roles/{name}",
         )
         delete_assignment = Operation(
             invocation="tool",
@@ -1364,7 +1367,8 @@ class NewCentralAdapter(BaseCentralTargetAdapter):
             name="delete_role",
             arguments={"name": candidate["identifier"], "dry_run": True},
             provenance=(
-                "hpe_networking_mcp.mcp_servers.config.delete_role; pre-reqs per its own docstring: "
+                "hpe_networking_mcp.mcp_servers.config.delete_role; pre-reqs per its own "
+                "docstring: "
                 "delete_role_acl then delete_config_assignment for all scopes"
             ),
         )
@@ -2099,7 +2103,8 @@ class NewCentralAdapter(BaseCentralTargetAdapter):
                     "dry_run": True,
                 },
                 provenance=(
-                    "hpe_networking_mcp.mcp_servers.config.build_underlay_ssid and hpe_networking_mcp.pipeline.create_ssid: "
+                    "hpe_networking_mcp.mcp_servers.config.build_underlay_ssid and "
+                    "hpe_networking_mcp.pipeline.create_ssid: "
                     "POST /network-config/v1/wlan-ssids/{name} plus scope-map"
                 ),
                 sensitive_argument_fields=sensitive_fields,
@@ -2139,7 +2144,8 @@ class NewCentralAdapter(BaseCentralTargetAdapter):
                     "dry_run": True,
                 },
                 provenance=(
-                    "hpe_networking_mcp.mcp_servers.config.build_overlay_ssid and hpe_networking_mcp.pipeline.create_ssid "
+                    "hpe_networking_mcp.mcp_servers.config.build_overlay_ssid and "
+                    "hpe_networking_mcp.pipeline.create_ssid "
                     "verified New Central tunneled-SSID workflow"
                 ),
                 sensitive_argument_fields=sensitive_fields,

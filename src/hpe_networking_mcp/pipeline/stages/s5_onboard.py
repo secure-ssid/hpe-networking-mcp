@@ -46,7 +46,9 @@ class OnboardStage(Stage):
                 scope_id = mcp.get_device_scope_id(record.serial_number)
                 if scope_id:
                     record.scope_id = scope_id
-                return StageResult.success(provisioning_status="ALREADY_PROVISIONED", scope_id=scope_id)
+                return StageResult.success(
+                    provisioning_status="ALREADY_PROVISIONED", scope_id=scope_id
+                )
             # Device is in Central but not yet provisioned (e.g. offline, awaiting group assign).
             # Proceed to S6 configure — provisioning completes when device connects.
             logger.info(
@@ -96,7 +98,8 @@ class OnboardStage(Stage):
                         record.scope_id = scope_id
                     else:
                         logger.warning(
-                            "%s: scope_id not found in /network-config/v1alpha1/devices — S6 will re-fetch",
+                            "%s: scope_id not found in /network-config/v1alpha1/devices — S6 will "
+                            "re-fetch",
                             record.serial_number,
                         )
                     return StageResult.success(provisioning_status=status, scope_id=scope_id)

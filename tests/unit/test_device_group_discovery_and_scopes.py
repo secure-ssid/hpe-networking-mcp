@@ -48,7 +48,10 @@ from hpe_networking_mcp.pipeline.stages.s6_configure import (
 )
 
 MANIFEST = json.loads(
-    (Path(__file__).resolve().parents[2] / "src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/central.json").read_text()
+    (
+        Path(__file__).resolve().parents[2]
+        / "src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/central.json"
+    ).read_text()
 )
 
 
@@ -75,7 +78,9 @@ def _paging_client(pages_by_path):
 
 
 def test_manifest_requires_limit_and_offset_and_caps_at_100():
-    op = next(o for o in MANIFEST["operations"] if o["key"] == "GET /network-config/v1/device-groups")
+    op = next(
+        o for o in MANIFEST["operations"] if o["key"] == "GET /network-config/v1/device-groups"
+    )
     params = {p["name"]: p for p in op["parameters"]}
     assert params["limit"]["required"] is True
     assert params["offset"]["required"] is True
@@ -331,7 +336,10 @@ class TestScopeResolution:
         client = _paging_client(
             {
                 DEVICE_GROUP_PATHS[0]: [
-                    {"items": [{"scopeName": "Switches", "scopeId": "555"}, {"scopeName": "APs", "scopeId": "666"}]}
+                    {"items": [
+                        {"scopeName": "Switches", "scopeId": "555"},
+                        {"scopeName": "APs", "scopeId": "666"},
+                    ]}
                 ]
             }
         )
@@ -346,7 +354,9 @@ class TestScopeResolution:
         assert _resolve_device_group_scope_id(client, "Switches") == "555"
 
     def test_missing_group_returns_none(self):
-        client = _paging_client({DEVICE_GROUP_PATHS[0]: [{"items": [{"scopeName": "APs", "scopeId": "666"}]}]})
+        client = _paging_client(
+            {DEVICE_GROUP_PATHS[0]: [{"items": [{"scopeName": "APs", "scopeId": "666"}]}]}
+        )
 
         assert _resolve_device_group_scope_id(client, "Switches") is None
 
@@ -366,7 +376,9 @@ class TestScopeResolution:
 
         client = _paging_client({DEVICE_GROUP_PATHS[0]: [{"items": []}]})
 
-        with caplog.at_level(logging.WARNING, logger="hpe_networking_mcp.pipeline.stages.s6_configure"):
+        with caplog.at_level(
+            logging.WARNING, logger="hpe_networking_mcp.pipeline.stages.s6_configure"
+        ):
             assert _profile_scope_ids(client, self._ctx()) == ["900"]
 
         assert any(SWITCH_GROUP_NAME_ENV in r.message for r in caplog.records)

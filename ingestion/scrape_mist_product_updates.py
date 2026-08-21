@@ -107,7 +107,10 @@ def scrape_entry(entry: dict) -> str:
 
 
 def main() -> None:
-    pending = [e for e in ENTRIES if not (OUTPUT_DIR / f"{slugify(e.get('title') or e['url'])}.html").exists()]
+    pending = [
+        e for e in ENTRIES
+        if not (OUTPUT_DIR / f"{slugify(e.get('title') or e['url'])}.html").exists()
+    ]
     print(f"Total entries: {len(ENTRIES)}  pending: {len(pending)}  -> {OUTPUT_DIR}")
     done = 0
     errors = []

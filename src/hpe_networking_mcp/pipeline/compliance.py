@@ -1,7 +1,8 @@
 """Pure, network-free declarative compliance-policy evaluation.
 
 This module backs the router-native ``evaluate_compliance_policy`` tool in
-``hpe_networking_mcp.mcp_servers.tool_router``, but never imports the MCP server SDK, ``hpe_networking_mcp.mcp_servers.*``, or
+``hpe_networking_mcp.mcp_servers.tool_router``, but never imports the MCP server
+SDK, ``hpe_networking_mcp.mcp_servers.*``, or
 any backend server module itself -- it only ever evaluates already-retrieved,
 caller-supplied ``observations`` (plain dicts, e.g. one ``invoke_read_tool``
 result per device/entity) against a declarative ``policy`` (a bounded list of

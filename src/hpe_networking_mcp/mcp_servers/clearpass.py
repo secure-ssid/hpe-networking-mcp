@@ -1138,7 +1138,8 @@ async def clearpass_list_cluster_servers(
 
 
 # ---------------------------------------------------------------------------
-# Generated OpenAPI tools (see src/hpe_networking_mcp/mcp_servers/openapi_gen). The committed manifest
+# Generated OpenAPI tools (see src/hpe_networking_mcp/mcp_servers/openapi_gen). The
+# committed manifest
 # at src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/clearpass.json is a derived operation
 # manifest built from the current ClearPass 6.12.x OpenAPI definitions published
 # on the Aruba developer portal (ReadMe api-registry). It exposes every

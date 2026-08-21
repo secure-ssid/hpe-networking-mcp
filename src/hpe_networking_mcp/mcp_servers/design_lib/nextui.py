@@ -78,8 +78,10 @@ def export_next_ui(model: DiagramModel) -> dict[str, Any]:
         "preview_html_ext": ".html",
         "notes": [
             "JSON matches a NeXt UI topology data shape (nodes/links with device_type).",
-            "preview_html is a stub shell — load NeXt UI assets yourself or paste JSON into an existing dashboard.",
-            "Cisco/generic device_type icons; supply custom icons in your NeXt app for Aruba/HPE/Mist.",
+            "preview_html is a stub shell — load NeXt UI assets yourself or paste JSON into an "
+            "existing dashboard.",
+            "Cisco/generic device_type icons; supply custom icons in your NeXt app for "
+            "Aruba/HPE/Mist.",
         ],
     }
 

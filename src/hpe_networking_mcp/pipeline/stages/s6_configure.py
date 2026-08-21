@@ -243,7 +243,12 @@ def _ensure_device_profiles(central_client: Any, target_ctx: Any) -> list[str]:
             "name": "arubaAP",
             "description": "arubaAP",
             "vlan-parameters": {"wired-access-vlan-id": 5},
-            "session-parameters": {"auth-mode": "DEVICE_MODE", "stp-admin-edge-port": True, "poe-priority": "CRITICAL", "tunneled-node-server-redirect": False},
+            "session-parameters": {
+                "auth-mode": "DEVICE_MODE",
+                "stp-admin-edge-port": True,
+                "poe-priority": "CRITICAL",
+                "tunneled-node-server-redirect": False,
+            },
         },
     }
     for name in _PROFILE_NAMES:
@@ -273,7 +278,12 @@ def _ensure_device_profiles(central_client: Any, target_ctx: Any) -> list[str]:
                 resp_text = getattr(getattr(exc, "response", None), "text", "") or ""
                 if not _skip(resp_text):
                     profile_errors.append(f"role_scope_map({name}@{scope_id}): {exc}")
-                    logger.warning("Role '%s' scope-map (scope=%s) failed: %s — continuing", name, scope_id, exc)
+                    logger.warning(
+                        "Role '%s' scope-map (scope=%s) failed: %s — continuing",
+                        name,
+                        scope_id,
+                        exc,
+                    )
 
     # Step 2: Port profiles (sw-port-profiles)
     _PORT_PROFILES = [
@@ -335,7 +345,10 @@ def _ensure_device_profiles(central_client: Any, target_ctx: Any) -> list[str]:
     for pp in _PORT_PROFILES:
         pp_name = pp["name"]
         try:
-            central_client.post(f"/network-config/v1/sw-port-profiles/{pp_name}", data={"description": pp["description"]})
+            central_client.post(
+                f"/network-config/v1/sw-port-profiles/{pp_name}",
+                data={"description": pp["description"]},
+            )
             central_client.put(f"/network-config/v1/sw-port-profiles/{pp_name}", data=pp["body"])
             logger.debug("Created port profile '%s'", pp_name)
         except Exception as exc:
@@ -346,12 +359,19 @@ def _ensure_device_profiles(central_client: Any, target_ctx: Any) -> list[str]:
 
         for scope_id in scope_ids:
             try:
-                _post_scope_map(central_client, scope_id, "ACCESS_SWITCH", f"sw-port-profiles/{pp_name}")
+                _post_scope_map(
+                    central_client, scope_id, "ACCESS_SWITCH", f"sw-port-profiles/{pp_name}"
+                )
             except Exception as exc:
                 resp_text = getattr(getattr(exc, "response", None), "text", "") or ""
                 if not _skip(resp_text):
                     profile_errors.append(f"sw_port_profile_scope_map({pp_name}@{scope_id}): {exc}")
-                    logger.warning("Port profile '%s' scope-map (scope=%s) failed: %s — continuing", pp_name, scope_id, exc)
+                    logger.warning(
+                        "Port profile '%s' scope-map (scope=%s) failed: %s — continuing",
+                        pp_name,
+                        scope_id,
+                        exc,
+                    )
 
     # Step 3: Device profiles with LLDP match rules + scope-maps
     for profile in ARUBA_DEVICE_PROFILES:
@@ -372,7 +392,12 @@ def _ensure_device_profiles(central_client: Any, target_ctx: Any) -> list[str]:
                 resp_text = getattr(getattr(exc, "response", None), "text", "") or ""
                 if not _skip(resp_text):
                     profile_errors.append(f"device_profile_scope_map({name}@{scope_id}): {exc}")
-                    logger.warning("Device profile '%s' scope-map (scope=%s) failed: %s — continuing", name, scope_id, exc)
+                    logger.warning(
+                        "Device profile '%s' scope-map (scope=%s) failed: %s — continuing",
+                        name,
+                        scope_id,
+                        exc,
+                    )
 
     target_ctx.device_profiles_created = True
     return profile_errors
@@ -416,14 +441,32 @@ def _push_vlan_interface(
 
     # Step 3: Override IP at device local scope
     if vi["ip_address"] and not vi["dhcp"]:
-        local_body: dict = {"id": vlan_id, "is-valid": True, "enable": True, "ipv4": {"address": vi["ip_address"]}}
+        local_body: dict = {
+            "id": vlan_id, "is-valid": True, "enable": True, "ipv4": {"address": vi["ip_address"]}
+        }
         if vi["helper_address"]:
-            local_body["ipv4-relay"] = {"server": [{"ip": vi["helper_address"], "vrf": "default", "ip-vrf": f"{vi['helper_address']}~default"}]}
+            local_body["ipv4-relay"] = {
+                "server": [
+                    {
+                        "ip": vi["helper_address"],
+                        "vrf": "default",
+                        "ip-vrf": f"{vi['helper_address']}~default",
+                    }
+                ]
+            }
         local_params = {"scope-id": device_scope_id, "view-type": "LOCAL"}
         try:
-            central_client.post(f"/network-config/v1/vlan-interfaces/{vlan_id}", params=local_params, data=local_body)
+            central_client.post(
+                f"/network-config/v1/vlan-interfaces/{vlan_id}",
+                params=local_params,
+                data=local_body,
+            )
         except Exception:
-            central_client.put(f"/network-config/v1/vlan-interfaces/{vlan_id}", params=local_params, data=local_body)
+            central_client.put(
+                f"/network-config/v1/vlan-interfaces/{vlan_id}",
+                params=local_params,
+                data=local_body,
+            )
 
     # Step 4: Scope-maps — duplicates on a resumed run are non-fatal for BOTH
     # the global layer2-vlan map and the device vlan-interfaces map. The global
@@ -495,7 +538,8 @@ class ConfigureStage(Stage):
             device_scope_id = mcp.get_device_scope_id(record.serial_number)
             if not device_scope_id:
                 return StageResult.failed(
-                    f"CONFIGURE_FAILED: could not resolve device scope-id for {record.serial_number} "
+                    f"CONFIGURE_FAILED: could not resolve device scope-id "
+                    f"for {record.serial_number} "
                     "via /network-config/v1alpha1/devices"
                 )
             record.scope_id = device_scope_id
@@ -511,7 +555,9 @@ class ConfigureStage(Stage):
                 # Re-fetch site list to get the new site_id
                 new_site = mcp.get_site_by_name(record.target_site)
                 if new_site:
-                    site_id = new_site.get("id") or new_site.get("scopeId") or new_site.get("siteId")
+                    site_id = new_site.get("id") or new_site.get("scopeId") or new_site.get(
+                        "siteId"
+                    )
                     record.site_id = site_id
                     logger.info("Created site '%s' → id=%s", record.target_site, site_id)
                 else:
@@ -537,15 +583,27 @@ class ConfigureStage(Stage):
             )
             logger.debug("Set hostname alias for %s", record.serial_number)
         except Exception as exc:
-            logger.warning("Hostname alias failed for %s: %s — continuing", record.serial_number, exc)
+            logger.warning(
+                "Hostname alias failed for %s: %s — continuing", record.serial_number, exc
+            )
 
-        # 4. Persona assignment via scope-map at device scope (soft failure — device may already be assigned)
+        # 4. Persona assignment via scope-map at device scope (soft failure —
+        #    device may already be assigned)
         persona_api = record.persona.to_api_value()  # "ACCESS_SWITCH", "CORE_SWITCH", "AGG_SWITCH"
-        logger.info("Setting persona '%s' on %s (scope-id=%s)", persona_api, record.serial_number, device_scope_id)
+        logger.info(
+            "Setting persona '%s' on %s (scope-id=%s)",
+            persona_api,
+            record.serial_number,
+            device_scope_id,
+        )
         try:
             _post_scope_map(central, device_scope_id, persona_api, f"persona/{persona_api}")
         except Exception as exc:
-            logger.warning("Persona assignment failed for %s: %s — continuing (may already be set)", record.serial_number, exc)
+            logger.warning(
+                "Persona assignment failed for %s: %s — continuing (may already be set)",
+                record.serial_number,
+                exc,
+            )
 
         # 5. Group assignment via configuration/v1/devices/move (direct REST)
         logger.info("Assigning %s to group '%s'", record.serial_number, record.target_group)
@@ -582,7 +640,9 @@ class ConfigureStage(Stage):
                         vlans_pushed, record.serial_number, target_ctx.global_scope_id,
                     )
             except Exception as exc:
-                logger.warning("VLAN push failed for %s: %s — continuing", record.serial_number, exc)
+                logger.warning(
+                    "VLAN push failed for %s: %s — continuing", record.serial_number, exc
+                )
 
         # 7. Push VLAN interfaces (L3) from config file
         vlan_interfaces_pushed = 0

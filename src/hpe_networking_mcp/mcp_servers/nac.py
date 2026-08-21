@@ -444,7 +444,10 @@ def create_auth_server(
 
     if dry_run:
         # Mask secret in dry-run output
-        safe = {**payload, "shared-secret-config": {"secret-type": "PLAIN_TEXT", "plaintext-value": "***"}}
+        safe = {
+            **payload,
+            "shared-secret-config": {"secret-type": "PLAIN_TEXT", "plaintext-value": "***"},
+        }
         return {"dry_run": True, "name": name, "payload": safe}
 
     endpoint = f"{_CNAC_BASE}/auth-servers/{name}"
@@ -528,7 +531,10 @@ def create_server_group(
     payload: dict[str, Any] = {
         "name": name,
         "type": group_type,
-        "servers": [{"server-name": server_name, "position": idx + 1} for idx, server_name in enumerate(server_names)],
+        "servers": [
+            {"server-name": server_name, "position": idx + 1}
+            for idx, server_name in enumerate(server_names)
+        ],
         "fail-through": fail_through,
         "load-balance": load_balance,
     }
@@ -812,7 +818,9 @@ def create_authz_policy(
         payload["policy-type"] = policy_type
 
     if dry_run:
-        return {"dry_run": True, "policy_id": policy_id, "policy_name": policy_name, "payload": payload}
+        return {
+            "dry_run": True, "policy_id": policy_id, "policy_name": policy_name, "payload": payload
+        }
 
     endpoint = f"{_CNAC_BASE}/authz-policies/{policy_id}"
     client = get_client()
@@ -851,7 +859,10 @@ def list_static_tags(
     offset: int = 0,
     full_list: bool = False,
 ) -> dict[str, Any]:
-    """List user-created static classification tags (bounded). System tags (e.g. IoT) not returned."""
+    """List user-created static classification tags (bounded).
+
+    System tags (e.g. IoT) not returned.
+    """
     data = get_client().get(_STATIC_TAG_BASE)
     if full_list:
         return data
@@ -863,7 +874,10 @@ def create_static_tag(
     name: str,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Create a static classification tag (UUID auto-generated). Used in authz policies to assign roles."""
+    """Create a static classification tag (UUID auto-generated).
+
+    Used in authz policies to assign roles.
+    """
     tag_id = str(uuid.uuid4())
     payload = {"name": name}
     if dry_run:
@@ -946,7 +960,8 @@ def create_mac_auth_profile(
     Args:
         networks: SSID names to associate (e.g. ["Central-MacAuth"]).
         allow_all: True = allow all MACs; False = only pre-registered MACs.
-        identity_store_id: Defaults to built-in MAC Address Store. Use list_identity_stores for others.
+        identity_store_id: Defaults to built-in MAC Address Store. Use
+            list_identity_stores for others.
         dry_run: If True, return payload without sending.
     """
     profile_id = str(uuid.uuid4())

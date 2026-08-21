@@ -94,7 +94,9 @@ def _build_canonical_map(table: Any, batch_size: int) -> dict[str, dict[str, Any
             else:
                 ep = _source_priority(existing)
                 rp = _source_priority(row)
-                if rp > ep or (rp == ep and row.get("file_path", "") < existing.get("file_path", "")):
+                if rp > ep or (
+                    rp == ep and row.get("file_path", "") < existing.get("file_path", "")
+                ):
                     best[key] = row
         print(f"  scanned {total} rows …", end="\r", flush=True)
     print(f"  scanned {total} rows total")
@@ -116,7 +118,9 @@ def _to_arrow_batch(rows: list[dict[str, Any]], schema: pa.Schema) -> pa.Table:
         elif pa.types.is_fixed_size_list(field.type):
             arrays.append(pa.array(raw, type=field.type))
         else:
-            arrays.append(pa.array(raw, type=pa.string() if pa.types.is_string(field.type) else field.type))
+            arrays.append(
+                pa.array(raw, type=pa.string() if pa.types.is_string(field.type) else field.type)
+            )
     return pa.table(arrays, schema=schema)
 
 
@@ -139,7 +143,10 @@ def run(dry_run: bool = False, batch_size: int = DEFAULT_BATCH_SIZE) -> None:
     n_dropped = total_rows - n_unique
 
     by_source = Counter(row.get("source", "?") for row in canonical.values())
-    print(f"\nAfter dedup: {n_unique:,} unique rows, {n_dropped:,} dropped ({100*n_dropped//total_rows}%)")
+    print(
+        f"\nAfter dedup: {n_unique:,} unique rows, "
+        f"{n_dropped:,} dropped ({100*n_dropped//total_rows}%)"
+    )
     print("Canonical rows per source:")
     for src, cnt in sorted(by_source.items(), key=lambda x: -x[1]):
         print(f"  {src}: {cnt:,}")
@@ -186,7 +193,10 @@ def run(dry_run: bool = False, batch_size: int = DEFAULT_BATCH_SIZE) -> None:
     live = lance_client.docs_table(db)
     lance_client.build_search_indexes(live)
 
-    print(f"\nDone. Index reduced from {total_rows:,} to {n_unique:,} rows ({n_dropped:,} duplicates removed).")
+    print(
+        f"\nDone. Index reduced from {total_rows:,} to {n_unique:,} rows "
+        f"({n_dropped:,} duplicates removed)."
+    )
 
 
 def main():

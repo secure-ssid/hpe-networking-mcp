@@ -68,7 +68,11 @@ class OffboardStage(Stage):
             if device is None:
                 logger.info("%s successfully offboarded from source Central", record.serial_number)
                 return StageResult.success()
-            logger.debug("%s still visible in source Central — waiting %ds", record.serial_number, _POLL_INTERVAL)
+            logger.debug(
+                "%s still visible in source Central — waiting %ds",
+                record.serial_number,
+                _POLL_INTERVAL,
+            )
             time.sleep(_POLL_INTERVAL)
 
         return StageResult.failed(

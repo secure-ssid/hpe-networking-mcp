@@ -154,9 +154,11 @@ def create_vlan_interface(
 
     try:
         _push_vlan_interface(client, vi, device_scope_id, global_scope_id, persona)
-        return {"vlan_id": vlan_id, "device_scope_id": device_scope_id, "pushed": True, "errors": []}
+        return {"vlan_id": vlan_id, "device_scope_id": device_scope_id,
+                "pushed": True, "errors": []}
     except Exception as exc:
-        return {"vlan_id": vlan_id, "device_scope_id": device_scope_id, "pushed": False, "errors": [str(exc)]}
+        return {"vlan_id": vlan_id, "device_scope_id": device_scope_id,
+                "pushed": False, "errors": [str(exc)]}
 
 
 # ── Hostname & Device Profiles ─────────────────────────────────────────────────
@@ -235,7 +237,8 @@ def push_aruba_device_profiles(dry_run: bool = False) -> dict[str, Any]:
 
 @mcp.tool(annotations=READ_ONLY)
 def get_firmware(serial_number: str) -> dict[str, Any]:
-    """Fetch current firmware details (version, compliance status, upgrades available) for a device."""
+    """Fetch current firmware details (version, compliance status, upgrades
+    available) for a device."""
     client = get_client()
     errors: list[str] = []
     try:
@@ -259,14 +262,19 @@ def get_firmware_compliance(
     errors: list[str] = []
     params = {"scope-id": scope_id, "object-type": "LOCAL", "device-function": device_function}
     try:
-        response = client._request("GET", "/network-config/v1alpha1/firmware-compliance", params=params)
+        response = client._request(
+            "GET", "/network-config/v1alpha1/firmware-compliance", params=params
+        )
         if response.status_code not in (200, 201, 202):
             errors.append(f"HTTP {response.status_code}")
-            return {"scope_id": scope_id, "device_function": device_function, "policy": None, "errors": errors}
-        return {"scope_id": scope_id, "device_function": device_function, "policy": response.json(), "errors": errors}
+            return {"scope_id": scope_id, "device_function": device_function,
+                    "policy": None, "errors": errors}
+        return {"scope_id": scope_id, "device_function": device_function,
+                "policy": response.json(), "errors": errors}
     except Exception as exc:
         errors.append(str(exc))
-        return {"scope_id": scope_id, "device_function": device_function, "policy": None, "errors": errors}
+        return {"scope_id": scope_id, "device_function": device_function,
+                "policy": None, "errors": errors}
 
 
 @mcp.tool(annotations=IDEMPOTENT_WRITE)
@@ -303,10 +311,15 @@ def set_firmware_compliance(
 
     action = "created"
     try:
-        response = client._request("POST", "/network-config/v1alpha1/firmware-compliance", json=payload, params=params)
+        response = client._request(
+            "POST", "/network-config/v1alpha1/firmware-compliance", json=payload, params=params
+        )
         if response.status_code == 412:
             action = "updated"
-            response = client._request("PATCH", "/network-config/v1alpha1/firmware-compliance", json=payload, params=params)
+            response = client._request(
+                "PATCH", "/network-config/v1alpha1/firmware-compliance",
+                json=payload, params=params,
+            )
         if response.status_code not in (200, 201, 202):
             errors.append(compact_http_error(response))
             return {"action": None, "scope_id": scope_id, "device_function": device_function,
@@ -400,7 +413,8 @@ def trigger_device_upgrade(
 
     if not device_function:
         errors.append(f"Could not determine device_function for {serial_number}.")
-        return {"serial_number": serial_number, "firmware_version": firmware_version, "response": None, "errors": errors}
+        return {"serial_number": serial_number, "firmware_version": firmware_version,
+                "response": None, "errors": errors}
 
     scope_id = mcp_client.get_device_scope_id(serial_number)
     if not scope_id:
@@ -422,7 +436,8 @@ def trigger_device_upgrade(
     }
 
     if dry_run:
-        return {"dry_run": True, "serial_number": serial_number, "firmware_version": firmware_version,
+        return {"dry_run": True, "serial_number": serial_number,
+                "firmware_version": firmware_version,
                 "device_function": device_function, "scope_id": scope_id, "endpoint": endpoint,
                 "params": params, "payload": payload, "errors": []}
 
@@ -433,7 +448,8 @@ def trigger_device_upgrade(
         if response.status_code not in (200, 201, 202):
             errors.append(compact_http_error(response, endpoint=endpoint))
             return {"serial_number": serial_number, "firmware_version": firmware_version,
-                    "device_function": device_function, "scope_id": scope_id, "response": None, "errors": errors}
+                    "device_function": device_function, "scope_id": scope_id,
+                    "response": None, "errors": errors}
         try:
             resp_body = response.json()
         except Exception:
@@ -444,7 +460,8 @@ def trigger_device_upgrade(
     except Exception as exc:
         errors.append(str(exc))
         return {"serial_number": serial_number, "firmware_version": firmware_version,
-                "device_function": device_function, "scope_id": scope_id, "response": None, "errors": errors}
+                "device_function": device_function, "scope_id": scope_id,
+                "response": None, "errors": errors}
 
 
 # ── SSIDs ─────────────────────────────────────────────────────────────────────
@@ -613,7 +630,11 @@ def get_passpoint_profile(
         effective=effective,
         detailed=detailed,
     )
-    resp = client._request("GET", f"/network-config/v1alpha1/passpoint/{quote(name, safe='')}", params=params or None)
+    resp = client._request(
+        "GET",
+        f"/network-config/v1alpha1/passpoint/{quote(name, safe='')}",
+        params=params or None,
+    )
     return resp_json(resp)
 
 
@@ -726,7 +747,8 @@ def _provision_nac_mac_auth(client, ssid_name: str, default_role: str | None, re
                 resp = client._request("PATCH", f"{_AUTH_PROFILE_BASE}/{profile_id}", json={
                     "networks": updated_networks,
                 })
-                result["nac_auth_profile"] = {"profile_id": profile_id, "action": "patched", "status": resp.status_code}
+                result["nac_auth_profile"] = {"profile_id": profile_id, "action": "patched",
+                                              "status": resp.status_code}
             else:
                 # Fallback: create new profile
                 profile_id = str(uuid.uuid4())
@@ -741,7 +763,8 @@ def _provision_nac_mac_auth(client, ssid_name: str, default_role: str | None, re
                     "identity-stores": [_MAC_ADDRESS_STORE_ID],
                     "mab": {"allow-all": True},
                 })
-                result["nac_auth_profile"] = {"profile_id": profile_id, "action": "created", "status": resp.status_code}
+                result["nac_auth_profile"] = {"profile_id": profile_id, "action": "created",
+                                              "status": resp.status_code}
     except Exception as exc:
         result.setdefault("errors", []).append(f"nac_auth_profile: {exc}")
 
@@ -779,7 +802,8 @@ def _provision_nac_mac_auth(client, ssid_name: str, default_role: str | None, re
                     }],
                 }],
             })
-            result["nac_authz_policy"] = {"policy_id": policy_id, "name": policy_name, "status": resp.status_code}
+            result["nac_authz_policy"] = {"policy_id": policy_id, "name": policy_name,
+                                          "status": resp.status_code}
     except Exception as exc:
         result.setdefault("errors", []).append(f"nac_authz_policy: {exc}")
 
@@ -841,8 +865,10 @@ def build_underlay_ssid(
     if dry_run:
         if mac_auth_server_group:
             result["will_also_create"] = [
-                f"Central NAC MAB auth profile: add '{ssid_name}' to existing wireless allow-all profile",
-                f"Central NAC authz policy: '{ssid_name} Allow' (no conditions, assigns role '{default_role or ssid_name}')",
+                f"Central NAC MAB auth profile: add '{ssid_name}' to existing "
+                "wireless allow-all profile",
+                f"Central NAC authz policy: '{ssid_name} Allow' (no conditions, "
+                f"assigns role '{default_role or ssid_name}')",
             ]
         return result
     if mac_auth_server_group is None:
@@ -867,9 +893,13 @@ def build_underlay_ssid(
     if default_role is not None:
         updates["default-role"] = default_role
     try:
-        response = client._request("PATCH", f"/network-config/v1/wlan-ssids/{url_name}", json=updates)
+        response = client._request(
+            "PATCH", f"/network-config/v1/wlan-ssids/{url_name}", json=updates
+        )
         if response.status_code not in (200, 201, 202, 204):
-            result.setdefault("errors", []).append(f"post_configure_macauth: {compact_http_error(response)}")
+            result.setdefault("errors", []).append(
+                f"post_configure_macauth: {compact_http_error(response)}"
+            )
             return result
         result["mac_auth_configured"] = True
         result["mac_auth_updates"] = updates
@@ -995,7 +1025,8 @@ def delete_overlay_ssid(
     the failure buried in an `errors` list.
     """
     if dry_run:
-        return {"dry_run": True, "profile_name": profile_name, "endpoint": f"/network-config/v1alpha1/overlay-wlan/{profile_name}"}
+        return {"dry_run": True, "profile_name": profile_name,
+                "endpoint": f"/network-config/v1alpha1/overlay-wlan/{profile_name}"}
 
     endpoint = f"/network-config/v1alpha1/overlay-wlan/{profile_name}"
     client = get_client()
@@ -1060,21 +1091,25 @@ def update_ssid(
         params["view-type"] = "LOCAL"
 
     if dry_run:
-        return {"dry_run": True, "ssid_name": ssid_name, "scope_id": scope_id, "updates": updates, "response": None, "errors": []}
+        return {"dry_run": True, "ssid_name": ssid_name, "scope_id": scope_id,
+                "updates": updates, "response": None, "errors": []}
 
     try:
         response = client._request("PATCH", endpoint, json=updates, params=params or None)
         if response.status_code not in (200, 201, 202, 204):
             errors.append(compact_http_error(response))
-            return {"ssid_name": ssid_name, "scope_id": scope_id, "updates": updates, "response": None, "errors": errors}
+            return {"ssid_name": ssid_name, "scope_id": scope_id, "updates": updates,
+                    "response": None, "errors": errors}
         try:
             resp_body = response.json()
         except Exception:
             resp_body = {}
-        return {"ssid_name": ssid_name, "scope_id": scope_id, "updates": updates, "response": resp_body, "errors": errors}
+        return {"ssid_name": ssid_name, "scope_id": scope_id, "updates": updates,
+                "response": resp_body, "errors": errors}
     except Exception as exc:
         errors.append(str(exc))
-        return {"ssid_name": ssid_name, "scope_id": scope_id, "updates": updates, "response": None, "errors": errors}
+        return {"ssid_name": ssid_name, "scope_id": scope_id, "updates": updates,
+                "response": None, "errors": errors}
 
 
 # ── Switch Port Profiles & Interface Config ────────────────────────────────────
@@ -1101,7 +1136,10 @@ def create_port_profile(
     encoded_name = quote(profile_name, safe="")
 
     try:
-        client.post(f"/network-config/v1/sw-port-profiles/{encoded_name}", data={"description": description})
+        client.post(
+            f"/network-config/v1/sw-port-profiles/{encoded_name}",
+            data={"description": description},
+        )
     except Exception as exc:
         resp_text = _exc_resp_text(exc)
         if "duplicate" not in resp_text.lower() and "already exists" not in resp_text.lower():
@@ -1120,7 +1158,8 @@ def create_port_profile(
             if "already exists" not in resp_text.lower():
                 errors.append(f"scope_map(scope={sid}): {exc}")
 
-    return {"profile_name": profile_name, "body": body, "scope_ids": scope_ids or [], "errors": errors}
+    return {"profile_name": profile_name, "body": body,
+            "scope_ids": scope_ids or [], "errors": errors}
 
 
 @mcp.tool(annotations=IDEMPOTENT_WRITE)
@@ -1211,7 +1250,8 @@ def update_port_config(
     """
     if dry_run:
         return {"dry_run": True, "serial_number": serial_number, "interface_name": interface_name,
-                "updates": updates, "device_scope_id": device_scope_id, "response": None, "errors": []}
+                "updates": updates, "device_scope_id": device_scope_id,
+                "response": None, "errors": []}
 
     client = get_client()
     errors: list[str] = []
@@ -1452,10 +1492,12 @@ def gateway_join_cluster(
 
         errors.append(f"POST failed: {post_err}")
         errors.append(f"PATCH failed: {_resp_err(response)}")
-        return {"cluster_name": cluster_name, "payload": payload, "response": None, "errors": errors}
+        return {"cluster_name": cluster_name, "payload": payload,
+                "response": None, "errors": errors}
     except Exception as exc:
         errors.append(str(exc))
-        return {"cluster_name": cluster_name, "payload": payload, "response": None, "errors": errors}
+        return {"cluster_name": cluster_name, "payload": payload,
+                "response": None, "errors": errors}
 
 
 # ── Device Management ─────────────────────────────────────────────────────────
@@ -1472,7 +1514,8 @@ def create_site(
     longitude: float | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Create a new site (mandatory geographic scope). Only `name` is required; name must be unique."""
+    """Create a new site (mandatory geographic scope). Only `name` is required;
+    name must be unique."""
     payload: dict[str, Any] = {"name": name}
     for key, val in [
         ("address", address), ("city", city), ("state", state), ("country", country),
@@ -1554,7 +1597,8 @@ def update_device_settings(
     device_scope_id: str | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Update device metadata (name, location, notes, banner). device_scope_id required for switch-system path."""
+    """Update device metadata (name, location, notes, banner). device_scope_id
+    required for switch-system path."""
     if dry_run:
         return {"dry_run": True, "serial_number": serial_number, "settings": settings,
                 "device_scope_id": device_scope_id, "response": None, "errors": []}
@@ -1588,7 +1632,8 @@ def update_device_settings(
         except Exception as exc:
             errors.append(str(exc))
 
-    return {"serial_number": serial_number, "settings": settings, "endpoint_used": None, "response": None, "errors": errors}
+    return {"serial_number": serial_number, "settings": settings,
+            "endpoint_used": None, "response": None, "errors": errors}
 
 
 # ── Roles ─────────────────────────────────────────────────────────────────────
@@ -1834,7 +1879,10 @@ def delete_config_assignment(
     or an error-shaped envelope instead of returning a success-shaped result with
     the failure buried in an `errors` list.
     """
-    endpoint = f"/network-config/v1alpha1/config-assignments/{scope_id}/{device_function}/{profile_type}/{profile_instance}"
+    endpoint = (
+        f"/network-config/v1alpha1/config-assignments/"
+        f"{scope_id}/{device_function}/{profile_type}/{profile_instance}"
+    )
 
     if dry_run:
         return {"dry_run": True, "endpoint": endpoint}
@@ -1915,7 +1963,9 @@ def list_config_assignments(
     if device_function is not None:
         params["device-function"] = device_function
     client = get_client()
-    resp = client._request("GET", "/network-config/v1alpha1/config-assignments", params=params or None)
+    resp = client._request(
+        "GET", "/network-config/v1alpha1/config-assignments", params=params or None
+    )
     data = resp_json(resp)
     if profile_type is not None and isinstance(data, dict):
         assignments = data.get("config-assignment")
@@ -2026,7 +2076,9 @@ def create_webhook(
     body: dict[str, Any] = {"name": name, "endpoint": endpoint_url, "authMechanism": auth_mechanism}
     if auth_mechanism == "OIDC":
         if not (oidc_client_id and oidc_client_secret and oidc_well_known_url):
-            return {"errors": ["OIDC requires oidc_client_id, oidc_client_secret, and oidc_well_known_url"]}
+            return {"errors": [
+                "OIDC requires oidc_client_id, oidc_client_secret, and oidc_well_known_url"
+            ]}
         body["oidcDetails"] = {
             "clientId": oidc_client_id,
             "clientSecret": oidc_client_secret,
@@ -2107,7 +2159,9 @@ def create_device_group(
     client = get_client()
     if devices:
         payload = {"scopeName": name, "description": description, "devices": devices}
-        resp = client._request("POST", "/network-config/v1/device-groups-create-and-add-devices", json=payload)
+        resp = client._request(
+            "POST", "/network-config/v1/device-groups-create-and-add-devices", json=payload
+        )
     else:
         payload = {"scopeName": name, "description": description}
         resp = client._request("POST", _DEVICE_GROUPS_BASE, json=payload)
@@ -2144,7 +2198,11 @@ def add_devices_to_group(scope_id: str, serial_numbers: list[str]) -> dict[str, 
 def remove_devices_from_group(serial_numbers: list[str]) -> dict[str, Any]:
     """Remove devices from their current device group."""
     client = get_client()
-    resp = client._request("POST", "/network-config/v1/device-groups-remove-devices", json={"devices": serial_numbers})
+    resp = client._request(
+        "POST",
+        "/network-config/v1/device-groups-remove-devices",
+        json={"devices": serial_numbers},
+    )
     try:
         body = resp.json()
     except Exception:
@@ -2199,7 +2257,11 @@ def list_config_templates(limit: int = 100, offset: int = 0) -> dict[str, Any]:
             return bounded
         except Exception as exc:
             errors.append(f"{endpoint}: {exc}")
-    return {"items": [], "errors": errors, "_note": "No template endpoint responded — may not be exposed in New Central yet"}
+    return {
+        "items": [],
+        "errors": errors,
+        "_note": "No template endpoint responded — may not be exposed in New Central yet",
+    }
 
 
 @mcp.tool(annotations=READ_ONLY)
@@ -2229,10 +2291,16 @@ def get_device_running_config(serial_number: str) -> dict[str, Any]:
                 data = resp.json()
             except Exception:
                 data = {"config": resp.text}
-            return {"serial_number": serial_number, "endpoint_used": endpoint, "config": data, "errors": errors}
+            return {"serial_number": serial_number, "endpoint_used": endpoint,
+                    "config": data, "errors": errors}
         except Exception as exc:
             errors.append(f"{endpoint}: {exc}")
-    return {"serial_number": serial_number, "config": None, "errors": errors, "_note": "Config export may not be available in New Central"}
+    return {
+        "serial_number": serial_number,
+        "config": None,
+        "errors": errors,
+        "_note": "Config export may not be available in New Central",
+    }
 
 
 @mcp.tool(annotations=READ_ONLY)
@@ -2268,11 +2336,21 @@ def list_named_vlans(scope_id: str | None = None) -> dict[str, Any]:
                 errors.append(compact_http_error(resp, endpoint))
                 continue
             data = resp.json()
-            items = data if isinstance(data, list) else data.get("items", data.get("vlans", data.get("named_vlans", [])))
-            return {"scope_id": scope_id, "endpoint_used": endpoint, "vlans": items, "errors": errors}
+            items = (
+                data
+                if isinstance(data, list)
+                else data.get("items", data.get("vlans", data.get("named_vlans", [])))
+            )
+            return {"scope_id": scope_id, "endpoint_used": endpoint,
+                    "vlans": items, "errors": errors}
         except Exception as exc:
             errors.append(f"{endpoint}: {exc}")
-    return {"scope_id": scope_id, "vlans": [], "errors": errors, "_note": "Named VLAN endpoint not found — use get_switch_vlans for live switch VLANs"}
+    return {
+        "scope_id": scope_id,
+        "vlans": [],
+        "errors": errors,
+        "_note": "Named VLAN endpoint not found — use get_switch_vlans for live switch VLANs",
+    }
 
 
 # ── Network Profiles: Routing Overlays, HA, Telemetry, App Experience, ──────

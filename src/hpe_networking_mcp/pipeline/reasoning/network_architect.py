@@ -31,7 +31,9 @@ def synthesize_architecture(
         return ArchitectureRecommendation(
             topology_type="evpn_vxlan_fabric",
             title="Modern EVPN-VXLAN Spine-Leaf Campus / Data Center Fabric",
-            description="High-performance, non-blocking L3 Spine-Leaf underlay with BGP EVPN control plane and VXLAN encapsulation for microsegmentation and seamless VM/workload mobility.",
+            description="High-performance, non-blocking L3 Spine-Leaf underlay with BGP EVPN "
+                        "control plane and VXLAN encapsulation for microsegmentation and seamless "
+                        "VM/workload mobility.",
             recommended_hardware=[
                 {
                     "role": "Spine",
@@ -45,7 +47,8 @@ def synthesize_architecture(
                     "model": "Aruba CX 10000-48Y6C (with Pensando DPU)",
                     "quantity": 2,
                     "ports": "48x 25G SFP28 + 6x 100G QSFP28 + 800G Stateful Firewall DPU",
-                    "notes": "Stateful east-west firewalling, microsegmentation, and IPsec line-rate encryption",
+                    "notes": "Stateful east-west firewalling, microsegmentation, and IPsec "
+                             "line-rate encryption",
                 },
                 {
                     "role": "Access / Server Leaf",
@@ -57,7 +60,8 @@ def synthesize_architecture(
             ],
             key_design_principles=[
                 "Layer 3 routed underlay using eBGP with ECMP (Equal-Cost Multi-Path)",
-                "EVPN-VXLAN overlay with symmetric IRB (Integrated Routing and Bridging) and Anycast Gateway",
+                "EVPN-VXLAN overlay with symmetric IRB (Integrated Routing and Bridging) and "
+                "Anycast Gateway",
                 "Distributed Stateful Security at the access edge via Pensando DPUs",
                 "Jumbo frame MTU 9198 on all underlay links to support VXLAN overhead (50 bytes)",
             ],
@@ -67,8 +71,10 @@ def synthesize_architecture(
                 "Network-wide microsegmentation with Group-Based Policies (GBP)",
             ],
             config_highlights=[
-                "router bgp 65001\n  neighbor 10.0.0.1 remote-as 65000\n  address-family l2vpn evpn\n    neighbor 10.0.0.1 activate",
-                "evpn\n  vni 10010\n    rd 10.255.255.1:10010\n    route-target export 65000:10010\n    route-target import 65000:10010",
+                "router bgp 65001\n  neighbor 10.0.0.1 remote-as 65000\n  address-family l2vpn "
+                "evpn\n    neighbor 10.0.0.1 activate",
+                "evpn\n  vni 10010\n    rd 10.255.255.1:10010\n    route-target export "
+                "65000:10010\n    route-target import 65000:10010",
             ],
         )
 
@@ -79,21 +85,25 @@ def synthesize_architecture(
     return ArchitectureRecommendation(
         topology_type="collapsed_core_campus",
         title="High-Availability Multi-Gigabit Campus Network (Aruba ESP)",
-        description="Enterprise campus architecture with redundant VSF/VSX Core switching, multi-gigabit Class 8 PoE access layer, Wi-Fi 6E APs, and ClearPass Zero Trust Network Access.",
+        description="Enterprise campus architecture with redundant VSF/VSX Core switching, "
+                    "multi-gigabit Class 8 PoE access layer, Wi-Fi 6E APs, and ClearPass Zero "
+                    "Trust Network Access.",
         recommended_hardware=[
             {
                 "role": "Core / Aggregation",
                 "model": "Aruba CX 8360-16Y2C (VSX Pair)",
                 "quantity": 2,
                 "ports": "16x 25G SFP28 + 2x 100G QSFP28",
-                "notes": "Active-Active dual-chassis VSX pairing with sub-50ms failover and Multi-Active Detection",
+                "notes": "Active-Active dual-chassis VSX pairing with sub-50ms failover and "
+                         "Multi-Active Detection",
             },
             {
                 "role": "Access Layer",
                 "model": "Aruba CX 6300M 48-port SmartRate Class 8 PoE",
                 "quantity": access_switch_count,
                 "ports": "48x 1G/2.5G/5G SmartRate PoE Class 8 (90W) + 4x 50G SFP56 Uplinks",
-                "notes": "VSF Stacking up to 10 switches per stack, redundant hot-swappable power supplies",
+                "notes": "VSF Stacking up to 10 switches per stack, redundant hot-swappable power "
+                         "supplies",
             },
             {
                 "role": "Wireless APs",
@@ -107,14 +117,19 @@ def synthesize_architecture(
                 "model": "Aruba ClearPass Policy Manager (CPPM)",
                 "quantity": 2,
                 "ports": "High-Availability Cluster",
-                "notes": "Dynamic 802.1X, MPSK, MAC-Auth, Profiling, and Downloadable User Roles (DUR)",
+                "notes": "Dynamic 802.1X, MPSK, MAC-Auth, Profiling, and Downloadable User Roles "
+                         "(DUR)",
             },
         ],
         key_design_principles=[
-            "VSX dual-core with ISL (Inter-Switch Link) and Keepalive over dedicated management link",
-            "Multi-Chassis LAG (MC-LAG) from access VSF stacks to Core VSX pair (zero blocked STP links)",
-            "Dynamic Segmentation: Access switches dynamically tunnel untrusted traffic to Central Gateways",
-            "PoE Class 8 90W budget planned to support full 802.3bt tri-band APs without radio power throttling",
+            "VSX dual-core with ISL (Inter-Switch Link) and Keepalive over dedicated management "
+            "link",
+            "Multi-Chassis LAG (MC-LAG) from access VSF stacks to Core VSX pair (zero blocked STP "
+            "links)",
+            "Dynamic Segmentation: Access switches dynamically tunnel untrusted traffic to Central "
+            "Gateways",
+            "PoE Class 8 90W budget planned to support full 802.3bt tri-band APs without radio "
+            "power throttling",
         ],
         advantages=[
             "Complete hardware redundancy at Core, Stacking, Power Supply, and Uplink layers",
@@ -122,7 +137,8 @@ def synthesize_architecture(
             "Zero Trust policy enforcement based on identity, device posture, and role",
         ],
         config_highlights=[
-            "vsx\n  inter-switch-link lag 100\n  keepalive peer 192.168.1.2 source 192.168.1.1 vrf mgmt\n  role active",
+            "vsx\n  inter-switch-link lag 100\n  keepalive peer 192.168.1.2 source 192.168.1.1 vrf "
+            "mgmt\n  role active",
             "interface lag 1\n  vsx-sync\n  vlan trunk allowed all\n  lacp mode active",
         ],
     )

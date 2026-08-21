@@ -54,7 +54,8 @@ class VerifyStage(Stage):
                 failures.append(f"isProvisioned={device.get('isProvisioned')!r} (expected 'Yes')")
             if status != "ONLINE":
                 logger.warning(
-                    "%s status=%r (expected 'ONLINE') — device may be offline but still provisioned",
+                    "%s status=%r (expected 'ONLINE') — device may be offline but still "
+                    "provisioned",
                     record.serial_number, status,
                 )
 
@@ -74,11 +75,22 @@ class VerifyStage(Stage):
                     )
                     items = details.get("items", [])
                     for item in items:
-                        if item.get("serialNumber") == record.serial_number or item.get("id") == record.serial_number:
-                            fw_version = item.get("softwareVersion", "") or item.get("firmwareVersion", "") or ""
+                        if (
+                            item.get("serialNumber") == record.serial_number
+                            or item.get("id") == record.serial_number
+                        ):
+                            fw_version = (
+                                item.get("softwareVersion", "")
+                                or item.get("firmwareVersion", "")
+                                or ""
+                            )
                             break
                     if not fw_version and items:
-                        fw_version = items[0].get("softwareVersion", "") or items[0].get("firmwareVersion", "") or ""
+                        fw_version = (
+                            items[0].get("softwareVersion", "")
+                            or items[0].get("firmwareVersion", "")
+                            or ""
+                        )
                 except Exception as exc:
                     logger.warning("Firmware version check failed: %s", exc)
             # Check contains "10." anywhere (handles platform prefixes like "PL.10.16.1006")
@@ -113,7 +125,9 @@ class VerifyStage(Stage):
                 checks_failed=failures,
             )
 
-        final_firmware = fw_version or (device or {}).get("firmwareVersion") or record.firmware_target
+        final_firmware = (
+            fw_version or (device or {}).get("firmwareVersion") or record.firmware_target
+        )
         device_status = str((device or {}).get("status", "")).upper()
         return StageResult.success(
             is_provisioned=True,

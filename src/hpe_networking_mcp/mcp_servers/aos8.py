@@ -2293,7 +2293,8 @@ def _aos8_migration_target(
         # stateless `aos8_preview_migration_run`, which persists nothing.
         # `aos8_create_migration_run` rejects any non-empty value here with
         # a clear error (see
-        # `hpe_networking_mcp.pipeline.aos8_migration_orchestrator._reject_persisted_operator_context`)
+        # `hpe_networking_mcp.pipeline.aos8_migration_orchestrator
+        # ._reject_persisted_operator_context`)
         # rather than persisting it, a hash of it, or a resupply count.
         # `aos8_apply_migration_run` does not accept these fields at all.
         "external_object_references": external_object_references or {},
@@ -3047,8 +3048,10 @@ async def aos8_write_memory(
 
 
 # ---------------------------------------------------------------------------
-# Generated OpenAPI tools (see src/hpe_networking_mcp/mcp_servers/openapi_gen). The committed manifest
-# at src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/aos8.json is a derived operation manifest
+# Generated OpenAPI tools (see src/hpe_networking_mcp/mcp_servers/openapi_gen). The
+# committed manifest at
+# src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/aos8.json is a derived
+# operation manifest
 # built from the current ArubaOS 8 JSON API OpenAPI document published on the
 # Aruba developer portal (ReadMe). Every generated call flows through
 # `_aos8_send`, which preserves the UIDARUBA session query param and the

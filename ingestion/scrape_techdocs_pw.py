@@ -13,11 +13,18 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-OUTPUT_DIR = Path(__file__).parent / "sources" / "techdocs_html" / "arubanetworking.hpe.com" / "techdocs" / "new-central" / "content"
+OUTPUT_DIR = (
+    Path(__file__).parent / "sources" / "techdocs_html" / "arubanetworking.hpe.com"
+    / "techdocs" / "new-central" / "content"
+)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 def load_urls():
-    path = "/tmp/techdocs_missing.json" if os.path.exists("/tmp/techdocs_missing.json") else "/tmp/techdocs_urls.json"
+    path = (
+        "/tmp/techdocs_missing.json"
+        if os.path.exists("/tmp/techdocs_missing.json")
+        else "/tmp/techdocs_urls.json"
+    )
     with open(path) as f:
         urls = json.load(f)
     # Fix double slash
@@ -61,7 +68,8 @@ def main():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, "
+                       "like Gecko) Chrome/135.0.0.0 Safari/537.36"
         )
         page = context.new_page()
 

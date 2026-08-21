@@ -122,7 +122,9 @@ def test_load_all_backends_keeps_diagnostics_in_read_only_mode(monkeypatch):
 def test_load_all_backends_filters_optional_writes_when_read_only(monkeypatch):
     monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-only")
     monkeypatch.setenv("HPE_MCP_CLEARPASS_WRITES", "0")  # .env sets this; explicit disable wins
-    monkeypatch.setattr(router, "_BACKENDS", {"clearpass-core": "hpe_networking_mcp.mcp_servers.clearpass"})
+    monkeypatch.setattr(
+        router, "_BACKENDS", {"clearpass-core": "hpe_networking_mcp.mcp_servers.clearpass"}
+    )
     monkeypatch.setattr(router, "_tool_index", {})
     monkeypatch.setattr(router, "_tool_servers", {})
     monkeypatch.setattr(router, "_tool_backend_names", {})
@@ -137,7 +139,9 @@ def test_load_all_backends_filters_optional_writes_when_read_only(monkeypatch):
 
 def test_load_all_backends_exposes_optional_writes_when_read_write(monkeypatch):
     monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-write")
-    monkeypatch.setattr(router, "_BACKENDS", {"clearpass-core": "hpe_networking_mcp.mcp_servers.clearpass"})
+    monkeypatch.setattr(
+        router, "_BACKENDS", {"clearpass-core": "hpe_networking_mcp.mcp_servers.clearpass"}
+    )
     monkeypatch.setattr(router, "_tool_index", {})
     monkeypatch.setattr(router, "_tool_servers", {})
     monkeypatch.setattr(router, "_tool_backend_names", {})
@@ -293,7 +297,9 @@ def test_find_tool_filters_optional_write_hits_when_read_only(monkeypatch):
     monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-only")
     monkeypatch.setenv("HPE_MCP_CLEARPASS_WRITES", "0")  # .env sets this; explicit disable wins
     monkeypatch.setattr(router, "_BACKEND", "lancedb")
-    monkeypatch.setattr(router, "_BACKENDS", {"clearpass-core": "hpe_networking_mcp.mcp_servers.clearpass"})
+    monkeypatch.setattr(
+        router, "_BACKENDS", {"clearpass-core": "hpe_networking_mcp.mcp_servers.clearpass"}
+    )
     monkeypatch.setattr(
         router,
         "_tool_index",
@@ -353,7 +359,9 @@ def test_find_tool_filters_optional_write_hits_when_read_only(monkeypatch):
 
 def test_find_tool_omits_schema_by_default(monkeypatch):
     monkeypatch.setattr(router, "_BACKEND", "lancedb")
-    monkeypatch.setattr(router, "_BACKENDS", {"central-config": "hpe_networking_mcp.mcp_servers.config"})
+    monkeypatch.setattr(
+        router, "_BACKENDS", {"central-config": "hpe_networking_mcp.mcp_servers.config"}
+    )
     monkeypatch.setattr(
         router,
         "_tool_index",
@@ -390,7 +398,9 @@ def test_find_tool_omits_schema_by_default(monkeypatch):
 
 def test_find_tool_can_include_schema_when_requested(monkeypatch):
     monkeypatch.setattr(router, "_BACKEND", "lancedb")
-    monkeypatch.setattr(router, "_BACKENDS", {"central-config": "hpe_networking_mcp.mcp_servers.config"})
+    monkeypatch.setattr(
+        router, "_BACKENDS", {"central-config": "hpe_networking_mcp.mcp_servers.config"}
+    )
     monkeypatch.setattr(
         router,
         "_tool_index",
@@ -840,7 +850,9 @@ def test_find_tool_reports_semantic_error_without_keyword_fallback(monkeypatch):
         raise RuntimeError("index missing")
 
     monkeypatch.setattr(router, "_BACKEND", "lancedb")
-    monkeypatch.setattr(router, "_BACKENDS", {"central-config": "hpe_networking_mcp.mcp_servers.config"})
+    monkeypatch.setattr(
+        router, "_BACKENDS", {"central-config": "hpe_networking_mcp.mcp_servers.config"}
+    )
     monkeypatch.setattr(router, "_keyword_hits", lambda query, limit, include_schema=False: [])
     monkeypatch.setattr(router._embedder, "embed_query", raise_index_missing)
 

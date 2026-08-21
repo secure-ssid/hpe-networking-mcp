@@ -49,47 +49,58 @@ ACCESSIBILITY = {
     ),
     "data-index-flow": (
         "Documentation and index data flow",
-        "Official documentation, OpenAPI, and advisory sources flow through ingestion into docs.lance, specs.sqlite, and tools.lance for RAG and router discovery.",
+        "Official documentation, OpenAPI, and advisory sources flow through ingestion into "
+        "docs.lance, specs.sqlite, and tools.lance for RAG and router discovery.",
     ),
     "how-mcp-rag-works": (
         "How MCP and RAG work",
-        "An MCP client uses find_tool, invoke_read_tool, and invoke_tool. Reads reach local RAG indexes or live vendor APIs; writes reach vendor APIs only.",
+        "An MCP client uses find_tool, invoke_read_tool, and invoke_tool. Reads reach local RAG "
+        "indexes or live vendor APIs; writes reach vendor APIs only.",
     ),
     "discovery-dispatch": (
         "Tool discovery and dispatch sequence",
-        "Sequence from a user request through router tool discovery, backend dispatch, a bounded vendor API request, and the normalized response.",
+        "Sequence from a user request through router tool discovery, backend dispatch, a bounded "
+        "vendor API request, and the normalized response.",
     ),
     "optional-products-map": (
         "Choose an optional product backend",
-        "Map from common network automation goals to the ClearPass, Mist, Apstra, ArubaOS 8, EdgeConnect, UXI, and Axis backends.",
+        "Map from common network automation goals to the ClearPass, Mist, Apstra, ArubaOS 8, "
+        "EdgeConnect, UXI, and Axis backends.",
     ),
     "rag-query-routing": (
         "RAG and live-tool query routing",
-        "Exact API questions use lookup_api, advisory IDs use lookup_advisory, how-to questions use ask_docs, and live device state uses find_tool then invoke_read_tool.",
+        "Exact API questions use lookup_api, advisory IDs use lookup_advisory, how-to questions "
+        "use ask_docs, and live device state uses find_tool then invoke_read_tool.",
     ),
     "quickstart-journey": (
         "hpe-networking-mcp quickstart journey",
-        "Six steps from cloning hpe-networking-mcp through setup, doctor checks, MCP connection, tool discovery, and a safe read-only call.",
+        "Six steps from cloning hpe-networking-mcp through setup, doctor checks, MCP connection, "
+        "tool discovery, and a safe read-only call.",
     ),
     "router-safety-flow": (
         "Router discovery and safety flow",
-        "Decision flow from find_tool through read, diagnostic, write, and destructive dispatch with dry-run, confirmation, and write gates.",
+        "Decision flow from find_tool through read, diagnostic, write, and destructive dispatch "
+        "with dry-run, confirmation, and write gates.",
     ),
     "setup-wizard-flow": (
         "Setup wizard phases",
-        "Six compact wizard phases: install, credentials, optional products, MCP client configs, tool catalog, and the local doctor.",
+        "Six compact wizard phases: install, credentials, optional products, MCP client configs, "
+        "tool catalog, and the local doctor.",
     ),
     "runtime-overview": (
         "hpe-networking-mcp runtime overview",
-        "High-level flow from a user and MCP client through the low-token router, tool catalog, Central/GLP/RAG, Central Streaming, optional products, local indexes, and vendor APIs.",
+        "High-level flow from a user and MCP client through the low-token router, tool catalog, "
+        "Central/GLP/RAG, Central Streaming, optional products, local indexes, and vendor APIs.",
     ),
     "troubleshooting-tree": (
         "hpe-networking-mcp troubleshooting decision tree",
-        "Diagnostic path from the local doctor through setup, authentication, transport, catalog, and RAG index checks.",
+        "Diagnostic path from the local doctor through setup, authentication, transport, catalog, "
+        "and RAG index checks.",
     ),
     "transport-deployment": (
         "MCP transport and deployment choices",
-        "Deployment paths for stdio, local streamable HTTP, and protected non-loopback streamable HTTP connections to the hpe-networking-mcp router.",
+        "Deployment paths for stdio, local streamable HTTP, and protected non-loopback streamable "
+        "HTTP connections to the hpe-networking-mcp router.",
     ),
 }
 
@@ -177,14 +188,18 @@ def _render_terminal_svg(source: Path) -> str:
                 f"{source.name}: line exceeds {TERMINAL_MAX_LINE_LENGTH} columns "
                 f"(mobile readability limit): {line!r}"
             )
-    height = TERMINAL_PADDING_TOP + max(len(lines), 1) * TERMINAL_LINE_HEIGHT + TERMINAL_PADDING_BOTTOM
+    height = (
+        TERMINAL_PADDING_TOP + max(len(lines), 1) * TERMINAL_LINE_HEIGHT + TERMINAL_PADDING_BOTTOM
+    )
     rows: list[str] = []
     y = TERMINAL_PADDING_TOP + TERMINAL_LINE_HEIGHT - 8
     for line in lines:
         style = _terminal_line_style(line)
         if style != "blank":
             text = html.escape(line)
-            rows.append(f'<text x="{TERMINAL_PADDING_X}" y="{y}" class="term-{style}">{text}</text>')
+            rows.append(
+                f'<text x="{TERMINAL_PADDING_X}" y="{y}" class="term-{style}">{text}</text>'
+            )
         y += TERMINAL_LINE_HEIGHT
     body = "".join(rows)
     digest = _digest(source)
@@ -264,7 +279,10 @@ def _pin_intrinsic_size(svg: str) -> str:
     if match is None:
         raise RuntimeError("Mermaid output has no <svg> root")
     attrs = re.sub(r'\s(?:width|height)="[^"]*"', "", match.group(1))
-    return f'{svg[: match.start()]}<svg{attrs} width="{width}" height="{height}">{svg[match.end() :]}'
+    return (
+        f'{svg[: match.start()]}<svg{attrs} '
+        f'width="{width}" height="{height}">{svg[match.end() :]}'
+    )
 
 
 def render() -> None:

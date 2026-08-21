@@ -336,7 +336,9 @@ def test_set_alert_priority_validates_priority(monkeypatch):
     monkeypatch.setattr(monitoring, "get_client", lambda: client)
 
     with pytest.raises(ValueError, match="priority must be one of"):
-        asyncio.run(monitoring.set_alert_priority(_AcceptCtx(), keys=["alert-1"], priority="Urgent"))
+        asyncio.run(
+            monitoring.set_alert_priority(_AcceptCtx(), keys=["alert-1"], priority="Urgent")
+        )
 
     client._arequest.assert_not_called()
 
@@ -713,7 +715,9 @@ def test_list_scopes_validates_total_on_terminal_page(monkeypatch):
     result = monitoring.list_scopes(full_list=True)
 
     assert result["_pagination"]["truncated"] is True
-    assert any("terminal page reported total 2 after 1 records" in item for item in result["warnings"])
+    assert any(
+        "terminal page reported total 2 after 1 records" in item for item in result["warnings"]
+    )
 
 
 def test_list_scopes_rejects_regressing_continuation_and_marks_partial(monkeypatch):

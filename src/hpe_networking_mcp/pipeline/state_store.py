@@ -73,7 +73,8 @@ class StateStore:
     def create_run(self, run_id: str, input_file: str, total_devices: int) -> None:
         with self._conn() as conn:
             conn.execute(
-                "INSERT OR IGNORE INTO run_metadata (run_id, input_file, started_at, total_devices) "
+                "INSERT OR IGNORE INTO run_metadata (run_id, input_file, started_at, "
+                "total_devices) "
                 "VALUES (?, ?, ?, ?)",
                 (run_id, input_file, _now(), total_devices),
             )
@@ -114,7 +115,8 @@ class StateStore:
             conn.execute(
                 """
                 INSERT INTO device_state
-                    (serial_number, run_id, stage, status, started_at, completed_at, error_message, result_data)
+                    (serial_number, run_id, stage, status, started_at,
+                     completed_at, error_message, result_data)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(serial_number, run_id, stage) DO UPDATE SET
                     status=excluded.status,
@@ -128,7 +130,8 @@ class StateStore:
     def get_stage_data(self, serial: str, run_id: str, stage: str) -> dict[str, Any]:
         with self._conn() as conn:
             row = conn.execute(
-                "SELECT result_data FROM device_state WHERE serial_number=? AND run_id=? AND stage=?",
+                "SELECT result_data FROM device_state WHERE serial_number=? AND run_id=? AND "
+                "stage=?",
                 (serial, run_id, stage),
             ).fetchone()
         if row and row["result_data"]:
@@ -146,7 +149,8 @@ class StateStore:
         """Return serials that have at least one FAILED stage in the given run."""
         with self._conn() as conn:
             rows = conn.execute(
-                "SELECT DISTINCT serial_number FROM device_state WHERE run_id=? AND status='failed'",
+                "SELECT DISTINCT serial_number FROM device_state WHERE run_id=? AND "
+                "status='failed'",
                 (run_id,),
             ).fetchall()
         return [r["serial_number"] for r in rows]

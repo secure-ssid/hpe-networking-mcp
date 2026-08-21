@@ -37,7 +37,9 @@ class _DummyGLP:
         self.calls.append(("assign", serial_number, subscription_id, dry_run))
         return {"status": "dry_run" if dry_run else "SUCCEEDED"}
 
-    def list_audit_logs_page(self, limit=100, offset=0, category=None, filter=None, select=None, sort=None):
+    def list_audit_logs_page(
+        self, limit=100, offset=0, category=None, filter=None, select=None, sort=None
+    ):
         self.calls.append(("audit", limit, offset, category, filter, select, sort))
         return {"items": []}
 
@@ -133,7 +135,15 @@ class TestAuditToolParameters:
         )
 
         assert dummy.calls == [
-            ("audit", 10, 5, "User Management", "region eq 'us-west'", "createdAt", "createdAt desc")
+            (
+                "audit",
+                10,
+                5,
+                "User Management",
+                "region eq 'us-west'",
+                "createdAt",
+                "createdAt desc",
+            )
         ]
 
     def test_v2_tool_forwards_the_same_parameters(self, monkeypatch):

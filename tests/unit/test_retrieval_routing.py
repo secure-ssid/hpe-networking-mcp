@@ -102,7 +102,9 @@ def test_find_tool_exact_operation_id_ranks_top1_when_loaded(monkeypatch):
 def test_find_tool_origin_filter_hides_generated_only_exact_hit(monkeypatch):
     _stub_search(monkeypatch)
     _stub_exact(monkeypatch)
-    assert router.find_tool("GET /network-config/v1alpha1/firmware-compliance", origin="curated") == []
+    assert router.find_tool(
+        "GET /network-config/v1alpha1/firmware-compliance", origin="curated"
+    ) == []
 
 
 def test_keyword_scope_terms_boost_matching_params(monkeypatch):

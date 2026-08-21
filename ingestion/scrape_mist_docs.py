@@ -37,7 +37,8 @@ HEADERS = {
 }
 
 _TOPIC_BODY_RE = re.compile(
-    r'<div class="topicBody">(.*?)</div>\s*(?:<div class="(?:related-links|section (?:context|postreq))"|</body>|<footer)',
+    r'<div class="topicBody">(.*?)</div>\s*'
+    r'(?:<div class="(?:related-links|section (?:context|postreq))"|</body>|<footer)',
     re.DOTALL,
 )
 _TITLE_RE = re.compile(r'<h1[^>]*class="title[^"]*"[^>]*>(.*?)</h1>', re.DOTALL)

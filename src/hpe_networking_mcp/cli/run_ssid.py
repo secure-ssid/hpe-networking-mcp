@@ -80,7 +80,9 @@ def _load_csv(path: str) -> list[dict]:
             ssid_name = row.get("ssid_name", "").strip()
             vlans_raw = row.get("vlans", "").strip()
             if not ssid_name or not vlans_raw:
-                console.print(f"[yellow]Skipping row with missing ssid_name or vlans: {row}[/yellow]")
+                console.print(
+                    f"[yellow]Skipping row with missing ssid_name or vlans: {row}[/yellow]"
+                )
                 continue
             rows.append({
                 "ssid_name": ssid_name,
@@ -95,8 +97,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Aruba New Central — Underlay SSID Builder")
     parser.add_argument("--creds", default="config/credentials.yaml", help="Credentials YAML file")
     parser.add_argument("--ssid", metavar="NAME", help="SSID name (single-SSID mode)")
-    parser.add_argument("--vlans", metavar="IDS", help="Comma-separated VLAN IDs (e.g. 1000 or 1000,1001)")
-    parser.add_argument("--scope-id", metavar="ID", help="Scope-id to map SSID to (default: global)")
+    parser.add_argument(
+        "--vlans", metavar="IDS", help="Comma-separated VLAN IDs (e.g. 1000 or 1000,1001)"
+    )
+    parser.add_argument(
+        "--scope-id", metavar="ID", help="Scope-id to map SSID to (default: global)"
+    )
     parser.add_argument("--opmode", default="ENHANCED_OPEN",
                         choices=["ENHANCED_OPEN", "WPA3_SAE", "WPA2_PERSONAL", "WPA2_PSK"],
                         help="Security/auth mode (default: ENHANCED_OPEN). "
