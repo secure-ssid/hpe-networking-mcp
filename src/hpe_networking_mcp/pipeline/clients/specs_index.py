@@ -15,6 +15,7 @@ Query:   python -m hpe_networking_mcp.pipeline.clients.specs_index --query "auth
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -356,6 +357,26 @@ def _endpoint_identity(
     )
 
 
+# A 128-bit digest of the field list. The identity is only ever compared for
+# equality (see ``_schema_identity``), so the field list's *bytes* buy nothing
+# once its fingerprint is preserved, and 16 bytes make an accidental collision
+# across the corpus' few thousand schemas unreachable.
+_SIGNATURE_DIGEST_BYTES = 16
+
+
+def _field_signature(field_rows: list[tuple[str, str, str | None, str | None]]) -> str:
+    """A stable fingerprint of a schema's field list.
+
+    ``hashlib`` and an explicitly sorted, separator-pinned JSON serialization,
+    never ``hash()``: the build must produce identical identities across runs,
+    processes and machines, and ``hash()`` is salted per process.
+    """
+    payload = json.dumps(sorted(field_rows), separators=(",", ":"), sort_keys=False)
+    return hashlib.blake2b(
+        payload.encode("utf-8"), digest_size=_SIGNATURE_DIGEST_BYTES
+    ).hexdigest()
+
+
 def _schema_identity(
     *,
     source_family: str,
@@ -366,16 +387,30 @@ def _schema_identity(
     schema_name: str,
     field_rows: list[tuple[str, str, str | None, str | None]],
 ) -> str:
+    """Fingerprint a schema: same name *and* same field list means same schema.
+
+    Aruba's corpus ships one schema in several overlapping spec files, so the
+    name alone cannot identify it and the field list has to take part. The
+    field list is therefore *digested*, not inlined: this value is written to
+    ``schemas.identity`` and repeated on every one of that schema's
+    ``fields`` rows, so inlining it stored a 200-field schema's whole field
+    list 200 times, and ``idx_fields_identity`` then indexed the same text
+    again. Nothing reads the value - :func:`_externalize_row` strips both
+    columns before a row leaves this module - so only equality is owed, and a
+    digest preserves that exactly while bounding the column.
+
+    The name and scope stay in the clear so the column remains greppable when
+    debugging an index by hand.
+    """
     scope = platform or _normalized_server(server) or source_family
     version_key = version or spec_version or ""
-    signature = json.dumps(sorted(field_rows), separators=(",", ":"), sort_keys=False)
     return "|".join(
         (
             source_family,
             scope,
             version_key.lower(),
             schema_name,
-            signature,
+            _field_signature(field_rows),
         )
     )
 
