@@ -6,7 +6,7 @@ ArubaOS 8, EdgeConnect, UXI, and Axis backends. This page is a task-based
 front door for three audiences: people trying MCP for the first time, Aruba
 network operators, and hpe-networking-mcp developers.
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,722 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,144 generated operations, 6,726 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
 
 Whatever backend does the work, an MCP client sees only three router tools
 under the recommended `minimal` profile — the banner's "3 minimal router
@@ -240,9 +240,9 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | 6,144 generated operations (6,127 active) / 595 curated / 6,722 backend tools / 6,729 direct-all |
-| Capability totals (platform APIs) | 3,156 read, 165 diagnostic, 2,545 write, 842 destructive |
-| RAG | 392,471 prose chunks in LanceDB |
+| Tool catalog | 6,144 generated operations (6,127 active) / 599 curated / 6,726 backend tools / 6,733 direct-all |
+| Capability totals (platform APIs) | 3,159 read, 165 diagnostic, 2,545 write, 842 destructive |
+| RAG | 392,471 prose chunks in LanceDB across 30 scraped sources |
 | Structured lookup | 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 345 lifecycle records |
 | API provenance | Aruba ReadMe registries, official Mist/Apstra sources, pinned GLP and EdgeConnect snapshots, SHA-pinned Axis generator |
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud |
@@ -251,11 +251,13 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 </div>
 
 <figure class="docs-figure">
-  <img src="assets/platform-coverage.svg" alt="The low-token router searches 6,722 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms">
+  <img src="assets/platform-coverage.svg" alt="The low-token router searches 6,726 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms">
   <figcaption>Every platform is opt-in except Central, GLP, and RAG, which load by default under the minimal router profile.</figcaption>
 </figure>
 
-Read the [0.8.0 release notes](release-notes-0.8.0.md) for the clean repository
+Read the [0.9.0 release notes](release-notes-0.9.0.md) for corpus expansion,
+RAG modernization, Docker packaging, deduplication, and all post-0.8.0 changes,
+and the [0.8.0 release notes](release-notes-0.8.0.md) for the repository
 and package rename, MCP 2 transport repair, PII protection, interop tools, GLP
 inventory completion, strict catalog/RAG facts, and classified drift gates.
 See the
@@ -276,7 +278,8 @@ comparisons.
 | Enable ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, or Axis | [Optional product starters](optional-products.md) |
 | Plan typed product-specific workflows | [Typed product workflow roadmap](product-workflows.md) |
 | Fix setup, credentials, HTTP, or catalog issues | [Troubleshooting](troubleshooting.md) |
-| Download or package prebuilt RAG/OpenAPI indexes | [Prebuilt RAG/OpenAPI indexes](release-indexes.md) |
+| Build the tool/API indexes and the local RAG corpus | [Local RAG/OpenAPI indexes](release-indexes.md) |
+| Check vendor, product, version, and document-class coverage | [RAG coverage matrix](rag-coverage-matrix.md) |
 | Browse all backend counts and coverage | [Tool catalog](tool-catalog.md) |
 | See how MCP and RAG work | [How MCP and RAG work](architecture/how-it-works.md) |
 | See architecture, data, and safety diagrams | [System overview](architecture/system-overview.md) |
@@ -286,6 +289,7 @@ comparisons.
 
 | Goal | Guide |
 |---|---|
+| Review the 0.9.0 RAG/corpus/Docker expansion | [0.9.0 release notes](release-notes-0.9.0.md) |
 | Review the 0.8.0 repository launch | [0.8.0 release notes](release-notes-0.8.0.md) |
 | Review the complete 0.7.0 expansion | [0.7.0 release notes](release-notes-0.7.0.md) |
 | Review Central v0.7 depth workflows (templates, bulk delete, firmware campaigns, config-health remediation, troubleshooting bundles) | [Central v0.7 workflows](central-v07-workflows.md) |

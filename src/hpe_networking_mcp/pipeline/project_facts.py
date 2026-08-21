@@ -64,6 +64,11 @@ CREDENTIAL_FREE_LOCAL_SERVERS = ("design-core", "interop-core")
 #: by the REST/OpenAPI operation manifests used for platform coverage totals.
 PROTOCOL_ONLY_SERVERS = ("central-streaming",)
 
+#: Cross-platform aggregators are real registered tools, but they compose other
+#: backends rather than exposing a vendor API of their own, so they are not part
+#: of the per-platform API catalog or its capability benchmark.
+NON_PLATFORM_AGGREGATOR_SERVERS = ("site-health",)
+
 #: Curated diagnostics that intentionally inspect local configuration/cache
 #: state and make no vendor API call, even though they live beside vendor
 #: workflows in a platform backend.
@@ -287,6 +292,9 @@ def tool_facts(*, identities: dict[str, list[str]] | None = None) -> dict[str, A
     protocol_only_total = sum(
         by_server.get(server, 0) for server in PROTOCOL_ONLY_SERVERS
     )
+    aggregator_total = sum(
+        by_server.get(server, 0) for server in NON_PLATFORM_AGGREGATOR_SERVERS
+    )
     non_api_local: dict[str, int] = {}
     for server, tool_names in NON_API_LOCAL_TOOLS.items():
         registered = set(identities.get(server, []))
@@ -308,7 +316,11 @@ def tool_facts(*, identities: dict[str, list[str]] | None = None) -> dict[str, A
         },
         "non_api_local": non_api_local,
         "platform_backend_total": (
-            total - local_total - protocol_only_total - non_api_local_total
+            total
+            - local_total
+            - protocol_only_total
+            - non_api_local_total
+            - aggregator_total
         ),
         "platform_curated_total": (
             total
@@ -316,8 +328,13 @@ def tool_facts(*, identities: dict[str, list[str]] | None = None) -> dict[str, A
             - local_total
             - protocol_only_total
             - non_api_local_total
+            - aggregator_total
         ),
         "interop_tools": by_server.get("interop-core", 0),
+        "non_platform_aggregators": {
+            server: by_server.get(server, 0)
+            for server in NON_PLATFORM_AGGREGATOR_SERVERS
+        },
     }
 
 
@@ -574,7 +591,11 @@ def specs_counts(path: Path = SPECS_DB_PATH) -> dict[str, int]:
     connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     try:
         for table in SPECS_TABLES:
-            counts[table] = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            # table is always one of the hardcoded SPECS_TABLES constant
+            # above, never external/user input.
+            counts[table] = connection.execute(
+                f"SELECT COUNT(*) FROM {table}"  # nosec B608
+            ).fetchone()[0]
     finally:
         connection.close()
     return counts

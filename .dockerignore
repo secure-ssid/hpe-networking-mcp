@@ -1,0 +1,76 @@
+# Keep the Docker build context small and never let secrets or local state
+# reach the build daemon / image layers. This is a security boundary, not
+# just a cache optimization: anything not excluded here can end up baked
+# into an image layer even if a later COPY doesn't reference it directly.
+
+# VCS / editor. .github/index-bundle.json is kept (not excluded below) since
+# it is the pinned, checksum-verified prebuilt-index manifest referenced by
+# the explicit, opt-in `download_indexes.py --manifest` step documented in
+# docs/production-deployment.md.
+.git/
+.github/workflows/
+.github/ISSUE_TEMPLATE/
+.github/skills/
+.github/pull_request_template.md
+.github/dependabot.yml
+.gitignore
+.gitattributes
+.vscode/
+.cursor/
+.claude/
+*.iml
+
+# Secrets and local credentials — never send these to the build context.
+.env
+.env.*
+!.env.example
+config/credentials.yaml
+secrets/**
+!secrets/*.example
+!secrets/README.md
+.token_cache_*.json
+.mcp.json
+.mcp.http.json
+
+# Local runtime state / outputs / built indexes — mount these as volumes
+# instead of baking them into the image (see docs/production-deployment.md).
+state/
+outputs/
+data/
+redis_data/
+ollama_data/
+inputs/*.csv
+inputs/*.cfg
+
+# Python / tooling artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Docs / non-runtime content not needed inside the image
+docs/assets/
+docs/diagrams/
+resources/
+CHANGELOG.md
+MIGRATION.md
+*.pdf
+
+# Test suite is not needed to run the router at runtime.
+tests/
+.pytest_cache/
+
+# Scraped/ingested sources regenerated locally, not shipped in the image
+ingestion/sources/
+ingestion/markdown/
+ingestion/markdown_techdocs/
+ingestion/markdown_vsg/
+ingestion/greenlake_specs/
+personal_data/
+personal_docs/

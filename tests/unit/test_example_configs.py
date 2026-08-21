@@ -1,4 +1,4 @@
-"""Every example config under ``examples/`` parses, is non-secret, and uses
+"""Every example config under ``examples/`` parses, is non-secret, safe, and uses
 current identifiers.
 
 ``examples/`` is the tested, non-secret configuration tree described in
@@ -64,6 +64,23 @@ def test_configs_use_no_stale_identifiers(path: Path):
     assert not STALE_PACKAGE_RE.search(text), f"{path}: stale centralmcp package reference"
 
 
+@pytest.mark.parametrize("path", JSON_EXAMPLES, ids=lambda p: str(p.relative_to(EXAMPLES_DIR)))
+def test_json_examples_have_no_comment_keys(path: Path):
+    def comment_keys(value: object, location: str = "$") -> list[str]:
+        found: list[str] = []
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key.startswith("_") or "comment" in key.lower():
+                    found.append(f"{location}.{key}")
+                found.extend(comment_keys(child, f"{location}.{key}"))
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                found.extend(comment_keys(child, f"{location}[{index}]"))
+        return found
+
+    assert comment_keys(json.loads(path.read_text(encoding="utf-8"))) == []
+
+
 @pytest.mark.parametrize(
     "path", ALL_EXAMPLE_TEXT_FILES, ids=lambda p: str(p.relative_to(EXAMPLES_DIR))
 )
@@ -87,8 +104,11 @@ def _stdio_env(path: Path, server_name: str = "hpe-networking-mcp") -> dict[str,
 def test_minimal_stdio_example_uses_the_low_token_router_profile():
     env = _stdio_env(EXAMPLES_DIR / "mcp-clients" / "stdio" / "minimal.mcp.json")
 
+    assert env.get("HPE_MCP_ACCESS_PROFILE") == "safe-read-only"
+    assert env.get("HPE_MCP_READONLY") == "1"
     assert env.get("HPE_MCP_ROUTER_MODE") == "minimal"
     assert env.get("HPE_MCP_TOOLSETS") == "central,glp,rag"
+    assert env.get("HPE_MCP_PRODUCT_ACCESS") == "read-only"
     assert "HPE_MCP_PRODUCTS" not in env
 
 
@@ -107,9 +127,35 @@ def test_full_stdio_example_enables_every_optional_product_read_only():
 def test_copilot_cli_example_uses_the_low_token_router_profile():
     env = _stdio_env(EXAMPLES_DIR / "mcp-clients" / "copilot-cli.mcp-config.json")
 
+    assert env.get("HPE_MCP_ACCESS_PROFILE") == "safe-read-only"
+    assert env.get("HPE_MCP_READONLY") == "1"
     assert env.get("HPE_MCP_ROUTER_MODE") == "minimal"
     assert env.get("HPE_MCP_TOOLSETS") == "central,glp,rag"
+    assert env.get("HPE_MCP_PRODUCT_ACCESS") == "read-only"
     assert "HPE_MCP_PRODUCTS" not in env
+
+
+def test_claude_code_example_uses_mcp_servers_stdio_shape():
+    data = json.loads(
+        (EXAMPLES_DIR / "mcp-clients" / "claude-code.mcp.json").read_text()
+    )
+    assert set(data) == {"mcpServers"}
+    server = data["mcpServers"]["hpe-networking-mcp"]
+    assert server["type"] == "stdio"
+    assert server["env"]["HPE_MCP_ACCESS_PROFILE"] == "safe-read-only"
+
+
+def test_host_configs_keep_servers_shapes_separate():
+    for path in (
+        REPO_ROOT / ".mcp.json.example",
+        REPO_ROOT / ".github" / "mcp.json",
+        EXAMPLES_DIR / "mcp-clients" / "claude-code.mcp.json",
+    ):
+        assert set(json.loads(path.read_text())) == {"mcpServers"}
+
+    assert set(json.loads((REPO_ROOT / ".vscode" / "mcp.json.example").read_text())) == {
+        "servers"
+    }
 
 
 def test_local_http_example_targets_loopback_streamable_http():

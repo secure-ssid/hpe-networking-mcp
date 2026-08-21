@@ -7,7 +7,7 @@ description: |
   write workflow so post-change diffs have a clean reference.
 platforms: [central, glp]
 tags: [change, pre-check, baseline, maintenance]
-tools: [get_tenant_health, list_sites, get_alerts, list_devices, list_ssids, find_tool, invoke_read_tool]
+tools: [get_tenant_health, list_sites, list_active_alerts, list_devices, list_ssids, find_tool, invoke_read_tool]
 ---
 
 # Pre-change readiness checklist
@@ -15,7 +15,7 @@ tools: [get_tenant_health, list_sites, get_alerts, list_devices, list_ssids, fin
 ## Objective
 
 Establish a readable baseline and go/no-go signal before a planned change.
-Do not perform the change in this skill.
+**Read-only.** Do not perform the change in this skill.
 
 ## Prerequisites
 
@@ -40,7 +40,7 @@ Record: scope name, scope id, persona/device type.
 
 ### Step 3 — Alert baseline
 
-**Tool:** `get_alerts` (critical/major)
+**Tool:** `list_active_alerts` (critical/major)
 **Capture:** open alert count and top signatures for the target scope.
 
 ### Step 4 — Inventory baseline

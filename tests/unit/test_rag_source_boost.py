@@ -15,7 +15,11 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
-from hpe_networking_mcp.mcp_servers.rag import _SOURCE_BOOST, _boost_sources  # noqa: E402
+from hpe_networking_mcp.mcp_servers.rag import (  # noqa: E402
+    _SOURCE_BOOST,
+    _boost_sources,
+    _query_metadata_filter,
+)
 
 
 def _hit(source: str, score: float, path: str = "f.md") -> dict:
@@ -86,6 +90,26 @@ def test_mist_api_docs_outrank_unboosted_mist_prose_on_a_tie():
     ranked = [h["source"] for h in _boost_sources(hits)]
     assert ranked[0] == "mist_api_docs"
     assert ranked[-1] in {"mist_docs", "junos_cli"}
+def test_query_metadata_filter_uses_only_explicit_singletons():
+    assert _query_metadata_filter(
+        "Aruba CX 6100 AOS-CX 10.16 release notes",
+        {"vendor", "model", "release"},
+    ) == {"vendor": "aruba", "model": "6100", "release": "10.16"}
+    assert _query_metadata_filter(
+        "Does AOS-CX 9300S support Central on-prem on 10.13?",
+        {"vendor", "model", "release"},
+    ) == {"vendor": "aruba"}
+
+
+def test_query_metadata_filter_ignores_ambiguous_versions_and_missing_columns():
+    assert _query_metadata_filter(
+        "compare CX 6100 AOS-CX 10.13 and 10.16",
+        {"vendor", "model", "release"},
+    ) == {"vendor": "aruba"}
+    assert _query_metadata_filter(
+        "Aruba CX 6100",
+        {"vendor"},
+    ) == {"vendor": "aruba"}
 
 
 def test_boost_ordering_matches_table_priority():
@@ -131,7 +155,9 @@ def test_mist_spec_gets_its_own_boost_key():
     # fetch_mist_openapi.py writes the pinned spec under a hyphenated name;
     # matching only the legacy dotted name silently demoted it to an Aruba spec.
     assert _boost_key(_hit("openapi_specs", 0.1, "openapi_specs/mist-openapi.json")) == "mist_specs"
-    assert _boost_key(_hit("openapi_specs", 0.1, "openapi_specs/config-interfaces.json")) == "openapi_specs"
+    assert _boost_key(
+        _hit("openapi_specs", 0.1, "openapi_specs/config-interfaces.json")
+    ) == "openapi_specs"
 
 
 def test_non_spec_sources_keep_their_own_label_as_key():
@@ -245,3 +271,133 @@ def test_juniper_lifecycle_sources_are_not_penalised_on_mist_queries():
     ]
     ranked = _boost_sources(hits, "Mist security advisory")
     assert ranked[0]["source"] == "juniper_security_advisories"
+
+
+# ---------------------------------------------------------------------------
+# Device-model boost
+#
+# feature_navigator/product_datasheets ship one near-identical file per
+# hardware model (every CX file repeats the same "## VXLAN\n- EVPN...: Yes"
+# section headings and boilerplate), so a query naming one model (e.g.
+# "CX 8400") was regularly outranked by a *different* model's file that
+# happened to share more generic content terms — reproduced live via
+# "does CX 8400 support VXLAN and EVPN", which returned cx-cx-9300.md and
+# cx-cx-simulator.md ahead of the CX8400's own, on-topic VXLAN section.
+# ---------------------------------------------------------------------------
+
+from hpe_networking_mcp.mcp_servers.rag import (  # noqa: E402
+    _MODEL_MATCH_BOOST,
+    _boost_model_match,
+    _detect_model_token,
+)
+
+
+def test_detect_model_token_matches_vendor_prefixed_forms():
+    assert _detect_model_token("does CX 8400 support VXLAN") == "8400"
+    assert _detect_model_token("CX-8400 specs") == "8400"
+    assert _detect_model_token("cx8400 chassis") == "8400"
+    assert _detect_model_token("EX4400 uplink config") == "4400"
+
+
+def test_detect_model_token_ignores_bare_numbers():
+    """A number alone must never trigger the boost — only an explicit
+    vendor-prefixed mention is a deliberate model reference."""
+    assert _detect_model_token("port 8400 vlan") is None
+    assert _detect_model_token("what is the best switch") is None
+    assert _detect_model_token("index 8400 in an EX list") is None
+
+
+def test_detect_model_token_is_none_for_multiple_distinct_models():
+    """A comparison question must not silently boost only the first model
+    mentioned — mirrors _detect_vendor's ambiguity rule."""
+    assert _detect_model_token("compare CX 6400 vs CX 8400 VXLAN support") is None
+
+
+def test_detect_model_token_handles_the_same_model_repeated():
+    assert _detect_model_token("does CX 8400 and cx8400 differ") == "8400"
+
+
+def test_boost_model_match_empty_input_is_safe():
+    assert _boost_model_match([], "CX 8400") == []
+
+
+def test_boost_model_match_is_noop_without_an_explicit_model():
+    hits = [
+        _hit("feature_navigator", 1.0, "feature_navigator/cx-cx-9300.md"),
+        _hit("feature_navigator", 0.5, "feature_navigator/cx-cx-8400.md"),
+    ]
+    ranked = _boost_model_match(hits, "generic switch feature question")
+    assert [h["file_path"] for h in ranked] == [h["file_path"] for h in hits]
+
+
+def test_boost_model_match_is_noop_when_no_candidate_matches():
+    hits = [
+        _hit("feature_navigator", 1.0, "feature_navigator/cx-cx-9300.md"),
+        _hit("feature_navigator", 0.5, "feature_navigator/cx-cx-6300.md"),
+    ]
+    ranked = _boost_model_match(hits, "CX 8400 chassis specifications")
+    assert [h["file_path"] for h in ranked] == [h["file_path"] for h in hits]
+
+
+def test_boost_model_match_promotes_matching_hit_over_a_higher_scored_sibling():
+    """The regression this fixes: a same-family sibling for a different model
+    out-scoring the model the query actually named."""
+    hits = [
+        _hit("feature_navigator", 1.0, "feature_navigator/cx-cx-simulator.md"),
+        _hit("feature_navigator", 1.0, "feature_navigator/cx-cx-9300.md"),
+        _hit("feature_navigator", 0.9406, "feature_navigator/cx-cx-8360.md"),
+        _hit("feature_navigator", 0.1683, "feature_navigator/cx-cx-8400.md"),
+    ]
+    ranked = _boost_model_match(hits, "does CX 8400 support VXLAN and EVPN")
+    assert ranked[0]["file_path"] == "feature_navigator/cx-cx-8400.md"
+
+
+def test_boost_model_match_beats_the_largest_possible_source_boost():
+    """Sized with margin over normalised-1.0 + the biggest _SOURCE_BOOST
+    (0.16) — even a maximally-boosted non-matching sibling must still lose."""
+    hits = [
+        _hit("feature_navigator", 1.0 + 0.16, "feature_navigator/cx-cx-9300.md"),
+        _hit("feature_navigator", 0.0, "feature_navigator/cx-cx-8400.md"),
+    ]
+    ranked = _boost_model_match(hits, "CX 8400 specifications")
+    assert ranked[0]["file_path"] == "feature_navigator/cx-cx-8400.md"
+    assert ranked[0]["score"] == 0.0 + _MODEL_MATCH_BOOST
+
+
+def test_boost_model_match_preserves_relative_order_within_matching_group():
+    hits = [
+        _hit("feature_navigator", 0.3, "feature_navigator/cx-cx-8400.md"),
+        _hit("feature_navigator", 0.9, "feature_navigator/cx-cx-8400.md"),
+    ]
+    ranked = _boost_model_match(hits, "CX 8400 specifications")
+    assert [h["score"] for h in ranked] == [
+        0.9 + _MODEL_MATCH_BOOST,
+        0.3 + _MODEL_MATCH_BOOST,
+    ]
+
+
+def test_boost_model_match_does_not_touch_non_family_sources():
+    """A model number that happens to appear in an unrelated source's
+    file_path (e.g. a techdocs page mentioning "8400" in passing) must not be
+    boosted — the family list is a deliberate, narrow allowlist."""
+    hits = [
+        _hit("techdocs_html", 1.0, "techdocs_html/some-8400-mention.html"),
+        _hit("feature_navigator", 0.1, "feature_navigator/cx-cx-8400.md"),
+    ]
+    ranked = _boost_model_match(hits, "CX 8400 specifications")
+    # The techdocs_html hit keeps its original score — unboosted either way.
+    techdocs_hit = next(h for h in ranked if h["source"] == "techdocs_html")
+    assert techdocs_hit["score"] == 1.0
+
+
+def test_boost_model_match_runs_after_boost_sources_in_the_pipeline():
+    """End-to-end through _boost_sources then _boost_model_match, matching
+    _search_lancedb's actual call order."""
+    from hpe_networking_mcp.mcp_servers.rag import _boost_sources
+
+    hits = [
+        _hit("feature_navigator", 0.0313, "feature_navigator/cx-cx-9300.md"),
+        _hit("feature_navigator", 0.0229, "feature_navigator/cx-cx-8400.md"),
+    ]
+    ranked = _boost_model_match(_boost_sources(hits, "CX 8400 VXLAN"), "CX 8400 VXLAN")
+    assert ranked[0]["file_path"] == "feature_navigator/cx-cx-8400.md"

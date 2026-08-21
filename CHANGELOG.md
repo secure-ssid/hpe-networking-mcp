@@ -13,6 +13,61 @@ time. This file is the compact index into those pages. See
 [MIGRATION.md](MIGRATION.md) for the step-by-step move from the legacy
 `secure-ssid/centralmcp` repository to this one.
 
+## [0.9.0] - 2026-08-16
+
+Feature release. Full detail in [docs/release-notes-0.9.0.md](docs/release-notes-0.9.0.md).
+
+### Added
+
+- **RAG corpus**: 12 new Juniper sources (MX/QFX/SRX/EX hardware guides and
+  release notes), AOS-CX release notes (all 14 switch series back to 10.13),
+  AOS-CX Fundamentals/CLI Reference guides, Mist cloud release history,
+  ClearPass Policy Manager admin guide — total **262,104 chunks across 29 sources**.
+- **ANN index**: cosine HNSW-SQ `vector_idx` + 12 BTree metadata indexes
+  (`vendor`, `product`, `platform`, `model`, `release`, etc.) — warm p50 ~10 ms.
+- **Normalized metadata ingestion**: `derive_metadata()` populates 10 metadata
+  fields from file paths at ingest time; scoped metadata prefilters in search.
+- **Content-hash deduplication**: `_dedup_by_content()` collapses duplicate
+  hits at search time; `--dedup-on-ingest` flag drops duplicates before
+  embedding (saves ~38%); `scripts/migrate_dedup_index.py` migrates prebuilt
+  indexes without re-embedding.
+- **Bounded LRU caches**: `pipeline/clients/rag_cache.py` + `HPE_MCP_RAG_PREWARM`,
+  `HPE_MCP_RAG_CACHE_SIZE`, `HPE_MCP_RAG_EMBED_CACHE_SIZE` env vars.
+- **`compare_aoscx_releases` tool**: structured diff of AOS-CX enhancements
+  across two releases for a given switch series.
+- **Milvus Lite pilot**: opt-in adapter at `pipeline/clients/milvus_client.py`
+  (`uv sync --extra milvus-lite`); documented in `docs/milvus-lite-pilot.md`.
+- **Docker packaging**: `Dockerfile`, `docker-compose.router.yml`, `docker/`
+  helpers, `.dockerignore`, CI build workflow.
+- **Morning-report skill** and eight new operator runbooks (central-scope-audit,
+  clearpass-policy-audit, mist-scope-audit, uxi-diagnostics, wlan-sync-validation,
+  cross-platform-rf-check, central-scope-walker).
+- **`search_internal_docs`**: local personal document ingestion for the MCP router.
+- **Bandit SAST + pip-audit** security workflows.
+- **`scripts/benchmark_rag.py`** and **`scripts/benchmark_milvus.py`** latency harnesses.
+- **`scripts/migrate_rag_metadata.py`**: metadata migration for prebuilt indexes.
+- **Claude Code** MCP client example (`examples/mcp-clients/claude-code.mcp.json`).
+- **AI attribution**: CONTRIBUTING.md and README now document AI-assisted development.
+
+### Fixed
+
+- Reactive error hints from `specs_index` on failed MCP tool calls.
+- Nested stringified-blob redaction in `_middleware`.
+- Invalid `--rf-band` choices rejected before reaching Central API.
+- Central rf-band enum and WLAN opmode coverage in `interop.py`.
+- Central query-param names for alert configs and insights in `monitoring.py`.
+- `lookup_hardware_specs` registered as a callable MCP tool.
+- Device-model misattribution in `feature_navigator`/`product_datasheets` ranking.
+- Orphan heading chunks in RAG chunking (`chunk_text`).
+- `ModuleNotFoundError` crash risk in `rag_diagnostics` under real MCP launch.
+- Diagram-intent detection bug; `/docs remove` added; `/status` enriched.
+
+### Changed
+
+- Hero SVG updated to v0.9.0 with RAG and dedup metrics.
+- Platform-coverage SVG updated with current corpus counts.
+- `docs/architecture/RAG-ARCHITECTURE.md` documents all retrieval modernization.
+
 ## [0.8.0] - 2026-08-12
 
 This release launches the renamed, restructured continuation of

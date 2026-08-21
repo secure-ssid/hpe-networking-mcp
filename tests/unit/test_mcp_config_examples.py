@@ -8,6 +8,7 @@ from unittest.mock import patch
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CLIENT_CONFIGS = [
     REPO_ROOT / ".mcp.json.example",
+    REPO_ROOT / ".github" / "mcp.json",
     REPO_ROOT / ".cursor" / "mcp.json",
     REPO_ROOT / ".vscode" / "mcp.json.example",
 ]
@@ -19,6 +20,7 @@ COMMITTED_CONFIGS = [
     *HTTP_CONFIGS,
     REPO_ROOT / ".cursor" / "mcp.dev.json",
     REPO_ROOT / ".claude" / "launch.json",
+    REPO_ROOT / "examples" / "mcp-clients" / "claude-code.mcp.json",
 ]
 LOCAL_ONLY_CONFIGS = [
     ".mcp.json",
@@ -47,7 +49,9 @@ def test_committed_mcp_client_configs_use_low_token_router_profile():
 
         assert env.get("HPE_MCP_ROUTER_MODE") == "minimal"
         assert env.get("HPE_MCP_TOOLSETS") == "central,glp,rag"
-        assert env.get("HPE_MCP_ACCESS_PROFILE") == "custom"
+        assert env.get("HPE_MCP_ACCESS_PROFILE") == "safe-read-only"
+        assert env.get("HPE_MCP_READONLY") == "1"
+        assert env.get("HPE_MCP_PRODUCT_ACCESS") == "read-only"
         assert "HPE_MCP_PRODUCTS" not in env
 
 
@@ -114,7 +118,9 @@ def test_claude_launch_includes_low_token_router_profile():
     assert router.get("runtimeArgs") == ["-m", "hpe_networking_mcp.mcp_servers.tool_router"]
     assert router.get("env", {}).get("HPE_MCP_ROUTER_MODE") == "minimal"
     assert router.get("env", {}).get("HPE_MCP_TOOLSETS") == "central,glp,rag"
-    assert router.get("env", {}).get("HPE_MCP_ACCESS_PROFILE") == "custom"
+    assert router.get("env", {}).get("HPE_MCP_ACCESS_PROFILE") == "safe-read-only"
+    assert router.get("env", {}).get("HPE_MCP_READONLY") == "1"
+    assert router.get("env", {}).get("HPE_MCP_PRODUCT_ACCESS") == "read-only"
     assert "HPE_MCP_PRODUCTS" not in router.get("env", {})
 
 

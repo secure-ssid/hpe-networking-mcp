@@ -52,6 +52,11 @@ import weakref
 from collections import OrderedDict
 from typing import Any
 
+from hpe_networking_mcp.mcp_servers.shared import (
+    parse_stringified_container,
+    serialize_stringified_container,
+)
+
 _ENV_FLAG = "HPE_MCP_TOKENIZE_PII"
 _TOKEN_PREFIX = "hpe_mcp_pii_"
 _TOKEN_RE = re.compile(re.escape(_TOKEN_PREFIX) + r"[0-9a-f]{32}")
@@ -177,6 +182,19 @@ def _walk_tokenize(value: Any, vault: _PIIVault, parent_key: Any = None) -> tupl
         and _is_pii_key(parent_key)
     ):
         return vault.put(value), True
+    if isinstance(value, str) and value:
+        # Not a directly PII-keyed field -- but its value might be a
+        # serialized JSON/Python-repr container (e.g. a stringified
+        # annotation/scope blob) with a PII field nested inside it, which no
+        # parent_key check above can ever see. Only re-serialize when
+        # something inside actually changed, so blobs with nothing PII
+        # inside pass through byte-for-byte untouched.
+        blob = parse_stringified_container(value)
+        if blob is not None:
+            parsed, dialect = blob
+            new_parsed, changed = _walk_tokenize(parsed, vault, parent_key=None)
+            if changed:
+                return serialize_stringified_container(new_parsed, dialect), True
     return value, False
 
 
@@ -210,6 +228,15 @@ def _walk_resolve(value: Any, vault: _PIIVault) -> tuple[Any, bool]:
             plaintext = vault.resolve(match.group(0))
             if plaintext is not None:
                 return plaintext, True
+        # Not a bare token -- but it might be a container blob with a token
+        # nested inside it (the symmetric read-side case in _walk_tokenize
+        # above). Only re-serialize when a token inside actually resolved.
+        blob = parse_stringified_container(value)
+        if blob is not None:
+            parsed, dialect = blob
+            new_parsed, changed = _walk_resolve(parsed, vault)
+            if changed:
+                return serialize_stringified_container(new_parsed, dialect), True
     return value, False
 
 

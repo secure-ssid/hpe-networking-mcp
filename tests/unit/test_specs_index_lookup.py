@@ -23,7 +23,6 @@ import pytest
 
 from hpe_networking_mcp.pipeline.clients import specs_index
 
-
 FIXTURE_SPECS = {
     "cda-auth-profile.json": {
         "info": {"title": "CDA Auth Profile"},
@@ -88,6 +87,149 @@ FIXTURE_SPECS = {
     },
 }
 
+VERSIONED_SOURCE_SPECS = {
+    "openapi_specs": {
+        "central-firmware-v26-04.json": {
+            "info": {"title": "Central Firmware", "version": "v1alpha1"},
+            "servers": [{"url": "https://apigw-prod2.central.arubanetworks.com"}],
+            "paths": {
+                "/device-firmware": {
+                    "patch": {
+                        "operationId": "updateDeviceFirmware",
+                        "summary": "Update device firmware settings",
+                        "description": "Update device firmware for Central 26.04.",
+                    },
+                },
+            },
+            "components": {
+                "schemas": {
+                    "FirmwareProfile": {
+                        "description": "Firmware settings profile.",
+                        "properties": {
+                            "mode": {
+                                "type": "string",
+                                "description": "Upgrade mode.",
+                                "enum": ["AUTO", "MANUAL"],
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        "central-firmware-v26-04-mirror.json": {
+            "info": {"title": "Central Firmware Mirror", "version": "v1alpha1"},
+            "servers": [{"url": "https://apigw-prod2.central.arubanetworks.com"}],
+            "paths": {
+                "/device-firmware": {
+                    "patch": {
+                        "operationId": "updateDeviceFirmware",
+                        "summary": "Update device firmware settings",
+                        "description": "Mirror bundle for the same Central 26.04 endpoint.",
+                    },
+                },
+            },
+            "components": {
+                "schemas": {
+                    "FirmwareProfile": {
+                        "description": "Firmware settings profile (mirror).",
+                        "properties": {
+                            "mode": {
+                                "type": "string",
+                                "description": "Upgrade mode (mirror).",
+                                "enum": ["AUTO", "MANUAL"],
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    "product_specs": {
+        "cppm-enforcement.json": {
+            "info": {"title": "ClearPass Enforcement", "version": "v1"},
+            "servers": [{"url": "https://clearpass.example.test/api"}],
+            "paths": {
+                "/tips/role-mappings": {
+                    "get": {
+                        "operationId": "getRoleMappings",
+                        "summary": "List role mappings",
+                        "description": "Retrieve exact ClearPass role mappings.",
+                    },
+                },
+            },
+            "components": {
+                "schemas": {
+                    "RoleMapping": {
+                        "description": "Role mapping settings.",
+                        "properties": {
+                            "role_type": {
+                                "type": "string",
+                                "description": "Role action type.",
+                                "enum": ["ALLOW", "DENY"],
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        "cppm-prose-only.json": {
+            "info": {"title": "Narrative only"},
+            "description": "This file has no exact OpenAPI paths or schemas.",
+        },
+    },
+}
+
+OPENAPI_MANIFEST_FIXTURE = {
+    "generated_at": "2026-08-15T00:00:00+00:00",
+    "registries": {
+        "central-main": {
+            "output_path": "ingestion/sources/openapi_specs/central-firmware-v26-04.json",
+            "path_count": 1,
+            "portal_version": "v26.04",
+            "project": "aruba-new-central-config",
+            "registry_id": "central-main",
+            "source_url": "https://developer.arubanetworks.com/new-central-config/reference/device-firmware",
+            "spec_version": "v1alpha1",
+            "title": "Central Firmware",
+        },
+        "central-mirror": {
+            "output_path": "ingestion/sources/openapi_specs/central-firmware-v26-04-mirror.json",
+            "path_count": 1,
+            "portal_version": "v26.04",
+            "project": "aruba-new-central-config",
+            "registry_id": "central-mirror",
+            "source_url": "https://developer.arubanetworks.com/new-central-config/reference/device-firmware-mirror",
+            "spec_version": "v1alpha1",
+            "title": "Central Firmware Mirror",
+        },
+    },
+}
+
+PRODUCT_MANIFEST_FIXTURE = {
+    "specs": [
+        {
+            "branch": "6.0",
+            "output_path": "ingestion/sources/product_specs/cppm-enforcement.json",
+            "path_count": 1,
+            "project": "aruba-cppm",
+            "section": "cppm",
+            "source_url": "https://developer.arubanetworks.com/cppm/reference/get-role-mappings",
+            "spec_uri": "/branches/6.0/apis/cppm-enforcement.json",
+            "title": "ClearPass Enforcement",
+        },
+        {
+            "branch": "6.0",
+            "output_path": "ingestion/sources/product_specs/cppm-prose-only.json",
+            "path_count": 0,
+            "project": "aruba-cppm",
+            "section": "cppm",
+            "source_url": "https://developer.arubanetworks.com/cppm/reference/prose-only",
+            "spec_uri": "/branches/6.0/apis/cppm-prose-only.json",
+            "title": "Narrative only",
+        },
+    ],
+}
+
 
 @pytest.fixture
 def db(tmp_path):
@@ -98,6 +240,35 @@ def db(tmp_path):
     db_path = tmp_path / "specs.sqlite"
     counts = specs_index.build(specs_dir=specs_dir, db_path=db_path)
     assert counts["specs"] == 3 and counts["endpoints"] == 3
+    return db_path
+
+
+@pytest.fixture
+def versioned_db(tmp_path):
+    source_dirs = {}
+    for source_family, specs in VERSIONED_SOURCE_SPECS.items():
+        specs_dir = tmp_path / source_family
+        specs_dir.mkdir()
+        for fname, spec in specs.items():
+            (specs_dir / fname).write_text(json.dumps(spec))
+        source_dirs[source_family] = specs_dir
+
+    openapi_manifest = tmp_path / "openapi_registry_manifest.json"
+    openapi_manifest.write_text(json.dumps(OPENAPI_MANIFEST_FIXTURE))
+    product_manifest = tmp_path / "product_specs_manifest.json"
+    product_manifest.write_text(json.dumps(PRODUCT_MANIFEST_FIXTURE))
+
+    db_path = tmp_path / "versioned.sqlite"
+    counts = specs_index.build(
+        db_path=db_path,
+        source_dirs=source_dirs,
+        manifest_paths={
+            "openapi_specs": openapi_manifest,
+            "product_specs": product_manifest,
+        },
+    )
+    assert counts["specs"] == 3
+    assert counts["skipped"] == 1
     return db_path
 
 
@@ -233,6 +404,22 @@ class TestLookup:
             assert h["file_path"].startswith("openapi_specs/")
             assert "#" in h["file_path"]
 
+    def test_include_metadata_is_opt_in_for_old_callers(self, versioned_db):
+        plain = specs_index.lookup("PATCH /device-firmware", db_path=versioned_db)
+        rich = specs_index.lookup(
+            "PATCH /device-firmware",
+            db_path=versioned_db,
+            include_metadata=True,
+        )
+
+        assert set(plain[0]) == {"text", "source", "file_path", "kind", "score"}
+        assert rich[0]["platform"] == "central"
+        assert rich[0]["version"] == "v26.04"
+        assert rich[0]["api_version"] == "v1alpha1"
+        assert rich[0]["source_url"].startswith(
+            "https://developer.arubanetworks.com/new-central-config/reference/"
+        )
+
     def test_top_k_caps_results(self, db):
         hits = specs_index.lookup("cda auth profile firmware device", top_k=2, db_path=db)
         assert len(hits) <= 2
@@ -248,6 +435,74 @@ class TestLookup:
             "auth-type quantum teleportation flux capacitor", db_path=db
         )
         assert hits == []
+
+    def test_platform_and_version_filters_select_exact_spec_family(self, versioned_db):
+        hits = specs_index.lookup(
+            "PATCH /device-firmware",
+            db_path=versioned_db,
+            platform="central",
+            version="v26.04",
+            include_metadata=True,
+        )
+
+        assert len(hits) == 1
+        assert hits[0]["source"] == "openapi_specs"
+        assert hits[0]["platform"] == "central"
+        assert hits[0]["version"] == "v26.04"
+
+        assert specs_index.lookup(
+            "PATCH /device-firmware",
+            db_path=versioned_db,
+            platform="central",
+            version="v26.05",
+        ) == []
+
+    def test_product_specs_are_exact_eligible_and_source_filterable(self, versioned_db):
+        hits = specs_index.lookup(
+            "GET /tips/role-mappings",
+            db_path=versioned_db,
+            source="product_specs",
+            platform="clearpass",
+            version="6.0",
+            include_metadata=True,
+        )
+
+        assert len(hits) == 1
+        assert hits[0]["source"] == "product_specs"
+        assert hits[0]["file_path"].startswith("product_specs/")
+        assert hits[0]["platform"] == "clearpass"
+        assert hits[0]["version"] == "6.0"
+        assert "role mappings" in hits[0]["text"].lower()
+        assert (
+            specs_index.lookup(
+                "Narrative only",
+                db_path=versioned_db,
+                source="product_specs",
+                platform="clearpass",
+                version="6.0",
+            )
+            == []
+        )
+
+    def test_duplicate_endpoint_and_schema_identities_are_collapsed(self, versioned_db):
+        endpoint_hits = specs_index.lookup(
+            "PATCH /device-firmware",
+            db_path=versioned_db,
+            platform="central",
+            version="v26.04",
+        )
+        enum_hits = specs_index.get_enum(
+            "mode",
+            db_path=versioned_db,
+            platform="central",
+            version="v26.04",
+            include_metadata=True,
+        )
+
+        assert len(endpoint_hits) == 1
+        assert len(enum_hits) == 1
+        assert enum_hits[0]["platform"] == "central"
+        assert enum_hits[0]["version"] == "v26.04"
 
     def test_stale_index_requires_rebuild_for_operation_id(self, tmp_path):
         import sqlite3

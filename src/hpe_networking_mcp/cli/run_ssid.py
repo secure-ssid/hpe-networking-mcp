@@ -35,7 +35,7 @@ Options:
   --opmode MODE       ENHANCED_OPEN | WPA3_SAE | WPA2_PERSONAL (default: ENHANCED_OPEN)
                       WPA2_PSK is accepted as a deprecated alias for
                       WPA2_PERSONAL and is normalized automatically.
-  --rf-band BAND      24GHZ_5GHZ | 5GHZ_ONLY | 6GHZ_ONLY (default: 24GHZ_5GHZ)
+  --rf-band BAND      24GHZ_5GHZ | 24GHZ | 5GHZ | 6GHZ (default: 24GHZ_5GHZ)
   --hide-ssid         Suppress broadcast of SSID name
   --max-clients N     Max clients per AP radio (default: 1024)
   --input FILE        CSV file for batch mode
@@ -103,8 +103,9 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Security/auth mode (default: ENHANCED_OPEN). "
                              "WPA2_PSK is a deprecated alias for WPA2_PERSONAL.")
     parser.add_argument("--rf-band", default="24GHZ_5GHZ",
-                        choices=["24GHZ_5GHZ", "24GHZ_ONLY", "5GHZ_ONLY", "6GHZ_ONLY"],
-                        help="RF band (default: 24GHZ_5GHZ)")
+                        choices=["24GHZ_5GHZ", "24GHZ", "5GHZ", "6GHZ"],
+                        help="RF band (default: 24GHZ_5GHZ). Values match the Central "
+                             "Aruba802dot11_Wlan802dot11.rf-band enum on the wire.")
     parser.add_argument("--passphrase", metavar="KEY",
                         help="WPA pre-shared key (required for WPA3_SAE or WPA2_PERSONAL)")
     parser.add_argument("--hide-ssid", action="store_true", help="Suppress SSID broadcast")

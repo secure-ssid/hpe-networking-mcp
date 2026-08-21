@@ -10,12 +10,199 @@ HPE_MCP_TOOLSETS=central,glp,rag
 
 This exposes only `find_tool`, `invoke_read_tool`, and `invoke_tool` in
 minimal mode while still letting the router reach the backend catalog on
-demand. The complete index can contain 6,722 backend tools, while minimal
+9: demand. The complete index can contain 6,726 backend tools, while minimal
+10: The remaining profiles in that file are direct debug servers
+(`central-monitoring`, `central-config`, `central-ops`, `central-nac`,
+`central-streaming`, `glp-core`)
+plus two CLI launch entries for the migration pipeline and SSID builder.
+On first use, Claude Code asks you to approve project MCP servers; a trusted
+workspace or an explicit `claude mcp add`/`claude mcp list` workflow is
+required. `.claude/launch.json` remains an optional launch/debug profile, not
+the only Claude integration path. Its router profiles are also safe
+read-only; direct backend and CLI entries are for targeted debugging.
+See the [Claude Code MCP reference](https://code.claude.com/docs/en/mcp) for
+current approval and transport behavior.
+
+### GitHub Copilot CLI and app
+
+For Copilot CLI's project-level repository configuration, use
+[`.github/mcp.json`](../.github/mcp.json). It uses the `mcpServers` shape,
+relative `src`/`config` paths, and `type: "stdio"` so the same server
+definition is portable across Copilot CLI and other MCP hosts:
+
+```bash
+copilot mcp list
+```
+
+Copilot CLI also discovers a root `.mcp.json` (copy the generic or Claude
+example) and user configuration at `~/.copilot/mcp-config.json`. Project
+configs require folder trust; prompt mode skips an untrusted project config
+unless `GITHUB_COPILOT_PROMPT_MODE_WORKSPACE_MCP=true` is set. Copilot CLI
+does not read VS Code's `.vscode/mcp.json` because that file uses the
+host-specific top-level `servers` key. The built-in GitHub MCP server is
+already available in Copilot CLI, so this repository config adds only the
+HPE server. The GitHub Copilot app can use servers configured for repositories
+or Copilot CLI and also has its own MCP settings; Copilot cloud agent and code
+review repository configuration is entered in GitHub repository settings,
+not this local file. Those cloud surfaces run tools autonomously without
+approval, currently support tools rather than MCP resources/prompts, and do
+not support remote OAuth MCP servers, so keep their server configuration
+separate and allowlist read-only tools. See the [Copilot app
+settings](https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app)
+and [repository MCP
+settings](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/configure-mcp-servers)
+for those host-specific paths.
+
+Copilot CLI's `/mcp add` and `copilot mcp add` commands can create equivalent
+entries, and the host controls model selection, permissions, trust prompts,
+and tool approvals; an MCP JSON file cannot select or upgrade the model. See
+the [GitHub Copilot CLI MCP
+documentation](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers)
+for current registry, trust, and configuration precedence.
 mode keeps only three discovery/dispatch tools in client context.
+The shipped canonical host router examples also set the aggregate
+`safe-read-only` profile; model choice, agent mode, tool approval, and
+workspace trust remain owned by the host application.
 
 By the end of this page you will have picked the right transport for your
 client, copied an accurate config for it, started the router if needed, and
 run one MCP call to confirm the connection works.
+
+## Recommended host path
+
+1. **Primary:** use VS Code with GitHub Copilot and the workspace
+   `.vscode/mcp.json` example. This is the best-supported editor workflow for
+   this repository.
+2. **If already subscribed:** use GitHub Copilot CLI with `.github/mcp.json`
+   or a root `.mcp.json`; do not add a second frontend just to select a model.
+3. **Optional terminal alternative:** use Crush when you want to choose among
+   providers yourself or run a local Ollama model.
+4. **Local validation:** use MCPJam Inspector for traces, protocol debugging,
+   and cross-client checks rather than as the production chat host.
+5. **Browser platforms:** choose LibreChat or Open WebUI only when you need a
+   persistent, multi-provider browser experience. They are optional existing
+   frontends, not a reason to add a GUI to this repository.
+
+The repository stays focused on the router, setup/doctor workflow, portable
+configs, safety gates, and documentation. Model selection remains a host
+responsibility.
+
+## Native CLI (`hpe-mcp`)
+
+This repo also ships a standalone client that does **not** require Copilot
+CLI. It speaks MCP over stdio (launches the local router) or streamable HTTP
+(connects to an already-running router), defaults to read-only dispatch, and
+prints a project banner on interactive starts.
+
+```bash
+# easiest: activate once, then just `hpe-mcp`
+source .venv/bin/activate
+hpe-mcp                 # no args → plain streaming chat + boot banner
+
+# or from repo root without activating
+./hpe-mcp
+./hpe-mcp version
+./hpe-mcp tools list
+
+# offline helpers
+hpe-mcp version
+hpe-mcp profiles
+hpe-mcp skills list
+hpe-mcp docs add ./notes.md --collection personal
+hpe-mcp docs remove <id>              # or --keep-file to keep the file on disk
+
+# connected one-shots (stdio → local-router profile)
+hpe-mcp tools list
+hpe-mcp tools find "wireless client health"
+hpe-mcp rag ask "How do I configure WPA3?" --source mist_docs
+hpe-mcp api lookup "create WLAN on Mist"
+hpe-mcp invoke-read ask_docs --args '{"question":"Mist site config","source":"mist_docs"}'
+```
+
+The standalone chat defaults to the offline `heuristic` backend. For
+model-backed reasoning, select a provider and model explicitly or set them in
+the environment:
+
+```bash
+HPE_MCP_AI_PROVIDER=ollama HPE_MCP_AI_MODEL=llama3.2 hpe-mcp
+hpe-mcp --provider openai --model gpt-4o
+hpe-mcp ai "investigate client authentication failures"
+```
+
+Use the provider's normal credentials (`OPENAI_API_KEY`,
+`ANTHROPIC_API_KEY`, or a running Ollama server). When using VS Code, Copilot,
+Claude, Crush, MCPJam, LibreChat, or Open WebUI instead, configure the model
+in that host; the MCP router does not select or require a model.
+
+In plain chat, enter a networking question directly. In the legacy Textual
+TUI, plain text is also a networking question and `/` commands provide expert
+controls:
+
+```text
+How do I configure WPA3?
+/api create WLAN
+/find wireless client
+/tools
+/help
+/quit
+```
+
+Interactive mode defaults to a **plain streaming AI chat** that keeps the
+terminal readable and lets the selected host-side/provider adapter stream
+answers and observable MCP tool activity. Legacy commands such as
+`ask ...`, `api ...`, and `find ...` remain compatible. Use the gum-enhanced
+command shell or the legacy full-screen Textual UI only when you want their
+explicit controls:
+
+```bash
+hpe-mcp                 # plain streaming chat
+hpe-mcp --repl          # gum/readline command shell
+hpe-mcp --tui           # legacy Textual TUI
+```
+
+Useful flags:
+
+- `--json` — stable machine-readable envelope for scripts/CI
+- `--profile local-http` — attach to `http://127.0.0.1:8010/mcp` (or
+  `HPE_MCP_HTTP_URL`)
+- `--allow-writes --yes` — required together before any write/destructive tool
+- `--quiet` / `-q` — suppress the boot banner
+
+Config discovery order: built-in profiles → `~/.config/hpe-mcp/config.json`
+(or `$XDG_CONFIG_HOME/hpe-mcp/`) → repo `.hpe-mcp/config.json` /
+`.mcp.json` → `HPE_MCP_CLIENT_CONFIG`. Personal document collections live
+under `~/.config/hpe-mcp/collections/` and stay outside the git tree.
+
+`hpe-mcp-client` is an alias of the same entry point.
+
+## Guided network diagrams
+
+For a request such as “build a network diagram,” use the design backend through
+the router rather than guessing an export tool:
+
+```text
+find_tool("guided network diagram with vendor icons")
+invoke_read_tool("list_diagram_roles_and_vendors", {})
+invoke_read_tool("list_diagram_icons", {})
+```
+
+The guided workflow asks only for missing choices:
+
+1. diagram purpose: logical, physical, wireless, rack/device, or
+   troubleshooting;
+2. topology source: live Central inventory, supplied topology, or hand-built
+   design;
+3. site/group scope when live data is requested;
+4. output: editable Draw.io (default), Graphviz, or NeXt UI;
+5. generic role icons or vendor icons, plus Aruba/HPE, Juniper/Mist,
+   ClearPass, mixed-vendor, or generic branding;
+6. detail level, labels, links, layout, notes, and filename.
+
+Live topology is input to the model, not the diagram itself. The workflow
+labels the result as live or illustrative, validates it, previews the nodes,
+links, icon source, and output path, then exports under the diagram artifact
+boundary. If the design backend is disabled, enable the `design` product
+before retrying; do not silently substitute a fabricated live diagram.
 
 ## Choose a transport: stdio vs streamable HTTP
 
@@ -34,18 +221,19 @@ run one MCP call to confirm the connection works.
 
 | Style | Use when | Config |
 |---|---|---|
-| stdio | Your client launches the MCP server process | `.mcp.json.example`, `.cursor/mcp.json`, `.vscode/mcp.json.example`, `.claude/launch.json` |
+| stdio | Your client launches the MCP server process | `.mcp.json.example`, `.github/mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json.example`, Claude Code `.mcp.json` |
 | streamable HTTP | Your client connects to an already-running local MCP server | `.mcp.http.json.example` + `scripts/run_http_router.sh` |
 
 </div>
 
 ## Profile matrix
 
-The root-level committed configs above are all the **minimal** router
-profile (`HPE_MCP_ROUTER_MODE=minimal`, `HPE_MCP_TOOLSETS=central,glp,rag`,
-`HPE_MCP_ACCESS_PROFILE=custom`, no optional products) -- the recommended
-default for every client. For the **full safe-read-only** profile, the
-separate **full read/write** profile, a
+The root-level committed configs above are all the **minimal safe-read-only**
+router profile (`HPE_MCP_ROUTER_MODE=minimal`,
+`HPE_MCP_TOOLSETS=central,glp,rag`, `HPE_MCP_ACCESS_PROFILE=safe-read-only`,
+`HPE_MCP_READONLY=1`, and `HPE_MCP_PRODUCT_ACCESS=read-only`; no optional
+products) -- the recommended default for every client. For the **full
+safe-read-only** profile, the separate **full read/write** profile, a
 non-loopback **bearer-protected HTTP** profile, and a Copilot CLI/app
 example, see the tested configs and full client/transport/profile matrix in
 [`examples/README.md`](../examples/README.md). `cwd`/`PYTHONPATH`/
@@ -92,8 +280,13 @@ path:
       "env": {
         "PYTHONPATH": "/path/to/hpe-networking-mcp/src",
         "CREDS_PATH": "/path/to/hpe-networking-mcp/config/credentials.yaml",
+        "HPE_MCP_ACCESS_PROFILE": "safe-read-only",
+        "HPE_MCP_READONLY": "1",
         "HPE_MCP_ROUTER_MODE": "minimal",
-        "HPE_MCP_TOOLSETS": "central,glp,rag"
+        "HPE_MCP_TOOLSETS": "central,glp,rag",
+        "HPE_MCP_PRODUCT_ACCESS": "read-only",
+        "HPE_MCP_CENTRAL_WRITES": "0",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "0"
       }
     }
   }
@@ -118,8 +311,13 @@ profile — no copy step needed:
       "env": {
         "PYTHONPATH": "${workspaceFolder}/src",
         "CREDS_PATH": "${workspaceFolder}/config/credentials.yaml",
+        "HPE_MCP_ACCESS_PROFILE": "safe-read-only",
+        "HPE_MCP_READONLY": "1",
         "HPE_MCP_ROUTER_MODE": "minimal",
-        "HPE_MCP_TOOLSETS": "central,glp,rag"
+        "HPE_MCP_TOOLSETS": "central,glp,rag",
+        "HPE_MCP_PRODUCT_ACCESS": "read-only",
+        "HPE_MCP_CENTRAL_WRITES": "0",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "0"
       }
     }
   }
@@ -153,43 +351,202 @@ Keep the `hpe-networking-mcp` server entry enabled for normal use:
       "env": {
         "PYTHONPATH": "${workspaceFolder}/src",
         "CREDS_PATH": "${workspaceFolder}/config/credentials.yaml",
+        "HPE_MCP_ACCESS_PROFILE": "safe-read-only",
+        "HPE_MCP_READONLY": "1",
         "HPE_MCP_ROUTER_MODE": "minimal",
-        "HPE_MCP_TOOLSETS": "central,glp,rag"
+        "HPE_MCP_TOOLSETS": "central,glp,rag",
+        "HPE_MCP_PRODUCT_ACCESS": "read-only",
+        "HPE_MCP_CENTRAL_WRITES": "0",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "0"
       }
     }
   }
 }
 ```
 
+VS Code's `.vscode/mcp.json` intentionally uses the top-level `servers` key,
+not `mcpServers`. When the Agent Host is enabled, a workspace `.mcp.json` or
+Copilot's user config is the more portable choice; VS Code still owns model
+selection, trust, and tool approval. See the
+[VS Code MCP server reference](https://code.visualstudio.com/docs/agent-customization/mcp-servers).
+
   </div>
   <div class="audience-card" markdown="1">
 
-### Included `.claude` launch profiles
+### Claude Code
 
-Use `.claude/launch.json` as-is — no copy step needed. The first profile is
-the same minimal router setup:
+Claude Code's project-scoped configuration is a root `.mcp.json` file. Copy
+the tested shape from
+[`examples/mcp-clients/claude-code.mcp.json`](../examples/mcp-clients/claude-code.mcp.json)
+to `.mcp.json`, then replace the documented placeholder paths:
+
+```bash
+cp examples/mcp-clients/claude-code.mcp.json .mcp.json
+```
+
+The file uses the `mcpServers` shape and an explicit `type: "stdio"` entry:
 
 ```json
 {
-  "name": "hpe-networking-mcp MCP server (minimal)",
-  "runtimeExecutable": "python",
-  "runtimeArgs": ["-m", "hpe_networking_mcp.mcp_servers.tool_router"],
-  "env": {
-    "HPE_MCP_ROUTER_MODE": "minimal",
-    "HPE_MCP_TOOLSETS": "central,glp,rag"
+  "mcpServers": {
+    "hpe-networking-mcp": {
+      "type": "stdio",
+      "command": "/path/to/hpe-networking-mcp/.venv/bin/python3",
+      "args": [
+        "/path/to/hpe-networking-mcp/src/hpe_networking_mcp/mcp_servers/tool_router.py"
+      ],
+      "cwd": "/path/to/hpe-networking-mcp",
+      "env": {
+        "PYTHONPATH": "/path/to/hpe-networking-mcp/src",
+        "CREDS_PATH": "/path/to/hpe-networking-mcp/config/credentials.yaml",
+        "HPE_MCP_ACCESS_PROFILE": "safe-read-only",
+        "HPE_MCP_READONLY": "1",
+        "HPE_MCP_ROUTER_MODE": "minimal",
+        "HPE_MCP_TOOLSETS": "central,glp,rag",
+        "HPE_MCP_PRODUCT_ACCESS": "read-only",
+        "HPE_MCP_CENTRAL_WRITES": "0",
+        "HPE_MCP_GLP_V2BETA1_WRITES": "0"
+      }
+    }
   }
 }
 ```
 
-The remaining profiles in that file are direct debug servers
+9: demand. The complete index can contain 6,726 backend tools, while minimal
+10: The remaining profiles in that file are direct debug servers
 (`central-monitoring`, `central-config`, `central-ops`, `central-nac`,
 `central-streaming`, `glp-core`)
-plus two CLI launch entries for the migration pipeline and SSID builder —
-use those only when debugging a specific backend or script outside the
-router.
+plus two CLI launch entries for the migration pipeline and SSID builder.
+On first use, Claude Code asks you to approve project MCP servers; a trusted
+workspace or an explicit `claude mcp add`/`claude mcp list` workflow is
+required. `.claude/launch.json` remains an optional launch/debug profile, not
+the only Claude integration path. Its router profiles are also safe
+read-only; direct backend and CLI entries are for targeted debugging.
+See the [Claude Code MCP reference](https://code.claude.com/docs/en/mcp) for
+current approval and transport behavior.
+
+### GitHub Copilot CLI and app
+
+For Copilot CLI's project-level repository configuration, use
+[`.github/mcp.json`](../.github/mcp.json). It uses the `mcpServers` shape,
+relative `src`/`config` paths, and `type: "stdio"` so the same server
+definition is portable across Copilot CLI and other MCP hosts:
+
+```bash
+copilot mcp list
+```
+
+Copilot CLI also discovers a root `.mcp.json` (copy the generic or Claude
+example) and user configuration at `~/.copilot/mcp-config.json`. Project
+configs require folder trust; prompt mode skips an untrusted project config
+unless `GITHUB_COPILOT_PROMPT_MODE_WORKSPACE_MCP=true` is set. Copilot CLI
+does not read VS Code's `.vscode/mcp.json` because that file uses the
+host-specific top-level `servers` key. The built-in GitHub MCP server is
+already available in Copilot CLI, so this repository config adds only the
+HPE server. The GitHub Copilot app can use servers configured for repositories
+or Copilot CLI and also has its own MCP settings; Copilot cloud agent and code
+review repository configuration is entered in GitHub repository settings,
+not this local file. Those cloud surfaces run tools autonomously without
+approval, currently support tools rather than MCP resources/prompts, and do
+not support remote OAuth MCP servers, so keep their server configuration
+separate and allowlist read-only tools. See the [Copilot app
+settings](https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app)
+and [repository MCP
+settings](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/configure-mcp-servers)
+for those host-specific paths.
+
+Copilot CLI's `/mcp add` and `copilot mcp add` commands can create equivalent
+entries, and the host controls model selection, permissions, trust prompts,
+and tool approvals; an MCP JSON file cannot select or upgrade the model. See
+the [GitHub Copilot CLI MCP
+documentation](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers)
+for current registry, trust, and configuration precedence.
 
   </div>
 </div>
+
+## Optional existing frontends
+
+No custom web app is included. If a terminal, inspector, or self-hosted chat
+frontend is more useful than an editor host, these existing projects can use
+the same router:
+
+### Crush
+
+[Charmbracelet Crush](https://github.com/charmbracelet/crush) is an optional
+terminal alternative with host-owned model selection and permission prompts.
+It is useful when users want to choose providers themselves or run a local
+Ollama model. Its current MCP support includes `stdio`, HTTP, and SSE. Install
+it with Homebrew or npm, then register the local router in a project
+`.crushrc` (or use the equivalent global configuration):
+
+```bash
+mcp add hpe-networking-mcp \
+  --type stdio \
+  --command /path/to/hpe-networking-mcp/.venv/bin/python3 \
+  --args /path/to/hpe-networking-mcp/src/hpe_networking_mcp/mcp_servers/tool_router.py \
+  --env PYTHONPATH /path/to/hpe-networking-mcp/src \
+  --env CREDS_PATH /path/to/hpe-networking-mcp/config/credentials.yaml \
+  --env HPE_MCP_ACCESS_PROFILE safe-read-only \
+  --env HPE_MCP_READONLY 1 \
+  --env HPE_MCP_ROUTER_MODE minimal \
+  --env HPE_MCP_TOOLSETS central,glp,rag \
+  --env HPE_MCP_PRODUCT_ACCESS read-only
+```
+
+Keep Crush's normal permission prompts enabled; do not use `--yolo` for a
+credential-backed network server. The paths above are placeholders only.
+
+### MCPJam Inspector
+
+[MCPJam Inspector](https://github.com/MCPJam/inspector) is an existing
+testing/debugging frontend rather than a production chat surface. Its local
+terminal and desktop versions support local STDIO and HTTP/S servers:
+
+```bash
+npx @mcpjam/inspector@latest
+```
+
+Use it to inspect the router, exercise `find_tool` and
+`invoke_read_tool`, and compare host behavior. The hosted MCPJam app accepts
+HTTPS URLs only and cannot launch this repository's local STDIO process, so
+use the local inspector for STDIO or the loopback HTTP profile for a local
+HTTP test.
+
+### LibreChat
+
+[LibreChat](https://github.com/danny-avila/LibreChat) is an optional
+self-hosted browser platform for users who need a persistent, multi-provider
+chat experience. Current LibreChat releases support MCP entries in
+`librechat.yaml`, including `streamable-http`; point it at an already-running
+router instead of embedding credentials in a tracked file:
+
+```yaml
+mcpServers:
+  hpe-networking-mcp:
+    type: streamable-http
+    url: http://127.0.0.1:8010/mcp
+    chatMenu: true
+```
+
+Use a protected, network-reachable URL when LibreChat runs in another
+container or host; `127.0.0.1` then refers to that frontend's own network
+namespace. Keep API credentials in the deployment environment and preserve
+the router's `safe-read-only` profile.
+
+### Open WebUI
+
+[Open WebUI](https://github.com/open-webui/open-webui) is another optional
+persistent, multi-provider browser platform. It has native MCP support in
+v0.6.31 and later through **Admin Settings → Integrations → Add Server →
+MCP (Streamable HTTP)**. MCP registration is admin-only. For a Docker
+deployment, use a host-reachable URL such as
+`http://host.docker.internal:8010/mcp`, not `localhost`; set
+`WEBUI_SECRET_KEY` so OAuth-related credentials survive restarts. If a
+deployment needs an OpenAPI bridge instead, the existing
+[open-webui/mcpo](https://github.com/open-webui/mcpo) project can proxy an
+MCP command or Streamable HTTP endpoint; it is optional and does not require
+adding a web app to this repository.
 
 <div class="docs-checkpoint">
   <span class="docs-checkpoint__number">1</span>
@@ -246,7 +603,9 @@ HTTP helper safely loads expected local `.env` assignments first, so optional
 products selected in the wizard are available to the router process. Its
 startup banner prints `HPE_MCP_ACCESS_PROFILE`, selected products, and
 `HPE_MCP_PRODUCT_ACCESS` so write visibility is obvious before connecting a
-client. If the
+client. It warns if the local `.env` still contains the retired
+`CENTRALMCP_*` prefix; rename those assignments to `HPE_MCP_*` or remove them.
+If the
 port is already in use, `scripts/run_http_router.sh` exits before starting
 another router and prints the listener details:
 
@@ -254,6 +613,15 @@ another router and prints the listener details:
 lsof -nP -iTCP:8010 -sTCP:LISTEN
 kill <PID>
 ```
+
+### Reconnect after a router restart
+
+Streamable HTTP session handles belong to the running router process. Restarting
+the router invalidates handles held by an existing MCP client, so requests made
+with the old handle can return `404 Session expired` or `404 Invalid or expired
+session ID` even while `/livez` is healthy. Refresh or restart the MCP client
+connection, then let it perform a new `initialize` request; do not reuse the
+old session handle.
 
 <div class="docs-callout docs-callout--danger" markdown="1">
 

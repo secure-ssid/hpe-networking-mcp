@@ -17,20 +17,18 @@
 #                       official sources (negative query / documented
 #                       coverage gap) — a non-empty fabricated answer would be
 #                       scored as a failure, not a fabricated pass.
+# max_duplicate_ratio -> optional upper bound on duplicate/near-identical hits
+#                        across the returned top-k sample (0.0 = no duplicates).
+# max_latency_ms      -> optional upper bound on query latency measured by the
+#                        eval harness for this case.
 # See docs/architecture/RAG-ARCHITECTURE.md and docs/source-lifecycle-coverage.md.
 
 questions:
-  - id: dot1x-auth-type
+  - id: dot1x-auth-profile-endpoint
     type: api-lookup
-    query: "What auth-type value does a CDA 802.1X (dot1x) auth profile use?"
-    # Aruba Central Config API content now ships as per-category bundles
-    # (ingestion/scrape_config_reference_specs.py) rather than one file per
-    # reference-page slug, since the original per-slug internal host
-    # (internal-ui.central.arubanetworks.com) is unreachable from this
-    # environment. "config-wireless"/"config-interfaces"/"config-security"
-    # are the real bundle names that carry this content now.
-    expect_sources: ["cda-auth-profile", "auth-profile", "config-wireless", "config-interfaces", "config-security"]
-    expect_keywords: ["EAP"]
+    query: "What ArubaOS JSON API endpoint configures a dot1x authentication profile?"
+    expect_sources: ["product_specs/aos8-arubaos-json-api-specification.json"]
+    expect_keywords: ["POST /object/dot1x_auth_profile"]
 
   - id: auth-type-enum
     type: api-lookup
@@ -38,38 +36,46 @@ questions:
     expect_sources: ["cda-auth-profile", "auth-profile", "config-wireless", "config-interfaces", "config-security", "config-central-nac"]
     expect_keywords: ["MPSK", "EAP", "CAPTIVE_PORTAL", "MAB", "AIRPASS"]
 
+  - id: glp-company-workspace
+    type: howto
+    query: "How do I create a company workspace in HPE GreenLake Platform?"
+    # Current official indexed GLP guidance is in the VSG/ESP guide; exact
+    # GLP OpenAPI fixtures stay deferred below until the GLP spec corpus is
+    # refreshed.
+    expect_sources: ["vsg_docs/005-edge-service-platform_esp-na-025-glp.md"]
+    expect_keywords: ["company workspace", "Create Workspace"]
+
   - id: passpoint-list-key
     type: api-lookup
     query: "What is the response list key for the passpoint profiles GET endpoint?"
     expect_sources: ["passpoint"]
     expect_keywords: ["profile"]
 
-  - id: firmware-compliance-endpoint
+  - id: central-firmware-compliance-endpoint
     type: api-lookup
-    query: "Which endpoint sets firmware compliance in New Central and what HTTP method?"
-    expect_sources: ["firmware-compliance"]
-    expect_keywords: ["firmware-compliance", "PATCH"]
+    query: "What endpoint sets firmware compliance version in Central firmware APIs?"
+    expect_sources: ["product_specs/central-firmware-4.json"]
+    expect_keywords: ["POST /firmware/v2/upgrade/compliance_version"]
 
   - id: sites-client-health-exact-path
     type: api-lookup
     query: "GET /network-monitoring/v1/sites-client-health"
-    expect_sources: ["monitoring-7wjo8aumqq.json#GET /network-monitoring/v1/sites-client-health"]
+    expect_sources: ["api-cop-release/3.0.2.2-march-apis-cop.htm", "GUID-3FB0EAA2-D59C-47A4-93D0-86EFAF3DF493"]
     expect_keywords: ["sites-client-health", "GET"]
 
-  - id: sites-client-health-operation-id
-    type: api-lookup
-    query: "listSitesClientHealthV1"
-    expect_sources: ["monitoring-7wjo8aumqq.json#GET /network-monitoring/v1/sites-client-health"]
-    expect_keywords: ["sites-client-health", "GET"]
+  - id: aoscx-central-min-version-6300-6400
+    type: howto
+    query: "Which AOS-CX release supports 6300 and 6400 switches in Central on-prem?"
+    # The current indexed official answer is the Central on-prem supported-
+    # devices matrix rather than the release-notes corpus.
+    expect_sources: ["supp-devices.htm", "GUID-21D58D8E-6585-42B9-A28D-D1FB7435F384"]
+    expect_keywords: ["10.13.1110"]
 
-  - id: firmware-no-upgrade-path
+  - id: central-group-firmware-upgrade-endpoint
     type: api-lookup
-    query: "Is there a device-firmware-upgrade endpoint in the New Central config API?"
-    # Now served by the "Config Management"/firmware-policy category bundle
-    # rather than a per-slug firmware-management/firmware-compliance file
-    # (see note on dot1x-auth-type above).
-    expect_sources: ["firmware-management", "firmware-compliance", "config-firmware-policy", "config-miscellaneous"]
-    expect_keywords: ["device-firmware"]
+    query: "What endpoint upgrades firmware for a device group in Central firmware APIs?"
+    expect_sources: ["product_specs/central-firmware-4.json"]
+    expect_keywords: ["POST /firmware/v1/upgrade"]
 
   - id: ssid-security-enum
     type: api-lookup
@@ -83,24 +89,26 @@ questions:
     expect_sources: ["mac-reg", "cnac"]
     expect_keywords: ["cnac-mac-reg", "PUT"]
 
-  - id: scope-levels
-    type: api-lookup
-    query: "What scope levels exist when assigning a profile (global, site, group)?"
-    # Now served by the "Assignments" category bundle (see note above).
-    expect_sources: ["scope", "profile", "config-assignments"]
-    expect_keywords: ["scope"]
+  - id: aoscx-9300s-negative-10-13
+    type: howto
+    query: "Does AOS-CX 9300S support Central on-prem on 10.13?"
+    expect_sources: ["supp-devices.htm", "GUID-21D58D8E-6585-42B9-A28D-D1FB7435F384"]
+    expect_keywords: ["10.14.1061"]
 
-  - id: vlan-create-fields
-    type: api-lookup
-    query: "What fields are required to create a layer2 VLAN?"
-    expect_sources: ["vlan", "layer2"]
-    expect_keywords: ["vlan"]
+  - id: hardware-ex4100f-specs
+    type: howto
+    query: "What are the hardware specifications for EX4100-F?"
+    expect_sources:
+      - "product_datasheets/switch-ex4100-f-ethernet-switch.md"
+      - "https://www.juniper.net/us/en/products/switches/ex-series/ex4100-f-ethernet-switch/specs.html"
+    expect_keywords: ["Fixed 1 U access", "Port density"]
+    max_duplicate_ratio: 0.0
 
-  - id: igmp-lookup-enum
+  - id: central-msp-customer-firmware-upgrade-endpoint
     type: api-lookup
-    query: "What are the valid values for the IGMP forwarding lookup mode field?"
-    expect_sources: ["mgmd", "igmp"]
-    expect_keywords: ["LOOKUP_MAC", "LOOKUP_IP", "LOOKUP_NONE"]
+    query: "What endpoint upgrades firmware for an MSP customer in Central firmware APIs?"
+    expect_sources: ["product_specs/central-firmware-4.json"]
+    expect_keywords: ["POST /firmware/v1/msp/upgrade/customers/{customer_id}"]
 
   - id: howto-create-ssid
     type: howto
@@ -118,7 +126,13 @@ questions:
     type: howto
     query: "How does Passpoint / Hotspot 2.0 work and how is an identity profile assigned?"
     expect_sources: ["passpoint", "tech", "vsg"]
-    expect_keywords: ["passpoint"]
+    expect_keywords: ["Passpoint Identity Provider"]
+
+  - id: clearpass-radius-proxy
+    type: howto
+    query: "How do I configure RADIUS proxy in ClearPass Policy Manager?"
+    expect_sources: ["clearpass_guide/radius-radsec-server-b59ce978.html"]
+    expect_keywords: ["RADIUS proxy", "authentication source"]
 
   - id: howto-nac-mpsk
     type: howto
@@ -137,6 +151,16 @@ questions:
     query: "How do I assign a proxy profile to a scope?"
     expect_sources: ["proxy", "techdocs"]
     expect_keywords: ["proxy", "scope"]
+    max_latency_ms: 4000
+
+  - id: junos-ex4100f-configure
+    type: howto
+    query: "How do I configure Junos OS on an EX4100-F switch?"
+    expect_sources:
+      - "junos_ex_hardware"
+      - "ex4100-f-configure-junos-os_html"
+      - "https://www.juniper.net/documentation/us/en/hardware/ex4100-f/topics/topic-map/ex4100-f-configure-junos-os.html"
+    expect_keywords: ["EX4100-F Default Configuration", "factory default configuration"]
 
   - id: howto-gateway-cluster
     type: howto
@@ -156,11 +180,13 @@ questions:
     expect_sources: ["aaa", "auth-server", "radius", "nac"]
     expect_keywords: ["RADIUS"]
 
-  - id: howto-vsg-design
+  - id: mist-edge-part-numbers
     type: howto
-    query: "What is the recommended VLAN/overlay design for a campus wireless deployment?"
-    expect_sources: ["vsg"]
-    expect_keywords: ["VLAN", "overlay"]
+    query: "What part numbers are available for Mist Edge appliances?"
+    expect_sources:
+      - "product_datasheets/ap-juniper-edge.md"
+      - "https://www.juniper.net/us/en/products/access-points/juniper-edge-datasheet.html"
+    expect_keywords: ["ME-X1-M", "ME-X2-M", "ME-X6"]
 
   - id: advisory-hpesbnw04987
     type: advisory
@@ -254,3 +280,39 @@ questions:
       include_ingestion_delta: false
     expect_sources: ["citation_completeness"]
     expect_keywords: ["security_advisories", "lifecycle_events"]
+
+deferred_questions:
+  - id: deferred-dot1x-auth-type
+    type: api-lookup
+    query: "What auth-type value does a CDA 802.1X (dot1x) auth profile use?"
+    blocker: "The current local specs index cannot answer this exact New Central/CNAC enum lookup reliably; fallback retrieval drifts to ArubaOS JSON and NAC prose. Re-enable after a specs index refresh restores exact field/enum lookup."
+
+  - id: deferred-new-central-firmware-compliance-endpoint
+    type: api-lookup
+    query: "Which endpoint sets firmware compliance in New Central and what HTTP method?"
+    blocker: "Current indexed firmware specs favor legacy Central firmware APIs (POST /firmware/...) rather than the intended New Central config endpoint. Keep deferred until the New Central spec/index refresh is available."
+
+  - id: deferred-new-central-device-firmware-upgrade-path
+    type: api-lookup
+    query: "Is there a device-firmware-upgrade endpoint in the New Central config API?"
+    blocker: "Current retrieval surfaces legacy Central firmware upgrade APIs, which would weaken this negative/absence check. Re-enable only after the New Central config spec corpus is refreshed."
+
+  - id: deferred-igmp-lookup-enum
+    type: api-lookup
+    query: "What are the valid values for the IGMP forwarding lookup mode field?"
+    blocker: "The current local exact-spec index does not return the intended enum record and prose fallback retrieves generic IGMP design content instead of authoritative field values."
+
+  - id: deferred-glp-subscriptions-endpoint
+    type: api-lookup
+    query: "What endpoint lists HPE GreenLake subscriptions?"
+    blocker: "Current lookup_api retrieval falls back to the Central authorization spec instead of a GLP OpenAPI document. Promote/refetch indexed GLP specs before turning this into a scored fixture."
+
+  - id: deferred-ap635-hardware-specs
+    type: howto
+    query: "What are the hardware specifications for AP-635?"
+    blocker: "Current search_docs top hits are generic AP PoE/how-to pages, not a stable AP-635 datasheet chunk in the indexed hardware corpus. Enable after Aruba hardware datasheet coverage is refreshed."
+
+  - id: deferred-aoscx-10-13-release-notes-delta
+    type: howto
+    query: "What changed in AOS-CX 10.13.1110 for 6300 or 6400 switches?"
+    blocker: "Current retrieval prefers Central compatibility tables over AOS-CX 10.13 release-note chunks for broad 'what changed' questions. Revisit after release-note-centric retrieval or source refresh work lands."

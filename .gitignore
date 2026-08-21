@@ -3,11 +3,20 @@
 # .env.bak.<ts>, .env.broken.<ts>, .env.pre-<change>.<ts>. Those carry live tokens.
 # Only explicitly-negated template files may be tracked.
 .env
+# Any .env sidecar: wizard/doctor backups, pytest swap artifacts, incident
+# copies. These hold the same secrets as .env, so match them by prefix
+# rather than listing each suffix.
 .env.*
 !.env.example
 !.env.*.example
 config/credentials.yaml
 .token_cache_*.json
+
+# Docker secrets mounted into the MCP router container (docker-compose.router.yml).
+# Only *.example templates and secrets/README.md are tracked.
+secrets/*
+!secrets/*.example
+!secrets/README.md
 
 # Claude local settings (may contain credentials in allowed commands)
 .claude/settings.local.json
@@ -80,3 +89,13 @@ ingestion/greenlake_specs/
 resources/diagram_icons/private/
 resources/diagram_icons/vendors/**
 !resources/diagram_icons/vendors/.gitkeep
+
+# Personal/internal document collections (cli_client personal_ingest.py).
+# The real store lives outside the repo under ~/.config/hpe-mcp/personal/ —
+# these patterns are only a defensive backstop in case a relative data_dir
+# is ever pointed at the repo by mistake. Never commit ingested personal or
+# internal/proprietary document content or its local vector index.
+personal_data/
+personal_docs/
+*.personal.lancedb/
+cli_client/personal/

@@ -1,4 +1,5 @@
 """Shared clients, helpers, and constants for all MCP servers."""
+import ast
 import asyncio
 import base64
 import hashlib
@@ -98,14 +99,113 @@ _SENSITIVE_KEY_SUFFIXES = (
     "token",
 )
 _REDACTED = "******"
+# Auth header names an operator can *rename* via env. EdgeConnect sends its
+# API token under whatever `EDGECONNECT_AUTH_HEADER` names, so the static
+# rules above stop covering it the moment that name no longer looks like a
+# secret: the default "X-Auth-Token" normalizes to "x_auth_token" and is
+# caught by the "token" suffix, but a custom "X-Ec-Session" normalizes to
+# "x_ec_session" -- in no exact set, matching no suffix -- and would be
+# echoed verbatim if an upstream error body or debug endpoint reflected the
+# request headers back. Resolved at call time (not import time) so a
+# runtime env change takes effect immediately.
+_CONFIGURABLE_SENSITIVE_HEADER_ENV_VARS = ("EDGECONNECT_AUTH_HEADER",)
+
+
+def _normalize_key(key: Any) -> str:
+    """Fold a dict key/header name to a comparable ``snake_case`` token."""
+    key_text = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(key).strip())
+    return re.sub(r"[^a-z0-9]+", "_", key_text.lower()).strip("_")
+
+
+def _configured_sensitive_keys() -> frozenset[str]:
+    """Normalized key names contributed by operator-renamable auth headers."""
+    return frozenset(
+        normalized
+        for env_var in _CONFIGURABLE_SENSITIVE_HEADER_ENV_VARS
+        if (normalized := _normalize_key(os.environ.get(env_var, "")))
+    )
 
 
 def _is_sensitive_key(key: Any) -> bool:
-    key_text = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(key).strip())
-    normalized = re.sub(r"[^a-z0-9]+", "_", key_text.lower()).strip("_")
-    return normalized in _SENSITIVE_KEY_EXACT or any(
+    normalized = _normalize_key(key)
+    if normalized in _SENSITIVE_KEY_EXACT or any(
         normalized.endswith(suffix) for suffix in _SENSITIVE_KEY_SUFFIXES
-    )
+    ):
+        return True
+    return normalized in _configured_sensitive_keys()
+
+
+# ---------------------------------------------------------------------------
+# Stringified-container detection — shared by redact_sensitive() here and by
+# _middleware/secret_tokenizer.py + _middleware/pii_tokenizer.py.
+#
+# All three walk a result tree looking for sensitive/PII-*keyed* string
+# values to redact/tokenize -- but some APIs return a field whose value is
+# itself a JSON- or Python-repr-encoded dict/list serialized as one opaque
+# string (for example, a generically-named annotation/metadata field
+# carrying nested scope or device details). A sensitive value nested inside
+# that blob is invisible to a walker that only ever inspects the *immediate*
+# parent key, no matter how the outer field happens to be named. Centralizing
+# the detect/parse/re-serialize step here means none of the three call sites
+# can diverge on what counts as a "blob" or how one gets re-encoded, and
+# keeps this genuinely stateless (no vault, no tokens), so importing it does
+# not reintroduce any coupling between the secret and PII vaults -- both
+# tokenizer modules deliberately keep those independent.
+# ---------------------------------------------------------------------------
+_CONTAINER_BRACKETS = {"{": "}", "[": "]", "(": ")"}
+# Real nested annotation/config blobs are well under this; anything larger is
+# treated as an ordinary (if large) string, not a candidate blob, so this
+# can't become a CPU-cost lever for a hostile or merely huge upstream payload.
+_MAX_STRINGIFIED_CONTAINER_LENGTH = 50_000
+_CONTAINER_PARSE_ERRORS = (
+    ValueError,
+    TypeError,
+    SyntaxError,
+    RecursionError,
+    MemoryError,
+    OverflowError,
+)
+
+
+def parse_stringified_container(text: str) -> tuple[Any, str] | None:
+    """Parse ``text`` as a JSON or Python-repr dict/list/tuple, quote-agnostic.
+
+    Returns ``(parsed, dialect)`` — ``dialect`` is ``"json"`` or ``"python"``,
+    remembered so :func:`serialize_stringified_container` can re-encode in
+    the same style — or ``None`` when ``text`` doesn't look like, or fails to
+    parse as, a serialized container. A cheap bracket/length pre-check runs
+    before any real parsing, so the overwhelming majority of ordinary string
+    values (which don't start/end with a matching ``{}``/``[]``/``()`` pair)
+    cost only that check. Never raises: this runs on values callers do not
+    control, so any parse failure is treated as "not a blob", exactly like an
+    ordinary string.
+    """
+    stripped = text.strip()
+    if len(stripped) < 2 or len(stripped) > _MAX_STRINGIFIED_CONTAINER_LENGTH:
+        return None
+    if _CONTAINER_BRACKETS.get(stripped[0]) != stripped[-1]:
+        return None
+    try:
+        return json.loads(stripped), "json"
+    except _CONTAINER_PARSE_ERRORS:
+        pass
+    try:
+        parsed = ast.literal_eval(stripped)
+    except _CONTAINER_PARSE_ERRORS:
+        return None
+    if isinstance(parsed, (dict, list, tuple)):
+        return parsed, "python"
+    return None
+
+
+def serialize_stringified_container(parsed: Any, dialect: str) -> str:
+    """Re-encode a parsed container back to text in its original dialect."""
+    if dialect == "json":
+        try:
+            return json.dumps(parsed, default=str)
+        except _CONTAINER_PARSE_ERRORS:
+            return repr(parsed)
+    return repr(parsed)
 
 
 def redact_sensitive(value: Any) -> Any:
@@ -138,7 +238,16 @@ def redact_sensitive(value: Any) -> Any:
         stripped = value.strip().lower()
         if stripped.startswith(("bearer ", "token ", "basic ")):
             return _REDACTED
+        # Not directly sensitive-shaped -- but it might be a serialized
+        # container with a sensitive field nested inside it (see above).
+        blob = parse_stringified_container(value)
+        if blob is not None:
+            parsed, dialect = blob
+            redacted_parsed = redact_sensitive(parsed)
+            if redacted_parsed != parsed:
+                return serialize_stringified_container(redacted_parsed, dialect)
     return value
+
 
 
 _READ_ONLY_ACCESS_VALUES = {"read-only", "readonly", "read_only", "ro"}

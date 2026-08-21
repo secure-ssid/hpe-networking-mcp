@@ -27,6 +27,30 @@ def test_doctor_loads_dotenv_values_with_runtime_comment_semantics(
     assert checks["Access profile"].status == "OK"
 
 
+def test_doctor_warns_on_legacy_environment_prefix(tmp_path):
+    dotenv = tmp_path / ".env"
+    dotenv.write_text(
+        "CENTRALMCP_ROUTER_MODE=minimal\n"
+        "CENTRALMCP_CENTRAL_WRITES=1\n"
+    )
+
+    check = doctor._legacy_env_check(dotenv)
+
+    assert check.status == "WARN"
+    assert "CENTRALMCP_ROUTER_MODE" in check.detail
+    assert "CENTRALMCP_CENTRAL_WRITES" in check.detail
+    assert "minimal" not in check.detail
+
+
+def test_doctor_accepts_canonical_environment_prefix(tmp_path):
+    dotenv = tmp_path / ".env"
+    dotenv.write_text("HPE_MCP_ROUTER_MODE=minimal\n")
+
+    check = doctor._legacy_env_check(dotenv)
+
+    assert check.status == "OK"
+
+
 def test_doctor_uses_exported_values_for_dotenv_interpolation(
     monkeypatch,
     tmp_path,
