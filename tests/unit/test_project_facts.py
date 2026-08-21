@@ -351,8 +351,59 @@ def test_placeholder_specs_db_is_not_mistaken_for_an_index(tmp_path):
 
 
 @pytest.mark.skipif(
-    not project_facts.specs_index_present(),
-    reason="a real local data/specs.sqlite is required for the structured-count contract",
+    project_facts.specs_tables_present() != set(project_facts.SPECS_TABLES),
+    reason=(
+        "the committed counts describe a complete index; a checkout with no "
+        "index, or with the spec-only index the offline build and the "
+        "container image produce, is a different artifact they do not describe"
+    ),
 )
 def test_tracked_specs_counts_match_the_local_structured_index():
     assert TRACKED["indexes"]["specs_sqlite"] == project_facts.specs_counts()
+
+
+def test_spec_only_index_counts_what_it_has_and_omits_what_it_does_not(tmp_path):
+    """The regression guard for the index baked into the container image.
+
+    ``scripts/build_spec_index.py`` indexes the committed ``vendor/openapi``
+    corpus offline and writes ``endpoints``/``schemas``/``fields``.
+    ``advisories`` and ``lifecycle_events`` come only from a scrape, so they
+    are absent by construction, not by damage. Counting all five
+    unconditionally raised ``OperationalError: no such table: advisories``
+    and aborted fact derivation the moment that index existed.
+
+    Built with the real builder, not a hand-rolled fixture: a fixture with
+    three empty tables would pass while the shipped artifact still failed.
+
+    The absent tables must be *omitted*. ``advisories: 0`` would assert the
+    corpus was consulted and held nothing, which is a fabricated fact.
+    """
+    from scripts.build_spec_index import VENDOR_DIR, build_spec_index
+
+    db_path = tmp_path / "specs.sqlite"
+    built = build_spec_index(VENDOR_DIR, db_path)
+
+    assert project_facts.specs_index_present(db_path) is True
+    assert project_facts.specs_tables_present(db_path) == {"endpoints", "schemas", "fields"}
+
+    counts = project_facts.specs_counts(db_path)
+
+    assert counts == {
+        "endpoints": built["endpoints"],
+        "schemas": built["schemas"],
+        "fields": built["fields"],
+    }
+    assert "advisories" not in counts
+    assert "lifecycle_events" not in counts
+    # Canonical order, so a full index still renders as the facts file does.
+    assert list(counts) == [t for t in project_facts.SPECS_TABLES if t in counts]
+
+
+def test_placeholder_specs_db_counts_nothing_instead_of_raising(tmp_path):
+    import sqlite3
+
+    empty = tmp_path / "specs.sqlite"
+    sqlite3.connect(empty).close()
+
+    assert project_facts.specs_counts(empty) == {}
+    assert project_facts.specs_counts(tmp_path / "absent.sqlite") == {}
