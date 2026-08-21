@@ -1,11 +1,14 @@
 name: Release
 
-# Releases are deliberately operator-triggered. The large RAG/OpenAPI/tool
-# index is built and reviewed locally, published under an immutable
-# `indexes-vX.Y.Z` release, and pinned by digest in
-# `.github/index-bundle.json`. This workflow restores that exact bundle,
-# runs the strict release contract, then creates or updates the product
-# release and tag.
+# Releases are deliberately operator-triggered. This workflow rebuilds the
+# tool index and API-spec database from the OpenAPI specs committed to this
+# repository, runs the strict release contract, then creates or updates the
+# product release and tag.
+#
+# The RAG prose corpus (data/docs.lance) is NEVER published. It is scraped
+# third-party vendor documentation; republishing it would redistribute HPE,
+# Aruba, Juniper, and Mist content that this project has no licence to
+# redistribute. Operators build it locally -- see data/INDEX-MANIFEST.json.
 
 on:
   workflow_dispatch:
@@ -80,30 +83,21 @@ jobs:
               output.write(f"notes={notes}\n")
           PY
 
-      - name: Read pinned index metadata
-        id: index_meta
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          import pathlib
-
-          manifest = json.loads(pathlib.Path(".github/index-bundle.json").read_text())
-          with pathlib.Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
-              output.write(f"archive={manifest['archive']}\n")
-              output.write(f"sha256={manifest['sha256']}\n")
-          PY
-
-      - name: Restore repository-pinned indexes
-        run: >-
-          uv run python scripts/download_indexes.py
-          --manifest .github/index-bundle.json
-          --archive "dist/indexes/${{ steps.index_meta.outputs.archive }}"
+      - name: Build the tool index from committed OpenAPI specs
+        # The tool index and API-spec database are DERIVED from specs already in
+        # this repository, so CI rebuilds them deterministically. The RAG prose
+        # corpus (data/docs.lance) is NOT built or published here: it is scraped
+        # third-party vendor documentation, and ingestion/source_manifest.json
+        # already states "Do not commit scraped content". Operators build it
+        # locally under their own acceptance of each vendor's terms -- see the
+        # `rebuild` command in data/INDEX-MANIFEST.json.
+        run: uv run python scripts/ingest_tools.py --complete-catalog
 
       - name: Run complete strict release validation
+        # No --strict-rag: the prose corpus is intentionally absent in CI, and
+        # validate_release.py skips the eval gate cleanly when it is missing.
         run: >-
           uv run python scripts/validate_release.py
-          --strict-rag
           --strict-tool-index
           --catalog-products all
           --min-tools 6703
@@ -126,20 +120,6 @@ jobs:
         run: >-
           uv run python scripts/restore_release_bundle.py
           "${{ steps.evidence.outputs.archive }}"
-
-      - name: Prepare versioned and latest index assets
-        id: index_assets
-        run: |
-          archive="dist/indexes/${{ steps.index_meta.outputs.archive }}"
-          digest="${{ steps.index_meta.outputs.sha256 }}"
-          printf '%s  %s\n' "$digest" "$(basename "$archive")" > "${archive}.sha256"
-          latest="dist/indexes/hpe-networking-mcp-rag-index-latest.tar.gz"
-          ln "$archive" "$latest" 2>/dev/null || cp "$archive" "$latest"
-          printf '%s  %s\n' "$digest" "$(basename "$latest")" > "${latest}.sha256"
-          echo "archive=${archive}" >> "$GITHUB_OUTPUT"
-          echo "checksum=${archive}.sha256" >> "$GITHUB_OUTPUT"
-          echo "latest=${latest}" >> "$GITHUB_OUTPUT"
-          echo "latest_checksum=${latest}.sha256" >> "$GITHUB_OUTPUT"
 
       - name: Build release subject checksums
         id: subjects
@@ -204,10 +184,6 @@ jobs:
           PRERELEASE: ${{ inputs.prerelease }}
           EVIDENCE_ARCHIVE: ${{ steps.evidence.outputs.archive }}
           EVIDENCE_CHECKSUM: ${{ steps.evidence.outputs.checksum }}
-          INDEX_ARCHIVE: ${{ steps.index_assets.outputs.archive }}
-          INDEX_CHECKSUM: ${{ steps.index_assets.outputs.checksum }}
-          INDEX_LATEST: ${{ steps.index_assets.outputs.latest }}
-          INDEX_LATEST_CHECKSUM: ${{ steps.index_assets.outputs.latest_checksum }}
         run: |
           create_flags=(--draft)
           if [[ "$PRERELEASE" == "true" ]]; then
@@ -248,10 +224,6 @@ jobs:
             dist/hpe_networking_mcp-*.tar.gz \
             "$EVIDENCE_ARCHIVE" \
             "$EVIDENCE_CHECKSUM" \
-            "$INDEX_ARCHIVE" \
-            "$INDEX_CHECKSUM" \
-            "$INDEX_LATEST" \
-            "$INDEX_LATEST_CHECKSUM" \
             "dist/$TAG/sbom.json" \
             "dist/$TAG/provenance.json" \
             dist/release-subject-checksums.txt
