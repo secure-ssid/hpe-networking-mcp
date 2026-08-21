@@ -42,14 +42,31 @@ semantic matching for endpoint paths, fields, and enum values.
 
 ## Build the indexes
 
-### Tool catalog and exact-API database (derived, reproducible)
+### Tool catalog (derived from committed code, reproducible)
 
 ```bash
 uv run python scripts/ingest_tools.py --complete-catalog
 ```
 
-This regenerates `data/tools.lance` and `data/specs.sqlite` from the OpenAPI
-specs already in the repository. No network access and no scraping required.
+This regenerates `data/tools.lance` by importing the MCP server modules in
+`src/hpe_networking_mcp/mcp_servers/` and walking their tool registries. Every
+input is committed Python source, so it needs no network access and no
+scraping. CI rebuilds it on each commit and validates it with
+`--strict-tool-index`.
+
+### Exact-API database (needs fetched specs)
+
+`data/specs.sqlite` is built from the OpenAPI documents under
+`ingestion/sources/`, which is gitignored — the specs are fetched, not
+committed. Populate the sources first, then:
+
+```bash
+uv run python ingestion/ingest_docs.py
+```
+
+The same command rebuilds the SQLite exact-lookup tables and, unless the prose
+sources are absent, the embedded corpus below. Because its inputs are not in
+the repository, CI cannot rebuild `specs.sqlite` and does not require it.
 
 ### RAG prose corpus (scraped, local-only)
 

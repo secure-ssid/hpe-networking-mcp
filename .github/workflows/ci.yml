@@ -143,8 +143,10 @@ jobs:
 
       # The RAG prose corpus is deliberately not published (it is scraped vendor
       # documentation), so CI cannot restore it and does not assert --strict-rag.
-      # The tool index and API-spec database are derived from OpenAPI specs
-      # committed here, so they rebuild deterministically.
+      # data/specs.sqlite is likewise unbuildable here: its OpenAPI inputs live
+      # under the gitignored ingestion/sources/. The tool catalog is different --
+      # it is derived by importing the committed MCP server modules, so it
+      # rebuilds deterministically and is worth gating on.
       - name: Rebuild the tool catalog index
         run: uv run python scripts/ingest_tools.py --complete-catalog
 

@@ -294,8 +294,15 @@ def main() -> int:
     # data/SOURCE-MANIFEST.json (9 sources) sitting beside a generated
     # data/INDEX-MANIFEST.json (16 sources), and any manifest that no longer
     # describes the artifacts actually on disk.
+    #
+    # Demanding every artifact is a --strict-rag concern, not a
+    # --strict-tool-index one. The tool catalog rebuilds from the committed
+    # server modules, but data/specs.sqlite is built from ingestion/sources/,
+    # which is gitignored, and data/docs.lance is the scraped prose corpus this
+    # project does not distribute. Requiring them here made the tool-index gate
+    # impossible to satisfy on a clean checkout.
     manifest_command = [sys.executable, "scripts/package_indexes.py", "--check-local-manifests"]
-    if not strict:
+    if not args.strict_rag:
         manifest_command.append("--allow-missing-artifacts")
     _run(manifest_command, "Local index manifests")
 

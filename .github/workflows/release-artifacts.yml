@@ -1,9 +1,9 @@
 name: Release
 
 # Releases are deliberately operator-triggered. This workflow rebuilds the
-# tool index and API-spec database from the OpenAPI specs committed to this
-# repository, runs the strict release contract, then creates or updates the
-# product release and tag.
+# router tool index from the MCP server modules committed to this repository,
+# runs the strict release contract, then creates or updates the product
+# release and tag.
 #
 # The RAG prose corpus (data/docs.lance) is NEVER published. It is scraped
 # third-party vendor documentation; republishing it would redistribute HPE,
@@ -83,13 +83,15 @@ jobs:
               output.write(f"notes={notes}\n")
           PY
 
-      - name: Build the tool index from committed OpenAPI specs
-        # The tool index and API-spec database are DERIVED from specs already in
-        # this repository, so CI rebuilds them deterministically. The RAG prose
-        # corpus (data/docs.lance) is NOT built or published here: it is scraped
-        # third-party vendor documentation, and ingestion/source_manifest.json
-        # already states "Do not commit scraped content". Operators build it
-        # locally under their own acceptance of each vendor's terms -- see the
+      - name: Build the tool index from committed server modules
+        # The tool catalog is DERIVED by importing the MCP server modules in
+        # this repository, so it rebuilds deterministically here. Neither
+        # data/specs.sqlite (built from the gitignored ingestion/sources/) nor
+        # the RAG prose corpus (data/docs.lance) is built or published: the
+        # corpus is scraped third-party vendor documentation, and
+        # ingestion/source_manifest.json already states "Do not commit scraped
+        # content". Operators build both locally under their own acceptance of
+        # each vendor's terms -- see the
         # `rebuild` command in data/INDEX-MANIFEST.json.
         run: uv run python scripts/ingest_tools.py --complete-catalog
 

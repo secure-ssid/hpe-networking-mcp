@@ -329,6 +329,25 @@ def test_strict_mode_runs_manifest_and_canonical_fact_gates(monkeypatch):
     assert any("project_facts.py --require-indexes" in item for item in flattened)
 
 
+def test_strict_tool_index_alone_does_not_demand_unbuildable_artifacts(monkeypatch):
+    """The tool-index gate must be satisfiable on a clean checkout.
+
+    ``data/specs.sqlite`` is built from the gitignored ``ingestion/sources/``
+    and ``data/docs.lance`` is the scraped prose corpus this project does not
+    distribute, so neither exists in CI. Requiring them here once made the
+    strict tool-index job impossible to pass while still rebuilding the
+    catalog it actually validates.
+    """
+    commands = _recorded_commands(
+        monkeypatch,
+        ["--skip-tests", "--skip-rag", "--strict-tool-index", "--min-tools", "1"],
+    )
+    flattened = [" ".join(command) for command in commands]
+
+    assert any("--check-local-manifests --allow-missing-artifacts" in item for item in flattened)
+    assert any("check_generated_tool_manifests.py" in item for item in flattened)
+
+
 def test_non_strict_mode_tolerates_a_no_data_checkout(monkeypatch):
     commands = _recorded_commands(monkeypatch, ["--skip-tests", "--min-tools", "1"])
     flattened = [" ".join(command) for command in commands]

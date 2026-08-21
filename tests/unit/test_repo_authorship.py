@@ -1,13 +1,23 @@
-"""No AI agent may appear as a contributor on this repository.
+"""No bot or AI agent may appear as a contributor on this repository.
 
-GitHub builds its contributor list from commit *authors* and from
-``Co-authored-by:`` trailers. A coding agent that commits under its own
-identity, or that appends its own co-author trailer, therefore shows up
-next to the humans who are accountable for the code.
+GitHub builds the contributor list from the *authors* of commits reachable
+from the default branch, and from ``Co-authored-by:`` trailers in their
+messages. An agent that commits under its own identity, or that appends its
+own co-author trailer, therefore appears next to the humans who are
+accountable for the code.
 
-This project attributes tooling in prose, not by manufacturing contributor
+This project credits tooling in prose, not by manufacturing contributor
 identities: a human reviewed and shipped every commit, and a human owns the
-consequences. These tests fail on any reintroduction of an agent identity.
+consequences.
+
+Scope is deliberately ``HEAD``, not ``--all``. The contributor graph is built
+from the branch's own history, and a developer who has fetched a bot's pull
+request branch should not fail a repository-hygiene test because of a commit
+nobody has merged.
+
+To land a dependency-bot change without giving the bot an authorship entry,
+apply it as your own commit rather than merging the bot's branch, for example
+``git cherry-pick --no-commit <sha>`` followed by your own ``git commit``.
 """
 
 from __future__ import annotations
@@ -20,10 +30,10 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-#: Substrings that identify a coding agent rather than a person. Matched
-#: case-insensitively against the whole ``Name <email>`` identity, so both
-#: ``Copilot <copilot@github.com>`` and a bare ``...@users.noreply.github.com``
-#: agent address are caught.
+#: Substrings that identify an automated author rather than a person, matched
+#: case-insensitively against the whole ``Name <email>`` identity. ``[bot]`` is
+#: included because GitHub renders every ``...[bot]`` account in the
+#: contributor list exactly like a person.
 _AGENT_MARKERS = (
     "copilot",
     "claude",
@@ -35,23 +45,21 @@ _AGENT_MARKERS = (
     "codex",
     "gemini",
     "[bot]",
-    "-bot@",
     "bot@github.com",
     "noreply@github.com",
 )
 
-_COAUTHOR = re.compile(rb"(?im)^\s*co-authored-by:\s*(?P<identity>.+?)\s*$")
+_COAUTHOR = re.compile(rb"(?im)^[ \t]*co-authored-by:[ \t]*(?P<identity>.+?)[ \t]*$")
+
+#: Some commits store escaped ``\n`` literals instead of real newlines, so a
+#: trailer can hide mid-line where the anchored pattern above cannot see it.
+_ESCAPED_COAUTHOR = re.compile(rb"(?i)\\n[ \t]*co-authored-by:[ \t]*(?P<identity>[^\\\r\n]+)")
 
 
-def _git(*args: str) -> str:
-    """Run git in the repository, returning stdout as text."""
-    result = subprocess.run(
-        ("git", *args),
-        cwd=REPO_ROOT,
-        capture_output=True,
-        check=True,
-    )
-    return result.stdout.decode("utf-8", errors="replace")
+def _git_bytes(*args: str) -> bytes:
+    return subprocess.run(
+        ("git", *args), cwd=REPO_ROOT, capture_output=True, check=True
+    ).stdout
 
 
 def _is_agent(identity: str) -> bool:
@@ -60,64 +68,49 @@ def _is_agent(identity: str) -> bool:
 
 
 @pytest.fixture(scope="module")
-def _has_git_history() -> bool:
+def history() -> list[str]:
+    """Commit identities reachable from HEAD, as ``author\tcommitter`` rows."""
     try:
-        _git("rev-parse", "--git-dir")
+        raw = _git_bytes("log", "HEAD", "--pretty=format:%an <%ae>\t%cn <%ce>")
     except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
         pytest.skip("not a git checkout")
-    return True
+    return [line for line in raw.decode("utf-8", errors="replace").splitlines() if line]
 
 
-def test_no_commit_is_authored_by_an_ai_agent(_has_git_history):
+def test_no_commit_is_authored_by_an_agent(history):
+    offenders = sorted({row.split("\t")[0] for row in history if _is_agent(row.split("\t")[0])})
+
+    assert offenders == [], (
+        "commits reachable from HEAD are authored by an automated identity, "
+        f"which GitHub renders as a repository contributor: {offenders}. "
+        "Re-apply the change as your own commit."
+    )
+
+
+def test_no_commit_is_committed_by_an_agent(history):
+    offenders = sorted({row.split("\t")[1] for row in history if _is_agent(row.split("\t")[1])})
+
+    assert offenders == [], (
+        f"commits reachable from HEAD carry an automated committer: {offenders}"
+    )
+
+
+def test_no_commit_message_co_credits_an_agent():
+    try:
+        raw = _git_bytes("log", "HEAD", "--pretty=format:%B%x00")
+    except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
+        pytest.skip("not a git checkout")
+
     offenders = sorted(
         {
-            line
-            for line in _git(
-                "log", "--all", "--pretty=format:%an <%ae>"
-            ).splitlines()
-            if line.strip() and _is_agent(line)
+            identity
+            for pattern in (_COAUTHOR, _ESCAPED_COAUTHOR)
+            for match in pattern.finditer(raw)
+            if _is_agent(identity := match.group("identity").decode("utf-8", errors="replace"))
         }
     )
 
     assert offenders == [], (
-        "commits are authored by an AI agent identity, which GitHub renders as "
-        f"a repository contributor: {offenders}"
-    )
-
-
-def test_no_commit_is_committed_by_an_ai_agent(_has_git_history):
-    offenders = sorted(
-        {
-            line
-            for line in _git(
-                "log", "--all", "--pretty=format:%cn <%ce>"
-            ).splitlines()
-            if line.strip() and _is_agent(line)
-        }
-    )
-
-    assert offenders == [], (
-        f"commits carry an AI agent committer identity: {offenders}"
-    )
-
-
-def test_no_commit_message_co_credits_an_ai_agent(_has_git_history):
-    raw = subprocess.run(
-        ("git", "log", "--all", "--pretty=format:%B%x00"),
-        cwd=REPO_ROOT,
-        capture_output=True,
-        check=True,
-    ).stdout
-
-    offenders = sorted(
-        {
-            match.group("identity").decode("utf-8", errors="replace")
-            for match in _COAUTHOR.finditer(raw)
-            if _is_agent(match.group("identity").decode("utf-8", errors="replace"))
-        }
-    )
-
-    assert offenders == [], (
-        "Co-authored-by trailers name an AI agent, which GitHub counts as a "
-        f"contributor: {offenders}"
+        "Co-authored-by trailers name an automated identity, which GitHub "
+        f"counts as a contributor: {offenders}"
     )
