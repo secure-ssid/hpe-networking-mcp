@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from hpe_networking_mcp._paths import repo_root
+from hpe_networking_mcp.optional_deps import require
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +65,14 @@ def _clamp_top_k(top_k: int) -> int:
 
 
 def connect(data_dir: Path = DATA_DIR):
-    """Open (or create) the embedded LanceDB database directory."""
-    import lancedb
+    """Open (or create) the embedded LanceDB database directory.
+
+    The single door into the store: every other function here takes the
+    handle this returns, so guarding the import once covers the whole module
+    (including the ``lancedb.index`` and ``pyarrow`` imports downstream, which
+    only run once a connection already exists).
+    """
+    lancedb = require("lancedb", extra="ingestion", capability="The document corpus")
     data_dir.mkdir(parents=True, exist_ok=True)
     return lancedb.connect(data_dir)
 

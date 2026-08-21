@@ -816,31 +816,53 @@ name = "hpe-networking-mcp"
 version = "0.9.0"
 source = { editable = "." }
 dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "fastembed" },
     { name = "httpx" },
-    { name = "lancedb" },
-    { name = "langchain-text-splitters" },
     { name = "mcp", extra = ["cli"] },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
-    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "playwright" },
-    { name = "pypdf" },
-    { name = "python-docx" },
     { name = "python-dotenv" },
-    { name = "python-pptx" },
     { name = "pyyaml" },
-    { name = "redis" },
     { name = "rich" },
-    { name = "textual" },
     { name = "websockets", version = "16.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "websockets", version = "17.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "beautifulsoup4" },
+    { name = "fastembed" },
+    { name = "lancedb" },
+    { name = "langchain-text-splitters" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "playwright" },
+    { name = "pymilvus", extra = ["milvus-lite"] },
+    { name = "pypdf" },
+    { name = "python-docx" },
+    { name = "python-pptx" },
+    { name = "redis" },
+    { name = "textual" },
+]
+ingestion = [
+    { name = "beautifulsoup4" },
+    { name = "fastembed" },
+    { name = "lancedb" },
+    { name = "langchain-text-splitters" },
+    { name = "playwright" },
+    { name = "pypdf" },
+    { name = "python-docx" },
+    { name = "python-pptx" },
+]
 milvus-lite = [
     { name = "pymilvus", extra = ["milvus-lite"] },
+]
+redis = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "redis" },
+]
+tui = [
+    { name = "textual" },
 ]
 
 [package.dev-dependencies]
@@ -855,26 +877,27 @@ security = [
 
 [package.metadata]
 requires-dist = [
-    { name = "beautifulsoup4", specifier = ">=4.15.0" },
-    { name = "fastembed", specifier = ">=0.8.0" },
+    { name = "beautifulsoup4", marker = "extra == 'ingestion'", specifier = ">=4.15.0" },
+    { name = "fastembed", marker = "extra == 'ingestion'", specifier = ">=0.8.0" },
+    { name = "hpe-networking-mcp", extras = ["ingestion", "redis", "tui", "milvus-lite"], marker = "extra == 'all'" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "lancedb", specifier = ">=0.33.0" },
-    { name = "langchain-text-splitters", specifier = ">=0.2.0" },
+    { name = "lancedb", marker = "extra == 'ingestion'", specifier = ">=0.33.0" },
+    { name = "langchain-text-splitters", marker = "extra == 'ingestion'", specifier = ">=0.2.0" },
     { name = "mcp", extras = ["cli"], specifier = ">=2.0.0,<3" },
-    { name = "numpy", specifier = ">=2.2.6" },
-    { name = "playwright", specifier = ">=1.58.0" },
+    { name = "numpy", marker = "extra == 'redis'", specifier = ">=2.2.6" },
+    { name = "playwright", marker = "extra == 'ingestion'", specifier = ">=1.58.0" },
     { name = "pymilvus", extras = ["milvus-lite"], marker = "extra == 'milvus-lite'", specifier = ">=2.5.0,<3" },
-    { name = "pypdf", specifier = ">=6.14.2" },
-    { name = "python-docx", specifier = ">=1.2.0" },
+    { name = "pypdf", marker = "extra == 'ingestion'", specifier = ">=6.14.2" },
+    { name = "python-docx", marker = "extra == 'ingestion'", specifier = ">=1.2.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "python-pptx", specifier = ">=1.0.2" },
+    { name = "python-pptx", marker = "extra == 'ingestion'", specifier = ">=1.0.2" },
     { name = "pyyaml", specifier = ">=6.0.0" },
-    { name = "redis", specifier = ">=8.0.1" },
+    { name = "redis", marker = "extra == 'redis'", specifier = ">=8.0.1" },
     { name = "rich", specifier = ">=13.0.0" },
-    { name = "textual", specifier = ">=8.2.8" },
+    { name = "textual", marker = "extra == 'tui'", specifier = ">=8.2.8" },
     { name = "websockets", specifier = ">=14.0" },
 ]
-provides-extras = ["milvus-lite"]
+provides-extras = ["ingestion", "redis", "tui", "milvus-lite", "all"]
 
 [package.metadata.requires-dev]
 dev = [

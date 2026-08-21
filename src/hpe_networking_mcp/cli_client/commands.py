@@ -33,6 +33,7 @@ from hpe_networking_mcp.cli_client.output import (
 from hpe_networking_mcp.cli_client.safety import SafetyPolicy
 from hpe_networking_mcp.cli_client.sessions import ConnectionState, SessionManager
 from hpe_networking_mcp.cli_client.skills import discover_skills, get_skill
+from hpe_networking_mcp.optional_deps import MissingOptionalDependency
 from hpe_networking_mcp.pipeline.reasoning import (
     create_troubleshooting_plan,
     format_architecture_recommendation_markdown,
@@ -363,7 +364,13 @@ def cmd_docs_ingest(
         if not json_mode:
             console.print(f"[dim]{msg}[/]")
 
-    result = ingest_folder(path, collection=collection, progress=None if json_mode else _progress)
+    try:
+        result = ingest_folder(
+            path, collection=collection, progress=None if json_mode else _progress
+        )
+    except MissingOptionalDependency as exc:
+        print_error(str(exc), json_mode=json_mode, code="docs_ingest_unavailable")
+        return 1
     payload = {
         "collection": collection,
         "files_seen": result.files_seen,
@@ -403,7 +410,13 @@ def cmd_docs_search_internal(
     """Hybrid search over the local-only personal index built by ``docs ingest``."""
     from hpe_networking_mcp.cli_client.personal_ingest import search_personal
 
-    hits = search_personal(query, collection=collection)
+    # Never let an uninstalled extra fall through to the "No matches" branch
+    # below -- that reads as "your documents do not mention this".
+    try:
+        hits = search_personal(query, collection=collection)
+    except MissingOptionalDependency as exc:
+        print_error(str(exc), json_mode=json_mode, code="docs_search_unavailable")
+        return 1
     if json_mode:
         print_ok({"hits": hits, "count": len(hits)}, json_mode=True)
         return 0

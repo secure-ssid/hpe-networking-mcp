@@ -37,12 +37,13 @@ from typing import Any, Callable
 # ``PYTHONPATH=<repo>/src`` only (see .cursor/mcp.json) — under that exact
 # launch, ``sys.path[0]`` is the script's own directory, not the repo root,
 # so ``from ingestion.chunking import chunk_text`` raises ModuleNotFoundError
-# (reproduced directly). ``langchain-text-splitters`` is already a base
-# dependency importable from anywhere, so this module depends on it directly
-# instead of on the fragile top-level package.
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-
+# (reproduced directly). ``langchain-text-splitters`` now lives in the
+# ``ingestion`` extra, so it is imported lazily via ``_get_splitter`` below:
+# ``search_personal``/``personal_collection_counts`` must stay importable on a
+# base install (``rag.search_internal_docs`` reaches them), and only the
+# ingest path actually chunks.
 from hpe_networking_mcp.cli_client.config import default_user_data_dir
+from hpe_networking_mcp.optional_deps import require
 
 _CHUNK_SIZE = 800
 _CHUNK_OVERLAP = 100
@@ -54,11 +55,24 @@ _CHUNK_OVERLAP = 100
 #: "orphan" chunk that can outrank the real content for title-keyword
 #: queries).
 _MIN_CHUNK_SIZE = 200
-_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=_CHUNK_SIZE,
-    chunk_overlap=_CHUNK_OVERLAP,
-    separators=["\n\n", "\n", ". ", " ", ""],
-)
+_splitter = None
+
+
+def _get_splitter():
+    """Build the chunker on first use, or raise the actionable install error."""
+    global _splitter
+    if _splitter is None:
+        text_splitters = require(
+            "langchain_text_splitters",
+            extra="ingestion",
+            capability="Chunking documents for ingest",
+        )
+        _splitter = text_splitters.RecursiveCharacterTextSplitter(
+            chunk_size=_CHUNK_SIZE,
+            chunk_overlap=_CHUNK_OVERLAP,
+            separators=["\n\n", "\n", ". ", " ", ""],
+        )
+    return _splitter
 
 
 def _merge_small_chunks(chunks: list[str]) -> list[str]:
@@ -91,7 +105,7 @@ def _merge_small_chunks(chunks: list[str]) -> list[str]:
 
 
 def _chunk_text(text: str) -> list[str]:
-    return _merge_small_chunks(_splitter.split_text(text))
+    return _merge_small_chunks(_get_splitter().split_text(text))
 
 
 SUPPORTED_SUFFIXES = {
@@ -197,7 +211,9 @@ def extract_pptx_text(path: Path) -> str:
     rebuild an in-memory copy with just the broken member(s) zeroed out and
     retry once.
     """
-    from pptx import Presentation
+    Presentation = require(
+        "pptx", extra="ingestion", capability="Reading .pptx files"
+    ).Presentation
 
     try:
         prs = Presentation(str(path))
@@ -232,7 +248,7 @@ def extract_pptx_text(path: Path) -> str:
 
 def extract_docx_text(path: Path) -> str:
     """Paragraph text + table cell text, in document order."""
-    import docx
+    docx = require("docx", extra="ingestion", capability="Reading .docx files")
 
     doc = docx.Document(str(path))
     parts: list[str] = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
@@ -246,7 +262,7 @@ def extract_docx_text(path: Path) -> str:
 
 def extract_pdf_text(path: Path) -> str:
     """Per-page text, same pypdf pattern used by ingestion/scrape_security_lifecycle.py."""
-    from pypdf import PdfReader
+    PdfReader = require("pypdf", extra="ingestion", capability="Reading .pdf files").PdfReader
 
     reader = PdfReader(str(path))
     pages = [page.extract_text() or "" for page in reader.pages]
@@ -312,7 +328,9 @@ def _extract_text_dispatch(path: Path) -> str | None:
     if suffix in (".md", ".markdown", ".txt"):
         return path.read_text(encoding="utf-8", errors="ignore")
     if suffix in (".htm", ".html"):
-        from bs4 import BeautifulSoup
+        BeautifulSoup = require(
+            "bs4", extra="ingestion", capability="Reading .html files"
+        ).BeautifulSoup
 
         soup = BeautifulSoup(path.read_text(encoding="utf-8", errors="ignore"), "html.parser")
         return soup.get_text("\n")
