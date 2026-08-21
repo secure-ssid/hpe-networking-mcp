@@ -282,9 +282,19 @@ class TestGetResponseDescription:
         by_str = specs_index.get_response_description("mist", "429", db_path=db_path)
         assert by_int == by_str == "API rate limit exceeded for this token."
 
-    def test_missing_db_file_returns_none_not_raise(self, tmp_path):
+    def test_missing_db_file_returns_none_and_creates_nothing(self, tmp_path):
+        """Degrading to ``None`` is only half the contract.
+
+        ``sqlite3.connect`` opens read-write and creates an empty database
+        when the path is missing, so a read here used to leave a zero-byte
+        ``data/specs.sqlite`` behind in a corpus-free checkout. Every probe
+        that only checks ``is_file()`` then reports an index that has no
+        tables, and derived-fact tooling fails instead of taking its no-data
+        path.
+        """
         missing = tmp_path / "nope.sqlite"
         assert specs_index.get_response_description("central", 401, db_path=missing) is None
+        assert not missing.exists()
 
     def test_pre_rebuild_db_without_responses_table_returns_none_not_raise(self, responses_db):
         """A real data/specs.sqlite built before this feature shipped has

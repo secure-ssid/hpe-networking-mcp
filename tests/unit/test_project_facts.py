@@ -323,9 +323,36 @@ def test_specs_counts_cover_every_contract_table(tmp_path):
     assert project_facts.specs_counts(db_path) == dict.fromkeys(project_facts.SPECS_TABLES, 1)
 
 
+def test_placeholder_specs_db_is_not_mistaken_for_an_index(tmp_path):
+    """An empty ``specs.sqlite`` must read as *absent*, not as an index.
+
+    ``sqlite3.connect`` creates the file on first write, so a checkout with
+    no corpus can still end up with a zero-byte ``data/specs.sqlite``.
+    Counting it raises ``OperationalError`` mid-derivation instead of taking
+    the documented no-data path, which is how a stray file turns into a hard
+    CI failure.
+    """
+    import sqlite3
+
+    empty = tmp_path / "specs.sqlite"
+    sqlite3.connect(empty).close()
+    assert empty.is_file()
+    assert project_facts.specs_index_present(empty) is False
+
+    foreign = tmp_path / "not-sqlite.sqlite"
+    foreign.write_text("this is not a database", encoding="utf-8")
+    assert project_facts.specs_index_present(foreign) is False
+
+    real = tmp_path / "real.sqlite"
+    with sqlite3.connect(real) as connection:
+        for table in project_facts.SPECS_TABLES:
+            connection.execute(f"CREATE TABLE {table} (id INTEGER)")
+    assert project_facts.specs_index_present(real) is True
+
+
 @pytest.mark.skipif(
-    not project_facts.SPECS_DB_PATH.is_file(),
-    reason="local data/specs.sqlite is required for the exact structured-count contract",
+    not project_facts.specs_index_present(),
+    reason="a real local data/specs.sqlite is required for the structured-count contract",
 )
 def test_tracked_specs_counts_match_the_local_structured_index():
     assert TRACKED["indexes"]["specs_sqlite"] == project_facts.specs_counts()

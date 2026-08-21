@@ -313,8 +313,28 @@ def _coerce_source_dirs(
     return dict(_DEFAULT_SOURCE_DIRS)
 
 
-def connect(db_path: Path = DB_PATH) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path)
+def connect(db_path: Path = DB_PATH, *, create: bool = False) -> sqlite3.Connection:
+    """Open the structured index.
+
+    Args:
+        db_path: The index to open; defaults to ``data/specs.sqlite``.
+        create: Open read-write, creating the file when absent. Only the
+            builder wants this.
+
+    Query paths must never create. ``sqlite3.connect`` on a plain path opens
+    read-write and materializes an empty database when the file is missing,
+    so one best-effort read in a corpus-free checkout (``reactive_hint`` on a
+    failed dispatch, say) leaves a zero-byte ``data/specs.sqlite`` behind.
+    Everything that probes for an index with ``is_file()`` then believes one
+    exists, and derived-fact tooling fails on the absent tables instead of
+    taking its documented no-data path. Read-only against a missing file
+    raises ``sqlite3.OperationalError``, which every reader here already
+    degrades on.
+    """
+    if create:
+        conn = sqlite3.connect(db_path)
+    else:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -645,7 +665,7 @@ def build(
     db_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = db_path.with_name(db_path.name + ".tmp")
     tmp_path.unlink(missing_ok=True)
-    conn = connect(tmp_path)
+    conn = connect(tmp_path, create=True)
     try:
         if preserve_shared and db_path.exists():
             source = connect(db_path)

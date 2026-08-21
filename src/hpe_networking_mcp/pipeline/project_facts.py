@@ -601,6 +601,40 @@ def specs_counts(path: Path = SPECS_DB_PATH) -> dict[str, int]:
     return counts
 
 
+def specs_index_present(path: Path = SPECS_DB_PATH) -> bool:
+    """True when ``path`` is a real structured index, not a placeholder.
+
+    ``sqlite3.connect`` creates an empty database on first write, so a
+    zero-byte ``data/specs.sqlite`` can appear in a checkout that has no
+    corpus at all. Such a file satisfies ``is_file()`` while carrying none of
+    :data:`SPECS_TABLES`, and counting it raises ``OperationalError`` in the
+    middle of fact derivation instead of taking the documented
+    no-data-checkout path.
+
+    A file holding *some* of the expected tables is a real index that has
+    been damaged or truncated, so it stays present here and fails loudly in
+    :func:`specs_counts` rather than being silently downgraded to "absent".
+
+    Args:
+        path: The shared structured index; defaults to ``data/specs.sqlite``.
+    """
+    if not path.is_file():
+        return False
+    try:
+        connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    except sqlite3.Error:  # pragma: no cover - unreadable file
+        return False
+    try:
+        present = {
+            row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+    except sqlite3.DatabaseError:  # not a sqlite database at all
+        return False
+    finally:
+        connection.close()
+    return bool(present & set(SPECS_TABLES))
+
+
 def _column_counts(table, column: str) -> dict[str, int]:
     rows = table.count_rows()
     values = table.search().select([column]).limit(rows).to_arrow().column(column).to_pylist()
@@ -619,11 +653,12 @@ def index_facts() -> dict[str, Any] | None:
     """
     from hpe_networking_mcp.pipeline.clients import lance_client
 
-    if not SPECS_DB_PATH.is_file() and not (DATA_DIR / "docs.lance").is_dir():
+    specs_present = specs_index_present()
+    if not specs_present and not (DATA_DIR / "docs.lance").is_dir():
         return None
 
     facts: dict[str, Any] = {"data_dir": "data"}
-    if SPECS_DB_PATH.is_file():
+    if specs_present:
         facts["specs_sqlite"] = specs_counts()
     db = lance_client.connect(DATA_DIR)
     docs = lance_client.docs_table(db)
