@@ -238,6 +238,85 @@ def curated_capabilities(module_names: tuple[str, ...]) -> Counter[str]:
     return counts
 
 
+def _non_api_local_exclusions() -> list[tuple[str, int, int, tuple[str, ...]]]:
+    """Per backend, what `NON_API_LOCAL_TOOLS` keeps out of the counts above.
+
+    A backend can register a tool that inspects local configuration, cache, or
+    committed-corpus state and calls no vendor API. Counting those in a
+    *platform API* benchmark would inflate it, so `curated_capabilities` skips
+    them -- which leaves the rendered row disagreeing with the server's own
+    registration. Derived here rather than written into the prose so the
+    disclosure stays true when the next local diagnostic is added.
+
+    Returns `(server_name, counted, registered, excluded_tool_names)` for each
+    backend that has an exclusion, in `PLATFORMS` order.
+    """
+    found: list[tuple[str, int, int, tuple[str, ...]]] = []
+    for platform in PLATFORMS:
+        for module_name in platform.modules:
+            path = ROOT / "src" / "hpe_networking_mcp" / "mcp_servers" / module_name
+            server_name = "glp-core" if path.stem == "glp" else f"{path.stem}-core"
+            excluded = NON_API_LOCAL_TOOLS.get(server_name, frozenset())
+            if not excluded:
+                continue
+            names: set[str] = set()
+            for node in ast.walk(ast.parse(path.read_text())):
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if any(
+                    isinstance(decorator, ast.Call)
+                    and isinstance(decorator.func, ast.Attribute)
+                    and decorator.func.attr == "tool"
+                    and isinstance(decorator.func.value, ast.Name)
+                    and decorator.func.value.id == "mcp"
+                    for decorator in node.decorator_list
+                ):
+                    names.add(node.name)
+            # Intersect rather than subtract the whole set: an entry naming a
+            # tool this module does not register must not shrink the count.
+            present = names & set(excluded)
+            if not present:
+                continue
+            found.append(
+                (server_name, len(names - present), len(names), tuple(sorted(present)))
+            )
+    return found
+
+
+def _non_api_local_lines() -> list[str]:
+    """Disclose the registration/count difference the table cannot show.
+
+    Rendered from `_non_api_local_exclusions`, so the counts and the tool
+    names move with `NON_API_LOCAL_TOOLS` instead of being retyped here.
+    """
+    exclusions = _non_api_local_exclusions()
+    if not exclusions:
+        return []
+    clauses = [
+        f"`{server}` defines {_fmt(registered)} curated tools of which "
+        f"{_fmt(counted)} count here ({', '.join(f'`{name}`' for name in names)})"
+        for server, counted, registered, names in exclusions
+    ]
+    joined = "; ".join(clauses[:-1])
+    listed = f"{joined}, and {clauses[-1]}" if joined else clauses[-1]
+    return [
+        "",
+        f"In {_fmt(len(exclusions))} of the rows above the curated count sits "
+        f"below the backend's own registration on purpose: {listed}. "
+        f"{'Those tools inspect' if len(exclusions) > 1 else 'That tool inspects'} "
+        "local configuration, cache, or committed-corpus state, "
+        f"{'make' if len(exclusions) > 1 else 'makes'} no vendor API call, and "
+        f"{'describe' if len(exclusions) > 1 else 'describes'} the catalog "
+        "rather than extending it, so counting "
+        f"{'them' if len(exclusions) > 1 else 'it'} in a "
+        "platform API benchmark would inflate it. The set is "
+        "`NON_API_LOCAL_TOOLS` in "
+        "`src/hpe_networking_mcp/pipeline/project_facts.py`; "
+        "[`docs/tool-catalog.md`](tool-catalog.md) lists them as their own "
+        "rows.",
+    ]
+
+
 def _excluded_reason(platform: str, operation: dict[str, Any]) -> str | None:
     path = operation.get("path", "")
     if platform == "glp" and path.startswith(
@@ -387,6 +466,7 @@ def render_report() -> str:
             "minimal-router "
             "tools are a separate client-visible dispatch surface, not three additional "
             "backend capabilities.",
+            *_non_api_local_lines(),
             "",
             "## Protocol-only capabilities",
             "",
