@@ -3,10 +3,7 @@
 # just a cache optimization: anything not excluded here can end up baked
 # into an image layer even if a later COPY doesn't reference it directly.
 
-# VCS / editor. This repository publishes no prebuilt-index archive, so no
-# index manifest is tracked or copied into the image; the opt-in
-# `download_indexes.py --manifest` step in docs/production-deployment.md
-# takes an operator-supplied manifest instead.
+# VCS / editor.
 .git/
 .github/workflows/
 .github/ISSUE_TEMPLATE/
@@ -32,8 +29,12 @@ secrets/**
 .mcp.json
 .mcp.http.json
 
-# Local runtime state / outputs / built indexes — mount these as volumes
-# instead of baking them into the image (see docs/production-deployment.md).
+# Local runtime state / outputs / locally built indexes — mount these as
+# volumes instead of baking them into the image (see
+# docs/production-deployment.md). data/ stays excluded even though the image
+# ships data/specs.sqlite: that file is built in the `specindex` stage from
+# vendor/openapi/ and copied in with `COPY --from`, so a developer's local
+# data/ can never leak into an image layer.
 state/
 outputs/
 data/

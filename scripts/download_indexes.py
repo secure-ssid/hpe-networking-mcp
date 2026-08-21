@@ -1,5 +1,24 @@
 #!/usr/bin/env python3
-"""Download and unpack the latest prebuilt hpe-networking-mcp RAG/OpenAPI indexes."""
+"""Download and unpack a prebuilt hpe-networking-mcp index archive.
+
+There is no default source, and the one this script used to fall back on never
+worked: it named a release asset no workflow has ever produced. Downloading an
+archive is the third and least necessary way to get an index:
+
+1. The container image already ships ``data/specs.sqlite``. It is built during
+   the image build from the committed ``vendor/openapi`` corpus, so a pulled
+   image answers ``lookup_api`` with nothing to fetch.
+2. ``python scripts/build_spec_index.py`` rebuilds that same database offline,
+   in seconds, from the same committed corpus. No network, no scrape.
+3. A release publishes ``spec-index-<tag>.tar.gz`` alongside a
+   ``spec-index-manifest.json`` pin. Pass that pin to ``--manifest`` and the
+   recorded SHA-256 is verified before anything is unpacked. Use ``--url`` for
+   an archive you host yourself.
+
+The RAG prose corpus (``data/docs.lance``) is scraped third-party vendor
+documentation and is never published by this project, so no manifest here can
+restore it. Build it locally with ``ingestion/ingest_docs.py``.
+"""
 
 from __future__ import annotations
 
@@ -14,9 +33,15 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_URL = (
-    "https://github.com/secure-ssid/hpe-networking-mcp/releases/latest/download/"
-    "hpe-networking-mcp-rag-index-latest.tar.gz"
+#: Neither --manifest nor --url given. There is deliberately no default: a
+#: fallback URL that 404s is worse than an argument error, because it fails
+#: after the user has already been told the download started.
+NO_SOURCE_MESSAGE = (
+    "Pass --manifest <pin.json> or --url <archive-url>. This project publishes "
+    "no archive at a fixed default location. The container image already ships "
+    "data/specs.sqlite, and `python scripts/build_spec_index.py` rebuilds it "
+    "offline from the committed vendor/openapi corpus; a release's "
+    "spec-index-manifest.json is the third option."
 )
 PINNED_MANIFEST_SCHEMA_VERSION = 1
 
@@ -192,7 +217,7 @@ def main() -> int:
             "checksum URL, and SHA-256. The pinned digest is always verified."
         ),
     )
-    parser.add_argument("--url", default=None, help="Release asset URL")
+    parser.add_argument("--url", default=None, help="Archive URL you host yourself")
     parser.add_argument(
         "--checksum-url",
         default=None,
@@ -237,7 +262,9 @@ def main() -> int:
     if pinned and args.expected_sha256:
         raise SystemExit("--manifest cannot be combined with --expected-sha256")
 
-    url = pinned["url"] if pinned else (args.url or DEFAULT_URL)
+    if not pinned and not args.url:
+        raise SystemExit(NO_SOURCE_MESSAGE)
+    url = pinned["url"] if pinned else args.url
     expected_sha256 = pinned["sha256"] if pinned else args.expected_sha256
     archive = args.archive or (
         ROOT / "dist" / (pinned["archive"] if pinned else Path(url).name)

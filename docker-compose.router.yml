@@ -22,10 +22,14 @@
 #   * Credentials are never passed as plaintext `environment:` values. See
 #     secrets/README.md for the CREDS_PATH file-secret and MCP_HTTP_BEARER_TOKEN
 #     "*_FILE" conventions this service uses.
-#   * `./data` is bind-mounted read-only and starts empty. Prebuilt
-#     RAG/OpenAPI indexes are never downloaded automatically by this file,
-#     the image build, or the container's entrypoint -- populate it
-#     explicitly per docs/production-deployment.md.
+#   * `./data` is bind-mounted read-only, which *replaces* the spec index the
+#     image already ships at /app/data/specs.sqlite. Populate the host
+#     directory before starting, or lookup_api has no index to read:
+#     `uv run python scripts/build_spec_index.py data/specs.sqlite` (offline,
+#     seconds, no network). Nothing is ever downloaded automatically by this
+#     file, the image build, or the container's entrypoint -- the scraped RAG
+#     prose corpus in particular is not published and must be built locally
+#     per docs/production-deployment.md.
 #   * This overlay intentionally has no `depends_on` on `redis`/`ollama` --
 #     it stays valid and startable on its own (`HPE_MCP_RAG_BACKEND` unset
 #     uses the embedded LanceDB backend, no Redis/Ollama needed). If you set

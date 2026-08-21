@@ -8,7 +8,16 @@ name: Release
 # The RAG prose corpus (data/docs.lance) is NEVER published. It is scraped
 # third-party vendor documentation; republishing it would redistribute HPE,
 # Aruba, Juniper, and Mist content that this project has no licence to
-# redistribute. Operators build it locally -- see data/INDEX-MANIFEST.json.
+# redistribute. Operators build it locally with ingestion/ingest_docs.py.
+#
+# The OpenAPI spec index (data/specs.sqlite) IS published, as
+# spec-index-<tag>.tar.gz, its .sha256 sidecar, and a spec-index-manifest.json
+# pin carrying the archive's real digest. It is built here from
+# vendor/openapi/, whose 31 documents are committed, digest-pinned and
+# redistributable, so nothing scraped goes into it. The same database is baked
+# into the container image, and anyone can rebuild it offline in seconds with
+# `python scripts/build_spec_index.py`, so this asset is a convenience rather
+# than the only way to get an index.
 
 on:
   workflow_dispatch:
@@ -85,14 +94,13 @@ jobs:
 
       - name: Build the tool index from committed server modules
         # The tool catalog is DERIVED by importing the MCP server modules in
-        # this repository, so it rebuilds deterministically here. Neither
-        # data/specs.sqlite (built from the gitignored ingestion/sources/) nor
-        # the RAG prose corpus (data/docs.lance) is built or published: the
-        # corpus is scraped third-party vendor documentation, and
+        # this repository, so it rebuilds deterministically here. The RAG prose
+        # corpus (data/docs.lance) is neither built nor published: it is
+        # scraped third-party vendor documentation, and
         # ingestion/source_manifest.json already states "Do not commit scraped
-        # content". Operators build both locally under their own acceptance of
-        # each vendor's terms -- see the
-        # `rebuild` command in data/INDEX-MANIFEST.json.
+        # content". Operators build it locally under their own acceptance of
+        # each vendor's terms (`uv run python ingestion/ingest_docs.py`).
+        # data/specs.sqlite is built further down, from vendor/openapi/.
         run: uv run python scripts/ingest_tools.py --complete-catalog
 
       - name: Run complete strict release validation
@@ -106,6 +114,70 @@ jobs:
 
       - name: Build wheel and source distribution
         run: uv build
+
+      - name: Build and package the OpenAPI spec index
+        # vendor/openapi/ holds 31 committed, digest-pinned, redistributable
+        # OpenAPI documents, so this is a pure offline rebuild -- the same one
+        # the Dockerfile's specindex stage runs.
+        env:
+          TAG: ${{ inputs.tag }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p data dist
+          uv run python scripts/build_spec_index.py data/specs.sqlite
+          # Rooted at data/ because scripts/download_indexes.py rejects every
+          # archive member outside it.
+          tar -czf "dist/spec-index-${TAG}.tar.gz" data/specs.sqlite
+          (
+            cd dist
+            sha256sum "spec-index-${TAG}.tar.gz" > "spec-index-${TAG}.tar.gz.sha256"
+          )
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import sys
+
+          tag = os.environ["TAG"]
+          server = os.environ["SERVER_URL"]
+          if not server.startswith("https://"):
+              raise SystemExit(f"refusing to pin a non-https download URL: {server}")
+
+          archive = pathlib.Path(f"dist/spec-index-{tag}.tar.gz")
+          digest = hashlib.sha256()
+          with archive.open("rb") as handle:
+              for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                  digest.update(chunk)
+
+          url = f"{server}/{os.environ['REPOSITORY']}/releases/download/{tag}/{archive.name}"
+          manifest = pathlib.Path("dist/spec-index-manifest.json")
+          manifest.write_text(
+              json.dumps(
+                  {
+                      "schema_version": 1,
+                      "release": tag,
+                      "archive": archive.name,
+                      "url": url,
+                      "checksum_url": f"{url}.sha256",
+                      "sha256": digest.hexdigest(),
+                  },
+                  indent=2,
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+
+          # Fail the release here rather than publish a pin the restorer would
+          # reject on the operator's machine. This is the same validator
+          # scripts/download_indexes.py --manifest runs, not a copy of it.
+          sys.path.insert(0, ".")
+          from scripts.download_indexes import _load_pinned_manifest
+
+          _load_pinned_manifest(manifest)
+          print(manifest.read_text(encoding="utf-8"))
+          PY
 
       - name: Build release evidence bundle
         id: evidence
@@ -135,6 +207,7 @@ jobs:
               *pathlib.Path("dist").glob("*.whl"),
               *pathlib.Path("dist").glob("*.tar.gz"),
               pathlib.Path(os.environ["EVIDENCE_ARCHIVE"]),
+              pathlib.Path("dist/spec-index-manifest.json"),
               pathlib.Path(f"dist/{os.environ['TAG']}/sbom.json"),
               pathlib.Path(f"dist/{os.environ['TAG']}/provenance.json"),
           }
@@ -166,6 +239,9 @@ jobs:
             dist/hpe_networking_mcp-*.tar.gz
             ${{ steps.evidence.outputs.archive }}
             ${{ steps.evidence.outputs.checksum }}
+            dist/spec-index-${{ inputs.tag }}.tar.gz
+            dist/spec-index-${{ inputs.tag }}.tar.gz.sha256
+            dist/spec-index-manifest.json
             dist/${{ inputs.tag }}/sbom.json
             dist/${{ inputs.tag }}/provenance.json
             ${{ steps.subjects.outputs.path }}
@@ -226,6 +302,9 @@ jobs:
             dist/hpe_networking_mcp-*.tar.gz \
             "$EVIDENCE_ARCHIVE" \
             "$EVIDENCE_CHECKSUM" \
+            "dist/spec-index-$TAG.tar.gz" \
+            "dist/spec-index-$TAG.tar.gz.sha256" \
+            dist/spec-index-manifest.json \
             "dist/$TAG/sbom.json" \
             "dist/$TAG/provenance.json" \
             dist/release-subject-checksums.txt

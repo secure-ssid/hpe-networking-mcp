@@ -16,13 +16,20 @@
 #     content are ever COPYed into the image — see .dockerignore. Real
 #     secrets are supplied at *runtime* via Docker secrets / env files
 #     (docker-compose.router.yml, secrets/README.md).
-#   * Prebuilt RAG/OpenAPI indexes (data/) are NOT downloaded during the
-#     build or at container start. They stay an explicit, checksum-verified,
-#     opt-in step run by the operator against a manifest they supply
-#     (`uv run python scripts/download_indexes.py --manifest <your-manifest>`)
-#     — see docs/production-deployment.md. This repository publishes no index
-#     archive, so there is no tracked manifest to bake in, and nothing
-#     silently trusts a network artifact during image build/startup.
+#   * The OpenAPI spec index (data/specs.sqlite) is BUILT during the image
+#     build, in a throwaway stage, from the digest-pinned OpenAPI corpus
+#     committed under vendor/openapi/ — offline, no network, no scrape. Only
+#     the finished database is copied into the runtime image; the ~23 MB
+#     corpus never reaches a layer the final image keeps. `lookup_api`
+#     therefore answers on first start with nothing to download.
+#   * The RAG prose corpus (data/docs.lance) is NOT built here and is never
+#     downloaded during the build or at container start. It is scraped
+#     third-party vendor documentation this project has no licence to
+#     redistribute, so it stays an explicit, checksum-verified, opt-in step
+#     run by the operator against a manifest they supply
+#     (`uv run python scripts/download_indexes.py --manifest <manifest>`)
+#     — see docs/production-deployment.md. Nothing silently trusts a network
+#     artifact during image build or container start.
 #   * The router's own loopback-only HTTP bind default (MCP_HOST=127.0.0.1)
 #     is left untouched here; MCP_HOST/MCP_ALLOWED_HOSTS/MCP_ALLOWED_ORIGINS
 #     are opt-in overrides supplied by the compose overlay, not this image.
@@ -54,6 +61,25 @@ COPY scripts/ ./scripts/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
 
+# The spec index is built FROM builder rather than from a bare python image:
+# scripts/build_spec_index.py imports
+# hpe_networking_mcp.pipeline.clients.specs_index, so it needs both the
+# project source and the installed environment that `builder` already has.
+# Nothing added here survives into `runtime` except the database itself.
+FROM builder AS specindex
+
+# ingestion/openapi_registry_manifest.json supplies each document's portal
+# version; without it the endpoints table carries thinner `version` values
+# than a local `python scripts/build_spec_index.py` produces.
+COPY ingestion/openapi_registry_manifest.json ./ingestion/
+COPY vendor/ ./vendor/
+
+# Written outside /app so that runtime's `COPY --from=builder /app /app`
+# cannot pick it up implicitly: the database enters the final image through
+# exactly one explicit COPY, and vendor/ enters through none.
+RUN mkdir -p /spec-index \
+    && /app/.venv/bin/python scripts/build_spec_index.py /spec-index/specs.sqlite
+
 FROM python:${PYTHON_VERSION} AS runtime
 
 # scripts/run_http_router.sh execs `uv run hpe-mcp-router`; keep the uv
@@ -80,6 +106,14 @@ COPY --from=builder --chown=mcp:mcp /app /app
 # docker-compose.router.yml and docs/production-deployment.md).
 RUN mkdir -p /app/state /app/outputs /app/data \
     && chown -R mcp:mcp /app/state /app/outputs /app/data
+
+# The prebuilt OpenAPI spec index, at the exact path
+# hpe_networking_mcp.pipeline.clients.specs_index.DB_PATH resolves to here:
+# repo_root() falls back to the working directory for a non-editable install,
+# and WORKDIR is /app. data/ is excluded from the build context by
+# .dockerignore, so this file can only come from the specindex stage — never
+# from a developer's local data/ directory.
+COPY --from=specindex --chown=mcp:mcp /spec-index/specs.sqlite /app/data/specs.sqlite
 
 COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 

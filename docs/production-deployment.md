@@ -37,8 +37,9 @@ cp config/credentials.yaml.example secrets/credentials.yaml
 openssl rand -hex 32 > secrets/mcp_http_bearer_token
 chmod 600 secrets/credentials.yaml secrets/mcp_http_bearer_token
 
-# 2. (Optional) populate a prebuilt RAG/OpenAPI index -- see "Prebuilt
-#    indexes" below. Skip this to run with the embedded router catalog only.
+# 2. The overlay bind-mounts ./data over the image's baked spec index, so
+#    populate the host directory first (offline, seconds, no network):
+uv run python scripts/build_spec_index.py data/specs.sqlite
 
 # 3. Build and start the router alongside the unchanged redis/ollama services:
 docker compose -f docker-compose.yml -f docker-compose.router.yml \
@@ -113,27 +114,42 @@ make that the default.
   steps and how to add more `*_FILE` secrets (optional-product API tokens,
   etc.).
 
-### Explicit, checksum-verified index provisioning — never silent
+### The spec index ships in the image; nothing is ever downloaded for you
 
-The image ships with an **empty** `data/` directory. Neither the
-`Dockerfile` build, nor `docker/entrypoint.sh`, nor
-`docker-compose.router.yml` downloads a prebuilt RAG/OpenAPI index
-automatically. This repository publishes no index archive, so there is
-nothing to fetch by default: populating `data/` is an explicit,
-operator-initiated step, matching
-[release-indexes.md](release-indexes.md)'s build-it-yourself flow -- this
-packaging doesn't add a new index mechanism, it just refuses to run one
-without you asking.
+The image **contains** `/app/data/specs.sqlite`. It is built during the image
+build, in a throwaway stage, from the 31 digest-pinned OpenAPI documents
+committed under `vendor/openapi/`, so `lookup_api` answers on a bare
+`docker run` with no credentials, no network, and no extra step. The corpus
+itself never reaches the runtime image.
 
-Build the indexes on the host (see [release-indexes.md](release-indexes.md))
-and bind-mount the result. If you host your own archive internally, package
-it with `scripts/package_indexes.py` -- which emits the checksum manifest --
-and restore it with the manifest *you* generated:
+Nothing else is provisioned automatically. Neither the `Dockerfile` build, nor
+`docker/entrypoint.sh`, nor `docker-compose.router.yml` downloads an index at
+build or at container start. The RAG prose corpus (`data/docs.lance`) is
+scraped vendor documentation this project does not distribute, so `ask_docs`
+and `search_docs` have nothing to answer from until you build it yourself —
+see [release-indexes.md](release-indexes.md).
+
+> **The `./data` bind mount replaces the baked index.**
+> `docker-compose.router.yml` mounts `./data:/app/data:ro`, which shadows
+> `/app/data/specs.sqlite` from the image. If you use that overlay, populate
+> the host directory first:
+>
+> ```bash
+> uv run python scripts/build_spec_index.py data/specs.sqlite
+> ```
+>
+> An empty host `./data` leaves `lookup_api` with no index even though the
+> image shipped one.
+
+If you host your own archive internally, package it with
+`scripts/package_indexes.py` -- which emits the checksum manifest -- and
+restore it with the manifest *you* generated, or with the
+`spec-index-manifest.json` published alongside a release:
 
 ```bash
-# Optional: restore from an archive you host yourself, verified against the
-# manifest produced by scripts/package_indexes.py. There is no repo-tracked
-# manifest, and no upstream release asset, by design.
+# Optional: restore from an archive you host yourself, or from a release's
+# spec-index-manifest.json. The pinned digest is verified before anything is
+# unpacked, and there is no default URL: --manifest or --url is required.
 docker compose -f docker-compose.yml -f docker-compose.router.yml \
   run --rm --no-deps mcp-router \
   uv run python scripts/download_indexes.py --manifest /app/state/your-index-bundle.json \
@@ -207,13 +223,14 @@ docker compose -f docker-compose.yml -f docker-compose.router.yml \
   putting TLS termination, auth, and network policy in front of the
   container is explicitly out of scope for this packaging and is not the
   default; see "Loopback-only exposure by default" above.
-* **Index provisioning is a host-visible extra step**, not a one-command
-  `docker run`. Anyone deploying this for RAG-backed tools (`ask_docs`,
-  `search_docs`, `lookup_api`) needs to run the explicit
-  `download_indexes.py` step (or mount their own prebuilt `./data`) before
-  those tools have anything to answer from; the router itself still starts
-  and serves non-RAG tools (Central/GLP/monitoring/config/ops/NAC) without
-  it.
+* **Prose-corpus provisioning is a host-visible extra step**, not a
+  one-command `docker run`. `lookup_api` works out of the box because the
+  image ships `data/specs.sqlite`, but `ask_docs` and `search_docs` need
+  `data/docs.lance`, which you build yourself
+  (`uv run python ingestion/ingest_docs.py`) and bind-mount. Mounting
+  `./data` at all replaces the baked spec index, so populate it with
+  `scripts/build_spec_index.py` too; the router itself still starts and
+  serves non-RAG tools (Central/GLP/monitoring/config/ops/NAC) either way.
 * **Firmware upgrade caveat carries over unchanged**: `set_firmware_compliance`
   remains the supported path; `/firmware/v1/upgrade` still 404s on this
   Central instance regardless of how the router is deployed.

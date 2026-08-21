@@ -55,19 +55,42 @@ input is committed Python source, so it needs no network access and no
 scraping. CI rebuilds it on each commit and validates it with
 `--strict-tool-index`.
 
-### Exact-API database (needs fetched specs)
+### Exact-API database (`data/specs.sqlite`)
 
-`data/specs.sqlite` is built from the OpenAPI documents under
-`ingestion/sources/`, which is gitignored — the specs are fetched, not
-committed. Populate the sources first, then:
+Three ways to get one, in the order you should reach for them.
+
+**1. Use the container image — it already has one.** The image build runs the
+index build in a throwaway stage over `vendor/openapi/` and copies the
+finished database to `/app/data/specs.sqlite`. Nothing to fetch, nothing to
+run, and the ~23 MB corpus stays out of the runtime image.
+
+**2. Build it offline from the committed corpus.**
 
 ```bash
-uv run python ingestion/ingest_docs.py
+uv run python scripts/build_spec_index.py
 ```
 
-The same command rebuilds the SQLite exact-lookup tables and, unless the prose
-sources are absent, the embedded corpus below. Because its inputs are not in
-the repository, CI cannot rebuild `specs.sqlite` and does not require it.
+`vendor/openapi/` ships all 31 digest-pinned OpenAPI documents, so this needs
+no network, no scrape, and no credentials, and finishes in seconds. This is
+the path for a fresh clone, and it is what CI and the release workflow run.
+
+**3. Restore a release archive.** Each release publishes
+`spec-index-<tag>.tar.gz`, its `.sha256` sidecar, and
+`spec-index-manifest.json` — a pin carrying the archive's real digest,
+generated from the archive that was actually uploaded.
+
+```bash
+uv run python scripts/download_indexes.py --manifest spec-index-manifest.json
+```
+
+The pinned digest is verified before anything is unpacked. This is a
+convenience only: option 2 builds the same database from the same corpus.
+
+All three produce the OpenAPI tables (`endpoints`, `schemas`, `fields`,
+`responses`, and the `fts` index). The advisory and lifecycle tables that
+share the same file come from `ingestion/scrape_security_lifecycle.py`, and
+`uv run python ingestion/ingest_docs.py` rebuilds every table from the
+scraped `ingestion/sources/` tree when you have populated it.
 
 ### RAG prose corpus (scraped, local-only)
 
@@ -97,19 +120,23 @@ additionally obtained by driving Playwright with `headless=False` specifically
 to get past Akamai bot protection, which is not something to republish at
 scale on anyone's behalf.
 
-Releases therefore ship the wheel, source distribution, SBOM, provenance, and
-evidence bundle only. CI rebuilds the tool index from committed specs and does
-not assert `--strict-rag`, because no corpus is present.
+Releases therefore ship the wheel, source distribution, SBOM, provenance,
+evidence bundle, and the OpenAPI spec index (`spec-index-<tag>.tar.gz`, its
+`.sha256`, and `spec-index-manifest.json`) — never `data/docs.lance`. CI
+rebuilds the tool index from committed specs and does not assert
+`--strict-rag`, because no corpus is present.
 
 ### Moving an index between your own machines
 
-`scripts/download_indexes.py` remains available as a hardened restorer for
-archives **you** host: it verifies a SHA-256 digest, rejects absolute paths,
-parent traversal, symlinks, and non-regular members, then stages and atomically
-replaces `data/`. Pass `--url`, and pin integrity with `--expected-sha256` or a
+`scripts/download_indexes.py` is also a hardened restorer for archives **you**
+host: it verifies a SHA-256 digest, rejects absolute paths, parent traversal,
+symlinks, and non-regular members, then stages and atomically replaces
+`data/`. Pass `--url`, and pin integrity with `--expected-sha256` or a
 `--manifest` file of your own. A digest supplied by `--manifest` or
 `--expected-sha256` is always verified; `--skip-checksum` only skips a
-downloaded sidecar.
+downloaded sidecar. There is no default URL — `--manifest` or `--url` is
+required, because a built-in default that 404s is worse than an argument
+error.
 
 ## Refresh and reconcile local indexes
 
