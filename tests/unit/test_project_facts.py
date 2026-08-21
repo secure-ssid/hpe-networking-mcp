@@ -363,9 +363,46 @@ def test_merge_keeps_locally_built_facts_a_checkout_cannot_measure():
         merged[project_facts.LOCALLY_BUILT]
         == TRACKED["indexes"][project_facts.LOCALLY_BUILT]
     )
-    assert project_facts.merge_unbuilt_index_facts(None, TRACKED["indexes"]) == (
-        TRACKED["indexes"]
+
+
+def test_merge_never_republishes_offline_counts_nothing_measured():
+    """A no-data checkout must not re-emit counts it did not rebuild.
+
+    ``current is None`` is the no-data-checkout signal: no ``data/specs.sqlite``
+    and no Lance tables. Carrying the tracked document whole across it kept
+    ``offline_derivable`` -- counts derived from the committed
+    ``vendor/openapi`` corpus -- so ``vendor/openapi`` could change, facts be
+    regenerated without building the index, and the endpoint/schema/field
+    numbers ship unchanged while looking freshly derived. The partition exists
+    precisely so those three numbers are verifiable from committed inputs.
+    """
+    merged = project_facts.merge_unbuilt_index_facts(None, TRACKED["indexes"])
+
+    assert project_facts.OFFLINE_DERIVABLE not in merged
+    assert (
+        merged[project_facts.LOCALLY_BUILT]
+        == TRACKED["indexes"][project_facts.LOCALLY_BUILT]
     )
+    assert merged["data_dir"] == TRACKED["indexes"]["data_dir"]
+
+
+def test_merge_reports_no_index_when_only_offline_facts_are_tracked():
+    """Nothing measured and nothing carryable stays the no-data signal.
+
+    An offline-only tracked block has nothing a git-ignored artifact could
+    excuse, so the merge yields ``None`` -- the same value :func:`collect`
+    records for a fresh clone -- rather than an index document asserting
+    counts this checkout never touched.
+    """
+    offline_only = {
+        "data_dir": "data",
+        project_facts.OFFLINE_DERIVABLE: {"specs_sqlite": {"endpoints": 2734}},
+        project_facts.LOCALLY_BUILT: {},
+    }
+
+    assert project_facts.merge_unbuilt_index_facts(None, offline_only) is None
+    assert project_facts.merge_unbuilt_index_facts(None, {}) is None
+    assert project_facts.merge_unbuilt_index_facts(None, None) is None
 
 
 def test_registered_identities_require_the_pinned_catalog_env(monkeypatch):

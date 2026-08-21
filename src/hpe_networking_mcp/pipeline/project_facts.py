@@ -780,7 +780,7 @@ def index_facts() -> dict[str, Any] | None:
             "rows": tools.count_rows(),
             "rows_by_server": rows_by_server,
         }
-    return {"data_dir": "data", OFFLINE_DERIVABLE: offline, LOCALLY_BUILT: local}
+    return {"data_dir": DATA_DIR.name, OFFLINE_DERIVABLE: offline, LOCALLY_BUILT: local}
 
 
 # ---------------------------------------------------------------------------
@@ -874,12 +874,32 @@ def merge_unbuilt_index_facts(
     "absent here" is not evidence they changed. Offline-derivable facts are
     never carried over: they are rebuilt from committed inputs or they are
     genuinely unavailable.
+
+    That holds when *nothing* was measured, too. ``current is None`` is
+    :func:`index_facts`'s no-data-checkout signal, and carrying the tracked
+    document whole across it republished offline counts nobody rebuilt: the
+    committed ``vendor/openapi`` corpus could change, facts be regenerated
+    without building the index, and the endpoint/schema/field numbers still
+    read as freshly derived while describing a corpus that no longer exists.
+    Omitting them is the same answer :func:`unbuilt_index_families` gives one
+    level down -- say "not built" rather than invent a value -- and it makes a
+    wrong published offline count unreachable rather than merely unlikely: an
+    offline number can now only enter the document by being measured. A clone
+    that wants them present builds the index
+    (``python scripts/build_spec_index.py``); a clone that does not can still
+    regenerate every code-derived fact, which is why this omits rather than
+    fails.
+
+    Returns ``None`` when nothing was measured and there is nothing to carry,
+    preserving the no-data-checkout signal for callers that require indexes.
     """
+    carried = dict((tracked or {}).get(LOCALLY_BUILT) or {})
     if current is None:
-        return tracked
+        if not carried:
+            return None
+        return {"data_dir": DATA_DIR.name, LOCALLY_BUILT: carried}
     if not tracked:
         return current
-    carried = dict(tracked.get(LOCALLY_BUILT) or {})
     carried.update(current.get(LOCALLY_BUILT) or {})
     merged = dict(current)
     merged[LOCALLY_BUILT] = carried
