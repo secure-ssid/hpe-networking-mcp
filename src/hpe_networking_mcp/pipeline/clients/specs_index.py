@@ -45,6 +45,27 @@ VENDOR_MANIFEST_NAME = "MANIFEST.json"
 _FULL_REBUILD_COMMAND = (
     "uv run python -m hpe_networking_mcp.pipeline.clients.specs_index --rebuild-shared"
 )
+# One actionable sentence for "the index is not there", shared by every query
+# entry point. ``scripts/build_spec_index.py`` indexes the committed
+# ``vendor/openapi`` corpus, so the fix is one offline command -- naming a
+# scrape or a release asset here would send the reader somewhere that cannot
+# help them.
+_BUILD_COMMAND = "python scripts/build_spec_index.py"
+# The remedy alone, carrying no path. The exception message below is the full
+# diagnostic (remedy *plus* which file was looked for); a caller that wants to
+# surface the fix on its own -- ``rag.lookup_api``'s degraded ``hint`` -- reads
+# this instead of slicing the exception text or restating the command, either
+# of which drifts the moment the wording changes.
+MISSING_INDEX_REMEDY = (
+    f"build the index with `{_BUILD_COMMAND}`; the OpenAPI corpus under "
+    "vendor/openapi/ is committed, so this needs no scrape and no network"
+)
+
+
+def _missing_index_error(db_path: Path | str) -> FileNotFoundError:
+    return FileNotFoundError(f"specs index missing at {db_path} — {MISSING_INDEX_REMEDY}")
+
+
 _DEFAULT_SOURCE_DIRS: dict[str, Path] = {
     "openapi_specs": SPECS_DIR,
     "product_specs": PRODUCT_SPECS_DIR,
@@ -402,19 +423,31 @@ def connect(db_path: Path = DB_PATH, *, create: bool = False) -> sqlite3.Connect
         create: Open read-write, creating the file when absent. Only the
             builder wants this.
 
+    Raises:
+        FileNotFoundError: when a read connection is asked for an index that
+            does not exist. This is the single seam every query entry point
+            already funnels through, so one check here gives ``search``,
+            ``get_endpoint``, ``get_exact_endpoint``,
+            ``get_endpoint_by_operation_id``, ``get_schema``, ``get_enum`` and
+            ``lookup`` the same actionable message. Without it SQLite's
+            read-only open fails with ``unable to open database file`` — a
+            ``sqlite3.OperationalError`` that names no cause and no fix, and
+            that callers catching ``FileNotFoundError`` do not see at all.
+
     Query paths must never create. ``sqlite3.connect`` on a plain path opens
     read-write and materializes an empty database when the file is missing,
     so one best-effort read in a corpus-free checkout (``reactive_hint`` on a
     failed dispatch, say) leaves a zero-byte ``data/specs.sqlite`` behind.
     Everything that probes for an index with ``is_file()`` then believes one
     exists, and derived-fact tooling fails on the absent tables instead of
-    taking its documented no-data path. Read-only against a missing file
-    raises ``sqlite3.OperationalError``, which every reader here already
-    degrades on.
+    taking its documented no-data path. The pre-check below refuses before
+    SQLite is handed the path at all, so no file is created either way.
     """
     if create:
         conn = sqlite3.connect(db_path)
     else:
+        if not Path(db_path).exists():
+            raise _missing_index_error(db_path)
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     return conn
@@ -1263,7 +1296,7 @@ def get_response_description(
         return None
     try:
         conn = connect(db_path)
-    except sqlite3.Error:
+    except (FileNotFoundError, sqlite3.Error):
         return None
     try:
         rows = conn.execute(
@@ -1454,11 +1487,12 @@ def lookup(
     ``include_metadata=True`` adds exact spec-grounded platform/version
     provenance for callers that need it without breaking older consumers.
     """
+    # ``connect`` raises this too, but the cache key is computed from
+    # ``Path.stat()`` first and would raise a bare "No such file or directory"
+    # before the connection is ever opened. Check here so the actionable
+    # message is what a caller sees.
     if not Path(db_path).exists():
-        raise FileNotFoundError(
-            f"specs index missing at {db_path} — build it with "
-            "`python -m hpe_networking_mcp.pipeline.clients.specs_index --build`"
-        )
+        raise _missing_index_error(db_path)
     top_k = max(1, min(20, top_k))
     try:
         return _cached_lookup(

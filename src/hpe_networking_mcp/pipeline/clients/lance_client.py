@@ -1,8 +1,9 @@
 """LanceDB embedded document store — hybrid (vector + BM25) search, no server.
 
 Replaces the Redis Stack backend for the default download-and-run path: the
-whole index lives in data/ (docs.lance + tools.lance), ships prebuilt via
-GitHub Release, and rebuilds with `uv run python ingestion/ingest_docs.py`.
+whole index lives in data/ (docs.lance + tools.lance) and is built locally
+with `uv run python ingestion/ingest_docs.py`. The prose corpus is scraped
+vendor documentation, so this project distributes no prebuilt copy of it.
 
 Hybrid search (R5): vector similarity + native BM25 FTS, fused with Reciprocal
 Rank Fusion — this catches exact identifiers (WPA3_SAE, endpoint paths) that
@@ -296,9 +297,9 @@ def hybrid_search(
     table = docs_table(db, table_name)
     if table is None:
         raise FileNotFoundError(
-            f"LanceDB docs table missing under {DATA_DIR} — build it with "
-            "`uv run python ingestion/ingest_docs.py` or download the prebuilt "
-            "index from the GitHub Release."
+            f"LanceDB docs table missing under {DATA_DIR} — prose retrieval is "
+            "optional; build it with `uv run python ingestion/ingest_docs.py`. "
+            "Exact API lookup (lookup_api) does not require this index."
         )
     top_k = _clamp_top_k(top_k)
     source_where = _source_where_clause(source_filter)

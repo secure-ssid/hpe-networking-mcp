@@ -521,7 +521,7 @@ class TestLookup:
             specs_index.lookup("updateDeviceFirmware", db_path=stale)
 
     def test_missing_db_raises_with_build_instructions(self, tmp_path):
-        with pytest.raises(FileNotFoundError, match="--build"):
+        with pytest.raises(FileNotFoundError, match="build_spec_index"):
             specs_index.lookup("anything", db_path=tmp_path / "nope.sqlite")
 
     def test_corrupt_db_raises_filenotfound_not_sqlite_error(self, tmp_path):

@@ -520,10 +520,12 @@ The unit suite includes static guards that keep async MCP tools off sync HTTP ca
 
 ## Optional: build the docs/API RAG indexes
 
-The router tool catalog is quick. The full docs/API index is larger. Fresh clones need either a prebuilt release index or locally populated
-`ingestion/sources/` input files before rebuilding docs/API search. Structured
-OpenAPI data is written only to SQLite exact lookup; it is not embedded into the
-LanceDB prose corpus.
+The router tool catalog is quick. The full docs/API index is larger. The exact
+API index rebuilds offline from the committed `vendor/openapi/` corpus
+(`python scripts/build_spec_index.py`); the prose corpus needs locally
+populated `ingestion/sources/` input files. Neither is published as a release
+asset. Structured OpenAPI data is written only to SQLite exact lookup; it is
+not embedded into the LanceDB prose corpus.
 
 ```bash
 uv run python ingestion/scrape_openapi.py

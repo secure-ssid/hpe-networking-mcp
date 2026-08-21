@@ -30,7 +30,7 @@ Live device/tenant questions skip RAG and use `find_tool` →
 > - **LanceDB** — prose docs (developer/tech/NAC/VSG/aos), with native **hybrid (vector + BM25) + reranking**.
 > - **SQLite** — OpenAPI specs as **exact structured lookup** (method/path, operation IDs, endpoints, schemas, fields, and enums), *not* embeddings.
 > - **fastembed** — embeddings in-process (ONNX); no Ollama required. Can run the same `nomic-embed-text-v1.5`.
-> - **Ship a prebuilt index** as a GitHub Release asset so `git clone → uv sync → run` works with zero ingest.
+> - **Build the indexes locally** — the SQLite exact-API index rebuilds offline from the committed `vendor/openapi/` corpus (`python scripts/build_spec_index.py`), so `git clone → uv sync → run` answers `lookup_api` with no scrape. The prose corpus is scraped vendor documentation and is **not** distributed as a release asset.
 > - **The portal consumes via the MCP** (`search_docs` / `ask_docs` over stdio or streamable-HTTP) — it never touches the store directly, so no shared server is needed.
 >
 > **Redis Stack** remains a documented, supported *server option* for anyone who wants it — but it is **not** the default for the cloned-and-run experience.
