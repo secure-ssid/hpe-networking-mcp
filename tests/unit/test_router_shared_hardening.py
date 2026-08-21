@@ -413,7 +413,10 @@ class TestStandaloneWriteGate:
         assert _call(server, "destroy_thing") == {"destroyed": True}
 
     def test_composes_with_middleware_in_either_order(self, monkeypatch):
-        from hpe_networking_mcp.mcp_servers._middleware import NullStripMiddleware, install_middleware
+        from hpe_networking_mcp.mcp_servers._middleware import (
+            NullStripMiddleware,
+            install_middleware,
+        )
 
         monkeypatch.delenv("HPE_MCP_GLP_V2BETA1_WRITES", raising=False)
 

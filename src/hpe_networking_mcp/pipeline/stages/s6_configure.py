@@ -12,8 +12,8 @@ from typing import Any
 
 from hpe_networking_mcp.pipeline.models import AccountContext, DeviceRecord, StageResult
 from hpe_networking_mcp.pipeline.scope_ids import normalize_scope_id
-from hpe_networking_mcp.pipeline.state_store import StateStore
 from hpe_networking_mcp.pipeline.stages.base import Stage
+from hpe_networking_mcp.pipeline.state_store import StateStore
 
 logger = logging.getLogger(__name__)
 
@@ -587,7 +587,9 @@ class ConfigureStage(Stage):
         # 7. Push VLAN interfaces (L3) from config file
         vlan_interfaces_pushed = 0
         if record.vlan_interface_config_file:
-            from hpe_networking_mcp.pipeline.vlan_interface_loader import load_vlan_interface_config_file
+            from hpe_networking_mcp.pipeline.vlan_interface_loader import (
+                load_vlan_interface_config_file,
+            )
             try:
                 vlan_intfs = load_vlan_interface_config_file(record.vlan_interface_config_file)
                 for vi in vlan_intfs:

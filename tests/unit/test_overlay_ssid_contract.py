@@ -20,8 +20,6 @@ from __future__ import annotations
 import logging
 from unittest.mock import MagicMock
 
-import pytest
-
 from hpe_networking_mcp.pipeline.create_ssid import (
     _build_ssid_body,
     _normalize_opmode,

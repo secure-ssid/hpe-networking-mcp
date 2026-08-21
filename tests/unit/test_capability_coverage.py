@@ -7,7 +7,6 @@ import pytest
 from hpe_networking_mcp.mcp_servers import rag
 from hpe_networking_mcp.pipeline.clients import capability_coverage as coverage
 
-
 CENTRAL_OPS = [
     {
         "name": "get_firmware_compliance",

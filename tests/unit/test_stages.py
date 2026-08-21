@@ -13,7 +13,6 @@ from hpe_networking_mcp.pipeline.stages.s6_configure import ConfigureStage
 from hpe_networking_mcp.pipeline.stages.s7_firmware import FirmwareStage
 from hpe_networking_mcp.pipeline.stages.s8_verify import VerifyStage
 
-
 # ---------------------------------------------------------------------------
 # S1 — Discover
 # ---------------------------------------------------------------------------

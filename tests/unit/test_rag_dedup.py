@@ -1,5 +1,4 @@
 """Tests for _dedup_by_content: content-hash deduplication of search hits."""
-import pytest
 
 from hpe_networking_mcp.mcp_servers.rag import _dedup_by_content, _shape
 

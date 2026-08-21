@@ -21,13 +21,21 @@ from hpe_networking_mcp.mcp_servers.openapi_gen.manifest import (
     dumps,
     sha256_bytes,
 )
-from hpe_networking_mcp.mcp_servers.openapi_gen.naming import DuplicateNameError, NameAllocator, base_name, snake
+from hpe_networking_mcp.mcp_servers.openapi_gen.naming import (
+    DuplicateNameError,
+    NameAllocator,
+    base_name,
+    snake,
+)
 from hpe_networking_mcp.mcp_servers.openapi_gen.runtime import (
     _py_type,
     is_transport_header,
     register_generated_tools,
 )
-from hpe_networking_mcp.mcp_servers.shared import bound_collection_response, bounded_response_payload
+from hpe_networking_mcp.mcp_servers.shared import (
+    bound_collection_response,
+    bounded_response_payload,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers

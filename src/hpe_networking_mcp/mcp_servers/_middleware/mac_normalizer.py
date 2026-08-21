@@ -11,7 +11,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 _SEPARATED_MAC_RE = re.compile(
     r"(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}(?![0-9A-Fa-f])"
 )

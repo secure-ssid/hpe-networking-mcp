@@ -21,9 +21,8 @@ import re
 import time
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright
-
 import scrape_security_lifecycle as sec
+from playwright.sync_api import sync_playwright
 
 OUTPUT_DIR = Path(__file__).resolve().parent / "sources" / "juniper_kb"
 

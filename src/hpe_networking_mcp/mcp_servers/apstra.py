@@ -38,16 +38,20 @@ from hpe_networking_mcp.mcp_servers.shared import (
     DIAGNOSTIC,
     IDEMPOTENT_WRITE,
     READ_ONLY,
-    bounded_response_payload,
     bound_collection_response,
+    bounded_response_payload,
     clamp_limit,
     compact_http_error,
-    platform_write_blocked as _platform_write_blocked,
-    platform_writes_allowed as _platform_writes_allowed,
     redact_sensitive,
     response_payload,
     safe_api_path,
     validate_product_base_url,
+)
+from hpe_networking_mcp.mcp_servers.shared import (
+    platform_write_blocked as _platform_write_blocked,
+)
+from hpe_networking_mcp.mcp_servers.shared import (
+    platform_writes_allowed as _platform_writes_allowed,
 )
 
 mcp = MCPServer("apstra-core")
@@ -1058,7 +1062,10 @@ def _register_generated_apstra_tools() -> list[str]:
     never exposed as model-visible tools.
     """
     from hpe_networking_mcp.mcp_servers.openapi_gen.manifest import load_manifest, manifest_exists
-    from hpe_networking_mcp.mcp_servers.openapi_gen.runtime import generated_tools_enabled, register_generated_tools
+    from hpe_networking_mcp.mcp_servers.openapi_gen.runtime import (
+        generated_tools_enabled,
+        register_generated_tools,
+    )
 
     if not generated_tools_enabled("apstra") or not manifest_exists("apstra"):
         return []

@@ -34,7 +34,10 @@ import asyncio
 
 from mcp.server.mcpserver import MCPServer
 
-from hpe_networking_mcp.mcp_servers.openapi_gen.http_exec import make_read_executor, make_write_executor
+from hpe_networking_mcp.mcp_servers.openapi_gen.http_exec import (
+    make_read_executor,
+    make_write_executor,
+)
 from hpe_networking_mcp.mcp_servers.shared import (
     get_client,
     platform_write_blocked,

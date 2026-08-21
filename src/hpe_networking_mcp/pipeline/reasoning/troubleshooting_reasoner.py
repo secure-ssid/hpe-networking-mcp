@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 import uuid
-from typing import Any
 
 from hpe_networking_mcp.pipeline.reasoning.models import (
     PlanStep,
@@ -12,7 +11,6 @@ from hpe_networking_mcp.pipeline.reasoning.models import (
     ReasoningPlan,
     RemediationAction,
     RootCauseHypothesis,
-    StepStatus,
 )
 
 

@@ -9,9 +9,14 @@ from __future__ import annotations
 import logging
 import time
 
-from hpe_networking_mcp.pipeline.models import AccountContext, DeviceRecord, FirmwareAction, StageResult
-from hpe_networking_mcp.pipeline.state_store import StateStore
+from hpe_networking_mcp.pipeline.models import (
+    AccountContext,
+    DeviceRecord,
+    FirmwareAction,
+    StageResult,
+)
 from hpe_networking_mcp.pipeline.stages.base import Stage
+from hpe_networking_mcp.pipeline.state_store import StateStore
 
 logger = logging.getLogger(__name__)
 

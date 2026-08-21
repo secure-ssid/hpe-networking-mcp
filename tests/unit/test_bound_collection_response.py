@@ -21,14 +21,11 @@ from __future__ import annotations
 
 import random
 
-import pytest
-
 from hpe_networking_mcp.mcp_servers.shared import (
     _BOUND_LISTS_FLAG,
     bound_collection_response,
     maybe_bound,
 )
-
 
 # ---------------------------------------------------------------------------
 # bound_collection_response: list inputs

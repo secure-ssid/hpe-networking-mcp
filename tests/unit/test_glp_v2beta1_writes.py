@@ -19,13 +19,11 @@ No live calls. No writes anywhere.
 
 from __future__ import annotations
 
-import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from hpe_networking_mcp.pipeline.clients.glp_client import GLPClient, _V2BETA1_WRITES_FLAG
-
+from hpe_networking_mcp.pipeline.clients.glp_client import _V2BETA1_WRITES_FLAG, GLPClient
 
 # ---------------------------------------------------------------------------
 # Fixtures

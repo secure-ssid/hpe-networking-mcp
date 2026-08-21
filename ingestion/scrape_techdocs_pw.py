@@ -10,6 +10,7 @@ import re
 import subprocess
 import time
 from pathlib import Path
+
 from playwright.sync_api import sync_playwright
 
 OUTPUT_DIR = Path(__file__).parent / "sources" / "techdocs_html" / "arubanetworking.hpe.com" / "techdocs" / "new-central" / "content"

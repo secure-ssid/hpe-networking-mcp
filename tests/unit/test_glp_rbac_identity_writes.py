@@ -33,7 +33,6 @@ import pytest
 from hpe_networking_mcp.mcp_servers import glp
 from hpe_networking_mcp.pipeline.clients.glp_client import _V2BETA1_WRITES_FLAG, GLPClient
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

@@ -313,10 +313,10 @@ def icon_path_for(vendor: str, role: str) -> Path | None:
     generic_candidates = [
         f"generic/{role}.png",
         f"generic/{role}.svg",
-        f"generic/default.svg",
+        "generic/default.svg",
         f"vendors/generic/{role}.png",
         f"vendors/generic/{role}.svg",
-        f"vendors/generic/default.svg",
+        "vendors/generic/default.svg",
     ]
     return _pick_first_icon(vendor_candidates) or _pick_first_icon(generic_candidates)
 

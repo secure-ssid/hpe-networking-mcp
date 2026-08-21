@@ -44,8 +44,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 sys.path.insert(0, str(_REPO_ROOT / "src"))
 
-from ingestion import readme_registry as rr  # noqa: E402
 from hpe_networking_mcp.mcp_servers.openapi_gen import manifest as M  # noqa: E402
+from ingestion import readme_registry as rr  # noqa: E402
 
 PORTAL = "https://developer.arubanetworks.com"
 PROVENANCE_DIR = _REPO_ROOT / "src" / "hpe_networking_mcp" / "mcp_servers" / "openapi_gen" / "provenance"
