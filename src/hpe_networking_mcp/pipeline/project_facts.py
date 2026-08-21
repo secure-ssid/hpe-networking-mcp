@@ -625,9 +625,8 @@ def specs_index_present(path: Path = SPECS_DB_PATH) -> bool:
     except sqlite3.Error:  # pragma: no cover - unreadable file
         return False
     try:
-        present = {
-            row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        }
+        rows = connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        present = {row[0] for row in rows}
     except sqlite3.DatabaseError:  # not a sqlite database at all
         return False
     finally:
