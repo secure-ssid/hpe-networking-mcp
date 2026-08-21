@@ -2,9 +2,19 @@
 
 Everything the rest of this package needs from the MCP SDK's tool registry is
 expressed here as a named, intent-revealing function. No other module may write
-``._tool_manager`` -- ``tests/unit/test_no_private_sdk_access.py`` enforces that
-and pins the SDK shapes below, so an upstream rename fails as one loud, obvious
-test rather than as a silently missing write gate.
+``._tool_manager``; ``tests/unit/test_no_private_sdk_access.py`` enforces that.
+
+**Before bumping ``mcp``, read**
+``tests/unit/test_no_private_sdk_access.py::test_sdk_compat_matches_the_installed_sdk``.
+That test is the tripwire for this whole module: it pins every SDK internal
+relied on below -- registry access, the internal-vs-wire attribute split,
+verbatim ``Tool`` republication by object identity, raw dispatch returning a
+Python value, and the claim/replace/restore interception seam including the
+fact that the *public* ``MCPServer.call_tool`` still routes through it. An
+upstream rename must fail there, as one loud and obvious test, rather than as a
+silently missing write gate. If that test goes red on an SDK bump, do not
+"fix" it by loosening the assertion -- re-derive the seam and re-run the
+write-gate suites.
 
 Why a quarantine rather than a migration
 ----------------------------------------
@@ -34,15 +44,27 @@ have no public equivalent:
 
 Why the write gate intercepts *here* and not at ``ServerMiddleware``
 --------------------------------------------------------------------
-``MCPServer.middleware`` (the low-level ``ServerMiddleware`` chain) is
-*inbound-message* tier: it wraps ``tools/call`` requests arriving over a
-transport. Backend servers in this deployment never receive wire messages --
-the router imports them and dispatches in-process -- so a middleware-tier gate
-would observe **none** of the traffic it is supposed to gate. Intercepting
-``ToolManager.call_tool`` is the only position that covers all three paths:
-the wire handler (which funnels through ``MCPServer.call_tool``), a direct
-in-process ``server.call_tool(name, ...)``, and the router's raw dispatch.
-See ``docs`` in ``shared.install_platform_write_gate`` and the Task 8 report.
+``MCPServer.middleware`` looks like the supported seam and is not one. It is
+the low-level ``ServerMiddleware`` chain: *inbound-message* tier, wrapping
+``tools/call`` requests that arrive over a transport. ``mcp.server.context.
+ServerMiddleware`` exposes no tool-level hook at all, and the chain ships
+holding only ``OpenTelemetryMiddleware`` and ``RequestStateBoundary`` -- both
+wire-tier.
+
+Measured, not assumed: registering a spy on ``MCPServer.middleware`` and then
+calling ``await server.call_tool(name, args)`` in-process records **nothing**;
+the spy's observed-method list comes back empty. That matters here because
+backend servers in this deployment never receive a wire message -- the router
+imports them as modules and dispatches in-process -- so a middleware-tier write
+gate would observe **0%** of the traffic it exists to gate, silently deleting
+the security boundary for every router dispatch and every direct by-name call.
+
+Intercepting the tool manager's dispatcher is the only position covering all
+three paths, which all converge on it: the SDK's wire handler (via
+``MCPServer.call_tool``), a direct in-process ``server.call_tool(name, ...)``,
+and the router's raw dispatch (:func:`call_tool_raw`). Maximal coverage beats
+API purity for a security boundary. See ``shared.install_platform_write_gate``
+and ``.superpowers/sdd/hpe-mcp-repo-a-improvement-plan/task-8-report.md`` §2.
 """
 
 from __future__ import annotations
