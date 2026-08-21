@@ -108,7 +108,7 @@ tui = [
     "textual>=8.2.8",
 ]
 milvus-lite = [
-    "pymilvus[milvus-lite]>=2.5.0,<3",
+    "pymilvus[milvus-lite]>=2.5.0,<4",
 ]
 # Everything, for a checkout that wants the full feature set in one command.
 all = [
