@@ -9,8 +9,9 @@ name: Security
 # push/PR, plus a weekly schedule so a newly disclosed CVE is caught even
 # without a code change.
 #
-# A container/image scan (e.g. trivy) is deferred until a Dockerfile exists
-# for this project -- there is no image to scan yet.
+# The image scan below covers the layer the Python-only scanners above cannot
+# see: the Debian base, the interpreter, and any non-Python binary the runtime
+# stage copies in (today, uv).
 
 on:
   push:
@@ -107,5 +108,72 @@ jobs:
         with:
           name: security-pip-audit-report
           path: outputs/security/pip-audit-report.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  image-scan:
+    name: Trivy (image CVEs)
+    runs-on: ubuntu-latest
+    # A real build, not a registry pull: the runtime image resolves the whole
+    # locked dependency set and indexes the digest-pinned OpenAPI corpus under
+    # vendor/openapi/ into data/specs.sqlite in a throwaway stage, so the build
+    # is measured in minutes rather than seconds.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      # Same image the Docker workflow builds and the same one an operator
+      # gets from `docker build .`; scanning anything else would scan a
+      # different artifact than the one that ships.
+      - name: Build the runtime image
+        run: |
+          mkdir -p outputs/security
+          docker build -t hpe-networking-mcp:scan .
+
+      # Pinned to an immutable commit rather than the `@master` this scan was
+      # originally sketched against, and deliberately stricter than the `@vN`
+      # pins elsewhere in this repo: every other action used here is published
+      # by GitHub itself, whereas this one is third-party and its job is to
+      # download and execute a scanner binary. A tag is a movable pointer; a
+      # commit SHA is not. Bump both the SHA and the trailing version comment
+      # together.
+      - name: Record the full vulnerability inventory (non-gating)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: hpe-networking-mcp:scan
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: "false"
+          format: json
+          output: outputs/security/trivy-report.json
+          exit-code: "0"
+
+      # The gate. `ignore-unfixed` is not a severity reduction -- severity
+      # stays CRITICAL,HIGH -- it drops only findings with no released fix.
+      # The Debian stable base currently carries dozens of HIGH/CRITICAL CVEs
+      # with no fixed version available upstream; gating on those makes this
+      # job permanently red for a reason no commit in this repository can
+      # address, which is exactly how a security gate ends up disabled. The
+      # unfiltered inventory is still archived by the step above, so nothing
+      # is hidden -- only the unactionable is kept out of the pass/fail
+      # decision. A finding that reaches this step has a fix, and the fix is
+      # to bump the base image or the vendored binary, never to relax this.
+      - name: Fail on fixable CRITICAL/HIGH
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: hpe-networking-mcp:scan
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: "true"
+          format: table
+          exit-code: "1"
+          skip-setup-trivy: "true"
+
+      - name: Upload Trivy report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: security-trivy-report
+          path: outputs/security/trivy-report.json
           if-no-files-found: warn
           retention-days: 90

@@ -34,6 +34,7 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 from hpe_networking_mcp._paths import repo_root
@@ -98,6 +99,13 @@ NON_PLATFORM_AGGREGATOR_SERVERS = ("site-health",)
 #: workflows in a platform backend.
 NON_API_LOCAL_TOOLS = {
     "glp-core": frozenset({"glp_preflight"}),
+    # ``corpus_provenance`` reads ``vendor/openapi/MANIFEST.json`` and the
+    # local index artifacts to report what backed an answer. It reaches no
+    # vendor API, so counting it in the published platform-API benchmark
+    # (``platform_backend_total``, the 6,711 in docs/capability-gap-matrix.md)
+    # would inflate that number with a tool that describes the catalog rather
+    # than extending it.
+    "rag-core": frozenset({"corpus_provenance"}),
 }
 
 FULL_WRITE_GATE_ENV = {
@@ -198,7 +206,7 @@ def package_facts() -> dict[str, Any]:
     return {"name": name, "version": version, "console_scripts": dict(sorted(scripts.items()))}
 
 
-def _router_module():
+def _router_module() -> ModuleType:
     from hpe_networking_mcp.mcp_servers import tool_router
 
     return tool_router
@@ -476,7 +484,8 @@ def _run_router_mode_probe(
     # The child process imports several heavyweight optional-product/RAG
     # modules that may print their own startup diagnostics to stdout before
     # our final JSON line -- only the last line is the contract.
-    return json.loads(result.stdout.strip().splitlines()[-1])
+    facts: dict[str, Any] = json.loads(result.stdout.strip().splitlines()[-1])
+    return facts
 
 
 def router_mode_facts(*, registered_names: set[str] | None = None) -> dict[str, Any]:
@@ -703,7 +712,7 @@ def specs_index_present(path: Path = SPECS_DB_PATH) -> bool:
     return bool(specs_tables_present(path))
 
 
-def _column_counts(table, column: str) -> dict[str, int] | None:
+def _column_counts(table: Any, column: str) -> dict[str, int] | None:
     """Value frequencies for ``column``, or None when the table lacks it.
 
     A LanceDB directory that does not carry the expected column is not this
@@ -834,7 +843,8 @@ def load(path: Path = FACTS_PATH) -> dict[str, Any]:
         raise ProjectFactsError(
             f"missing {path}; generate it with `uv run python scripts/project_facts.py --write`"
         )
-    return json.loads(path.read_text(encoding="utf-8"))
+    snapshot: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return snapshot
 
 
 def write(snapshot: dict[str, Any], path: Path = FACTS_PATH) -> Path:

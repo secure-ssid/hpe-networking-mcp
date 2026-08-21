@@ -4,8 +4,9 @@ name: Docker
 # Dockerfile still build, do both Compose files still merge/validate, and
 # do the Docker-specific unit tests still pass. This never pushes an image
 # anywhere -- there is no registry credential in scope, and this workflow
-# does not request one. Image vulnerability scanning (e.g. trivy) is a
-# natural follow-up once a registry/publish story exists; deferred here.
+# does not request one. Image vulnerability scanning lives in the `image-scan`
+# job of .github/workflows/security.yml, which builds this same Dockerfile and
+# gates on fixable CRITICAL/HIGH findings; it is not repeated here.
 
 on:
   push:

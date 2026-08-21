@@ -21,6 +21,7 @@ import os
 import re
 import sqlite3
 from collections import OrderedDict
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -492,7 +493,9 @@ def connect(db_path: Path = DB_PATH, *, create: bool = False) -> sqlite3.Connect
 # Build
 # ---------------------------------------------------------------------------
 
-def _walk_fields(node: Any, path: str, depth: int = 0):
+def _walk_fields(
+    node: Any, path: str, depth: int = 0
+) -> Iterator[tuple[str, str, dict[str, Any]]]:
     """Recursively yield (field_path, field_name, fdef) from a schema node.
 
     Fields hide inside items/allOf/anyOf/oneOf nesting (e.g.
@@ -515,7 +518,7 @@ def _walk_fields(node: Any, path: str, depth: int = 0):
             yield from _walk_fields(sub, path, depth + 1)
 
 
-def _response_description(spec: dict, resp: dict) -> str:
+def _response_description(spec: dict[str, Any], resp: dict[str, Any]) -> str:
     """A response object's description, resolving a local ``$ref`` first.
 
     OpenAPI's standard "reusable responses" pattern
@@ -1354,7 +1357,8 @@ def get_response_description(
     total = sum(r["c"] for r in rows)
     top = rows[0]
     if total and (top["c"] / total) >= min_share:
-        return top["description"]
+        description: str = top["description"]
+        return description
     return None
 
 
