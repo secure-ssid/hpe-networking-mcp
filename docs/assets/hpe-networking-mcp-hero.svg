@@ -21,7 +21,7 @@
   <rect width="1200" height="420" rx="32" fill="url(#bg)"/>
   <rect x="48" y="44" width="8" height="332" rx="4" fill="url(#accent)"/>
   <text x="92" y="128" class="title">hpe-networking-mcp</text>
-  <text x="92" y="174" class="subtitle">v0.9.0 · Low-token HPE Networking automation through Model Context Protocol · AI-assisted</text>
+  <text x="92" y="174" class="subtitle">v0.9.0 · Low-token HPE Networking automation through Model Context Protocol</text>
 
   <g transform="translate(92 224)">
     <rect width="208" height="112" rx="18" fill="#0d2239" stroke="#275174"/>
