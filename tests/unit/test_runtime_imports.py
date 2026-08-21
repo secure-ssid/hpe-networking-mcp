@@ -23,7 +23,11 @@ import sys
 from pathlib import Path
 
 import pytest
-import tomllib
+
+try:  # Python >= 3.11
+    import tomllib as _toml
+except ModuleNotFoundError:  # pragma: no cover - exercised on Python 3.10
+    import tomli as _toml  # type: ignore[import-not-found, no-redef]
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -82,7 +86,7 @@ def _run(code: str) -> subprocess.CompletedProcess[str]:
 
 
 def _pyproject() -> dict:
-    return tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    return _toml.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
 
 def _requirement_names(requirements: list[str]) -> set[str]:
