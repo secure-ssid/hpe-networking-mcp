@@ -65,8 +65,10 @@ ingestion/techdocs_urls.json
 redis_data/
 ollama_data/
 
-# Built indexes — regenerate (python -m pipeline.clients.specs_index --build)
-# or download prebuilt from GitHub Releases
+# Built indexes — rebuild locally: the OpenAPI index with
+# `python scripts/build_spec_index.py` (offline, from the committed
+# vendor/openapi corpus), the prose corpus with `ingestion/ingest_docs.py`.
+# Neither is published as a release asset.
 data/
 
 # Python

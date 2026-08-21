@@ -728,6 +728,36 @@ def search_docs(
     return results
 
 
+def _degraded_spec_index(exc: FileNotFoundError) -> list[dict[str, Any]]:
+    """Render an unusable spec index so a model cannot mistake it for a miss.
+
+    ``lookup_api`` returning ``[]`` is a real, useful answer: the specs were
+    consulted and hold nothing, so the caller should fall back to prose
+    search. A *missing* index consulted nothing. Rendering the two the same
+    way is the worst outcome available here — a model handed ``[]`` concludes
+    the endpoint does not exist and tells the operator so, and in a
+    network-automation tool that fabrication is strictly worse than an error.
+
+    So the marker is deliberately a non-empty list carrying ``degraded`` and a
+    ``hint``, and it keeps ``error`` so callers written against the older
+    shape (``ask_docs``' ``"error" not in hits[0]`` check) still route around
+    it. The return type is unchanged: still ``list[dict[str, Any]]``.
+
+    ``error`` is the full diagnostic and names the path that was looked for;
+    ``hint`` is the remedy alone, taken from ``specs_index`` so the command is
+    written once and cannot drift from the one in the exception. They are not
+    the same string: repeating one text under two keys costs the model a
+    second read and tells it nothing new.
+    """
+    return [
+        {
+            "error": str(exc),
+            "degraded": True,
+            "hint": specs_index.MISSING_INDEX_REMEDY,
+        }
+    ]
+
+
 @mcp.tool(annotations=READ_ONLY_LOCAL)
 def lookup_api(
     query: str,
@@ -744,6 +774,9 @@ def lookup_api(
     enum values does field X accept", "which endpoint configures Y and with
     what method", or "what fields does schema Z have". Returns [] when the
     specs hold no confident answer — fall back to search_docs in that case.
+    An unbuilt index is NOT that: it returns a single entry with
+    ``degraded: true`` and a ``hint`` naming the build command. Treat that as
+    "unknown, index absent", never as "no such endpoint".
 
     Args:
         query: Natural language question, exact ``METHOD /path``, or exact
@@ -769,7 +802,7 @@ def lookup_api(
             include_metadata=include_metadata,
         )
     except FileNotFoundError as exc:
-        return [{"error": str(exc)}]
+        return _degraded_spec_index(exc)
     return annotate_lookup_hits(hits)
 
 
