@@ -11,6 +11,7 @@ available.
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -179,6 +180,8 @@ def test_router_overlay_validates_standalone_and_merged_with_docker_cli(tmp_path
     service). Run the real `docker compose config` when the CLI plugin is
     installed, regardless of whether a daemon is reachable -- `config` is a
     pure parse/merge step and doesn't need one."""
+    if shutil.which("docker") is None:
+        pytest.skip("docker CLI not installed")
     docker_compose = subprocess.run(
         ["docker", "compose", "version"], capture_output=True, timeout=10
     )
