@@ -1357,7 +1357,12 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
 
     original = _sdk_compat.claim_dispatcher(mcp_instance, _WRITE_GATE_INSTALLED_ATTR)
 
-    async def gated_call_tool(name, arguments, context=None, convert_result=False):  # noqa: ANN001,ANN202
+    async def gated_call_tool(
+        name: str,
+        arguments: dict[str, Any] | None,
+        context: Any = None,
+        convert_result: bool = False,
+    ) -> Any:
         tool = _sdk_compat.get_tool(mcp_instance, name)
         if tool is not None:
             capability = tool_write_capability(tool)
@@ -1394,7 +1399,7 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
     return True
 
 
-def run_server(mcp_instance, default_port: int | None = None) -> None:
+def run_server(mcp_instance: Any, default_port: int | None = None) -> None:
     """Run an MCP server with transport configured by environment.
 
     MCP_TRANSPORT: 'stdio' (default) or 'streamable-http'
@@ -1901,7 +1906,10 @@ def bound_collection_response(
         and isinstance(existing_pagination.get("total"), int)
     )
     if preserve_existing:
-        total = max(total, existing_pagination["total"])
+        # `preserve_existing` already established the dict-ness and the int
+        # `total`; restate it so the narrowing survives into the subscript.
+        assert isinstance(existing_pagination, dict)
+        total = max(total, int(existing_pagination["total"]))
     page = val[off : off + lim]
     was_truncated = isinstance(existing_pagination, dict) and bool(
         existing_pagination.get("truncated")
@@ -1985,9 +1993,9 @@ async def atroubleshoot_poll(client: CentralClient, poll_url: str) -> dict[str, 
 
 
 def _async_response_location(resp: Any) -> str:
-    location = resp.headers.get("Location", "")
-    if location:
-        return location
+    header: str = resp.headers.get("Location", "")
+    if header:
+        return header
     try:
         body = resp.json()
     except Exception:
@@ -2069,7 +2077,8 @@ async def atroubleshoot_async(
 def resp_json(resp: Any) -> dict[str, Any]:
     """Return resp.json() or compact metadata if the body is not JSON."""
     try:
-        return resp.json()
+        body: dict[str, Any] = resp.json()
+        return body
     except Exception:
         raw_text = resp.text or ""
         return {

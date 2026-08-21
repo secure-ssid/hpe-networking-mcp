@@ -75,7 +75,12 @@ def _accepts_context(fn: Any) -> bool:
     return "context" in sig.parameters
 
 
-async def _run_before(middlewares, name, args, context=None):
+async def _run_before(
+    middlewares: list[Middleware],
+    name: str,
+    args: dict[str, Any],
+    context: Any = None,
+) -> dict[str, Any]:
     for mw in middlewares:
         try:
             before = getattr(mw, "before_call", None)
@@ -89,7 +94,13 @@ async def _run_before(middlewares, name, args, context=None):
     return args
 
 
-async def _run_after(middlewares, name, args, result, context=None):
+async def _run_after(
+    middlewares: list[Middleware],
+    name: str,
+    args: dict[str, Any],
+    result: Any,
+    context: Any = None,
+) -> Any:
     for mw in middlewares:
         try:
             after = getattr(mw, "after_call", None)
@@ -103,7 +114,13 @@ async def _run_after(middlewares, name, args, result, context=None):
     return result
 
 
-async def _run_on_error(middlewares, name, args, exc, context=None):
+async def _run_on_error(
+    middlewares: list[Middleware],
+    name: str,
+    args: dict[str, Any],
+    exc: BaseException,
+    context: Any = None,
+) -> Any:
     for mw in middlewares:
         try:
             handler = getattr(mw, "on_error", None)
@@ -129,7 +146,12 @@ def install_middleware(server: MCPServer, middlewares: list[Middleware]) -> None
     """
     original = _sdk_compat.claim_dispatcher(server, _INSTALLED_ATTR)
 
-    async def wrapped_call_tool(name, arguments, context=None, convert_result=False):  # noqa: ANN001,ANN202
+    async def wrapped_call_tool(
+        name: str,
+        arguments: dict[str, Any] | None,
+        context: Any = None,
+        convert_result: bool = False,
+    ) -> Any:
         args = dict(arguments) if arguments else {}
         args = await _run_before(middlewares, name, args, context=context)
 

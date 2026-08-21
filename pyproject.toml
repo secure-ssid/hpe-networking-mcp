@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hpe-networking-mcp"
-version = "0.9.0"
-description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,727-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
+version = "0.10.0"
+description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,728-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -122,7 +122,7 @@ Issues = "https://github.com/secure-ssid/hpe-networking-mcp/issues"
 Changelog = "https://github.com/secure-ssid/hpe-networking-mcp/blob/main/CHANGELOG.md"
 
 [dependency-groups]
-dev = ["pytest>=9.1.1", "ruff>=0.8.0"]
+dev = ["pytest>=9.1.1", "ruff>=0.8.0", "mypy>=1.15.0"]
 security = ["bandit>=1.9.0", "pip-audit>=2.9.0"]
 
 [tool.setuptools.packages.find]
@@ -139,6 +139,51 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.mypy]
+# A real gate on a deliberately small surface, not a tree-wide formality.
+#
+# `files` below is the whole of what this project type-checks, and every
+# module in it passes `strict` with no `ignore_missing_imports`, no
+# `# type: ignore`, and no per-module relaxations. The set was chosen for
+# blast radius rather than convenience: the write gate and HTTP transport
+# (`mcp_servers/shared.py`), the middleware chain that does rate limiting,
+# audit logging and secret/PII tokenization (`mcp_servers/_middleware/`), and
+# the two modules whose job is to report facts truthfully -- the exact-API
+# index (`pipeline/clients/specs_index.py`) and the derived fact snapshot
+# behind docs/project-facts.json (`pipeline/project_facts.py`).
+#
+# The rest of the tree is NOT type-checked, and this file does not pretend
+# otherwise. Measured 2026-08-21 against src/hpe_networking_mcp (150 modules):
+# `--strict` reports 397 errors in 71 modules; without `--strict` but with
+# `--ignore-missing-imports` it is 144 errors in 43 modules. That debt is a
+# known number, not a vague one.
+#
+# Expansion path: pick one module, annotate it until `mypy --strict <module>`
+# is clean on its own, then add it to `files`. Never widen `files` and then
+# buy the pass back with an ignore or an override -- a gate that suppresses
+# what it finds asserts nothing, and a future reader would reasonably read
+# its presence as "this codebase is type-checked".
+#
+# `follow_imports = "silent"` lets types flow in from the unchecked majority
+# without reporting their errors; it is what makes incremental adoption
+# possible and it is the only concession here.
+#
+# No `python_version` pin. Setting it to this package's 3.10 floor makes mypy
+# hard-fail parsing numpy's bundled stubs (PEP 695 `type` statements, 3.12+),
+# which arrive transitively through the optional `ingestion` extra and abort
+# the run before it checks a single line of our code. The gate therefore
+# targets whichever interpreter mypy runs on (3.12 in CI). Floor
+# compatibility is not left unchecked: the ci.yml test matrix runs the whole
+# suite on 3.10 and 3.11, which imports every one of these modules for real.
+strict = true
+follow_imports = "silent"
+files = [
+    "src/hpe_networking_mcp/mcp_servers/shared.py",
+    "src/hpe_networking_mcp/mcp_servers/_middleware",
+    "src/hpe_networking_mcp/pipeline/clients/specs_index.py",
+    "src/hpe_networking_mcp/pipeline/project_facts.py",
+]
 
 [tool.bandit]
 # CI gates on medium+ severity only (see .github/workflows/security.yml).

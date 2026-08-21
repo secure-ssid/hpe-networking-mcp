@@ -4,7 +4,7 @@
   "note": "Derived from code, committed manifests, and local indexes -- never hand-edited. Regenerate with `uv run python scripts/project_facts.py --write`.",
   "package": {
     "name": "hpe-networking-mcp",
-    "version": "0.9.0",
+    "version": "0.10.0",
     "console_scripts": {
       "hpe-mcp": "hpe_networking_mcp.cli.mcp_cli:main",
       "hpe-mcp-client": "hpe_networking_mcp.cli.mcp_cli:main",
