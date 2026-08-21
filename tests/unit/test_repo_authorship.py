@@ -22,6 +22,7 @@ apply it as your own commit rather than merging the bot's branch, for example
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -67,11 +68,37 @@ def _is_agent(identity: str) -> bool:
     return any(marker in lowered for marker in _AGENT_MARKERS)
 
 
+def _history_ref() -> str:
+    """The ref whose history actually belongs to this repository.
+
+    For ``pull_request`` events ``actions/checkout`` checks out a merge commit
+    that GitHub synthesizes on the fly, committed by ``GitHub
+    <noreply@github.com>``. That commit is never pushed to a branch and never
+    renders as a contributor, so counting it would fail every pull request
+    while telling us nothing about the repository's real history. Step over it
+    to the PR's own head; on ``push`` events (including a real merge commit
+    that someone actually landed) ``HEAD`` is used unchanged, so a genuinely
+    bot-committed merge is still caught.
+    """
+    if os.environ.get("GITHUB_EVENT_NAME") != "pull_request":
+        return "HEAD"
+    parents = _git_bytes("rev-parse", "HEAD^@").decode("utf-8", errors="replace").split()
+    committer = (
+        _git_bytes("log", "-1", "HEAD", "--pretty=format:%cn <%ce>")
+        .decode("utf-8", errors="replace")
+        .strip()
+        .lower()
+    )
+    if len(parents) == 2 and committer == "github <noreply@github.com>":
+        return "HEAD^2"
+    return "HEAD"
+
+
 @pytest.fixture(scope="module")
 def history() -> list[str]:
-    """Commit identities reachable from HEAD, as ``author\tcommitter`` rows."""
+    """Commit identities in this repository's history, as ``author\tcommitter`` rows."""
     try:
-        raw = _git_bytes("log", "HEAD", "--pretty=format:%an <%ae>\t%cn <%ce>")
+        raw = _git_bytes("log", _history_ref(), "--pretty=format:%an <%ae>\t%cn <%ce>")
     except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
         pytest.skip("not a git checkout")
     return [line for line in raw.decode("utf-8", errors="replace").splitlines() if line]
@@ -97,7 +124,7 @@ def test_no_commit_is_committed_by_an_agent(history):
 
 def test_no_commit_message_co_credits_an_agent():
     try:
-        raw = _git_bytes("log", "HEAD", "--pretty=format:%B%x00")
+        raw = _git_bytes("log", _history_ref(), "--pretty=format:%B%x00")
     except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
         pytest.skip("not a git checkout")
 

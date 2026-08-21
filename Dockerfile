@@ -18,10 +18,11 @@
 #     (docker-compose.router.yml, secrets/README.md).
 #   * Prebuilt RAG/OpenAPI indexes (data/) are NOT downloaded during the
 #     build or at container start. They stay an explicit, checksum-verified,
-#     opt-in step (`uv run python scripts/download_indexes.py --manifest
-#     .github/index-bundle.json`) run by the operator — see
-#     docs/production-deployment.md. This avoids silently trusting a
-#     network artifact during image build/startup.
+#     opt-in step run by the operator against a manifest they supply
+#     (`uv run python scripts/download_indexes.py --manifest <your-manifest>`)
+#     — see docs/production-deployment.md. This repository publishes no index
+#     archive, so there is no tracked manifest to bake in, and nothing
+#     silently trusts a network artifact during image build/startup.
 #   * The router's own loopback-only HTTP bind default (MCP_HOST=127.0.0.1)
 #     is left untouched here; MCP_HOST/MCP_ALLOWED_HOSTS/MCP_ALLOWED_ORIGINS
 #     are opt-in overrides supplied by the compose overlay, not this image.
@@ -50,7 +51,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY README.md LICENSE ./
 COPY src/ ./src/
 COPY scripts/ ./scripts/
-COPY .github/index-bundle.json ./.github/index-bundle.json
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
 

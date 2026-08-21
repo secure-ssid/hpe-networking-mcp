@@ -118,17 +118,25 @@ make that the default.
 The image ships with an **empty** `data/` directory. Neither the
 `Dockerfile` build, nor `docker/entrypoint.sh`, nor
 `docker-compose.router.yml` downloads a prebuilt RAG/OpenAPI index
-automatically. Populating `data/` is an explicit, operator-initiated step,
-matching [release-indexes.md](release-indexes.md)'s existing
-checksum-verified download flow -- this packaging doesn't add a new index
-mechanism, it just refuses to run the existing one without you asking:
+automatically. This repository publishes no index archive, so there is
+nothing to fetch by default: populating `data/` is an explicit,
+operator-initiated step, matching
+[release-indexes.md](release-indexes.md)'s build-it-yourself flow -- this
+packaging doesn't add a new index mechanism, it just refuses to run one
+without you asking.
+
+Build the indexes on the host (see [release-indexes.md](release-indexes.md))
+and bind-mount the result. If you host your own archive internally, package
+it with `scripts/package_indexes.py` -- which emits the checksum manifest --
+and restore it with the manifest *you* generated:
 
 ```bash
-# Build (or reuse) the image, then run the download as a one-off container
-# using the pinned, checksum-verified manifest already tracked in the repo:
+# Optional: restore from an archive you host yourself, verified against the
+# manifest produced by scripts/package_indexes.py. There is no repo-tracked
+# manifest, and no upstream release asset, by design.
 docker compose -f docker-compose.yml -f docker-compose.router.yml \
   run --rm --no-deps mcp-router \
-  uv run python scripts/download_indexes.py --manifest .github/index-bundle.json \
+  uv run python scripts/download_indexes.py --manifest /app/state/your-index-bundle.json \
   --output-dir /app/data-download
 
 # Move the verified output into the bind-mounted ./data on the host, then

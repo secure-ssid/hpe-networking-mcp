@@ -3,10 +3,10 @@
 # just a cache optimization: anything not excluded here can end up baked
 # into an image layer even if a later COPY doesn't reference it directly.
 
-# VCS / editor. .github/index-bundle.json is kept (not excluded below) since
-# it is the pinned, checksum-verified prebuilt-index manifest referenced by
-# the explicit, opt-in `download_indexes.py --manifest` step documented in
-# docs/production-deployment.md.
+# VCS / editor. This repository publishes no prebuilt-index archive, so no
+# index manifest is tracked or copied into the image; the opt-in
+# `download_indexes.py --manifest` step in docs/production-deployment.md
+# takes an operator-supplied manifest instead.
 .git/
 .github/workflows/
 .github/ISSUE_TEMPLATE/

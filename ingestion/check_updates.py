@@ -141,11 +141,22 @@ def _urls_from_headers(output_dir: Path) -> list[str]:
 
 
 def _urls_from_seed_file(seed_file: str, seed_urls: list[str]) -> list[str]:
-    """Load an absolute or site-relative path list and resolve against seed_urls[0]."""
+    """Load an absolute or site-relative path list and resolve against seed_urls[0].
+
+    Seed files come in two committed shapes: a plain list of paths/URLs, and
+    a list of discovery records carrying a ``url`` field alongside metadata
+    (``mist_product_updates`` stores ``{url, title, year}``). Both normalize
+    to a list of strings here so drift resolution never depends on which
+    discover script produced the file.
+    """
     seed_path = ROOT / seed_file
     if not seed_path.exists():
         return []
-    paths = json.loads(seed_path.read_text(encoding="utf-8"))
+    entries = json.loads(seed_path.read_text(encoding="utf-8"))
+    if not entries:
+        return []
+    paths = [entry.get("url", "") if isinstance(entry, dict) else entry for entry in entries]
+    paths = [path for path in paths if isinstance(path, str) and path]
     if not paths:
         return []
     if paths[0].startswith("http"):
@@ -153,7 +164,7 @@ def _urls_from_seed_file(seed_file: str, seed_urls: list[str]) -> list[str]:
     base = seed_urls[0] if seed_urls else ""
     parsed = urlparse(base)
     origin = f"{parsed.scheme}://{parsed.netloc}"
-    return [urljoin(origin, quote(p)) for p in paths]
+    return [urljoin(origin, quote(path)) for path in paths]
 
 
 def _load_json(path: Path) -> Any:

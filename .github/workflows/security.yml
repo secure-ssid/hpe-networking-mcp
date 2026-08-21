@@ -53,6 +53,7 @@ jobs:
       # noise for this CLI/pipeline codebase.
       - name: Run bandit (fails on medium+ severity)
         run: |
+          mkdir -p outputs/security
           uv run bandit -r src/ -ll -f json -o outputs/security/bandit-report.json
           uv run bandit -r src/ -ll
 
