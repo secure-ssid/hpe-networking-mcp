@@ -43,6 +43,7 @@ from mcp.client import Client
 from mcp.server.mcpserver import Context, MCPServer
 
 import hpe_networking_mcp.mcp_servers.tool_router as router
+from hpe_networking_mcp.mcp_servers._middleware import uninstall_middleware
 from hpe_networking_mcp.mcp_servers._middleware.pii_tokenizer import (
     PIITokenizeMiddleware,
 )
@@ -112,12 +113,15 @@ def pii_router(monkeypatch):
     monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
     monkeypatch.delenv("HPE_MCP_READONLY", raising=False)
 
-    original_call_tool = router.mcp._tool_manager.call_tool
     router.install_router_middleware()
     try:
         yield seen
     finally:
-        router.mcp._tool_manager.call_tool = original_call_tool
+        # Symmetric release, not a hand-restore: assigning ``call_tool`` back
+        # leaves the seam's bookkeeping naming a wrapper that is gone, and the
+        # next install on this shared module-level server then cannot tell a
+        # refresh from a silent removal of someone else's interceptor.
+        uninstall_middleware(router.mcp)
 
 
 def _call(name: str, arguments: dict[str, Any]) -> Any:

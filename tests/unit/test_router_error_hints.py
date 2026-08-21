@@ -33,6 +33,7 @@ import pytest
 from mcp.server.mcpserver import Context, MCPServer
 
 import hpe_networking_mcp.mcp_servers.tool_router as router
+from hpe_networking_mcp.mcp_servers._middleware import uninstall_middleware
 from hpe_networking_mcp.mcp_servers.shared import READ_ONLY
 from hpe_networking_mcp.pipeline.clients.error_help import _GENERIC_STATUS_HINTS
 
@@ -70,7 +71,13 @@ def hint_router(monkeypatch):
     monkeypatch.delenv("HPE_MCP_READONLY", raising=False)
 
     router.install_router_middleware()
-    yield tools
+    try:
+        yield tools
+    finally:
+        # ``router.mcp`` is module-level and shared with every other test in the
+        # session; leaving the chain installed makes a later install here look
+        # like it is about to drop someone else's interceptor.
+        uninstall_middleware(router.mcp)
 
 
 def _call(name: str, arguments: dict[str, Any]) -> Any:
