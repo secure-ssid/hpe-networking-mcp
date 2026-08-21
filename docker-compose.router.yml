@@ -22,14 +22,16 @@
 #   * Credentials are never passed as plaintext `environment:` values. See
 #     secrets/README.md for the CREDS_PATH file-secret and MCP_HTTP_BEARER_TOKEN
 #     "*_FILE" conventions this service uses.
-#   * `./data` is bind-mounted read-only, which *replaces* the spec index the
-#     image already ships at /app/data/specs.sqlite. Populate the host
-#     directory before starting, or lookup_api has no index to read:
-#     `uv run python scripts/build_spec_index.py data/specs.sqlite` (offline,
-#     seconds, no network). Nothing is ever downloaded automatically by this
-#     file, the image build, or the container's entrypoint -- the scraped RAG
-#     prose corpus in particular is not published and must be built locally
-#     per docs/production-deployment.md.
+#   * `/app/data` as a whole is deliberately NOT mounted. The image builds
+#     data/specs.sqlite from vendor/openapi/ and ships it, so a
+#     `./data:/app/data:ro` mount would shadow it and leave the documented
+#     deployment as the one path without the index the image just built.
+#     Only the two artifacts the image cannot ship -- the scraped prose
+#     corpus and the router tool index -- are bind-mounted from the host,
+#     individually and read-only. Both start empty (`data/` is git-ignored)
+#     and nothing is ever downloaded automatically by this file, the image
+#     build, or the container's entrypoint; build them per
+#     docs/production-deployment.md.
 #   * This overlay intentionally has no `depends_on` on `redis`/`ollama` --
 #     it stays valid and startable on its own (`HPE_MCP_RAG_BACKEND` unset
 #     uses the embedded LanceDB backend, no Redis/Ollama needed). If you set
@@ -63,7 +65,8 @@ services:
       - credentials_yaml
       - mcp_http_bearer_token
     volumes:
-      - ./data:/app/data:ro
+      - ./data/docs.lance:/app/data/docs.lance:ro
+      - ./data/tools.lance:/app/data/tools.lance:ro
       - router_state:/app/state
       - router_outputs:/app/outputs
     restart: unless-stopped
