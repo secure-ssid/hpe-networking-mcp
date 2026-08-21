@@ -61,6 +61,7 @@ from typing import Any, Literal
 from mcp.server.mcpserver import Context, MCPServer
 from pydantic import BaseModel, ConfigDict, Field
 
+from hpe_networking_mcp.mcp_servers import _sdk_compat
 from hpe_networking_mcp.mcp_servers.prompts import register_router_prompts
 from hpe_networking_mcp.mcp_servers.shared import (
     ACCESS_PROFILE_ENV_VAR,
@@ -721,7 +722,7 @@ def _load_all_backends() -> None:
     for server_name, module_path in _BACKENDS.items():
         try:
             mod = importlib.import_module(module_path)
-            backend_tools = list(mod.mcp._tool_manager._tools.items())
+            backend_tools = list(_sdk_compat.tool_registry(mod.mcp).items())
         except Exception as exc:
             errors[server_name] = f"{type(exc).__name__}: {exc}"
             logger.warning("backend %s (%s) failed to load: %s", server_name, module_path, exc)
@@ -762,14 +763,14 @@ def _register_direct_backend_tools(target: MCPServer | None = None) -> list[str]
     2. The original MCPServer ``Tool`` object is published verbatim.
        ``add_tool`` re-derives the tool with ``Tool.from_function``, which
        rebuilds ``parameters``/``fn_metadata`` and drops ``title``, ``icons``,
-       ``meta`` and any ``structured_output`` choice the backend made. Reusing
-       the object keeps the router's published schema byte-identical to the
-       backend's.
+       ``meta`` and any ``structured_output`` choice the backend made -- so this
+       republishes the object itself through
+       ``_sdk_compat.register_tool_object``, keeping the router's published
+       schema byte-identical to the backend's.
     """
     target = target or mcp
     _load_all_backends()
-    tools = target._tool_manager._tools
-    existing = set(tools)
+    existing = set(_sdk_compat.tool_registry(target))
     registered: list[str] = []
     for name, tool in _tool_index.items():
         if name in existing:
@@ -782,7 +783,7 @@ def _register_direct_backend_tools(target: MCPServer | None = None) -> list[str]
         # direct-mode list exactly as they do from find_tool discovery.
         if _readonly_blocks(tool):
             continue
-        tools[name] = tool
+        _sdk_compat.register_tool_object(target, name, tool)
         existing.add(name)
         registered.append(name)
     return registered
@@ -1711,7 +1712,7 @@ async def _dispatch_tool(
     # quota it never used.
     await _await_dispatch_rate_gate()
     try:
-        result = await backend._tool_manager.call_tool(name, args, context=ctx)
+        result = await _sdk_compat.call_tool_raw(backend, name, args, context=ctx)
     except Exception as e:
         result = {"error": f"{type(e).__name__}: {e}"}
     # Cursors are only ever eligible for capability "read" tools; this is a
@@ -3017,7 +3018,7 @@ def _router_call_labels(name: str, arguments: dict[str, Any]) -> tuple[str, str,
             # Every dispatched entry is annotation-gated read-only.
             return (tool_label, backend_label, "read")
         return (name, "router", "read")
-    tool = mcp._tool_manager._tools.get(name)
+    tool = _sdk_compat.get_tool(mcp, name)
     capability = _tool_capability(tool) if tool is not None else "unknown"
     return (name, "router", capability)
 
@@ -3101,7 +3102,7 @@ def build_router_middlewares() -> list[Any]:
         NullStripMiddleware(),
         rate_limiter,
         UnknownToolSuggestMiddleware(
-            lambda: mcp._tool_manager._tools,
+            lambda: _sdk_compat.tool_registry(mcp),
             suggestion_provider=_suggest_router_tool,
             platform_hint_resolver=_unconfigured_platform_hint,
         ),

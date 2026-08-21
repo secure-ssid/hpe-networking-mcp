@@ -29,6 +29,7 @@ from urllib.parse import quote
 import httpx
 from mcp.server.mcpserver import MCPServer
 
+from hpe_networking_mcp.mcp_servers import _sdk_compat
 from hpe_networking_mcp.mcp_servers.openapi_gen.http_exec import build_multipart_files
 from hpe_networking_mcp.mcp_servers.shared import (
     DESTRUCTIVE,
@@ -2895,7 +2896,10 @@ def _register_generated_edgeconnect_tools() -> list[str]:
         if operation.get("capability") != "diagnostic":
             continue
         _EDGECONNECT_DIAGNOSTIC_TOOL_NAMES.add(registered_name)
-        _strip_diagnostic_guard_parameters(mcp._tool_manager._tools[registered_name])
+        tool = _sdk_compat.get_tool(mcp, registered_name)
+        if tool is None:  # pragma: no cover - registration above guarantees it
+            raise RuntimeError(f"EdgeConnect tool {registered_name!r} vanished after registration")
+        _strip_diagnostic_guard_parameters(tool)
     return registered
 
 
