@@ -13,6 +13,17 @@ time. This file is the compact index into those pages. See
 [MIGRATION.md](MIGRATION.md) for the step-by-step move from the legacy
 `secure-ssid/centralmcp` repository to this one.
 
+## [Unreleased]
+
+### Changed — BREAKING
+
+- **Central writes are now denied by default.** `HPE_MCP_CENTRAL_WRITES` must be
+  set to `1` (or `HPE_MCP_ACCESS_PROFILE=full-read-write`) to expose Central
+  write and destructive tools. Previously Central alone defaulted to enabled,
+  which meant `import hpe_networking_mcp` with no configuration produced a
+  server willing to dispatch `reboot_device` and `disconnect_client`.
+  Deployments relying on the implicit default must set the variable explicitly.
+
 ## [0.9.0] - 2026-08-16
 
 Feature release. Full detail in [docs/release-notes-0.9.0.md](docs/release-notes-0.9.0.md).

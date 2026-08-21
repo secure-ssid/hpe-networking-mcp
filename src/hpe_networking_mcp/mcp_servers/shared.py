@@ -528,14 +528,18 @@ def platform_writes_allowed(platform: str) -> bool:
 
     Resolution order (highest priority first):
 
+    The aggregate ``HPE_MCP_ACCESS_PROFILE`` outranks all three: ``safe-read-only``
+    denies every platform and ``full-read-write`` allows every platform without
+    any per-platform variable. Under ``custom`` the order below applies.
+
     1. The platform's own override env var (e.g. ``HPE_MCP_MIST_WRITES=1``),
        read as an explicit opt-in truthy/falsy value if set at all.
-    2. The platform's built-in default when there is no shared fallback
-       (Central defaults enabled; GLP defaults disabled -- both preserve
-       pre-existing behavior).
+    2. The platform's built-in default when there is no shared fallback.
+       Central and GLP both default to disabled, so their write tools stay
+       out of reach until the operator opts in.
     3. :func:`optional_product_writes_allowed` (the shared
        ``HPE_MCP_PRODUCT_ACCESS`` toggle) for the optional-product
-       backends -- unchanged legacy behavior.
+       backends, which is itself read-only unless configured otherwise.
 
     Raises:
         ValueError: ``platform`` is not one of the known platform keys.

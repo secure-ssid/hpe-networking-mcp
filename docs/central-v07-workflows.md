@@ -38,8 +38,8 @@ authoritative schema exists in this manifest:
 All writes below share one contract: `dry_run=True` by default (no network
 call), an explicit `confirm=True` is required to execute, execution is
 gated behind the existing Central write gate
-(`HPE_MCP_CENTRAL_WRITES`, default enabled — `enforce_platform_write`
-in `src/hpe_networking_mcp/mcp_servers/shared.py`), the executed response is validated
+(`HPE_MCP_CENTRAL_WRITES`, denied by default — set it to `1` to opt in;
+`enforce_platform_write` in `src/hpe_networking_mcp/mcp_servers/shared.py`), the executed response is validated
 (`validate_write_result`, raises `WriteResultError` on a non-2xx/error
 envelope), and a read-back call confirms what Central actually stored.
 

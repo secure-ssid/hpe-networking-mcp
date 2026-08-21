@@ -171,7 +171,7 @@ def run_disposable_write_lifecycle(scope_id: str, device_function: str) -> dict[
     This function is intentionally never called by `main()` in this repo
     revision -- it exists so an operator can opt in explicitly, later, once
     both live-test env gates and the Central write gate
-    (`HPE_MCP_CENTRAL_WRITES=1`, already the default) are set on purpose.
+    (`HPE_MCP_CENTRAL_WRITES=1`, denied by default) are set on purpose.
     """
     from hpe_networking_mcp.mcp_servers import config as config_tools
 
