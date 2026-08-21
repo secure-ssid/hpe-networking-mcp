@@ -248,7 +248,7 @@ tools, plus the one protocol-only Central Streaming tool --
 matching [`docs/capability-gap-matrix.md`](capability-gap-matrix.md)'s Total
 row, and excluding the two credential-free local backends (`design-core`,
 `interop-core`) plus the always-loaded `site-health` aggregator that add up to
-the complete 6,727-tool registered catalog
+the complete 6,728-tool registered catalog
 reported in [`docs/tool-catalog.md`](tool-catalog.md). Diagnostic tools are
 available in optional read-only mode but are not included in the read-only
 annotation count.

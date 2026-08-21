@@ -419,8 +419,8 @@ MCP hop.
 | Minimal router | 3 client-visible tools |
 | Default router | 18 client-visible tools[^compliance-tool] |
 | Platform API backend index | 6,711 tools |
-| Complete backend index (platform APIs + Central Streaming + `site-health` + local GLP preflight + `design-core` + `interop-core`) | 6,727 tools |
-| Direct-all router | 6,734 client-visible tools |
+| Complete backend index (platform APIs + Central Streaming + `site-health` + local GLP preflight + `design-core` + `interop-core`) | 6,728 tools |
+| Direct-all router | 6,735 client-visible tools |
 
 </div>
 
@@ -441,7 +441,7 @@ operations (6,127 register as active generated tools; 584 platform curated
 tools bring the REST/OpenAPI platform API backend total to 6,711). The
 protocol-only `central-streaming` backend and the cross-platform `site-health` aggregator each add one vendor-facing tool. Adding
 the two credential-free local backends (`design-core`: 7, `interop-core`: 5)
-yields the complete 6,727-tool registered backend catalog. Minimal mode does not
+yields the complete 6,728-tool registered backend catalog. Minimal mode does not
 expose that schema surface to the MCP client -- it searches the catalog on
 demand.
 
