@@ -105,32 +105,49 @@ jobs:
         # ingestion/source_manifest.json already states "Do not commit scraped
         # content". Operators build it locally under their own acceptance of
         # each vendor's terms (`uv run python ingestion/ingest_docs.py`).
-        # data/specs.sqlite is built further down, from vendor/openapi/.
         run: uv run python scripts/ingest_tools.py --complete-catalog
+
+      - name: Build the OpenAPI spec index
+        # BEFORE validation, not after. vendor/openapi/ holds 31 committed,
+        # digest-pinned, redistributable OpenAPI documents, so this is a pure
+        # offline rebuild -- the same one the Dockerfile's specindex stage and
+        # the CI strict-index job run. Building it after the validation step
+        # meant validation always ran against a checkout with no index, so
+        # indexes.offline_derivable.* was skipped as "not built" and the
+        # published endpoint/schema/field counts were never compared with the
+        # database the release then packaged and uploaded.
+        run: |
+          mkdir -p data
+          uv run python scripts/build_spec_index.py data/specs.sqlite
 
       - name: Run complete strict release validation
         # No --strict-rag: the prose corpus is intentionally absent in CI, and
         # validate_release.py skips the eval gate cleanly when it is missing.
+        # --strict-index-facts covers what the corpus does not: the spec index
+        # built in the previous step must exist and its counts must match
+        # docs/project-facts.json, so this cannot pass by not looking.
+        # No --min-tools: the floor defaults to that same canonical fact
+        # (tools.platform_backend_total). Typing it here is what let the gate
+        # enforce 6703 while every doc promised 6711.
         run: >-
           uv run python scripts/validate_release.py
           --strict-tool-index
+          --strict-index-facts
           --catalog-products all
-          --min-tools 6703
 
       - name: Build wheel and source distribution
         run: uv build
 
-      - name: Build and package the OpenAPI spec index
-        # vendor/openapi/ holds 31 committed, digest-pinned, redistributable
-        # OpenAPI documents, so this is a pure offline rebuild -- the same one
-        # the Dockerfile's specindex stage runs.
+      - name: Package the OpenAPI spec index
+        # Packaging only: the database itself was built and validated above,
+        # before the strict gate, so nothing is archived that the release
+        # contract has not already compared against docs/project-facts.json.
         env:
           TAG: ${{ inputs.tag }}
           SERVER_URL: ${{ github.server_url }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          mkdir -p data dist
-          uv run python scripts/build_spec_index.py data/specs.sqlite
+          mkdir -p dist
           uv run python - <<'PY'
           import json
           import os

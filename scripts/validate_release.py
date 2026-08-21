@@ -16,6 +16,16 @@ derived fact set -- including the exact ``data/specs.sqlite`` table counts --
 to match ``docs/project-facts.json`` (``scripts/project_facts.py
 --require-indexes``), and rejects ``--skip-rag``. A no-data CI job may
 restore a pinned index bundle first; it may not run strict mode without one.
+
+``--strict-index-facts`` is the half of that a corpus-free job can hold to:
+it requires ``data/specs.sqlite`` -- rebuilt offline from the committed
+``vendor/openapi`` corpus -- so the published endpoint/schema/field counts
+are compared instead of skipped. Without it, a checkout that never built the
+index passes the fact gate by not looking.
+
+The tool catalog floor is not a parameter of the caller: ``--min-tools``
+defaults to ``docs/project-facts.json``'s ``tools.platform_backend_total``,
+so CI, the release workflow, and the docs all enforce one number.
 """
 
 from __future__ import annotations
@@ -26,26 +36,35 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 ROOT = Path(__file__).resolve().parents[1]
-_DEFAULT_MIN_TOOLS = 204
 _BOUNDED_PREVIEW_LIMIT = 10
 
 
-def _canonical_catalog_env() -> dict[str, str]:
+def _project_facts() -> ModuleType:
     src = str(ROOT / "src")
     if src not in sys.path:
         sys.path.insert(0, src)
     from hpe_networking_mcp.pipeline import project_facts
 
-    return dict(project_facts.CATALOG_ENV)
+    return project_facts
 
 
-_FULL_CATALOG_ENV = _canonical_catalog_env()
+_PROJECT_FACTS = _project_facts()
+_FULL_CATALOG_ENV: dict[str, str] = dict(_PROJECT_FACTS.CATALOG_ENV)
 _STANDARD_CATALOG_ENV = {
     **_FULL_CATALOG_ENV,
     "HPE_MCP_GLP_GENERATED_TOOLS": "0",
 }
+
+#: The tool catalog floor, read from ``docs/project-facts.json`` rather than
+#: typed here. Retyping it is how the CI gate ended up enforcing 6703 while
+#: every doc promised 6711: two copies of one number drift, one cannot. It is
+#: deliberately the platform API backend subtotal, not the complete registered
+#: total, so the credential-free local backends can come and go without moving
+#: a floor that is about vendor API coverage.
+_DEFAULT_MIN_TOOLS: int = int(_PROJECT_FACTS.load()["tools"]["platform_backend_total"])
 
 
 def _positive_int(value: str) -> int:
@@ -230,12 +249,26 @@ def _build_parser() -> argparse.ArgumentParser:
         "--min-tools",
         type=_positive_int,
         default=_DEFAULT_MIN_TOOLS,
-        help=f"minimum acceptable tool catalog count (default: {_DEFAULT_MIN_TOOLS})",
+        help=(
+            "minimum acceptable tool catalog count; defaults to "
+            f"{_DEFAULT_MIN_TOOLS}, read from docs/project-facts.json's "
+            "tools.platform_backend_total. Callers should let it default so "
+            "the enforced floor cannot drift from the published one."
+        ),
     )
     parser.add_argument(
         "--strict-tool-index",
         action="store_true",
         help="fail if the local LanceDB tools index is missing",
+    )
+    parser.add_argument(
+        "--strict-index-facts",
+        action="store_true",
+        help=(
+            "require data/specs.sqlite so the offline-derivable OpenAPI counts "
+            "are compared rather than silently skipped (implied by --strict-rag; "
+            "does not require the scraped prose corpus)"
+        ),
     )
     parser.add_argument(
         "--ignore-index-facts",
@@ -256,6 +289,12 @@ def main() -> int:
         # reported success without ever running the eval. Strict mode must
         # fail loudly instead of quietly dropping its own gate.
         raise SystemExit("--strict-rag cannot be combined with --skip-rag")
+
+    if args.strict_index_facts and args.ignore_index_facts:
+        # One demands the offline index facts be compared, the other drops
+        # index facts entirely. Silently letting either win is how a gate
+        # ends up reporting success over a comparison it never made.
+        raise SystemExit("--strict-index-facts cannot be combined with --ignore-index-facts")
 
     if not args.skip_tests:
         _run([sys.executable, "-m", "pytest", "tests/unit", "-q"], "Unit tests")
@@ -308,18 +347,23 @@ def main() -> int:
     # Canonical derived facts (package version, server IDs, per-backend tool
     # counts, generated-operation counts, exact specs.sqlite table counts,
     # RAG artifact/source counts). --require-indexes makes the exact SQLite
-    # and RAG counts part of the strict contract rather than an optional
-    # extra that vanishes with the data directory.
+    # counts part of the contract rather than an optional extra that vanishes
+    # with the data directory: without it, a checkout that never built
+    # data/specs.sqlite skips indexes.offline_derivable.* entirely and still
+    # reports success, so the published 2,734/6,363/31,432 OpenAPI counts are
+    # never compared against anything.
     #
-    # It is tied to --strict-rag, not to strict generally: the index-derived
-    # facts come from data/specs.sqlite and data/docs.lance, neither of which a
-    # clean checkout can build. Passing --ignore-index-facts alongside it used
-    # to emit a self-contradicting `--require-indexes --ignore-indexes`, where
-    # the requirement won and the caller's opt-out was silently ignored.
+    # --require-indexes demands only the offline-derivable section, which any
+    # clone rebuilds from the committed vendor/openapi corpus in seconds, so
+    # --strict-index-facts is a gate a no-corpus CI job can actually pass.
+    # --strict-rag implies it: a run that requires the scraped corpus requires
+    # the index built beside it. Passing --ignore-index-facts alongside either
+    # used to emit a self-contradicting `--require-indexes --ignore-indexes`,
+    # where the requirement won and the caller's opt-out was silently ignored.
     facts_command = [sys.executable, "scripts/project_facts.py"]
     if args.ignore_index_facts:
         facts_command.append("--ignore-indexes")
-    elif args.strict_rag:
+    elif args.strict_rag or args.strict_index_facts:
         facts_command.append("--require-indexes")
     print("\n==> Canonical project facts", flush=True)
     subprocess.run(facts_command, cwd=ROOT, check=True, env=_strict_env())

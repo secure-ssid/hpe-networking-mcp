@@ -20,12 +20,23 @@ backend total.
 Dated release-notes snapshots (``docs/release-notes-*.md``) are historical
 records of the floor at release time and are intentionally excluded: they
 must stay frozen, not track future catalog growth.
+
+The workflows are covered too, and that is not decoration. The gate that
+decides whether a release ships lives in ``.github/workflows/*.yml``, not in
+prose, and it was the one place a markdown-only guard could never look: CI
+and the release job enforced ``--min-tools 6703`` for as long as the docs
+promised 6711, and nothing failed. A workflow must therefore take the floor
+from ``scripts/validate_release.py``'s canonical default rather than type a
+second copy of a published number.
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
+
+import yaml
 
 from hpe_networking_mcp.pipeline import project_facts
 
@@ -57,20 +68,25 @@ _LABEL_PATTERN = re.compile(
     r"not the complete registered backend total of ([\d,]+)"
 )
 
-_EXCLUDED_TOP_LEVEL_DIRS = {".git", "data", "dist", "node_modules"}
-
 
 def _current_doc_files() -> list[Path]:
-    """Every tracked markdown file except historical release-notes snapshots."""
-    docs = []
-    for path in sorted(REPO_ROOT.rglob("*.md")):
-        rel = path.relative_to(REPO_ROOT)
-        if rel.parts[0] in _EXCLUDED_TOP_LEVEL_DIRS:
-            continue
-        if rel.name.startswith("release-notes-"):
-            continue
-        docs.append(path)
-    return docs
+    """Every tracked markdown file except historical release-notes snapshots.
+
+    Tracked, from ``git ls-files``, rather than every ``*.md`` in the working
+    tree: walking the tree also swept up gitignored scratch notes and
+    vendored virtualenv documentation, so a local plan file quoting the old
+    floor could fail a guard about this repository's published docs.
+    """
+    output = subprocess.check_output(
+        ["git", "ls-files", "*.md"],
+        cwd=REPO_ROOT,
+        text=True,
+    )
+    return [
+        REPO_ROOT / line
+        for line in output.splitlines()
+        if not Path(line).name.startswith("release-notes-")
+    ]
 
 
 def _normalize(text: str) -> str:
@@ -160,3 +176,74 @@ def test_current_docs_referencing_min_tools_use_the_complete_catalog_form():
             "compatibility floor label; add one of those forms or update "
             "this test."
         )
+
+
+WORKFLOW_DIR = REPO_ROOT / ".github" / "workflows"
+
+_VALIDATE_RELEASE = "scripts/validate_release.py"
+_MIN_TOOLS_FLAG = re.compile(r"--min-tools\s+(\S+)")
+
+
+def _workflow_run_steps() -> list[tuple[Path, str]]:
+    """Every ``run:`` script in every workflow, parsed rather than grepped."""
+    steps: list[tuple[Path, str]] = []
+    for path in sorted(WORKFLOW_DIR.glob("*.yml")):
+        document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        for job in (document.get("jobs") or {}).values():
+            for step in job.get("steps", ()):
+                if "run" in step:
+                    steps.append((path, step["run"]))
+    return steps
+
+
+def test_validate_release_takes_its_default_floor_from_the_canonical_fact():
+    """Dropping ``--min-tools`` from the workflows only works if this holds.
+
+    The floor a workflow enforces by omission is
+    ``validate_release._DEFAULT_MIN_TOOLS``; if that stopped tracking
+    ``tools.platform_backend_total`` the workflows would silently enforce
+    something else again, with no flag left to inspect.
+    """
+    from scripts import validate_release
+
+    assert validate_release._DEFAULT_MIN_TOOLS == EXPECTED_MIN_TOOLS_FLOOR
+
+
+def test_no_workflow_types_a_tool_floor_that_can_drift_from_the_fact():
+    """The enforced gate must read the canonical fact, not restate it.
+
+    This is the check whose absence let ``--min-tools 6703`` sit in both
+    ``ci.yml`` and ``release-artifacts.yml`` while every doc promised 6711:
+    the markdown guard above covers the *documentation of* the gate, and the
+    gate itself is YAML.
+    """
+    problems = []
+    invocations = []
+    for path, run in _workflow_run_steps():
+        if _VALIDATE_RELEASE not in run:
+            continue
+        invocations.append(path)
+        match = _MIN_TOOLS_FLAG.search(_normalize(run))
+        if match is None:
+            continue
+        value = match.group(1)
+        name = path.relative_to(REPO_ROOT)
+        if value.isdigit() and int(value) != EXPECTED_MIN_TOOLS_FLOOR:
+            problems.append(
+                f"{name} enforces --min-tools {value}, but the canonical "
+                f"tools.platform_backend_total in docs/project-facts.json is "
+                f"{EXPECTED_MIN_TOOLS_FLOOR}: the release gate is "
+                f"{EXPECTED_MIN_TOOLS_FLOOR - int(value)} tool(s) more "
+                "permissive than the floor the docs promise operators"
+            )
+        problems.append(
+            f"{name} types a --min-tools value ({value}); drop the flag so the "
+            "gate takes docs/project-facts.json's tools.platform_backend_total "
+            "from scripts/validate_release.py's default"
+        )
+
+    assert invocations, (
+        f"No workflow invokes {_VALIDATE_RELEASE} -- the release gate moved and "
+        "this guard needs repointing so it keeps watching the real gate."
+    )
+    assert problems == []

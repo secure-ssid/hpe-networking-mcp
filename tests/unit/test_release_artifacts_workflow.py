@@ -117,6 +117,39 @@ class TestReleaseBehavior:
         assert "--strict-tool-index" in strict
         assert "--skip-tests" not in strict
 
+    def test_the_spec_index_is_built_before_the_gate_that_checks_it(self):
+        """Order is the whole point, not an incidental step arrangement.
+
+        The release used to build ``data/specs.sqlite`` *after* validation,
+        so every release validated a checkout with no index:
+        ``indexes.offline_derivable.*`` was skipped as "not built" and the
+        published endpoint/schema/field counts were never compared with the
+        database the release then archived and uploaded.
+        ``--strict-index-facts`` is what turns "present, so compared" into
+        "required, so it cannot pass by not looking".
+        """
+        runs = _run_steps(_load(RELEASE_WORKFLOW))
+        build = next(i for i, run in enumerate(runs) if "scripts/build_spec_index.py" in run)
+        validate = next(i for i, run in enumerate(runs) if "scripts/validate_release.py" in run)
+
+        assert build < validate, (
+            "data/specs.sqlite is built after the validation meant to check it"
+        )
+        assert "--strict-index-facts" in runs[validate]
+
+    def test_the_release_gate_never_types_its_own_tool_floor(self):
+        """One canonical floor: docs/project-facts.json, via the script default.
+
+        A typed value here is a second copy of a published number, and the
+        two drifted -- this gate enforced 6703 while every doc promised 6711.
+        """
+        strict = next(
+            run for run in _run_steps(_load(RELEASE_WORKFLOW))
+            if "scripts/validate_release.py" in run
+        )
+
+        assert "--min-tools" not in strict
+
     def test_release_never_ships_the_scraped_prose_corpus(self):
         """data/docs.lance is scraped vendor documentation, not ours to publish.
 
