@@ -48,18 +48,35 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
+# Optional extras, off by default. The base install is what serving MCP tools
+# needs: the baked spec index answers `lookup_api` with no network and no
+# extras. Prose retrieval (`ask_docs`/`search_docs`) additionally needs
+# LanceDB + the ONNX embedding stack *and* a corpus you built yourself, which
+# cannot ship in the image -- it is scraped vendor documentation this project
+# has no licence to redistribute. Paying ~700 MB of pyarrow/onnxruntime in
+# every image to serve the minority who have done that ingestion run is the
+# wrong default, so it is opt-in:
+#
+#   docker build --build-arg INSTALL_EXTRAS=ingestion -t hpe-mcp-router:rag .
+#
+# Space-separated for more than one (`"ingestion redis"`). No CI job publishes
+# a second tag from this; it is a documented local build.
+ARG INSTALL_EXTRAS=""
+
 # Install dependencies first so this layer only invalidates when
-# pyproject.toml / uv.lock change, not on every source edit.
+# pyproject.toml / uv.lock / INSTALL_EXTRAS change, not on every source edit.
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev --no-editable
+    uv sync --frozen --no-install-project --no-dev --no-editable \
+    $(for extra in ${INSTALL_EXTRAS}; do printf -- '--extra %s ' "$extra"; done)
 
 # Now add application source and install the project itself.
 COPY README.md LICENSE ./
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable
+    uv sync --frozen --no-dev --no-editable \
+    $(for extra in ${INSTALL_EXTRAS}; do printf -- '--extra %s ' "$extra"; done)
 
 # The spec index is built FROM builder rather than from a bare python image:
 # scripts/build_spec_index.py imports
@@ -104,8 +121,19 @@ COPY --from=builder --chown=mcp:mcp /app /app
 # Writable mount points. Nothing sensitive lives here by default; mount
 # named volumes or bind mounts over these in production (see
 # docker-compose.router.yml and docs/production-deployment.md).
+#
+# /app/data is deliberately NOT among them. It holds the baked spec index,
+# and unlink/rename are governed by the directory's mode, not the file's --
+# a writable /app/data would let anything running as mcp delete the index and
+# drop a different one in its place, which is exactly the substitution a
+# read-only file mode looks like it prevents and does not. Root-owned 0555.
+# Docker still creates a missing bind-mount point here itself, as root, so a
+# RAG-enabled build can mount a corpus at /app/data/docs.lance without the
+# directory being pre-created or the parent being writable (verified).
 RUN mkdir -p /app/state /app/outputs /app/data \
-    && chown -R mcp:mcp /app/state /app/outputs /app/data
+    && chown -R mcp:mcp /app/state /app/outputs \
+    && chown root:root /app/data \
+    && chmod 555 /app/data
 
 # The prebuilt OpenAPI spec index, at the exact path
 # hpe_networking_mcp.pipeline.clients.specs_index.DB_PATH resolves to here:
@@ -114,14 +142,23 @@ RUN mkdir -p /app/state /app/outputs /app/data \
 # .dockerignore, so this file can only come from the specindex stage — never
 # from a developer's local data/ directory.
 #
-# Left root-owned and mode 0444 on purpose. docker-compose.router.yml used to
-# mount ./data over /app/data read-only, which both protected this file and
-# hid it; the overlay now mounts only the artifacts the image cannot ship, so
-# the file mode is what keeps the router process from rewriting its own index.
-# The query layer opens it with `file:...?mode=ro`, so read-only is enough.
+# Mode 0444 on a 0555 root-owned directory: the router can read its own index
+# and can neither rewrite it in place nor swap it out. The query layer opens
+# it with `file:...?mode=ro`, so nothing legitimate needs write access.
+# Rebuilding the index inside the container therefore needs a writable mount
+# over /app/data or a different user -- see docs/production-deployment.md.
 COPY --from=specindex --chmod=444 /spec-index/specs.sqlite /app/data/specs.sqlite
 
 COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# optional_deps.require() defaults its remedy to `pip install '…[extra]'`,
+# which is right for a source install and wrong here: /app/.venv is uv-managed
+# with UV_NO_SYNC=1, and anything pip writes dies with the container. Override
+# it with the remedy that actually applies to an image. `{extra}` is
+# substituted with the missing extra by optional_deps.install_remedy().
+ENV HPE_MCP_INSTALL_REMEDY="rebuild the image with \
+`docker build --build-arg INSTALL_EXTRAS={extra}` \
+— see docs/production-deployment.md"
 
 ENV PATH=/app/.venv/bin:$PATH \
     VIRTUAL_ENV=/app/.venv \

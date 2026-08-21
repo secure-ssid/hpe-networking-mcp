@@ -4,7 +4,7 @@
 # inert on its own -- layer it on top explicitly:
 #
 #   docker compose -f docker-compose.yml -f docker-compose.router.yml \
-#     --profile router up -d --build
+#     --profile router up -d --build mcp-router
 #
 # Security choices (see docs/production-deployment.md for the full writeup):
 #   * "router" is a Compose *profile*, so a plain `docker compose up` (no
@@ -22,22 +22,41 @@
 #   * Credentials are never passed as plaintext `environment:` values. See
 #     secrets/README.md for the CREDS_PATH file-secret and MCP_HTTP_BEARER_TOKEN
 #     "*_FILE" conventions this service uses.
-#   * `/app/data` as a whole is deliberately NOT mounted. The image builds
-#     data/specs.sqlite from vendor/openapi/ and ships it, so a
-#     `./data:/app/data:ro` mount would shadow it and leave the documented
-#     deployment as the one path without the index the image just built.
-#     Only the two artifacts the image cannot ship -- the scraped prose
-#     corpus and the router tool index -- are bind-mounted from the host,
-#     individually and read-only. Both start empty (`data/` is git-ignored)
-#     and nothing is ever downloaded automatically by this file, the image
-#     build, or the container's entrypoint; build them per
-#     docs/production-deployment.md.
-#   * This overlay intentionally has no `depends_on` on `redis`/`ollama` --
-#     it stays valid and startable on its own (`HPE_MCP_RAG_BACKEND` unset
-#     uses the embedded LanceDB backend, no Redis/Ollama needed). If you set
-#     HPE_MCP_RAG_BACKEND=redis, start `docker-compose.yml`'s `redis`/
-#     `ollama` services first (or via one `docker compose ... up`) so the
-#     router doesn't come up racing an unstarted Redis.
+#   * **This is the exact-API-lookup deployment.** The image ships
+#     /app/data/specs.sqlite -- 2,734 endpoints built offline from the 31
+#     digest-pinned OpenAPI documents under vendor/openapi/ -- so `lookup_api`
+#     answers with no network, no credentials and no provisioning step. The
+#     default image installs no LanceDB/ONNX stack, so `ask_docs` answers from
+#     that spec index instead of the prose corpus and `search_docs` returns
+#     the degraded shape naming its remedy -- never a confident empty answer.
+#   * **The default image does no prose retrieval by any backend.** `ask_docs`
+#     and `search_docs` need a corpus you built yourself (`uv run python
+#     ingestion/ingest_docs.py` -- scraped vendor documentation, not
+#     redistributable, so it can never ship in the image) *and* a client for
+#     it, and the default image installs neither: the embedded LanceDB stack
+#     is in the `ingestion` extra and the `HPE_MCP_RAG_BACKEND=redis`
+#     alternative is in the `redis` extra. Switching backends is not a way
+#     around the corpus. Build once with what you need:
+#
+#       docker build --build-arg INSTALL_EXTRAS=ingestion \
+#         -t hpe-networking-mcp-router:rag .
+#
+#     Then set `image:` to that tag and add the corpus mounts you need, e.g.
+#     `- ./data/docs.lance:/app/data/docs.lance:ro`. They are not mounted by
+#     default because the default image has no code that can open them.
+#   * `/app/data` is never mounted as a whole. It holds the baked spec index,
+#     so a `./data:/app/data:ro` mount would shadow it and leave the
+#     documented deployment as the one path without the index the image just
+#     built. Nothing is ever downloaded automatically by this file, the image
+#     build, or the container's entrypoint.
+#   * This overlay intentionally has no `depends_on`, so
+#     `... --profile router up -d mcp-router` starts the router alone. That is
+#     the right command for the default image: `redis` and `ollama` are in
+#     docker-compose.yml's default profile, so omitting the service name
+#     starts them too, and the default image has no client for either. They
+#     are infrastructure for a RAG-enabled build and for running from source;
+#     start them when you have one, and set HPE_MCP_RAG_BACKEND=redis only
+#     against an image built with the `redis` extra.
 
 services:
   mcp-router:
@@ -65,8 +84,6 @@ services:
       - credentials_yaml
       - mcp_http_bearer_token
     volumes:
-      - ./data/docs.lance:/app/data/docs.lance:ro
-      - ./data/tools.lance:/app/data/tools.lance:ro
       - router_state:/app/state
       - router_outputs:/app/outputs
     restart: unless-stopped

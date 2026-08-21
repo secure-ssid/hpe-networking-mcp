@@ -136,6 +136,19 @@ def test_router_overlay_does_not_redefine_redis_or_ollama():
     assert "ollama" not in config["services"]
 
 
+def test_router_service_declares_no_depends_on():
+    """`... --profile router up -d mcp-router` must start the router alone.
+
+    `redis` and `ollama` sit in docker-compose.yml's default profile, so a
+    profile-only invocation starts them too -- and the default image installs
+    neither the `redis` client nor the LanceDB stack, so they would run
+    unused. Naming the service is the documented command, and a `depends_on`
+    here would silently drag them back in.
+    """
+    service = _load_yaml(ROUTER_OVERLAY)["services"]["mcp-router"]
+    assert "depends_on" not in service
+
+
 def test_router_overlay_uses_file_backed_secrets_not_inline_values():
     config = _load_yaml(ROUTER_OVERLAY)
     secrets = config.get("secrets", {})
@@ -167,59 +180,104 @@ def test_router_overlay_requires_explicit_allowed_hosts_and_origins():
         assert "*" not in value, f"{key} must not use a wildcard"
 
 
-def _router_host_mounts() -> list[tuple[str, str, str]]:
-    config = _load_yaml(ROUTER_OVERLAY)
-    volumes = config["services"]["mcp-router"]["volumes"]
-    return [tuple(volume.split(":")) for volume in volumes if volume.startswith("./")]
+def _router_volumes() -> list[str]:
+    return _load_yaml(ROUTER_OVERLAY)["services"]["mcp-router"]["volumes"]
 
 
-def test_router_overlay_host_data_mounts_are_read_only_and_start_unpopulated():
-    """Host-supplied index artifacts are read-only and ship with nothing in them.
+def _host_mount_problems(volumes: list[str]) -> list[str]:
+    """Every rule a host bind mount in the router overlay has to obey.
 
-    Both properties are load-bearing. Read-only means a compromised container
-    cannot rewrite the operator's own `data/` on the host. Unpopulated means
-    the overlay cannot smuggle in a prebuilt corpus: `data/docs.lance` is
-    scraped vendor documentation this project has no licence to redistribute,
-    so it must be absent from a clone and built by the operator.
+    Kept as a pure function over a volume list so the rules can be exercised
+    against deliberately bad configurations as well as the real one. The
+    overlay currently declares no host mounts at all -- the default image has
+    no LanceDB stack, so mounting a corpus into it would advertise a
+    capability that is not there -- and these rules are what any future mount
+    has to satisfy.
     """
-    mounts = _router_host_mounts()
-    assert mounts, "the overlay must still bind the host-built index artifacts"
+    def tracked(relative: str) -> list[str]:
+        return subprocess.run(
+            ["git", "ls-files", "--", relative],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.split()
 
-    tracked = subprocess.run(
-        ["git", "ls-files", "data"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
-
-    for source, target, mode in mounts:
+    problems: list[str] = []
+    for volume in volumes:
+        source, target, *rest = volume.split(":")
+        if not source.startswith("./"):
+            continue
         relative = source.removeprefix("./")
-        assert mode == "ro", f"{source} must be mounted read-only into the container"
-        assert target == f"/app/{relative}", f"{source} must map to /app/{relative}"
-        assert not any(path.startswith(relative) for path in tracked), (
-            f"{source} is tracked in git; the overlay must start unpopulated"
-        )
+        if (rest[-1] if rest else "") != "ro":
+            # A writable bind mount lets a compromised container rewrite the
+            # operator's own data/ on the host.
+            problems.append(f"{source} is not mounted read-only")
+        if target != f"/app/{relative}":
+            problems.append(f"{source} maps to {target}, not /app/{relative}")
+        if target.rstrip("/") == "/app/data" or target == "/app/data/specs.sqlite":
+            # /app/data holds the spec index the image builds from
+            # vendor/openapi/. Mounting over it leaves the documented
+            # deployment as the one path without the index.
+            problems.append(f"{source} shadows the baked spec index at {target}")
+        if tracked(relative):
+            # A mount must supply artifacts the operator built, never content
+            # a clone already carries. data/docs.lance in particular is
+            # scraped vendor documentation this project cannot redistribute.
+            problems.append(f"{source} is tracked in git, so it is not unpopulated")
+    return problems
 
 
-def test_router_overlay_does_not_shadow_the_baked_spec_index():
+def test_router_overlay_host_mounts_obey_every_rule():
+    assert _host_mount_problems(_router_volumes()) == []
+
+
+@pytest.mark.parametrize(
+    ("volume", "expected"),
+    [
+        ("./data:/app/data:ro", "shadows the baked spec index"),
+        ("./data/specs.sqlite:/app/data/specs.sqlite:ro", "shadows the baked spec index"),
+        ("./data/docs.lance:/app/data/docs.lance", "not mounted read-only"),
+        ("./data/docs.lance:/app/elsewhere:ro", "not /app/data/docs.lance"),
+        ("./tests:/app/tests:ro", "not unpopulated"),
+    ],
+)
+def test_host_mount_rules_reject_unsafe_mounts(volume, expected):
+    """The rules above are not vacuous: each unsafe shape is actually caught."""
+    problems = _host_mount_problems([volume, "router_state:/app/state"])
+    assert any(expected in problem for problem in problems), problems
+
+
+def test_router_overlay_mounts_nothing_over_the_baked_spec_index():
     """The image builds `data/specs.sqlite` from `vendor/openapi/` and ships it.
 
     The overlay used to mount `./data:/app/data:ro`, which hid that file and
     made the documented production deployment the one path that ran without
-    the index the image had just built. Only artifacts the image cannot ship
-    may be mounted, and never the directory holding the baked one.
+    the index the image had just built.
     """
     assert "/app/data/specs.sqlite" in DOCKERFILE.read_text(), (
         "the Dockerfile no longer bakes the spec index; this guard is stale"
     )
-
-    shadowing = [
-        (source, target)
-        for source, target, _mode in _router_host_mounts()
-        if target in ("/app/data", "/app/data/", "/app/data/specs.sqlite")
+    assert not [
+        volume
+        for volume in _router_volumes()
+        if volume.split(":")[1].startswith("/app/data")
     ]
-    assert not shadowing, f"these mounts hide the image's spec index: {shadowing}"
+
+
+def test_default_image_installs_no_optional_extras():
+    """RAG needs a corpus that cannot ship in the image, so its ~700 MB of
+    LanceDB/ONNX dependencies are opt-in rather than paid for by every user.
+
+    `--build-arg INSTALL_EXTRAS=ingestion` is the documented way back; the
+    default has to stay empty and has to reach both `uv sync` invocations,
+    or the dependency layer and the project layer disagree.
+    """
+    text = DOCKERFILE.read_text()
+    assert 'ARG INSTALL_EXTRAS=""' in text
+    syncs = [line for line in text.splitlines() if "uv sync --frozen" in line]
+    assert len(syncs) == 2, syncs
+    assert text.count("for extra in ${INSTALL_EXTRAS}") == 2
 
 
 def test_router_overlay_validates_standalone_and_merged_with_docker_cli(tmp_path):
