@@ -232,22 +232,6 @@ the floor. See
 
 The release helper runs unit tests, optional RAG/API eval when indexes exist, tool catalog floor checks, and local tool-index freshness checks. Unit tests also include static guards for the active MCP/pipeline code, committed low-token MCP config examples, local-only config files, router product/toolset docs, bounded generic read-only GET tools, MCP list default bounds, RAG/search top_k bounds, public tool-count claims, tool-count docstrings, rendered RAG/index doc-fact claims, tracked Markdown local links and images, Pages sitemap and robots metadata, documented router example arguments, product workflow tool-name tables, and wizard optional-product env tables.
 
-## AI-assisted development
-
-Significant portions of this project — RAG architecture, retrieval
-modernization, ingestion pipeline, Docker packaging, MCP tool surface, and
-test coverage — were developed with AI pair-programming assistance from
-**GitHub Copilot** (powered by Claude). Commits from AI-assisted sessions
-carry the trailer:
-
-```
-Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-```
-
-All design decisions, architectural choices, and final review are the
-responsibility of the project maintainer. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for the full AI attribution policy.
-
 ## Related projects and thanks
 
 hpe-networking-mcp is an independent HPE Networking MCP toolkit, improved by watching

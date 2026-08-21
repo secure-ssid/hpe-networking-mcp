@@ -26,7 +26,7 @@ render without browser-side JavaScript.
 | [aos8-migration-contract-matrix.md](aos8-migration-contract-matrix.md) | Authoritative AOS8-to-Classic/New Central migration contract matrix gating 0.5.0 implementation |
 | [aos8-live-dryrun-evaluation.md](aos8-live-dryrun-evaluation.md) | Read-only live/fixture-backed evaluation record of the AOS8 migration pipeline against the contract matrix |
 | [release-indexes.md](release-indexes.md) | Build the tool/API indexes from committed specs, build the RAG corpus locally, and why the corpus is never released |
-| [release-notes-0.9.0.md](release-notes-0.9.0.md) | RAG corpus expansion (28 scraped sources, 262,104 chunks), ANN+metadata indexes, content-hash dedup, Docker packaging, operator runbooks, AI attribution |
+| [release-notes-0.9.0.md](release-notes-0.9.0.md) | RAG corpus expansion (28 scraped sources, 262,104 chunks), ANN+metadata indexes, content-hash dedup, Docker packaging, and operator runbooks |
 | [release-notes-0.8.0.md](release-notes-0.8.0.md) | Clean repository/package rename, MCP 2 transport repair, PII protection, interop tools, GLP inventory completion, strict RAG/catalog facts, and classified drift gates |
 | [release-notes-0.7.0.md](release-notes-0.7.0.md) | Artifact/live-test gates, source lifecycle provenance, structured RAG intelligence, Central/GLP/AOS8/optional-product depth, observability/security, router automation, and release artifact automation |
 | [central-v07-workflows.md](central-v07-workflows.md) | Central v0.7 depth workflows: VSF template lifecycle, bulk site/site-collection delete, firmware-compliance campaigns, config-health remediation, troubleshooting orchestration |

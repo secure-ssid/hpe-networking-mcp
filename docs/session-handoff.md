@@ -24,8 +24,7 @@
 | `4ba9699` | Refresh RAG corpus facts and current-state documentation |
 | `316fc2a` | Document bounded batching over FastMCP code-mode |
 
-These commits were not pushed. Each includes the required Copilot co-author
-trailer.
+These commits were not pushed.
 
 ## Verification
 

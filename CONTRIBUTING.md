@@ -78,15 +78,3 @@ package touches runtime behavior, and run the local release gate before merging.
 
 Do not publish exploitable details or secrets in issues or pull requests. Follow
 [SECURITY.md](SECURITY.md) for vulnerability reports and credential exposure.
-
-## AI-assisted development
-
-Significant portions of this project — including RAG architecture, retrieval
-modernization, ingestion pipeline, MCP tool surface, Docker packaging, and
-test coverage — were developed with AI pair-programming assistance from
-**GitHub Copilot** (powered by Claude). Commits from AI-assisted sessions carry
-a `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>` trailer.
-
-AI-generated code follows the same review, test, and release-gate standards as
-human-written code. All design decisions, architectural choices, and final
-review remain the responsibility of the project maintainer.

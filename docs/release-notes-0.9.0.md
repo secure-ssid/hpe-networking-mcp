@@ -220,18 +220,6 @@ GitHub Copilot host-side skill files updated to match:
 - Strict RAG/API evaluation and local source/index manifest reconciliation passed.
 - `source_hit@5=0.972`, `MRR=0.972`, `api_exact=1.0`.
 
-## AI attribution
-
-Development in this release was substantially AI-assisted using **GitHub
-Copilot** (Claude Sonnet). Commits from AI-assisted sessions carry the trailer:
-
-```
-Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-```
-
-All design decisions, architectural choices, and final review are the
-responsibility of the project maintainer.
-
 ## Known boundaries
 
 - Milvus Lite remains opt-in (quality gap vs LanceDB hybrid).
