@@ -17,7 +17,7 @@
   </defs>
   <rect width="1200" height="720" rx="30" fill="url(#bg)"/>
   <text x="60" y="78" class="heading">One low-token router, nine platform surfaces</text>
-  <text x="60" y="112" class="sub">v0.9.0 · find_tool → invoke_read_tool → guarded invoke_tool · AI-assisted development</text>
+  <text x="60" y="112" class="sub">v0.9.0 · find_tool → invoke_read_tool → guarded invoke_tool</text>
 
   <g transform="translate(60 150)">
     <rect width="250" height="140" rx="18" fill="#0d2239" stroke="#2d668d"/>
