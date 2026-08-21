@@ -38,6 +38,10 @@ PRODUCT_SPECS_MANIFEST_PATH = ROOT / "ingestion" / "product_specs_manifest.json"
 # output, so a fresh clone has no OpenAPI documents to index at all; this
 # directory ships them. See ``default_source_dirs``.
 VENDOR_OPENAPI_DIR = ROOT / "vendor" / "openapi"
+# A vendored corpus describes its own provenance in a MANIFEST.json beside the
+# documents. It is read as a *fallback* for files the registry manifest does
+# not know -- see ``_resolve_source_meta``.
+VENDOR_MANIFEST_NAME = "MANIFEST.json"
 _FULL_REBUILD_COMMAND = (
     "uv run python -m hpe_networking_mcp.pipeline.clients.specs_index --rebuild-shared"
 )
@@ -205,6 +209,55 @@ def _product_manifest_metadata(path: Path) -> dict[str, dict[str, Any]]:
             "source_url": _clean_text(entry.get("source_url")),
         }
     return out
+
+
+def _vendor_manifest_metadata(path: Path) -> dict[str, dict[str, Any]]:
+    """Provenance from a vendored corpus's own ``MANIFEST.json``.
+
+    The corpus is not limited to documents the ReadMe registry manifest knows:
+    ``vendor/openapi/mist.openapi.json`` is pinned to a git commit and appears
+    in no registry, so without this its rows would index with a ``NULL``
+    ``source_url`` and answer every provenance question with silence.
+
+    Only ``source_url`` is taken. The manifest records digests, licences and
+    pins too, none of which the index has a column for, and the platform and
+    version this file would otherwise supply are already resolved from the
+    document itself.
+    """
+    data = _load_manifest_metadata(path)
+    specs = data.get("specs") if isinstance(data, dict) else None
+    if not isinstance(specs, list):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for entry in specs:
+        if not isinstance(entry, dict):
+            continue
+        spec_file = Path(str(entry.get("file") or "")).name
+        if not spec_file:
+            continue
+        out[spec_file] = {"source_url": _clean_text(entry.get("source_url"))}
+    return out
+
+
+def _resolve_source_meta(
+    spec_file: str,
+    primary: dict[str, dict[str, Any]],
+    fallback: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Manifest metadata for one document: the primary manifest always wins.
+
+    The fallback fills gaps and never overrides. A file the registry manifest
+    describes keeps every value it declares, so the 30 New Central documents
+    resolve exactly as before; a file it has never heard of picks up whatever
+    the vendored corpus manifest can supply. Neither source having an answer
+    is not an error -- the value stays unset and the build carries on, because
+    an index with thin provenance is still a working index.
+    """
+    meta = dict(primary.get(spec_file, {}))
+    for key, value in fallback.get(spec_file, {}).items():
+        if value and not meta.get(key):
+            meta[key] = value
+    return meta
 
 
 def _source_metadata_maps(
@@ -444,6 +497,9 @@ def _populate_openapi_tables(
     metadata_by_source = _source_metadata_maps(manifest_paths)
     for source_family, specs_dir in source_dirs.items():
         source_meta_map = metadata_by_source.get(source_family, {})
+        # Read once per directory, not once per document and certainly not
+        # once per row: this loop writes tens of thousands of them.
+        vendor_meta_map = _vendor_manifest_metadata(specs_dir / VENDOR_MANIFEST_NAME)
         for path in sorted(specs_dir.glob("*.json")):
             try:
                 spec = json.loads(path.read_text(encoding="utf-8", errors="ignore"))
@@ -454,7 +510,7 @@ def _populate_openapi_tables(
                 counts["skipped"] += 1
                 continue
 
-            source_meta = source_meta_map.get(path.name, {})
+            source_meta = _resolve_source_meta(path.name, source_meta_map, vendor_meta_map)
             info = spec.get("info")
             info = info if isinstance(info, dict) else {}
             spec_name = info.get("title", path.stem)

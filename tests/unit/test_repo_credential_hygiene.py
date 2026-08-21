@@ -23,6 +23,7 @@ to live. A local ``.env`` full of real tokens must keep passing.
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -169,15 +170,57 @@ def test_no_tracked_file_assigns_a_real_looking_secret(tracked: list[str]) -> No
     )
 
 
+def _digest_pinned_vendor_files() -> frozenset[str]:
+    """Repo-relative paths of the vendored documents covered by a digest pin.
+
+    Derived from ``vendor/openapi/MANIFEST.json`` at test time, never
+    hardcoded, so vendoring another spec needs no edit here — and, more
+    importantly, a file dropped into ``vendor/`` without a manifest entry is
+    undeclared, therefore unpinned, therefore scanned. An exemption has to be
+    earned by a digest; it is not inherited from a directory name.
+    """
+    manifest = ROOT / "vendor" / "openapi" / "MANIFEST.json"
+    try:
+        specs = json.loads(manifest.read_text(encoding="utf-8"))["specs"]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        return frozenset()
+    return frozenset(
+        f"vendor/openapi/{entry['file']}"
+        for entry in specs
+        if isinstance(entry, dict) and entry.get("file")
+    )
+
+
 def test_no_tracked_file_hardcodes_private_lab_urls(tracked: list[str]) -> None:
-    """Private RFC1918 endpoints disclose internal topology; keep them local."""
+    """Private RFC1918 endpoints disclose internal topology; keep them local.
+
+    The disclosure this guards against is *ours*: a lab address left in code or
+    config that we published. ``tests/`` and ``docs/`` are out of scope because
+    they legitimately discuss private ranges as examples.
+
+    The vendored corpus is exempt only where a digest says it must be. The Mist
+    OpenAPI spec carries ``https://10.3.5.1:8080/about`` as an upstream
+    ``examples`` value on a deprecated synthetic-test schema — Juniper's own
+    illustration, already public at the pinned commit, revealing nothing about
+    our network. Editing it out is not available to us: every byte is pinned to
+    an upstream SHA-256, so the corpus would stop verifying. Scanning it is
+    also redundant as a smuggling check, since
+    ``tests/unit/test_vendor_corpus.py`` proves the file hashes to a digest an
+    upstream published — stronger than any regex.
+
+    That argument covers the *payloads* and nothing else. ``MANIFEST.json`` and
+    ``NOTICE.md`` are first-party files we author and keep editing, with no
+    digest over them, so they stay scanned like any other source file. The
+    exempt set is therefore the ``file`` values the manifest declares, not the
+    ``vendor/`` tree.
+    """
+    exempt = _digest_pinned_vendor_files()
     offenders: list[str] = []
     for name in tracked:
         path = ROOT / name
         if not path.is_file() or path.is_symlink():
             continue
-        # Tests and docs legitimately discuss private ranges as examples.
-        if name.startswith("tests/") or name.startswith("docs/"):
+        if name.startswith(("tests/", "docs/")) or name in exempt:
             continue
         try:
             text = path.read_text(encoding="utf-8")

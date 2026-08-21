@@ -500,8 +500,8 @@ each page with plain `urllib` + pandoc (confirmed server-rendered DITA
 HTML — no Playwright needed here, unlike the Aruba techdocs/AOS sources),
 using a 4-worker pool with a 0.4s per-request delay to stay polite/avoid
 IP bans, and extracts the `<div class="topicBody">` article container to
-strip nav/TOC/survey-banner noise. The Mist OpenAPI 3.0 spec
-([mistsys/mist_openapi on GitHub](https://github.com/Mist-Automation-Programmability/mist_openapi))
+strip nav/TOC/survey-banner noise. The Mist OpenAPI spec
+([mistsys/mist_openapi on GitHub](https://github.com/mistsys/mist_openapi))
 is pulled by `scrape_mist_openapi.py` directly into the existing
 `openapi_specs` output folder (registered as an `extra_scripts` entry, same
 pattern as `scrape_cnac_spec.py`) so it flows through the existing
