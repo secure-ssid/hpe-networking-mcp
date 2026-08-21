@@ -50,13 +50,13 @@ def _build_backend() -> MCPServer:
     def optional_limit(limit: int = 5) -> dict[str, Any]:
         return {"limit": limit}
 
-    @srv.tool()
+    @srv.tool(annotations=READ_ONLY)
     async def async_ctx_echo(ctx: Context, value: int) -> dict[str, Any]:
         # The destructive ops tools take ``ctx: Context`` first and would never
         # receive it via ``tool.fn(**args)``. Prove MCPServer injected it.
         return {"kind": "async_ctx", "value": value, "ctx_injected": ctx is not None}
 
-    @srv.tool()
+    @srv.tool(annotations=READ_ONLY)
     def boom() -> dict[str, Any]:
         raise RuntimeError("kaboom")
 

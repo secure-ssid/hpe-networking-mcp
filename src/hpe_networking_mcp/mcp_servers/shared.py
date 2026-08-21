@@ -1401,9 +1401,12 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
     imported and called in-process, so a middleware-tier gate would see none of
     this traffic.
 
-    Idempotent: installing twice replaces the wrapper rather than stacking it,
-    and composes safely with :func:`hpe_networking_mcp.mcp_servers._middleware.install_middleware`
-    in either order (each keeps its own saved original).
+    Install order. ``install_middleware`` runs first (each backend's own
+    ``run_server`` does it), then ``shared.run_server`` installs this gate
+    outermost. Re-installing *this* gate is safe -- it replaces its own wrapper
+    rather than stacking. Re-installing the middleware chain afterwards is not,
+    and now raises: it would rebuild from a snapshot taken before this gate
+    existed and drop it. Install each interceptor exactly once, outermost last.
 
     Deny-by-default, resolved in the same three tiers the router uses so both
     paths refuse exactly the same calls:
@@ -1479,7 +1482,7 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
             name, arguments, context=context, convert_result=convert_result
         )
 
-    _sdk_compat.set_dispatcher(mcp_instance, gated_call_tool)
+    _sdk_compat.set_dispatcher(mcp_instance, gated_call_tool, _WRITE_GATE_INSTALLED_ATTR)
     return True
 
 

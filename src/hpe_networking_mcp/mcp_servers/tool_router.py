@@ -3150,8 +3150,13 @@ def build_router_middlewares() -> list[Any]:
 def install_router_middleware() -> list[Any]:
     """Install the unified router's middleware chain on this module's server.
 
-    Idempotent (``install_middleware`` replaces rather than stacks). Returns
-    the installed chain so callers/tests can assert on its composition.
+    Re-installable only while this chain is still the outermost dispatcher
+    wrapper, in which case it replaces rather than stacks. If anything else has
+    wrapped since, ``install_middleware`` raises rather than rebuilding from a
+    stale snapshot and dropping it. The router is exempt from
+    ``install_platform_write_gate``, so in practice this chain stays outermost
+    here -- but the guarantee is that order, not the call being unconditionally
+    safe. Returns the installed chain so callers/tests can assert on it.
     """
     from hpe_networking_mcp.mcp_servers._cache_hygiene import stable_list_tools
     from hpe_networking_mcp.mcp_servers._middleware import install_middleware

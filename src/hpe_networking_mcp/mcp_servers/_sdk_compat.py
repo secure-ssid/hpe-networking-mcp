@@ -138,30 +138,101 @@ async def call_tool_raw(
     )
 
 
+def _installed_attr(marker: str) -> str:
+    return f"{marker}__wrapper"
+
+
 def claim_dispatcher(server: MCPServer, marker: str) -> Callable[..., Awaitable[Any]]:
     """Return the dispatcher an interceptor registered under ``marker`` must call.
 
-    The first claim under a given ``marker`` snapshots the dispatcher currently in
-    place and remembers it on the manager; later claims return that same snapshot.
-    Re-installing therefore *replaces* an interceptor rather than stacking it, and
-    two interceptors using different markers compose in either install order.
+    The first claim under a given ``marker`` snapshots the dispatcher currently
+    in place and remembers it on the manager, so two interceptors using
+    different markers compose: each wraps whatever it found.
+
+    A **re-claim is only safe while this marker's wrapper is still the outermost
+    dispatcher.** Otherwise the remembered snapshot is stale -- something else
+    has wrapped since -- and rebuilding from it would silently discard every
+    interceptor installed in between. When one of those is the write gate, that
+    is a security boundary disappearing with no error, no log and no failing
+    test, so this refuses instead.
+
+    Raises:
+        RuntimeError: on a re-claim whose saved original is no longer current.
+            Install order is fixed and one-shot per server; hitting this means a
+            second install, which is the bug.
     """
     manager = server._tool_manager
     original = getattr(manager, marker, None)
     if original is None:
         original = manager.call_tool
         setattr(manager, marker, original)
-    return original
+        return original
+    current = manager.call_tool
+    installed = getattr(manager, _installed_attr(marker), None)
+    if (installed is not None and current is installed) or current == original:
+        # Either this marker's own wrapper is still outermost, or nothing has
+        # been installed since the claim. Both are safe to rebuild from: the
+        # saved original is still current, so no interceptor can be dropped.
+        return original
+    raise RuntimeError(
+        f"refusing to re-install {marker!r} on server {getattr(server, 'name', '?')!r}: "
+        "another interceptor has wrapped the tool dispatcher since this one was "
+        "installed, so rebuilding from the saved original would silently remove it "
+        "(the platform write gate is one such interceptor). Install each interceptor "
+        "exactly once, outermost last."
+    )
 
 
-def set_dispatcher(server: MCPServer, dispatcher: Callable[..., Awaitable[Any]]) -> None:
+def set_dispatcher(
+    server: MCPServer,
+    dispatcher: Callable[..., Awaitable[Any]],
+    marker: str | None = None,
+) -> None:
     """Install ``dispatcher`` as the server's tool-call entry point.
 
     It must accept ``(name, arguments, context=None, convert_result=False)`` --
     the manager's own signature -- because the SDK calls it positionally from
     ``MCPServer.call_tool``.
+
+    Pass the same ``marker`` used for :func:`claim_dispatcher` so a later
+    re-claim can tell whether this wrapper is still the outermost one.
     """
     server._tool_manager.call_tool = dispatcher  # type: ignore[method-assign]
+    if marker is not None:
+        setattr(server._tool_manager, _installed_attr(marker), dispatcher)
+
+
+def release_dispatcher(server: MCPServer, marker: str) -> bool:
+    """Uninstall the interceptor registered under ``marker``, restoring what it wrapped.
+
+    The symmetric counterpart to :func:`claim_dispatcher`, and the only correct
+    way to take an interceptor back off. Restoring by hand -- assigning
+    ``call_tool`` back to some remembered value -- leaves this module's
+    bookkeeping pointing at a wrapper that is no longer installed, and the next
+    claim then cannot tell a safe refresh from a silent removal.
+
+    Returns ``True`` if an interceptor was removed, ``False`` if none was
+    installed. Raises ``RuntimeError`` if something else has wrapped the
+    dispatcher since -- unwinding out of order would drop that one, which is the
+    same hazard :func:`claim_dispatcher` refuses.
+    """
+    manager = server._tool_manager
+    original = getattr(manager, marker, None)
+    if original is None:
+        return False
+    installed = getattr(manager, _installed_attr(marker), None)
+    if installed is not None and manager.call_tool is not installed:
+        raise RuntimeError(
+            f"refusing to release {marker!r} on server {getattr(server, 'name', '?')!r}: "
+            "another interceptor was installed on top of it, so restoring the saved "
+            "original would silently remove that one too. Release in reverse install "
+            "order."
+        )
+    manager.call_tool = original  # type: ignore[method-assign]
+    delattr(manager, marker)
+    if installed is not None:
+        delattr(manager, _installed_attr(marker))
+    return True
 
 
 def install_sorted_tool_listing(server: MCPServer) -> bool:

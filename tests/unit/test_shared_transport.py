@@ -44,12 +44,25 @@ from hpe_networking_mcp.mcp_servers.shared import (
 class _DummyMCP:
     """Minimal double for ``MCPServer`` -- no ``settings.host``/``port``/
     ``transport_security`` (those fields don't exist on the installed SDK's
-    ``Settings`` model), just enough for ``run_server`` to dispatch through."""
+    ``Settings`` model), just enough for ``run_server`` to dispatch through.
+
+    It does carry a ``_tool_manager`` with a ``call_tool``, because
+    ``run_server`` installs the platform write gate on every backend it starts
+    -- including ones with no registered platform gate, which are now refused
+    rather than left ungated. A double without that seam would be a server the
+    gate cannot be installed on, which no real backend is.
+    """
 
     def __init__(self) -> None:
         self.settings = SimpleNamespace(log_level="INFO")
         self.run_calls: list[dict] = []
         self.custom_routes: list[tuple[str, list[str]]] = []
+        self._tool_manager = SimpleNamespace(
+            call_tool=self._call_tool, _tools={}, list_tools=list
+        )
+
+    async def _call_tool(self, name, arguments, context=None, convert_result=False):
+        raise AssertionError(f"transport tests never dispatch tools (got {name!r})")
 
     def run(self, **kwargs):
         self.run_calls.append(kwargs)

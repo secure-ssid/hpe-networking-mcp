@@ -49,7 +49,7 @@ mid-poll would restart the whole ping instead of resuming.
 from __future__ import annotations
 
 from .audit_log import AuditLogMiddleware
-from .install import Middleware, install_middleware
+from .install import Middleware, install_middleware, uninstall_middleware
 from .mac_normalizer import MacNormalizeMiddleware
 from .metrics import MetricsMiddleware, MetricsRegistry, get_default_registry, metrics_enabled
 from .null_strip import NullStripMiddleware
@@ -75,4 +75,5 @@ __all__ = [
     "install_middleware",
     "metrics_enabled",
     "pii_tokenize_enabled",
+    "uninstall_middleware",
 ]

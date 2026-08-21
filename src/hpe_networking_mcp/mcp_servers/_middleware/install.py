@@ -140,9 +140,13 @@ async def _run_on_error(
 def install_middleware(server: MCPServer, middlewares: list[Middleware]) -> None:
     """Install ``middlewares`` on ``server``'s tool dispatcher.
 
-    Idempotent — a server that already has middleware installed will have
-    its chain *replaced* rather than stacked, so re-imports in tests
-    don't accumulate.
+    Call this **once per server**, and before anything else wraps the
+    dispatcher. Re-installing while this chain is still the outermost wrapper
+    replaces it rather than stacking, so repeated imports in tests do not
+    accumulate -- but re-installing after something else has wrapped (notably
+    ``shared.install_platform_write_gate``, which every backend gets from
+    ``shared.run_server``) raises ``RuntimeError`` instead of silently
+    rebuilding from a stale snapshot and dropping that interceptor.
     """
     original = _sdk_compat.claim_dispatcher(server, _INSTALLED_ATTR)
 
@@ -189,4 +193,15 @@ def install_middleware(server: MCPServer, middlewares: list[Middleware]) -> None
                     raise
         return result
 
-    _sdk_compat.set_dispatcher(server, wrapped_call_tool)
+    _sdk_compat.set_dispatcher(server, wrapped_call_tool, _INSTALLED_ATTR)
+
+
+def uninstall_middleware(server: MCPServer) -> bool:
+    """Remove this module's middleware chain from ``server``, restoring what it wrapped.
+
+    Returns ``True`` if a chain was removed. Intended for callers that install a
+    chain onto a server they do not exclusively own -- notably tests wiring the
+    module-level router -- so the next install starts from a clean seam instead
+    of inheriting a half-restored one.
+    """
+    return _sdk_compat.release_dispatcher(server, _INSTALLED_ATTR)
