@@ -153,23 +153,29 @@ jobs:
 
       # The RAG prose corpus is deliberately not published (it is scraped vendor
       # documentation), so CI cannot restore it and does not assert --strict-rag.
-      # data/specs.sqlite is likewise unbuildable here: its OpenAPI inputs live
-      # under the gitignored ingestion/sources/. The tool catalog is different --
-      # it is derived by importing the committed MCP server modules, so it
-      # rebuilds deterministically and is worth gating on.
+      # Everything else here is derived from committed inputs and is gated for
+      # real: the tool catalog by importing the MCP server modules, and
+      # data/specs.sqlite by indexing the vendored vendor/openapi corpus.
       - name: Rebuild the tool catalog index
         run: uv run python scripts/ingest_tools.py --complete-catalog
+
+      # Offline, no network: the OpenAPI documents are committed. This is what
+      # makes indexes.offline_derivable in docs/project-facts.json a fact CI
+      # can check rather than a number from one workstation.
+      - name: Build the exact-API index from the committed corpus
+        run: uv run python scripts/build_spec_index.py
 
       - name: Reconcile rebuilt index manifests
         run: uv run python scripts/package_indexes.py --write-local-manifests
 
+      # No --ignore-index-facts: the scrape-derived counts are skipped as "not
+      # built" on their own, while the offline OpenAPI counts are compared.
       - name: Validate strict exact-API and tool-index contract
         run: >-
           uv run python scripts/validate_release.py
           --skip-tests
           --skip-rag
           --strict-tool-index
-          --ignore-index-facts
           --catalog-products all
           --min-tools 6703
 
@@ -227,17 +233,17 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      # The ingestion/redis/tui packages became optional extras, so a bare
+      # `uv sync` no longer installs them. Named explicitly to keep this
+      # environment exactly what it was before the split -- the suite covers
+      # the document parsers, the LanceDB client and the Textual widgets, and
+      # dropping them would quietly stop testing them.
       - name: Install dependencies
         run: uv sync --group dev --extra ingestion --extra redis --extra tui
 
       - name: Resolve RAG source inventory (offline)
         run: >-
           uv run python ingestion/check_updates.py --offline --dry-run
-      # The ingestion/redis/tui packages became optional extras, so a bare
-      # `uv sync` no longer installs them. Named explicitly to keep this
-      # environment exactly what it was before the split -- the suite covers
-      # the document parsers, the LanceDB client and the Textual widgets, and
-      # dropping them would quietly stop testing them.
           --exit-code-mode classified
           --json-artifact outputs/drift/rag-source-freshness.json
 
@@ -359,17 +365,17 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      # The ingestion/redis/tui packages became optional extras, so a bare
+      # `uv sync` no longer installs them. Named explicitly to keep this
+      # environment exactly what it was before the split -- the suite covers
+      # the document parsers, the LanceDB client and the Textual widgets, and
+      # dropping them would quietly stop testing them.
       - name: Install dependencies
         run: uv sync --group dev --extra ingestion --extra redis --extra tui
 
       - name: Check official security and lifecycle sources
         run: >-
           uv run python scripts/check_security_lifecycle_drift.py
-      # The ingestion/redis/tui packages became optional extras, so a bare
-      # `uv sync` no longer installs them. Named explicitly to keep this
-      # environment exactly what it was before the split -- the suite covers
-      # the document parsers, the LanceDB client and the Textual widgets, and
-      # dropping them would quietly stop testing them.
           --drift-artifact-path outputs/drift/security-lifecycle-drift.json
 
       - name: Upload source-freshness artifact

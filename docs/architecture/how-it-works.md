@@ -75,8 +75,8 @@ Default embeddings are in-process **fastembed** (`nomic-embed-text-v1.5`).
 No Docker, Redis, or Ollama is required to clone and run. Redis Stack remains
 an optional server backend.
 
-The current corpus is **392,471** prose chunks, **4,106** endpoints,
-**8,890** schemas, **50,675** fields, **104** advisories, and **345**
+The current corpus is **392,471** prose chunks, **2,734** endpoints,
+**6,363** schemas, **31,432** fields, **104** advisories, and **345**
 lifecycle records across **18** declared RAG sources.
 
 ## How a live call runs

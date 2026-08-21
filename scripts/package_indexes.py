@@ -28,7 +28,6 @@ import argparse
 import hashlib
 import json
 import shutil
-import sqlite3
 import sys
 import tarfile
 import tempfile
@@ -40,6 +39,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
+
+from hpe_networking_mcp.pipeline import project_facts  # noqa: E402
 
 DATA_DIR = ROOT / "data"
 DIST_DIR = ROOT / "dist"
@@ -75,22 +76,13 @@ def _sha256(path: Path) -> str:
 
 
 def _sqlite_counts(path: Path) -> dict[str, int]:
-    if not path.exists():
-        return {}
-    counts: dict[str, int] = {}
-    with sqlite3.connect(path) as conn:
-        for table in (
-            "endpoints",
-            "schemas",
-            "fields",
-            "advisories",
-            "lifecycle_events",
-        ):
-            try:
-                counts[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-            except sqlite3.Error:
-                continue
-    return counts
+    """Row counts for the structured tables, via the one definition of them.
+
+    ``project_facts.SPECS_TABLES`` is where the table list and the
+    omit-what-is-absent rule live; a third private copy here drifted the
+    moment the offline build started shipping only the OpenAPI tables.
+    """
+    return project_facts.specs_counts(path)
 
 
 def _display_path(path: Path) -> str:

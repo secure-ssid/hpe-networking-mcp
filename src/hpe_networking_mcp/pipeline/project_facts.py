@@ -50,10 +50,34 @@ SPECS_DB_PATH = DATA_DIR / "specs.sqlite"
 
 #: Bumped when the fact document's shape changes, so a stale tracked copy is
 #: rejected loudly rather than compared field-by-field against a new schema.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
+
+#: The section holding facts any clone reproduces exactly from committed
+#: inputs. They are compared whenever the artifact exists, and a mismatch is
+#: a failure: nothing about them depends on one machine's scrape.
+OFFLINE_DERIVABLE = "offline_derivable"
+
+#: The section holding facts that need an artifact this repository does not
+#: distribute -- the scraped prose corpus, and the LanceDB tables built from
+#: it. They are compared only when that artifact is present locally, because
+#: "not built here" is not evidence that anything changed.
+LOCALLY_BUILT = "locally_built"
+
+#: Structured-index tables ``scripts/build_spec_index.py`` writes from the
+#: committed ``vendor/openapi`` corpus. Any clone reproduces these exactly.
+OFFLINE_DERIVABLE_SPECS_TABLES = ("endpoints", "schemas", "fields")
+
+#: Structured-index tables that come from ``ingestion/ingest_docs.py`` -- a
+#: crawl of vendor documentation this project does not redistribute.
+LOCALLY_BUILT_SPECS_TABLES = ("advisories", "lifecycle_events")
 
 #: Tables whose exact row counts are part of the strict release contract.
-SPECS_TABLES = ("endpoints", "schemas", "fields", "advisories", "lifecycle_events")
+SPECS_TABLES = OFFLINE_DERIVABLE_SPECS_TABLES + LOCALLY_BUILT_SPECS_TABLES
+
+#: Which side every non-``specs_sqlite`` index family falls on. A family in
+#: neither set is compared unconditionally, so a fact added without choosing
+#: a side fails the gate rather than quietly landing on the lenient one.
+LOCALLY_BUILT_INDEX_FAMILIES = ("docs_lance", "tools_lance")
 
 #: Backends that ship no vendor API surface (local translation/diagram
 #: helpers). They are registered tools but are excluded from the published
@@ -679,7 +703,17 @@ def specs_index_present(path: Path = SPECS_DB_PATH) -> bool:
     return bool(specs_tables_present(path))
 
 
-def _column_counts(table, column: str) -> dict[str, int]:
+def _column_counts(table, column: str) -> dict[str, int] | None:
+    """Value frequencies for ``column``, or None when the table lacks it.
+
+    A LanceDB directory that does not carry the expected column is not this
+    project's index -- a stub left by another tool, or an artifact from a
+    different schema version. Counting it raises mid-derivation and takes
+    the whole fact snapshot down; reporting it as unbuilt is the same
+    no-data path a missing directory takes.
+    """
+    if column not in set(table.schema.names):
+        return None
     rows = table.count_rows()
     values = table.search().select([column]).limit(rows).to_arrow().column(column).to_pylist()
     counts: dict[str, int] = {}
@@ -691,35 +725,53 @@ def _column_counts(table, column: str) -> dict[str, int]:
 def index_facts() -> dict[str, Any] | None:
     """Return local index-derived counts, or None when no indexes exist.
 
+    The counts are split by who can reproduce them. Everything under
+    :data:`OFFLINE_DERIVABLE` any clone rebuilds byte-for-byte from committed
+    inputs, so drift there is a real defect. Everything under
+    :data:`LOCALLY_BUILT` needs the scraped prose corpus, which this project
+    does not redistribute, so its absence means "not built here" and can only
+    be compared where the artifact exists. Keeping both in one undifferentiated
+    section is what let ``endpoints: 4106`` -- a number derived from one
+    workstation's scrape, reproducible by nobody -- sit in a file named
+    ``project-facts.json``.
+
     ``None`` is the no-data-checkout signal: callers that require indexes
     (strict release validation) treat it as a failure, while a fresh clone
     can still validate every code-derived fact.
     """
     from hpe_networking_mcp.pipeline.clients import lance_client
 
-    specs_present = specs_index_present()
-    if not specs_present and not (DATA_DIR / "docs.lance").is_dir():
+    present_tables = specs_tables_present()
+    if not present_tables and not (DATA_DIR / "docs.lance").is_dir():
         return None
 
-    facts: dict[str, Any] = {"data_dir": "data"}
-    if specs_present:
-        facts["specs_sqlite"] = specs_counts()
+    counts = specs_counts()
+    offline: dict[str, Any] = {}
+    local: dict[str, Any] = {}
+    offline_specs = {t: counts[t] for t in OFFLINE_DERIVABLE_SPECS_TABLES if t in counts}
+    local_specs = {t: counts[t] for t in LOCALLY_BUILT_SPECS_TABLES if t in counts}
+    if offline_specs:
+        offline["specs_sqlite"] = offline_specs
+    if local_specs:
+        local["specs_sqlite"] = local_specs
+
     db = lance_client.connect(DATA_DIR)
     docs = lance_client.docs_table(db)
-    if docs is not None:
-        rows_by_source = _column_counts(docs, "source")
-        facts["docs_lance"] = {
+    rows_by_source = _column_counts(docs, "source") if docs is not None else None
+    if rows_by_source is not None:
+        local["docs_lance"] = {
             "rows": docs.count_rows(),
             "source_count": len(rows_by_source),
             "rows_by_source": rows_by_source,
         }
     tools = lance_client.tools_table(db)
-    if tools is not None:
-        facts["tools_lance"] = {
+    rows_by_server = _column_counts(tools, "server") if tools is not None else None
+    if rows_by_server is not None:
+        local["tools_lance"] = {
             "rows": tools.count_rows(),
-            "rows_by_server": _column_counts(tools, "server"),
+            "rows_by_server": rows_by_server,
         }
-    return facts
+    return {"data_dir": "data", OFFLINE_DERIVABLE: offline, LOCALLY_BUILT: local}
 
 
 # ---------------------------------------------------------------------------
@@ -801,6 +853,52 @@ def _flatten(value: Any, prefix: str = "") -> dict[str, Any]:
     return {prefix: value}
 
 
+def merge_unbuilt_index_facts(
+    current: dict[str, Any] | None,
+    tracked: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Carry tracked locally-built facts this checkout could not measure.
+
+    Regenerating on a machine without the scraped corpus must not erase the
+    numbers measured on one that has it -- the artifacts are git-ignored, so
+    "absent here" is not evidence they changed. Offline-derivable facts are
+    never carried over: they are rebuilt from committed inputs or they are
+    genuinely unavailable.
+    """
+    if current is None:
+        return tracked
+    if not tracked:
+        return current
+    carried = dict(tracked.get(LOCALLY_BUILT) or {})
+    carried.update(current.get(LOCALLY_BUILT) or {})
+    merged = dict(current)
+    merged[LOCALLY_BUILT] = carried
+    return merged
+
+
+#: How a locally-built family is named when it is missing. ``specs_sqlite``
+#: needs the longer form: its offline tables can be present while the two
+#: scrape-derived ones are not, and "specs_sqlite: not built" would then be a
+#: lie about an index that exists.
+_UNBUILT_LABELS = {
+    "docs_lance": "docs_lance",
+    "tools_lance": "tools_lance",
+    "specs_sqlite": "specs_sqlite ({})".format("/".join(LOCALLY_BUILT_SPECS_TABLES)),
+}
+
+
+def unbuilt_index_families(current: dict[str, Any]) -> list[str]:
+    """Locally-built families a fresh snapshot could not measure.
+
+    Reported by the CLI as "not built", never as drift: the artifacts are
+    git-ignored scrape output, so their absence says nothing about whether
+    the tracked numbers are still right.
+    """
+    indexes = current.get("indexes")
+    built = set((indexes or {}).get(LOCALLY_BUILT) or {})
+    return [label for family, label in sorted(_UNBUILT_LABELS.items()) if family not in built]
+
+
 def compare(
     tracked: dict[str, Any],
     current: dict[str, Any],
@@ -810,14 +908,22 @@ def compare(
 ) -> list[str]:
     """Return human-readable drift between a tracked and a fresh snapshot.
 
+    Index facts are compared according to who can reproduce them. The
+    :data:`OFFLINE_DERIVABLE` section is compared whenever the structured
+    index exists, and ``ignore_indexes`` does not silence it: those counts
+    come from ``vendor/openapi``, which is committed, so there is no
+    "my corpus differs" excuse for them. The :data:`LOCALLY_BUILT` section is
+    compared only where the artifact is present.
+
     Args:
         tracked: The committed ``docs/project-facts.json`` content.
         current: A freshly derived snapshot from :func:`collect`.
-        require_indexes: Fail when the fresh snapshot has no index-derived
-            facts. When False, index facts are skipped (no-data checkout)
-            rather than reported as drift.
-        ignore_indexes: Skip comparing ``indexes.*`` even when local
-            artifacts exist. Used by CI against a pinned older release
+        require_indexes: Fail when the fresh snapshot cannot derive the
+            offline facts at all. It does *not* demand the scraped
+            artifacts: strict validation must not require a crawl nobody
+            else can reproduce.
+        ignore_indexes: Skip comparing the locally-built section even when
+            its artifacts exist. Used by CI against a pinned older release
             bundle whose corpus is not the developer workstation snapshot.
 
     Returns:
@@ -830,12 +936,30 @@ def compare(
             f"{SCHEMA_VERSION}; regenerate it"
         ]
 
-    skip_indexes = current.get("indexes") is None or ignore_indexes
-    if current.get("indexes") is None and require_indexes:
+    indexes = current.get("indexes")
+    offline_built = set((indexes or {}).get(OFFLINE_DERIVABLE) or {})
+    local_built = set((indexes or {}).get(LOCALLY_BUILT) or {})
+    if require_indexes and not offline_built:
         problems.append(
-            "no local indexes found: strict validation requires data/specs.sqlite and "
-            "data/docs.lance"
+            "data/specs.sqlite is not built: strict validation compares the "
+            "offline-derivable OpenAPI counts -- build it with "
+            "`python scripts/build_spec_index.py`"
         )
+
+    def compare_index_key(key: str) -> bool:
+        if indexes is None:
+            return False
+        parts = key.split(".")
+        section = parts[1] if len(parts) > 1 else ""
+        family = parts[2] if len(parts) > 2 else ""
+        if section == OFFLINE_DERIVABLE:
+            return family in offline_built
+        if section == LOCALLY_BUILT:
+            return not ignore_indexes and family in local_built
+        # ``data_dir``, or a fact added without choosing a side. Comparing it
+        # is the strict default on purpose: an unclassified fact must fail
+        # the gate rather than land silently in the lenient section.
+        return True
 
     skip_router_modes = current.get("router_modes") is None
 
@@ -843,8 +967,9 @@ def compare(
     tracked_flat = _flatten({k: v for k, v in tracked.items() if k not in ignored})
     current_flat = _flatten({k: v for k, v in current.items() if k not in ignored})
     for key in sorted(set(tracked_flat) | set(current_flat)):
-        if skip_indexes and key.startswith("indexes"):
-            continue
+        if key == "indexes" or key.startswith("indexes."):
+            if not compare_index_key(key):
+                continue
         if skip_router_modes and key.startswith("router_modes"):
             continue
         old = tracked_flat.get(key, "<absent>")

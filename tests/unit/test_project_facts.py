@@ -278,9 +278,9 @@ def test_compare_rejects_a_stale_schema_version():
     assert "schema_version" in problems[0]
 
 
-def test_compare_ignore_indexes_skips_corpus_drift():
+def test_compare_ignore_indexes_skips_locally_built_drift():
     drifted = json.loads(json.dumps(TRACKED))
-    drifted["indexes"]["docs_lance"]["rows"] = 1
+    drifted["indexes"][project_facts.LOCALLY_BUILT]["docs_lance"]["rows"] = 1
 
     ignored = project_facts.compare(
         TRACKED, drifted, require_indexes=True, ignore_indexes=True
@@ -288,18 +288,84 @@ def test_compare_ignore_indexes_skips_corpus_drift():
     compared = project_facts.compare(TRACKED, drifted, require_indexes=True)
 
     assert ignored == []
-    assert any("indexes.docs_lance.rows" in problem for problem in compared)
+    assert any("docs_lance.rows" in problem for problem in compared)
 
 
-def test_compare_requires_indexes_in_strict_mode():
+def test_ignore_indexes_cannot_silence_an_offline_count():
+    """The escape hatch covers the scraped corpus, never the committed one.
+
+    ``--ignore-index-facts`` exists because a pinned older bundle's *scrape*
+    is not the developer's. ``vendor/openapi`` is in the tree, so a clone
+    that disagrees about its counts is wrong, not merely different.
+    """
+    drifted = json.loads(json.dumps(TRACKED))
+    drifted["indexes"][project_facts.OFFLINE_DERIVABLE]["specs_sqlite"]["endpoints"] += 1
+
+    problems = project_facts.compare(
+        TRACKED, drifted, require_indexes=False, ignore_indexes=True
+    )
+
+    assert any("offline_derivable.specs_sqlite.endpoints" in problem for problem in problems)
+
+
+def test_a_spec_only_index_satisfies_strict_validation():
+    """A clone that ran the offline build owes nothing further.
+
+    Strict validation used to demand ``data/docs.lance`` too -- a scrape
+    this project does not distribute -- so the strict path was unreachable
+    for anyone but its author.
+    """
+    spec_only = json.loads(json.dumps(TRACKED))
+    spec_only["indexes"][project_facts.LOCALLY_BUILT] = {}
+
+    assert project_facts.compare(TRACKED, spec_only, require_indexes=True) == []
+    assert project_facts.unbuilt_index_families(spec_only) == [
+        "docs_lance",
+        "specs_sqlite (advisories/lifecycle_events)",
+        "tools_lance",
+    ]
+
+
+def test_a_wrong_offline_count_fails_even_without_require_indexes():
+    """The gate has to bite, or partitioning only made it quieter."""
+    wrong = json.loads(json.dumps(TRACKED))
+    wrong["indexes"][project_facts.OFFLINE_DERIVABLE]["specs_sqlite"]["fields"] = 1
+
+    problems = project_facts.compare(TRACKED, wrong, require_indexes=False)
+
+    assert any("offline_derivable.specs_sqlite.fields" in problem for problem in problems)
+
+
+def test_compare_requires_the_offline_index_in_strict_mode():
     index_free = json.loads(json.dumps(TRACKED))
     index_free["indexes"] = None
 
     strict = project_facts.compare(TRACKED, index_free, require_indexes=True)
     lenient = project_facts.compare(TRACKED, index_free, require_indexes=False)
 
-    assert any("no local indexes found" in problem for problem in strict)
+    assert any("data/specs.sqlite is not built" in problem for problem in strict)
+    assert any("scripts/build_spec_index.py" in problem for problem in strict)
     assert lenient == []
+
+
+def test_merge_keeps_locally_built_facts_a_checkout_cannot_measure():
+    """Regenerating without the scrape must not delete what it cannot see."""
+    fresh = {
+        "data_dir": "data",
+        project_facts.OFFLINE_DERIVABLE: {"specs_sqlite": {"endpoints": 2734}},
+        project_facts.LOCALLY_BUILT: {},
+    }
+
+    merged = project_facts.merge_unbuilt_index_facts(fresh, TRACKED["indexes"])
+
+    assert merged[project_facts.OFFLINE_DERIVABLE] == fresh[project_facts.OFFLINE_DERIVABLE]
+    assert (
+        merged[project_facts.LOCALLY_BUILT]
+        == TRACKED["indexes"][project_facts.LOCALLY_BUILT]
+    )
+    assert project_facts.merge_unbuilt_index_facts(None, TRACKED["indexes"]) == (
+        TRACKED["indexes"]
+    )
 
 
 def test_registered_identities_require_the_pinned_catalog_env(monkeypatch):
@@ -350,16 +416,58 @@ def test_placeholder_specs_db_is_not_mistaken_for_an_index(tmp_path):
     assert project_facts.specs_index_present(real) is True
 
 
-@pytest.mark.skipif(
-    project_facts.specs_tables_present() != set(project_facts.SPECS_TABLES),
-    reason=(
-        "the committed counts describe a complete index; a checkout with no "
-        "index, or with the spec-only index the offline build and the "
-        "container image produce, is a different artifact they do not describe"
-    ),
-)
-def test_tracked_specs_counts_match_the_local_structured_index():
-    assert TRACKED["indexes"]["specs_sqlite"] == project_facts.specs_counts()
+def test_tracked_offline_counts_match_a_build_of_the_committed_corpus(tmp_path):
+    """The integrity property the partition exists to create.
+
+    ``indexes.offline_derivable`` claims counts that any clone reproduces
+    from ``vendor/openapi`` with ``scripts/build_spec_index.py``. This test
+    is the proof: it builds that corpus and compares. Nothing here reads
+    ``data/``, so CI verifies the published OpenAPI numbers from committed
+    inputs alone -- which is exactly what the previous numbers (4,106
+    endpoints, derived from one workstation's scrape) could never support.
+    """
+    from scripts.build_spec_index import VENDOR_DIR, build_spec_index
+
+    built = build_spec_index(VENDOR_DIR, tmp_path / "specs.sqlite")
+    tracked = TRACKED["indexes"][project_facts.OFFLINE_DERIVABLE]["specs_sqlite"]
+
+    assert tracked == {table: built[table] for table in tracked}
+    assert set(tracked) == set(project_facts.OFFLINE_DERIVABLE_SPECS_TABLES)
+
+
+def test_every_tracked_index_fact_picked_a_side():
+    """A fact added without choosing a side must not default into leniency."""
+    indexes = TRACKED["indexes"]
+    assert set(indexes) == {
+        "data_dir",
+        project_facts.OFFLINE_DERIVABLE,
+        project_facts.LOCALLY_BUILT,
+    }
+    assert set(indexes[project_facts.OFFLINE_DERIVABLE]) == {"specs_sqlite"}
+    assert set(indexes[project_facts.LOCALLY_BUILT]) <= {
+        "specs_sqlite",
+        *project_facts.LOCALLY_BUILT_INDEX_FAMILIES,
+    }
+    tables = set(indexes[project_facts.LOCALLY_BUILT].get("specs_sqlite") or {})
+    assert tables <= set(project_facts.LOCALLY_BUILT_SPECS_TABLES)
+
+
+def test_a_lance_table_without_the_expected_column_reads_as_unbuilt():
+    """A foreign artifact under ``data/`` must not take fact derivation down.
+
+    A stub ``docs.lance`` written by another tool has no ``source`` column,
+    and counting it raised ``Schema error: No field named source`` in the
+    middle of :func:`index_facts` -- taking every code-derived fact with it.
+    Unreadable is the same answer as unbuilt.
+    """
+
+    class _Stub:
+        schema = type("_Schema", (), {"names": ["id", "vector"]})()
+
+        def count_rows(self):  # pragma: no cover - must never be reached
+            raise AssertionError("counted a table whose schema was rejected")
+
+    assert project_facts._column_counts(_Stub(), "source") is None
 
 
 def test_spec_only_index_counts_what_it_has_and_omits_what_it_does_not(tmp_path):

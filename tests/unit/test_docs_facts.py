@@ -38,15 +38,21 @@ def _canonical_counts() -> dict[str, int] | None:
     indexes = TRACKED.get("indexes")
     if not indexes:
         return None
-    docs_lance = indexes.get("docs_lance") or {}
-    specs = indexes.get("specs_sqlite") or {}
+    # Endpoints/schemas/fields are the offline-derivable counts any clone
+    # reproduces from vendor/openapi; the prose-chunk, advisory and lifecycle
+    # counts come from the scraped corpus. The docs cite both, so read both.
+    offline = indexes.get(project_facts.OFFLINE_DERIVABLE) or {}
+    local = indexes.get(project_facts.LOCALLY_BUILT) or {}
+    specs = offline.get("specs_sqlite") or {}
+    scraped_specs = local.get("specs_sqlite") or {}
+    docs_lance = local.get("docs_lance") or {}
     counts = {
         "prose_chunks": docs_lance.get("rows"),
         "endpoints": specs.get("endpoints"),
         "schemas": specs.get("schemas"),
         "fields": specs.get("fields"),
-        "advisories": specs.get("advisories"),
-        "lifecycle_records": specs.get("lifecycle_events"),
+        "advisories": scraped_specs.get("advisories"),
+        "lifecycle_records": scraped_specs.get("lifecycle_events"),
     }
     if any(value is None for value in counts.values()):
         return None
@@ -122,9 +128,15 @@ def _expected_snippets() -> list[tuple[Path, str]]:
             REPO_ROOT / "docs" / "release-indexes.md",
             f"| LanceDB prose chunks | {chunks} |",
         ),
-        (REPO_ROOT / "docs" / "release-indexes.md", f"| Exact endpoints | {endpoints} |"),
-        (REPO_ROOT / "docs" / "release-indexes.md", f"| Schemas | {schemas} |"),
-        (REPO_ROOT / "docs" / "release-indexes.md", f"| Fields | {fields} |"),
+        # Labelled "(offline)" in the table: these three are the counts any
+        # clone reproduces from the committed corpus, so the label is part of
+        # the claim and must not drift away from the number.
+        (
+            REPO_ROOT / "docs" / "release-indexes.md",
+            f"| Exact endpoints (offline) | {endpoints} |",
+        ),
+        (REPO_ROOT / "docs" / "release-indexes.md", f"| Schemas (offline) | {schemas} |"),
+        (REPO_ROOT / "docs" / "release-indexes.md", f"| Fields (offline) | {fields} |"),
         (
             REPO_ROOT / "docs" / "assets" / "platform-coverage.svg",
             f"{chunks} prose chunks",
