@@ -161,9 +161,14 @@ def build_flow_dot(model: DiagramModel, *, rankdir: str = "LR") -> str:
     ``<figure>`` that already carries a caption, and a duplicated heading
     inside the image cannot be selected, translated, or restyled by the page.
     """
+    # An opaque canvas, not "transparent": edge labels ("Yes"/"No") sit on the
+    # background rather than inside a filled node, so on GitHub's dark theme a
+    # transparent canvas renders them dark-grey-on-near-black. A static SVG
+    # cannot restyle itself per theme once GitHub embeds it through <img>, so
+    # the drawing carries its own background and reads identically in both.
     lines = [
         "digraph flow {",
-        f'  graph [rankdir={rankdir}, bgcolor="transparent", fontname="Helvetica", '
+        f'  graph [rankdir={rankdir}, bgcolor="white", fontname="Helvetica", '
         "nodesep=0.35, ranksep=0.45, pad=0.15, splines=true];",
         f'  node [fontname="Helvetica", fontsize=11, fontcolor="{_FLOW_TEXT}", '
         f'shape=box, style="filled,rounded", fillcolor="{_FLOW_FILL}", '

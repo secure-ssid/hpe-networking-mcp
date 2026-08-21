@@ -2,6 +2,7 @@
  viewBox="0.00 0.00 408.00 416.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="title desc" data-source-sha256="190194a2de7739fa68786aca3600aa222dae0151d3f220248f85eef3e288257a"><title id="title">RAG and live-tool query routing</title><desc id="desc">Exact API questions use lookup_api, advisory IDs use lookup_advisory, how-to questions use ask_docs, and live device state uses find_tool then invoke_read_tool.</desc>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 404.73)">
 
+<polygon fill="white" stroke="none" points="-10.8,10.8 -10.8,-404.73 396.84,-404.73 396.84,10.8 -10.8,10.8"/>
 <!-- q -->
 <g id="node1" class="node">
 

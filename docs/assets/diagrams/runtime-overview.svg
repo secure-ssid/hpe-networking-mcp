@@ -2,6 +2,7 @@
  viewBox="0.00 0.00 751.00 197.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="title desc" data-source-sha256="4b22456e8e9aad7772600fba23f81815a7513a21d704b0e81a8621042d4175c9"><title id="title">hpe-networking-mcp runtime overview</title><desc id="desc">High-level flow from a user and MCP client through the low-token router, tool catalog, Central/GLP/RAG, Central Streaming, optional products, local indexes, and vendor APIs.</desc>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 185.87)">
 
+<polygon fill="white" stroke="none" points="-10.8,10.8 -10.8,-185.87 739.91,-185.87 739.91,10.8 -10.8,10.8"/>
 <!-- user -->
 <g id="node1" class="node">
 

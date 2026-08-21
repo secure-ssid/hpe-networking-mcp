@@ -2,6 +2,7 @@
  viewBox="0.00 0.00 950.00 168.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="title desc" data-source-sha256="1a21ab2c6634ac019031bb157852356213b7613d22691f248b7838870c808b3f"><title id="title">MCP transport and deployment choices</title><desc id="desc">Deployment paths for stdio, local streamable HTTP, and protected non-loopback streamable HTTP connections to the hpe-networking-mcp router.</desc>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 157.2)">
 
+<polygon fill="white" stroke="none" points="-10.8,10.8 -10.8,-157.2 939.27,-157.2 939.27,10.8 -10.8,10.8"/>
 <!-- client -->
 <g id="node1" class="node">
 

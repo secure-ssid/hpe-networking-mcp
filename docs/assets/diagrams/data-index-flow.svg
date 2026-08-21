@@ -2,6 +2,7 @@
  viewBox="0.00 0.00 575.00 230.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="title desc" data-source-sha256="afa8421cd02801a277403ef104a0baf1923a706a6d35d1ee1441854060a56ad2"><title id="title">Documentation and index data flow</title><desc id="desc">Official documentation, OpenAPI, and advisory sources flow through ingestion into docs.lance, specs.sqlite, and tools.lance for RAG and router discovery.</desc>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 219.6)">
 
+<polygon fill="white" stroke="none" points="-10.8,10.8 -10.8,-219.6 564.48,-219.6 564.48,10.8 -10.8,10.8"/>
 <!-- sources -->
 <g id="node1" class="node">
 

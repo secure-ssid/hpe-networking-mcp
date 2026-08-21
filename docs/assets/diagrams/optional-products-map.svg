@@ -2,6 +2,7 @@
  viewBox="0.00 0.00 696.00 431.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="title desc" data-source-sha256="32da5530b70ea7acc068b70dcb2b01aa893746600c5e1578fe8e4c632bc9c835"><title id="title">Choose an optional product backend</title><desc id="desc">Map from common network automation goals to the ClearPass, Mist, Apstra, ArubaOS 8, EdgeConnect, UXI, and Axis backends.</desc>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 420.14)">
 
+<polygon fill="white" stroke="none" points="-10.8,10.8 -10.8,-420.14 685.41,-420.14 685.41,10.8 -10.8,10.8"/>
 <!-- goal -->
 <g id="node1" class="node">
 

@@ -2,6 +2,7 @@
  viewBox="0.00 0.00 666.00 58.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="title desc" data-source-sha256="f6cce262d135193162eb24f35f334fb50f6c9ec2371a221371b55429cea9fc1e"><title id="title">Setup wizard phases</title><desc id="desc">Six compact wizard phases: install, credentials, optional products, MCP client configs, tool catalog, and the local doctor.</desc>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 46.8)">
 
+<polygon fill="white" stroke="none" points="-10.8,10.8 -10.8,-46.8 654.82,-46.8 654.82,10.8 -10.8,10.8"/>
 <!-- install -->
 <g id="node1" class="node">
 

@@ -2,6 +2,7 @@
  viewBox="0.00 0.00 569.00 647.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="title desc" data-source-sha256="727f42f8a4f2a07b9602e5337beda7d8ebda30dbaafde5158bc33b55a20c56e4"><title id="title">hpe-networking-mcp troubleshooting decision tree</title><desc id="desc">Diagnostic path from the local doctor through setup, authentication, transport, catalog, and RAG index checks.</desc>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 636.43)">
 
+<polygon fill="white" stroke="none" points="-10.8,10.8 -10.8,-636.43 558.09,-636.43 558.09,10.8 -10.8,10.8"/>
 <!-- start -->
 <g id="node1" class="node">
 
