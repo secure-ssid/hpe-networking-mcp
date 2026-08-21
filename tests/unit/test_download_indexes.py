@@ -5,13 +5,10 @@ import json
 import shutil
 import sys
 import tarfile
-from pathlib import Path
 
 import pytest
 
 from scripts import download_indexes
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_parse_checksum_accepts_sha256_file_with_filename():
@@ -93,18 +90,6 @@ def test_verify_expected_checksum_rejects_mismatch(tmp_path):
 
     with pytest.raises(SystemExit, match="Pinned checksum mismatch"):
         download_indexes._verify_expected_checksum(archive, "0" * 64)
-
-
-def test_tracked_pinned_manifest_matches_project_version():
-    facts = json.loads((REPO_ROOT / "docs" / "project-facts.json").read_text())
-    version = facts["package"]["version"]
-    manifest = download_indexes._load_pinned_manifest(
-        REPO_ROOT / ".github" / "index-bundle.json"
-    )
-
-    assert manifest["release"] == f"indexes-v{version}"
-    assert manifest["archive"] == f"hpe-networking-mcp-rag-index-v{version}.tar.gz"
-    assert f"/{manifest['release']}/{manifest['archive']}" in manifest["url"]
 
 
 def test_main_downloads_checksum_next_to_archive_by_default(tmp_path, monkeypatch):

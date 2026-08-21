@@ -65,12 +65,30 @@ Connect any MCP-capable client to `http://127.0.0.1:8010/mcp`, then try a
 credential-free discovery call:
 
 ```text
-find_tool("ask Aruba docs with citations")
-invoke_read_tool("ask_docs", {"question": "WPA3 SAE transition mode", "top_k": 5})
+find_tool("list Aruba Central devices")
 ```
 
-Expected outcome: a short, cited answer from the embedded docs index — this
-call only reaches the local RAG index, never Central or GLP.
+Expected outcome: ranked matches read straight from the local tool index the
+wizard just built, each annotated with its capability and write-gate state.
+No vendor API is contacted.
+
+### Documentation search is a separate, local build
+
+`ask_docs` and the rest of the RAG surface need a prose corpus that this
+project deliberately does **not** ship. That corpus is scraped vendor
+documentation, and republishing it is not ours to do — see
+`ingestion/source_manifest.json`, which has always said "Do not commit scraped
+content". Build it yourself, under your own acceptance of each vendor's terms:
+
+```bash
+uv run python ingestion/ingest_docs.py
+```
+
+Budget for it. The crawl is measured in hours, and the first RAG query
+additionally downloads the ~250 MB `nomic-embed-text-v1.5` embedding model
+into your Hugging Face cache. **Credential-free is not the same as offline:**
+the quickstart above needs no vendor credentials, but the corpus build and
+first query both need network access.
 
 ## Write safety at a glance
 
@@ -153,13 +171,16 @@ legacy gates are aligned, or use the self-contained
 profile for daily use. `find_tool` omits full JSON schemas by default; request
 `include_schema=true` only when a client needs the full parameter shape.
 
-Build or refresh the router tool index, and download the prebuilt RAG/OpenAPI
-indexes instead of scraping locally:
+Build or refresh the router tool index and the API-spec database. Both are
+derived from the OpenAPI specs committed to this repository, so they rebuild
+deterministically and need no scraping:
 
 ```bash
 uv run python scripts/ingest_tools.py --products all
-uv run python scripts/download_indexes.py
 ```
+
+The RAG prose corpus is built separately by `ingestion/ingest_docs.py`, as
+described in the quickstart above. It is not distributed as a release asset.
 
 See [Getting started](docs/getting-started.md) for credentials, region
 selection, optional-product env vars, and the full ingestion/refresh path.
@@ -198,7 +219,7 @@ The full repository map, including generated/git-ignored paths, lives in
 
 ```bash
 uv run pytest tests/unit -q
-uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6708
+uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6708
 ```
 
 `--min-tools 6708` is the platform API compatibility floor (the
