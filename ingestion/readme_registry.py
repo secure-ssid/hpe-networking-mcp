@@ -350,12 +350,43 @@ def check_entry_drift(entry: dict[str, Any], *, offline: bool = False) -> DriftR
         )
 
     pointer = spec = None
+    parse_error_detail = ""
     for attempt in range(3):
         try:
             pointer, spec = fetch_spec_for_page(source_url)
             break
         except RegistryParseError as exc:
-            return _result(registry_id, source_url, taxonomy.PARSER_ERROR, str(exc))
+            parse_error_detail = str(exc)
+            manifest_pointer = OasPointer(
+                project=str(entry.get("project") or ""),
+                version=str(entry.get("portal_version") or ""),
+                registry_id=str(registry_id),
+            )
+            try:
+                spec = fetch_registry_spec(manifest_pointer)
+                pointer = manifest_pointer
+                break
+            except RegistryParseError as registry_exc:
+                return _result(
+                    registry_id,
+                    source_url,
+                    taxonomy.PARSER_ERROR,
+                    f"{parse_error_detail}; manifest registry also failed: {registry_exc}",
+                )
+            except RegistryMissingError as registry_exc:
+                return _result(
+                    registry_id,
+                    source_url,
+                    taxonomy.SOURCE_REMOVED,
+                    f"{parse_error_detail}; manifest registry is gone: {registry_exc}",
+                )
+            except RegistryFetchError as registry_exc:
+                return _result(
+                    registry_id,
+                    source_url,
+                    taxonomy.UNAVAILABLE,
+                    f"{parse_error_detail}; manifest registry could not be fetched: {registry_exc}",
+                )
         except RegistryMissingError as exc:
             return _result(registry_id, source_url, taxonomy.SOURCE_REMOVED, str(exc))
         except RegistryFetchError as exc:
@@ -397,7 +428,11 @@ def check_entry_drift(entry: dict[str, Any], *, offline: bool = False) -> DriftR
         registry_id,
         source_url,
         taxonomy.FRESH,
-        "sha256 matches manifest",
+        (
+            "sha256 matches manifest"
+            if not parse_error_detail
+            else f"sha256 matches manifest via direct api-registry fetch ({parse_error_detail})"
+        ),
         observed_registry_id=pointer.registry_id,
         observed_sha256=new_hash,
     )

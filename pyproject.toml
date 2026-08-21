@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hpe-networking-mcp"
-version = "0.8.0"
-description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,722-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
+version = "0.9.0"
+description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,726-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -67,6 +67,8 @@ dependencies = [
     "httpx>=0.27.0",
     "langchain-text-splitters>=0.2.0",
     "pypdf>=6.14.2",
+    "python-pptx>=1.0.2",
+    "python-docx>=1.2.0",
     "beautifulsoup4>=4.15.0",
     "playwright>=1.58.0",
     "redis>=8.0.1",
@@ -74,9 +76,17 @@ dependencies = [
     "lancedb>=0.33.0",
     "fastembed>=0.8.0",
     "websockets>=14.0",
+    "textual>=8.2.8",
+]
+
+[project.optional-dependencies]
+milvus-lite = [
+    "pymilvus[milvus-lite]>=2.5.0,<3",
 ]
 
 [project.scripts]
+hpe-mcp = "hpe_networking_mcp.cli.mcp_cli:main"
+hpe-mcp-client = "hpe_networking_mcp.cli.mcp_cli:main"
 hpe-mcp-router = "hpe_networking_mcp.mcp_servers.tool_router:main"
 hpe-mcp-doctor = "hpe_networking_mcp.cli.doctor:main"
 hpe-mcp-run-pipeline = "hpe_networking_mcp.cli.run_pipeline:main"
@@ -91,6 +101,7 @@ Changelog = "https://github.com/secure-ssid/hpe-networking-mcp/blob/main/CHANGEL
 
 [dependency-groups]
 dev = ["pytest>=9.1.1", "ruff>=0.8.0"]
+security = ["bandit>=1.9.0", "pip-audit>=2.9.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -106,6 +117,16 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.bandit]
+# CI gates on medium+ severity only (see .github/workflows/security.yml).
+# Low-severity findings (assert usage in application code, subprocess
+# invocation, try/except/pass, etc.) are common, low-risk patterns in this
+# CLI/pipeline codebase and are tracked as background noise, not a release
+# gate. Every medium+ finding is either fixed or annotated inline with a
+# scoped `# nosec <TEST_ID>` plus a one-line justification comment at the
+# exact flagged line -- never a blanket test-id skip here.
+exclude_dirs = ["tests", ".venv", "build", "dist"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

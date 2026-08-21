@@ -189,6 +189,19 @@ def test_glp_official_id_wrappers_encode_and_call_paths(monkeypatch):
     ]
 
 
+def test_glp_reporting_statuses_requires_filter_and_makes_no_call(monkeypatch):
+    def _boom():
+        raise AssertionError("must not reach the GLP client")
+
+    monkeypatch.setattr(glp, "get_glp_client", _boom)
+
+    for missing in (None, "", "   "):
+        out = glp.list_glp_reporting_statuses(filter=missing, limit=10, offset=0)
+        assert out["data"] is None
+        assert out["endpoint_used"] == "/reporting/v1/statuses"
+        assert "filter is a required query parameter" in out["errors"][0]
+
+
 def test_glp_official_list_wrappers_clamp_and_forward_params(monkeypatch):
     calls = []
 

@@ -1,0 +1,118 @@
+name: Docker
+
+# Build/validation gate for the production router packaging: does the
+# Dockerfile still build, do both Compose files still merge/validate, and
+# do the Docker-specific unit tests still pass. This never pushes an image
+# anywhere -- there is no registry credential in scope, and this workflow
+# does not request one. Image vulnerability scanning (e.g. trivy) is a
+# natural follow-up once a registry/publish story exists; deferred here.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "docker/**"
+      - "docker-compose*.yml"
+      - "secrets/*.example"
+      - "secrets/README.md"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "tests/unit/test_docker_router_packaging.py"
+      - "tests/unit/test_docker_compose.py"
+      - ".github/workflows/docker-build.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "docker/**"
+      - "docker-compose*.yml"
+      - "secrets/*.example"
+      - "secrets/README.md"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "tests/unit/test_docker_router_packaging.py"
+      - "tests/unit/test_docker_compose.py"
+      - ".github/workflows/docker-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-validate:
+    name: Build image and validate Compose overlay
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Lint Dockerfile (BuildKit check)
+        run: docker build --check -f Dockerfile .
+
+      - name: Build router image (no push)
+        run: docker build -t hpe-networking-mcp-router:ci .
+
+      - name: Validate router overlay standalone
+        run: docker compose -f docker-compose.router.yml --profile router config
+
+      - name: Validate router overlay merged with docker-compose.yml
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.router.yml \
+            --profile router config
+
+      - name: Confirm default `docker compose up` is unaffected
+        run: |
+          services="$(docker compose -f docker-compose.yml -f docker-compose.router.yml \
+            config --services | sort | tr '\n' ' ')"
+          expected="ollama redis "
+          if [[ "${services}" != "${expected}" ]]; then
+            echo "Expected default profile services '${expected}', got '${services}'" >&2
+            exit 1
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          prune-cache: true
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Docker/Compose unit tests
+        run: |
+          uv run pytest \
+            tests/unit/test_docker_router_packaging.py \
+            tests/unit/test_docker_compose.py \
+            tests/unit/test_download_indexes.py -v
+
+      - name: Smoke test the built image (no credentials, embedded RAG only)
+        run: |
+          docker run -d --name mcp-router-ci \
+            -p 127.0.0.1:8010:8010 \
+            -e MCP_HOST=0.0.0.0 \
+            -e MCP_ALLOWED_HOSTS=127.0.0.1,localhost \
+            -e MCP_ALLOWED_ORIGINS=http://127.0.0.1:8010 \
+            -e HPE_MCP_ROUTER_MODE=minimal \
+            -e HPE_MCP_TOOLSETS=central,glp,rag \
+            hpe-networking-mcp-router:ci
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8010/livez >/dev/null; then
+              echo "router is live"
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8010/livez
+          docker logs mcp-router-ci
+          docker stop mcp-router-ci
+          docker rm mcp-router-ci

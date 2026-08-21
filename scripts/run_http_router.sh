@@ -20,12 +20,17 @@ allowed_keys = {
     "HPE_MCP_PRODUCTS",
     "HPE_MCP_PRODUCT_ACCESS",
     "HPE_MCP_ALLOW_LOCAL_PRODUCT_URLS",
+    "HPE_MCP_ALLOW_PLACEHOLDER_URLS",
     "HPE_MCP_DIAGRAM_ICON_DIR",
     "HPE_MCP_DIAGRAM_ALLOW_LARGE_ICONS",
     "HPE_MCP_ROUTER_MODE",
     "HPE_MCP_READONLY",
     "HPE_MCP_TOOLSETS",
     "HPE_MCP_RAG_BACKEND",
+    "HPE_MCP_RAG_CACHE_SIZE",
+    "HPE_MCP_RAG_EMBED_CACHE_SIZE",
+    "HPE_MCP_RAG_PREWARM",
+    "HPE_MCP_MILVUS_PATH",
     "HPE_MCP_BOUND_LISTS",
     "HPE_MCP_NORMALIZE_MACS",
     "HPE_MCP_SWITCH_GROUP_NAME",
@@ -88,6 +93,19 @@ allowed_keys = {
 }
 inherited_keys = set(os.environ)
 load_dotenv(sys.argv[1], override=False)
+legacy_prefix = "CENTRALMCP_"
+legacy_keys = set()
+with open(sys.argv[1], encoding="utf-8") as env_file:
+    for line in env_file:
+        match = re.match(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=", line)
+        if match and match.group(1).startswith(legacy_prefix):
+            legacy_keys.add(match.group(1))
+if legacy_keys:
+    print(
+        "WARNING: ignored legacy environment keys in .env; use the HPE_MCP_* "
+        "prefix: " + ", ".join(sorted(legacy_keys)),
+        file=sys.stderr,
+    )
 for key in sorted(allowed_keys):
     value = os.environ.get(key)
     if (
@@ -114,9 +132,12 @@ export MCP_PORT="${MCP_PORT:-8010}"
 export HPE_MCP_ROUTER_MODE="${HPE_MCP_ROUTER_MODE:-minimal}"
 export HPE_MCP_TOOLSETS="${HPE_MCP_TOOLSETS:-central,glp,rag}"
 HPE_MCP_ACCESS_PROFILE="$(
-  normalize_access_profile "${HPE_MCP_ACCESS_PROFILE:-custom}"
+  normalize_access_profile "${HPE_MCP_ACCESS_PROFILE:-safe-read-only}"
 )"
-export HPE_MCP_ACCESS_PROFILE="${HPE_MCP_ACCESS_PROFILE:-custom}"
+export HPE_MCP_ACCESS_PROFILE="${HPE_MCP_ACCESS_PROFILE:-safe-read-only}"
+if [[ "${HPE_MCP_ACCESS_PROFILE}" == "safe-read-only" ]]; then
+  export HPE_MCP_READONLY="${HPE_MCP_READONLY:-1}"
+fi
 if [[ "${HPE_MCP_ACCESS_PROFILE}" == "full-read-write" ]]; then
   default_product_access="read-write"
 else

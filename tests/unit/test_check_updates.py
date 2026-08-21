@@ -445,3 +445,57 @@ def test_check_url_sleeps_before_requesting(monkeypatch):
     result = check_updates.check_url("https://example.invalid/x", "s", _Store(), dry_run=True)
     assert result["status"] == "error"
     assert calls == [check_updates.REQUEST_DELAY]
+
+
+def test_seed_files_resolve_both_committed_shapes(tmp_path, monkeypatch):
+    """Seed files ship in two shapes and both must resolve to plain URLs.
+
+    Most discover scripts write a flat list of paths/URLs, but
+    ``mist_product_updates`` writes discovery records (``{url, title,
+    year}``). A resolver that assumes strings raises ``AttributeError`` on
+    the record shape and takes the whole offline drift run down with it, so
+    pin both here.
+    """
+    monkeypatch.setattr(check_updates, "ROOT", tmp_path)
+
+    (tmp_path / "flat.json").write_text(
+        json.dumps(["https://example.invalid/a", "https://example.invalid/b"]),
+        encoding="utf-8",
+    )
+    (tmp_path / "records.json").write_text(
+        json.dumps(
+            [
+                {"url": "https://example.invalid/2026", "title": "2026 notes", "year": 2026},
+                {"url": "https://example.invalid/2025", "title": "2025 notes", "year": 2025},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "relative.json").write_text(
+        json.dumps(["/docs/one", "/docs/two"]), encoding="utf-8"
+    )
+
+    assert check_updates._urls_from_seed_file("flat.json", []) == [
+        "https://example.invalid/a",
+        "https://example.invalid/b",
+    ]
+    assert check_updates._urls_from_seed_file("records.json", []) == [
+        "https://example.invalid/2026",
+        "https://example.invalid/2025",
+    ]
+    assert check_updates._urls_from_seed_file(
+        "relative.json", ["https://seed.invalid/start"]
+    ) == ["https://seed.invalid/docs/one", "https://seed.invalid/docs/two"]
+
+
+def test_seed_file_records_without_a_url_are_dropped(tmp_path, monkeypatch):
+    """A malformed record must not become an empty or ``None`` URL."""
+    monkeypatch.setattr(check_updates, "ROOT", tmp_path)
+    (tmp_path / "mixed.json").write_text(
+        json.dumps([{"title": "no url"}, {"url": "https://example.invalid/ok"}, ""]),
+        encoding="utf-8",
+    )
+
+    assert check_updates._urls_from_seed_file("mixed.json", []) == [
+        "https://example.invalid/ok"
+    ]

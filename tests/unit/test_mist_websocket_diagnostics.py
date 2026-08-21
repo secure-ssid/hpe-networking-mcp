@@ -138,7 +138,16 @@ def test_collect_diagnostic_decodes_nested_event_and_redacts(monkeypatch):
 
     assert out["status"] == "completed"
     assert "secret-token" not in json.dumps(out)
-    assert "[REDACTED]" in out["events"][0]["data"]["raw"]
+    # The nested "raw" blob's own "token" field is now caught by two
+    # legitimate, overlapping defenses: shared.redact_sensitive's key-based
+    # nested-blob detection (marker "******") fires first and removes the
+    # plaintext, so _redact_diagnostic_data's known-value substring pass
+    # (marker "[REDACTED]") no longer finds anything left to replace.
+    # Assert the actual security property -- the plaintext token is gone --
+    # rather than coupling to which specific marker won the race.
+    raw = out["events"][0]["data"]["raw"]
+    assert "secret-token" not in raw
+    assert "[REDACTED]" in raw or "******" in raw
 
 
 def test_collect_diagnostic_skips_malformed_messages(monkeypatch):

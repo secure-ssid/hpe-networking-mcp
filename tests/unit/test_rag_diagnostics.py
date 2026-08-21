@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import sys
 from datetime import datetime, timezone
 
 import pytest
 
-from ingestion import ingest_docs
 from hpe_networking_mcp.pipeline import artifact_contracts as contracts
 from hpe_networking_mcp.pipeline.clients import lance_client, rag_diagnostics
+from ingestion import ingest_docs
 
 
 def _write_sources(sources_dir, family: str, files: dict[str, str]) -> None:
@@ -293,3 +294,41 @@ def test_full_corpus_delta_suppresses_collect_points_stdout(tmp_path, capsys, mo
 
     captured = capsys.readouterr()
     assert captured.out == ""
+
+
+def test_ingestion_delta_works_when_repo_root_is_not_on_sys_path(tmp_path, monkeypatch):
+    """Regression guard for the fragile ``from ingestion import ingest_docs``.
+
+    The real MCP router is launched with ``PYTHONPATH=<repo>/src`` only (see
+    ``.cursor/mcp.dev.json``); under that launch, ``sys.path[0]`` is the
+    script's own directory, not the repo root, so a bare
+    ``from ingestion import ingest_docs`` raises ``ModuleNotFoundError``
+    (reproduced directly before this fix, both standalone and through this
+    exact call). Pytest's own rootdir insertion normally hides this because
+    the repo root is already on ``sys.path`` (and ``ingestion.ingest_docs``
+    already cached in ``sys.modules``) for every other test in this file --
+    so this test evicts both to prove ``_ensure_ingestion_importable()``
+    (not ambient test-runner convenience) is what makes the import succeed.
+
+    Uses the real, on-disk ``ingestion/sources`` tree rather than a fixture
+    directory: ``ingest_docs.SOURCES_DIR`` is a module-level constant on
+    whatever module object ends up cached in ``sys.modules`` after the
+    eviction below, so monkeypatching it on the pre-eviction module object
+    would silently not apply to the fresh one this test deliberately forces.
+    The four security/lifecycle raw-source folders are gitignored/regenerable
+    (see ``ingestion/sources/`` in the repo layout docs) and reliably absent
+    in a plain checkout, so every family deterministically reports
+    ``missing_source_dir`` here regardless of scrape state.
+    """
+    data_dir = tmp_path / "data"
+
+    repo_root_str = str(rag_diagnostics.ROOT)
+    monkeypatch.setattr(sys, "path", [p for p in sys.path if p not in (repo_root_str, "")])
+    for name in ("ingestion", "ingestion.ingest_docs", "ingestion.chunking"):
+        monkeypatch.delitem(sys.modules, name, raising=False)
+
+    result = rag_diagnostics.ingestion_delta(data_dir=data_dir)
+
+    assert set(result["sources"]) == set(rag_diagnostics.DELTA_SOURCE_FAMILIES)
+    for entry in result["sources"].values():
+        assert entry["status"] == "missing_source_dir"

@@ -19,9 +19,9 @@ The ArubaOS 8-to-Classic/New Central migration rows below are gated by the autho
 | RAG/OpenAPI | 12 |
 | Optional products, read-only annotated | 1,773 |
 | Optional products, guarded writes included | 3,757 |
-| **Platform API backend catalog** | **6,708** |
+| **Platform API backend catalog** | **6,711** |
 | `design-core` + `interop-core` (credential-free, no vendor API) | 12 |
-| **Complete backend catalog** | **6,722** |
+| **Complete backend catalog** | **6,726** |
 
 ## Promotion rule
 
@@ -297,7 +297,7 @@ vendor specifications and live target behavior remain authoritative.
 
 | Rank | Capability | Recommended scope | Evidence |
 |---:|---|---|---|
-| 1 | Better low-token tool ranking | Add BM25 as a deterministic ranking layer beside the current keyword and semantic passes, while retaining compact results and the read/diagnostic/write/destructive gates. Do not replace the router with an upstream generic dispatcher that exposes full schemas or weakens write controls. | [FastMCP Tool Search](https://github.com/PrefectHQ/fastmcp/blob/main/docs/servers/transforms/tool-search.mdx) |
+| 1 | Better low-token tool ranking | Add BM25 as a deterministic ranking layer beside the current keyword and semantic passes, while retaining compact results and the read/diagnostic/write/destructive gates. Do not replace the router with an upstream generic dispatcher that exposes full schemas or weakens write controls. The router already provides bounded read-only batching via `invoke_read_tool_batch`; FastMCP code-mode is not adopted because it would add a second sandbox/runtime and policy boundary without being required for the current round-trip goal. | [FastMCP Tool Search](https://github.com/PrefectHQ/fastmcp/blob/main/docs/servers/transforms/tool-search.mdx); [router dispatch strategy](tool-router.md#why-the-router-does-not-adopt-fastmcp-code-mode) |
 | 2 | Plain-language OpenAPI summaries | Add an endpoint-family summary tier between `find_tool` and exact `lookup_api` results so an agent can disambiguate a large API without loading full schemas. | [janwilmake/openapi-mcp-server](https://github.com/janwilmake/openapi-mcp-server) |
 | 3 | Generated router trajectory evals | Extend `openapi_gen` to emit framework-neutral YAML smoke cases that grade tool selection, argument construction, correctness, and hallucination across `find_tool` -> dispatch trajectories. | [cnoe-io/openapi-mcp-codegen](https://github.com/cnoe-io/openapi-mcp-codegen) |
 | 4 | Git-incremental vendor-source RAG | Index official SDKs and example repositories alongside documentation, recording repository URL and commit provenance and refreshing only changed files. | [kvncampos/nautobot_mcp](https://github.com/kvncampos/nautobot_mcp) |

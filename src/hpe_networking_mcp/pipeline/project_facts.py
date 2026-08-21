@@ -64,6 +64,11 @@ CREDENTIAL_FREE_LOCAL_SERVERS = ("design-core", "interop-core")
 #: by the REST/OpenAPI operation manifests used for platform coverage totals.
 PROTOCOL_ONLY_SERVERS = ("central-streaming",)
 
+#: Cross-platform aggregators are real registered tools, but they compose other
+#: backends rather than exposing a vendor API of their own, so they are not part
+#: of the per-platform API catalog or its capability benchmark.
+NON_PLATFORM_AGGREGATOR_SERVERS = ("site-health",)
+
 #: Curated diagnostics that intentionally inspect local configuration/cache
 #: state and make no vendor API call, even though they live beside vendor
 #: workflows in a platform backend.
@@ -287,6 +292,9 @@ def tool_facts(*, identities: dict[str, list[str]] | None = None) -> dict[str, A
     protocol_only_total = sum(
         by_server.get(server, 0) for server in PROTOCOL_ONLY_SERVERS
     )
+    aggregator_total = sum(
+        by_server.get(server, 0) for server in NON_PLATFORM_AGGREGATOR_SERVERS
+    )
     non_api_local: dict[str, int] = {}
     for server, tool_names in NON_API_LOCAL_TOOLS.items():
         registered = set(identities.get(server, []))
@@ -308,7 +316,11 @@ def tool_facts(*, identities: dict[str, list[str]] | None = None) -> dict[str, A
         },
         "non_api_local": non_api_local,
         "platform_backend_total": (
-            total - local_total - protocol_only_total - non_api_local_total
+            total
+            - local_total
+            - protocol_only_total
+            - non_api_local_total
+            - aggregator_total
         ),
         "platform_curated_total": (
             total
@@ -316,8 +328,13 @@ def tool_facts(*, identities: dict[str, list[str]] | None = None) -> dict[str, A
             - local_total
             - protocol_only_total
             - non_api_local_total
+            - aggregator_total
         ),
         "interop_tools": by_server.get("interop-core", 0),
+        "non_platform_aggregators": {
+            server: by_server.get(server, 0)
+            for server in NON_PLATFORM_AGGREGATOR_SERVERS
+        },
     }
 
 
@@ -574,10 +591,47 @@ def specs_counts(path: Path = SPECS_DB_PATH) -> dict[str, int]:
     connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     try:
         for table in SPECS_TABLES:
-            counts[table] = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            # table is always one of the hardcoded SPECS_TABLES constant
+            # above, never external/user input.
+            counts[table] = connection.execute(
+                f"SELECT COUNT(*) FROM {table}"  # nosec B608
+            ).fetchone()[0]
     finally:
         connection.close()
     return counts
+
+
+def specs_index_present(path: Path = SPECS_DB_PATH) -> bool:
+    """True when ``path`` is a real structured index, not a placeholder.
+
+    ``sqlite3.connect`` creates an empty database on first write, so a
+    zero-byte ``data/specs.sqlite`` can appear in a checkout that has no
+    corpus at all. Such a file satisfies ``is_file()`` while carrying none of
+    :data:`SPECS_TABLES`, and counting it raises ``OperationalError`` in the
+    middle of fact derivation instead of taking the documented
+    no-data-checkout path.
+
+    A file holding *some* of the expected tables is a real index that has
+    been damaged or truncated, so it stays present here and fails loudly in
+    :func:`specs_counts` rather than being silently downgraded to "absent".
+
+    Args:
+        path: The shared structured index; defaults to ``data/specs.sqlite``.
+    """
+    if not path.is_file():
+        return False
+    try:
+        connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    except sqlite3.Error:  # pragma: no cover - unreadable file
+        return False
+    try:
+        rows = connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        present = {row[0] for row in rows}
+    except sqlite3.DatabaseError:  # not a sqlite database at all
+        return False
+    finally:
+        connection.close()
+    return bool(present & set(SPECS_TABLES))
 
 
 def _column_counts(table, column: str) -> dict[str, int]:
@@ -598,11 +652,12 @@ def index_facts() -> dict[str, Any] | None:
     """
     from hpe_networking_mcp.pipeline.clients import lance_client
 
-    if not SPECS_DB_PATH.is_file() and not (DATA_DIR / "docs.lance").is_dir():
+    specs_present = specs_index_present()
+    if not specs_present and not (DATA_DIR / "docs.lance").is_dir():
         return None
 
     facts: dict[str, Any] = {"data_dir": "data"}
-    if SPECS_DB_PATH.is_file():
+    if specs_present:
         facts["specs_sqlite"] = specs_counts()
     db = lance_client.connect(DATA_DIR)
     docs = lance_client.docs_table(db)

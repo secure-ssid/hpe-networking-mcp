@@ -28,8 +28,10 @@ configurable, deterministic response item/byte budget (see
 _bound_router_response / HPE_MCP_ROUTER_RESPONSE_MAX_ITEMS /
 HPE_MCP_ROUTER_RESPONSE_MAX_BYTES) and plan_tool_workflow /
 plan_reconciliation_schedule provide read-only, catalog-backed dependency
-ordering and recurring-reconciliation planning (src/hpe_networking_mcp/pipeline/router_automation.py)
-without ever executing a tool. evaluate_compliance_policy (src/hpe_networking_mcp/pipeline/compliance.py)
+ordering and recurring-reconciliation planning
+(src/hpe_networking_mcp/pipeline/router_automation.py) without ever executing
+a tool. evaluate_compliance_policy
+(src/hpe_networking_mcp/pipeline/compliance.py)
 evaluates already-retrieved observations against a bounded, declarative
 policy (fixed operator dispatch, no eval/exec) and never dispatches a tool
 either.
@@ -83,6 +85,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
 from hpe_networking_mcp.pipeline import artifact_contracts as _artifact_contracts
 from hpe_networking_mcp.pipeline import compliance as _compliance
 from hpe_networking_mcp.pipeline import router_automation as _router_automation
+from hpe_networking_mcp.pipeline.clients import error_help as _error_help
 
 _BACKEND = resolve_rag_backend()
 _ROUTER_MODE = os.getenv("HPE_MCP_ROUTER_MODE", "default").strip().lower()
@@ -100,6 +103,7 @@ if _BACKEND == "redis":
         from hpe_networking_mcp.pipeline.clients.redis_client import (
             search_tools as _search_tools,
         )
+
         _redis_tools = _get_redis()
         _redis_tools.ping()
     except Exception:
@@ -122,6 +126,7 @@ _BACKENDS_BASE = {
     "central-nac": "hpe_networking_mcp.mcp_servers.nac",
     "central-ops": "hpe_networking_mcp.mcp_servers.ops",
     "central-streaming": "hpe_networking_mcp.mcp_servers.central_streaming",
+    "site-health": "hpe_networking_mcp.mcp_servers.site_health",
     "glp-core": "hpe_networking_mcp.mcp_servers.glp",
     "rag-core": "hpe_networking_mcp.mcp_servers.rag",
 }
@@ -155,13 +160,11 @@ _SERVER_PLATFORMS = {
     "central-nac": "central",
     "central-ops": "central",
     "central-streaming": "central",
+    "site-health": "cross-platform",
     "central-generated": "central",
     "glp-core": "glp",
     "rag-core": "rag",
-    **{
-        server_name: product
-        for product, (server_name, _) in _OPTIONAL_BACKENDS.items()
-    },
+    **{server_name: product for product, (server_name, _) in _OPTIONAL_BACKENDS.items()},
 }
 _TOOLSET_BACKENDS = {
     "config": {"central-config"},
@@ -176,7 +179,9 @@ _TOOLSET_BACKENDS = {
         "central-nac",
         "central-ops",
         "central-streaming",
+        "site-health",
     },
+    "site-health": {"site-health"},
     "central-generated": {"central-generated"},
     "interop": {"interop-core"},
     "clearpass": {"clearpass-core"},
@@ -196,6 +201,81 @@ _TOOLSET_BACKENDS = {
 # valid HPE_MCP_PRODUCTS value.
 _VALID_TOOLSETS = frozenset(_TOOLSET_BACKENDS) | {"all"}
 _VALID_PRODUCTS = frozenset(_OPTIONAL_BACKENDS)
+
+# -- Unknown-tool "platform not configured" detection ------------------------
+#
+# Every optional product except "design" uses its own product key as a
+# "<product>_" tool-name prefix -- verified against each backend's own
+# @mcp.tool()-registered function names, not assumed: mist_status/mist_get/...,
+# clearpass_status/clearpass_get/..., apstra_status/apstra_login/...,
+# aos8_status/aos8_login/..., edgeconnect_status/edgeconnect_doctor/...,
+# uxi_status/uxi_get/..., and axis_create_*/axis_update_*/axis_delete_*/...
+# (manifest-generated; see axis.py's module docstring). "design" is
+# deliberately excluded: its tools (list_diagram_icons,
+# drawio_network_design_diagram, export_graphviz_topology, ...) don't share a
+# "design_" prefix, so a "design_..." guess has no real tool to disambiguate
+# against and is left to the ordinary fuzzy-suggestion fallback instead.
+#
+# Derived from _OPTIONAL_BACKENDS -- never a second hand-typed product list --
+# so a newly added optional product is covered automatically unless opted out
+# here, and "is this product enabled" always reads the same _BACKENDS every
+# other gate in this module already checks.
+_PREFIXLESS_OPTIONAL_PRODUCTS = frozenset({"design"})
+_OPTIONAL_PRODUCT_TOOL_PREFIXES: dict[str, str] = {
+    product: f"{product}_"
+    for product in _OPTIONAL_BACKENDS
+    if product not in _PREFIXLESS_OPTIONAL_PRODUCTS
+}
+#: Cosmetic display name only -- never used for gating/env-var logic (that is
+#: always the lowercase product key itself, e.g. HPE_MCP_PRODUCTS=mist).
+#: tests/unit/test_tool_router_backends.py asserts this covers every key in
+#: _OPTIONAL_PRODUCT_TOOL_PREFIXES, so a newly added prefixed product can't
+#: silently ship an unlabeled hint.
+_OPTIONAL_PRODUCT_LABELS: dict[str, str] = {
+    "clearpass": "ClearPass",
+    "mist": "Mist",
+    "apstra": "Apstra",
+    "aos8": "ArubaOS 8",
+    "edgeconnect": "EdgeConnect",
+    "uxi": "UXI",
+    "axis": "Axis",
+}
+
+
+def _unconfigured_platform_hint(name: str) -> dict[str, Any] | None:
+    """Classify an unresolved tool ``name`` against known optional-product prefixes.
+
+    Returns a structured ``platform_not_configured`` payload when ``name``
+    starts with a recognized optional product's tool-name prefix (``mist_``,
+    ``clearpass_``, ``apstra_``, ``aos8_``, ``edgeconnect_``, ``uxi_``,
+    ``axis_``) *and* that product's backend is not currently loaded (see
+    ``_BACKENDS``) -- the caller is very likely reaching for a real, gated
+    capability rather than a name that doesn't exist anywhere.
+
+    Returns ``None`` when ``name`` doesn't match any known prefix, or when it
+    does but the backend IS already loaded: a genuine typo against an
+    already-enabled platform still wants the ordinary fuzzy-suggestion
+    fallback, not this hint.
+    """
+    lowered = name.lower()
+    for product, prefix in _OPTIONAL_PRODUCT_TOOL_PREFIXES.items():
+        if not lowered.startswith(prefix):
+            continue
+        server_name, _module_path = _OPTIONAL_BACKENDS[product]
+        if server_name in _BACKENDS:
+            return None
+        label = _OPTIONAL_PRODUCT_LABELS.get(product, product)
+        return {
+            "reason": "platform_not_configured",
+            "platform": product,
+            "hint": (
+                f"The '{product}' backend is not currently enabled. Set "
+                f"HPE_MCP_PRODUCTS={product} (or include it in "
+                f"HPE_MCP_TOOLSETS) and configure {label} credentials, then "
+                "restart the server."
+            ),
+        }
+    return None
 
 
 def _csv_env(name: str) -> list[str]:
@@ -336,8 +416,7 @@ def _contract_next_action(
         if dry_run_state == "preview":
             confirm_arg = " and confirm=true" if supports_confirm else ""
             return (
-                "Review the preview, then call invoke_tool again with "
-                f"dry_run=false{confirm_arg}."
+                f"Review the preview, then call invoke_tool again with dry_run=false{confirm_arg}."
             )
         return "No further safety action is required; review the backend result."
 
@@ -347,8 +426,7 @@ def _contract_next_action(
         return "Call invoke_tool with confirm=true after explicit user approval."
     if capability == "destructive":
         return (
-            "Call invoke_tool after explicit user approval; the backend confirmation "
-            "flow will run."
+            "Call invoke_tool after explicit user approval; the backend confirmation flow will run."
         )
     return "Call invoke_tool only after explicit user intent."
 
@@ -379,9 +457,7 @@ def _execution_contract(
         dry_run_state=dry_run_state,
         supports_confirm=supports_confirm,
         requires_confirmation=requires_confirmation,
-        idempotent=bool(
-            getattr(getattr(tool, "annotations", None), "idempotent_hint", False)
-        ),
+        idempotent=bool(getattr(getattr(tool, "annotations", None), "idempotent_hint", False)),
         next_action=_contract_next_action(
             platform=platform,
             capability=capability,
@@ -397,18 +473,15 @@ def _execution_contract(
 
 def _discovery_metadata(tool: Any, server: str | None, schema: dict[str, Any]) -> dict[str, Any]:
     capability = _tool_capability(tool)
-    generated = _generated_records().get(str(getattr(tool, "name", "")))
+    generated = _generated_record_for(str(getattr(tool, "name", "")))
     properties = schema.get("properties") or {}
     supports_confirm = "confirm" in properties
     metadata = {
         "platform": _server_platform(server),
         "capability": capability,
-        "recommended_dispatcher": (
-            "invoke_read_tool" if capability == "read" else "invoke_tool"
-        ),
+        "recommended_dispatcher": ("invoke_read_tool" if capability == "read" else "invoke_tool"),
         "requires_write_enablement": capability in {"write", "destructive"},
-        "currently_enabled": bool(server in _BACKENDS)
-        and _write_is_enabled(server, capability),
+        "currently_enabled": bool(server in _BACKENDS) and _write_is_enabled(server, capability),
         "supports_dry_run": "dry_run" in properties,
         "supports_confirm": supports_confirm,
         "requires_confirmation": capability == "destructive"
@@ -498,8 +571,7 @@ def _build_backends() -> dict[str, str]:
     reject_unknown_env_choices("HPE_MCP_PRODUCTS", products, _VALID_PRODUCTS)
 
     optional_by_server = {
-        server_name: module_path
-        for server_name, module_path in _OPTIONAL_BACKENDS.values()
+        server_name: module_path for server_name, module_path in _OPTIONAL_BACKENDS.values()
     }
     all_backends = {
         **_BACKENDS_BASE,
@@ -564,6 +636,7 @@ def _generated_records() -> dict[str, dict[str, Any]]:
     if _generated_tool_records is not None:
         return _generated_tool_records
     from hpe_networking_mcp.mcp_servers.openapi_gen.manifest import MANIFEST_DIR
+    from hpe_networking_mcp.mcp_servers.openapi_gen.naming import digest
 
     records: dict[str, dict[str, Any]] = {}
     for path in sorted(MANIFEST_DIR.glob("*.json")):
@@ -574,13 +647,45 @@ def _generated_records() -> dict[str, dict[str, Any]]:
         for operation in manifest.get("operations") or []:
             if not isinstance(operation, dict) or not operation.get("name"):
                 continue
-            records[str(operation["name"])] = {
+            name = str(operation["name"])
+            # ``register_generated_tools`` renames a generated tool to
+            # ``<name>_g<digest>`` when a *curated* tool already owns
+            # ``<name>`` (openapi_gen/runtime.py). Index that collision alias
+            # too, and remember it, so provenance follows the tool that was
+            # actually registered instead of being pinned to the manifest
+            # name the curated tool kept.
+            op_digest = digest(str(operation.get("method") or ""), str(operation.get("path") or ""))
+            alias = f"{name}_g{op_digest}"
+            record = {
                 "operation_id": operation.get("operation_id"),
                 "operation_key": operation.get("key"),
                 "manifest_platform": path.stem,
+                "_collision_alias": alias,
             }
+            records[name] = record
+            records[alias] = record
     _generated_tool_records = records
     return records
+
+
+def _generated_record_for(name: str) -> dict[str, Any] | None:
+    """Manifest provenance for ``name``, or None when ``name`` is curated.
+
+    A generated operation whose preferred name collides with a curated tool
+    is registered under ``<name>_g<digest>``; the curated tool keeps the
+    plain manifest name. Matching on the manifest name alone therefore
+    reports the curated tool as "generated" (with the generated
+    operation_id) and the real generated tool as "curated". When the
+    collision alias is itself registered, the plain name belongs to the
+    curated tool and carries no generated provenance.
+    """
+    record = _generated_records().get(name)
+    if record is None:
+        return None
+    alias = record.get("_collision_alias")
+    if alias and alias != name and alias in _tool_index:
+        return None
+    return {key: value for key, value in record.items() if key != "_collision_alias"}
 
 
 def _load_all_backends() -> None:
@@ -618,9 +723,7 @@ def _load_all_backends() -> None:
             backend_tools = list(mod.mcp._tool_manager._tools.items())
         except Exception as exc:
             errors[server_name] = f"{type(exc).__name__}: {exc}"
-            logger.warning(
-                "backend %s (%s) failed to load: %s", server_name, module_path, exc
-            )
+            logger.warning("backend %s (%s) failed to load: %s", server_name, module_path, exc)
             continue
         for name, tool in backend_tools:
             if _optional_write_disabled(name, tool, server_name):
@@ -687,10 +790,39 @@ def _register_direct_backend_tools(target: MCPServer | None = None) -> list[str]
 # ── find_tool ────────────────────────────────────────────────────────────────
 
 # Common verbs that also appear in tool names — don't let them dominate overlap.
-_STOPWORDS = {"list", "get", "set", "find", "the", "a", "an", "of", "for", "to",
-              "on", "at", "in", "and", "or", "all", "one", "new", "show", "view",
-              "with", "from", "into", "via", "use", "using", "please", "make",
-              "create", "build", "generate"}
+_STOPWORDS = {
+    "list",
+    "get",
+    "set",
+    "find",
+    "the",
+    "a",
+    "an",
+    "of",
+    "for",
+    "to",
+    "on",
+    "at",
+    "in",
+    "and",
+    "or",
+    "all",
+    "one",
+    "new",
+    "show",
+    "view",
+    "with",
+    "from",
+    "into",
+    "via",
+    "use",
+    "using",
+    "please",
+    "make",
+    "create",
+    "build",
+    "generate",
+}
 
 # Distinctive scope/identity terms. Used only to boost a name-overlapping hit
 # whose schema actually accepts the same parameter — never as sole evidence.
@@ -707,9 +839,7 @@ def _query_tokens(query: str) -> set[str]:
     import re
 
     lowered = query.lower()
-    spaced = (
-        lowered.replace("_", " ").replace("-", " ").replace("/", " ").replace(".", " ")
-    )
+    spaced = lowered.replace("_", " ").replace("-", " ").replace("/", " ").replace(".", " ")
     tokens: set[str] = set()
     for raw in spaced.split():
         w = "".join(ch for ch in raw if ch.isalnum())
@@ -1004,18 +1134,13 @@ def find_tool(
                 continue
             if _readonly_blocks(tool):
                 continue
-            if (
-                hit_server in _OPTIONAL_SERVER_NAMES
-                and _optional_write_disabled(name, tool, hit_server)
+            if hit_server in _OPTIONAL_SERVER_NAMES and _optional_write_disabled(
+                name, tool, hit_server
             ):
                 continue
             indexed_schema = json.loads(h.get("schema_json") or "{}")
             published_schema = getattr(tool, "parameters", None)
-            schema = (
-                published_schema
-                if isinstance(published_schema, dict)
-                else indexed_schema
-            )
+            schema = published_schema if isinstance(published_schema, dict) else indexed_schema
             metadata = _discovery_metadata(tool, hit_server, schema)
             candidate = {
                 "name": name,
@@ -1244,9 +1369,7 @@ def _decode_and_verify_continuation_cursor(
         raise CursorError("cursor is malformed") from exc
     expected_signature = _sign_cursor_payload(payload_bytes)
     if not hmac.compare_digest(signature_bytes, expected_signature):
-        raise CursorError(
-            "cursor signature is invalid (tampered, or the server process restarted)"
-        )
+        raise CursorError("cursor signature is invalid (tampered, or the server process restarted)")
     try:
         payload = json.loads(payload_bytes.decode("utf-8"))
     except Exception as exc:
@@ -1333,9 +1456,7 @@ def _bound_router_response(
     if not isinstance(result, (dict, list)):
         return result
 
-    requested_items_budget = (
-        max_items if max_items is not None else _response_budget_items()
-    )
+    requested_items_budget = max_items if max_items is not None else _response_budget_items()
     items_budget = max(1, min(requested_items_budget, MAX_LIST_LIMIT))
     bytes_budget = max_bytes if max_bytes is not None else _response_budget_bytes()
     resume_offset = max(0, int(offset or 0))
@@ -1355,11 +1476,7 @@ def _bound_router_response(
     size = _json_byte_size(result)
     remaining_count = max(0, item_count - resume_offset)
     item_overflow = remaining_count > items_budget
-    byte_overflow = (
-        resume_offset == 0
-        and size is not None
-        and size > bytes_budget
-    )
+    byte_overflow = resume_offset == 0 and size is not None and size > bytes_budget
     needs_paging = item_overflow or byte_overflow or resume_offset > 0
     if not needs_paging:
         return result
@@ -1375,9 +1492,10 @@ def _bound_router_response(
         )
         marker["resumable"] = False
         marker["resumable_reason"] = "no_sliceable_collection"
-        return {"_response_bounds": marker, "preview": raw[:bytes_budget].decode(
-            "utf-8", errors="replace"
-        )}
+        return {
+            "_response_bounds": marker,
+            "preview": raw[:bytes_budget].decode("utf-8", errors="replace"),
+        }
 
     limit = items_budget
     page = bound_collection_response(result, limit=limit, offset=resume_offset)
@@ -1405,14 +1523,13 @@ def _bound_router_response(
         )
         marker["resumable"] = False
         marker["resumable_reason"] = "single_item_exceeds_byte_budget"
-        return {"_response_bounds": marker, "preview": raw[:bytes_budget].decode(
-            "utf-8", errors="replace"
-        )}
+        return {
+            "_response_bounds": marker,
+            "preview": raw[:bytes_budget].decode("utf-8", errors="replace"),
+        }
 
     slice_key = "items" if isinstance(result, list) else primary_key
-    actual_count = (
-        len(page.get(slice_key, [])) if isinstance(page, dict) and slice_key else 0
-    )
+    actual_count = len(page.get(slice_key, [])) if isinstance(page, dict) and slice_key else 0
     next_offset = resume_offset + actual_count
     pagination = page.get("_pagination") if isinstance(page, dict) else None
     truncated_by_items = bool(pagination and pagination.get("truncated"))
@@ -1499,7 +1616,29 @@ async def _await_dispatch_rate_gate() -> None:
 
 # ── invoke_read_tool / invoke_tool ───────────────────────────────────────────
 
+
 def _unknown_tool_error(name: str) -> dict[str, Any]:
+    """Structured 'tool not found' response shared by invoke_tool/invoke_read_tool.
+
+    Distinguishes a name that matches a known-but-disabled optional-product
+    prefix (``reason: "platform_not_configured"``, see
+    ``_unconfigured_platform_hint``) from a genuine typo/unknown name, which
+    keeps the original flat message (optionally decorated with
+    ``backend_load_errors`` when an *enabled* backend failed to import).
+    """
+    platform_hint = _unconfigured_platform_hint(name)
+    if platform_hint is not None:
+        # Recognized optional-product prefix, backend not loaded at all -- a
+        # configuration gap, not a typo. backend_load_errors is intentionally
+        # not attached here: that field means a backend WAS selected but
+        # failed to import, a different failure mode than "never selected".
+        return {
+            "error": f"Unknown tool: {name}",
+            "tool": name,
+            "status": "unknown_tool",
+            **platform_hint,
+            "suggestions": [],
+        }
     error: dict[str, Any] = {
         "error": f"Unknown tool '{name}'. Use find_tool to discover.",
         "tool": name,
@@ -2058,17 +2197,13 @@ if _ROUTER_MODE != "minimal":
         body -- and is itself clipped to the budget.
         """
         skeleton = [
-            {"index": item["index"], "id": item["id"], "status": item["status"]}
-            for item in items
+            {"index": item["index"], "id": item["id"], "status": item["status"]} for item in items
         ]
         while skeleton and _batch_items_byte_size(skeleton) > byte_budget // 2:
             skeleton.pop()
         return {
             "ok": False,
-            "error": (
-                "batch response exceeded the "
-                f"{byte_budget}-byte budget; results omitted"
-            ),
+            "error": (f"batch response exceeded the {byte_budget}-byte budget; results omitted"),
             "results": skeleton,
             "results_omitted": len(items) - len(skeleton),
             "counts": counts,
@@ -2141,8 +2276,7 @@ if _ROUTER_MODE != "minimal":
             return {
                 "ok": False,
                 "error": (
-                    f"calls has {len(calls)} entries, exceeding the "
-                    f"{MAX_BATCH_CALLS}-entry bound"
+                    f"calls has {len(calls)} entries, exceeding the {MAX_BATCH_CALLS}-entry bound"
                 ),
             }
 
@@ -2165,9 +2299,7 @@ if _ROUTER_MODE != "minimal":
         items: list[dict[str, Any]] = []
         for index, raw_call in enumerate(calls):
             items.append(
-                await _dispatch_one_batch_call(
-                    ctx, index, raw_call, item_max_bytes=item_budget
-                )
+                await _dispatch_one_batch_call(ctx, index, raw_call, item_max_bytes=item_budget)
             )
 
         succeeded = sum(1 for item in items if item["status"] == "ok")
@@ -2180,13 +2312,9 @@ if _ROUTER_MODE != "minimal":
         failed_ids = [item["id"] for item in failed_items]
         failed_indexes = [item["index"] for item in failed_items]
 
-        shrunk, truncated = _shrink_batch_items_for_budget(
-            items, byte_budget=byte_budget
-        )
+        shrunk, truncated = _shrink_batch_items_for_budget(items, byte_budget=byte_budget)
         if _batch_items_byte_size(shrunk) > byte_budget:
-            return _batch_overflow_envelope(
-                items, counts, failed_ids, failed_indexes, byte_budget
-            )
+            return _batch_overflow_envelope(items, counts, failed_ids, failed_indexes, byte_budget)
 
         return {
             "ok": not failed_items,
@@ -2203,6 +2331,7 @@ if _ROUTER_MODE != "minimal":
 # default mode: include convenience wrappers (list_sites/find_device/etc.)
 # minimal mode: expose only find_tool + invoke_read_tool + invoke_tool to minimize tool-list tokens
 if _ROUTER_MODE != "minimal" and "central-monitoring" in _BACKENDS:
+
     @_dispatching_wrapper_tool(READ_ONLY)
     async def list_scopes(
         ctx: Context, limit: int = 100, offset: int = 0, full_list: bool = False
@@ -2212,34 +2341,25 @@ if _ROUTER_MODE != "minimal" and "central-monitoring" in _BACKENDS:
             ctx, "list_scopes", {"limit": limit, "offset": offset, "full_list": full_list}
         )
 
-
     @_dispatching_wrapper_tool(READ_ONLY)
     async def get_global_scope_id(ctx: Context) -> dict[str, Any]:
         """Return the global (org-wide) scope-id."""
         return await invoke_tool(ctx, "get_global_scope_id")
 
-
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def list_sites(
-        ctx: Context, limit: int = 50, offset: int = 0
-    ) -> dict[str, Any]:
+    async def list_sites(ctx: Context, limit: int = 50, offset: int = 0) -> dict[str, Any]:
         """List sites (paginated)."""
         return await invoke_tool(ctx, "list_sites", {"limit": limit, "offset": offset})
 
-
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def list_devices(
-        ctx: Context, limit: int = 50, offset: int = 0
-    ) -> dict[str, Any]:
+    async def list_devices(ctx: Context, limit: int = 50, offset: int = 0) -> dict[str, Any]:
         """List devices (paginated)."""
         return await invoke_tool(ctx, "list_devices", {"limit": limit, "offset": offset})
-
 
     @_dispatching_wrapper_tool(READ_ONLY)
     async def find_device(ctx: Context, query: str) -> dict[str, Any]:
         """Find a device by serial number."""
         return await invoke_tool(ctx, "find_device", {"serial_number": query})
-
 
     @_dispatching_wrapper_tool(READ_ONLY)
     async def find_client(ctx: Context, query: str) -> dict[str, Any]:
@@ -2248,16 +2368,25 @@ if _ROUTER_MODE != "minimal" and "central-monitoring" in _BACKENDS:
 
 
 if _ROUTER_MODE != "minimal" and "rag-core" in _BACKENDS:
+
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def ask_docs(ctx: Context, query: str, top_k: int = 5) -> Any:
+    async def ask_docs(
+        ctx: Context,
+        query: str,
+        top_k: int = 5,
+        context: str | None = None,
+    ) -> Any:
         """Ask Aruba/HPE docs for a compact cited answer.
 
         Use this for prose/how-to questions when you want a short answer instead
-        of raw retrieval hits. Exact endpoint/schema questions should still use
-        lookup_api first.
+        of raw retrieval hits. For an ambiguous follow-up, pass a short summary
+        of the prior turn in `context`. Exact endpoint/schema questions should
+        still use lookup_api first.
         """
-        return await invoke_tool(ctx, "ask_docs", {"question": query, "top_k": top_k})
-
+        args: dict[str, Any] = {"question": query, "top_k": top_k}
+        if context:
+            args["context"] = context
+        return await invoke_tool(ctx, "ask_docs", args)
 
     @_dispatching_wrapper_tool(READ_ONLY)
     async def search_docs(
@@ -2276,9 +2405,16 @@ if _ROUTER_MODE != "minimal" and "rag-core" in _BACKENDS:
             args["source"] = source
         return await invoke_tool(ctx, "search_docs", args)
 
-
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def lookup_api(ctx: Context, query: str, top_k: int = 10) -> Any:
+    async def lookup_api(
+        ctx: Context,
+        query: str,
+        top_k: int = 10,
+        source: str | None = None,
+        platform: str | None = None,
+        version: str | None = None,
+        include_metadata: bool = False,
+    ) -> Any:
         """Exact Aruba Central API lookup — endpoints, schemas, fields, enum values.
 
         Use INSTEAD of search_docs for "what enum values does field X accept",
@@ -2287,7 +2423,17 @@ if _ROUTER_MODE != "minimal" and "rag-core" in _BACKENDS:
         Returns [] when the specs hold no confident answer — fall back to
         search_docs in that case.
         """
-        return await invoke_tool(ctx, "lookup_api", {"query": query, "top_k": top_k})
+        args: dict[str, Any] = {"query": query, "top_k": top_k}
+        for key, value in (
+            ("source", source),
+            ("platform", platform),
+            ("version", version),
+        ):
+            if value:
+                args[key] = value
+        if include_metadata:
+            args["include_metadata"] = True
+        return await invoke_tool(ctx, "lookup_api", args)
 
     @_dispatching_wrapper_tool(READ_ONLY)
     async def list_skills(
@@ -2307,7 +2453,6 @@ if _ROUTER_MODE != "minimal" and "rag-core" in _BACKENDS:
     async def load_skill(ctx: Context, name: str) -> Any:
         """Load one skill runbook body by name from rag-core."""
         return await invoke_tool(ctx, "load_skill", {"name": name})
-
 
 
 # ── Router automation: dependency planning + reconciliation scheduling ──────
@@ -2360,9 +2505,7 @@ if _ROUTER_MODE != "minimal":
         if not candidates:
             return None, False, False, []
         top_score = candidates[0].get("score", 0.0)
-        close = [
-            c for c in candidates if top_score - c.get("score", 0.0) <= _PLAN_AMBIGUITY_MARGIN
-        ]
+        close = [c for c in candidates if top_score - c.get("score", 0.0) <= _PLAN_AMBIGUITY_MARGIN]
         ambiguous = len(close) > 1
         return candidates[0]["name"], True, ambiguous, candidates
 
@@ -2811,9 +2954,7 @@ BATCH_MULTI_LABEL = "batch_multi"
 
 #: Router tools whose real dispatch target lives in their arguments. Kept in
 #: sync with ``hpe_networking_mcp.mcp_servers._middleware.audit_log._DISPATCHING_TOOL_NAMES``.
-_DISPATCHING_ROUTER_TOOLS = frozenset(
-    {"invoke_tool", "invoke_read_tool", "invoke_read_tool_batch"}
-)
+_DISPATCHING_ROUTER_TOOLS = frozenset({"invoke_tool", "invoke_read_tool", "invoke_read_tool_batch"})
 
 #: Hard cap on how many batch entries label resolution will inspect. Matches
 #: the batch bound in default mode, and stays defined in minimal mode (where
@@ -2862,9 +3003,7 @@ def _router_call_labels(name: str, arguments: dict[str, Any]) -> tuple[str, str,
         targets = _batch_call_targets(arguments)
         if targets:
             distinct = sorted(set(targets))
-            backends = sorted(
-                {_tool_backend_names.get(target, "router") for target in targets}
-            )
+            backends = sorted({_tool_backend_names.get(target, "router") for target in targets})
             tool_label = distinct[0] if len(distinct) == 1 else BATCH_MULTI_LABEL
             backend_label = backends[0] if len(backends) == 1 else BATCH_MULTI_LABEL
             # Every dispatched entry is annotation-gated read-only.
@@ -2887,6 +3026,15 @@ def _router_call_target(name: str, arguments: dict[str, Any]) -> str | None:
         return None
     target, backend, _capability = _router_call_labels(name, arguments)
     return target if backend != "router" else "unknown"
+
+
+def _reactive_error_hint(
+    tool_name: str, status_code: int | None, platform: str | None
+) -> str | None:
+    """``ResponseEnvelopeMiddleware`` hint resolver -- thin glue to
+    ``error_help.reactive_hint`` so ``_middleware/response_envelope.py``
+    stays router-agnostic (it never imports ``tool_router`` itself)."""
+    return _error_help.reactive_hint(tool_name, status_code, platform=platform)
 
 
 def _suggest_router_tool(name: str, limit: int) -> list[dict[str, Any]]:
@@ -2947,8 +3095,13 @@ def build_router_middlewares() -> list[Any]:
         UnknownToolSuggestMiddleware(
             lambda: mcp._tool_manager._tools,
             suggestion_provider=_suggest_router_tool,
+            platform_hint_resolver=_unconfigured_platform_hint,
         ),
-        ResponseEnvelopeMiddleware(),
+        ResponseEnvelopeMiddleware(
+            label_resolver=_router_call_labels,
+            platform_resolver=_server_platform,
+            hint_resolver=_reactive_error_hint,
+        ),
         SecretTokenizeMiddleware(),
         # PII tokenization (opt-in via HPE_MCP_TOKENIZE_PII) must be installed
         # here too, not only on central-nac/clearpass-core: router dispatch

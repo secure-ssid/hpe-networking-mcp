@@ -1,5 +1,4 @@
 {
-  "_comment": "Non-loopback streamable HTTP profile, protected with host/origin allow-lists and a bearer token. The server refuses to start on a non-loopback MCP_HOST without both MCP_ALLOWED_HOSTS and MCP_ALLOWED_ORIGINS set (see bearer.server.env in this folder). Replace mcp.example.test and the token placeholder with real values -- never commit a real bearer token.",
   "mcpServers": {
     "hpe-networking-mcp-http": {
       "url": "https://mcp.example.test:8010/mcp",

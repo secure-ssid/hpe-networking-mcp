@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ingestion import ingest_docs
 from hpe_networking_mcp.pipeline.clients import lance_client
+from ingestion import ingest_docs
 
 
 def _row(doc_id: str, text: str, content_hash: str) -> dict:
@@ -13,7 +13,10 @@ def _row(doc_id: str, text: str, content_hash: str) -> dict:
         "file_path": "docs/example.md",
         "chunk_index": 0,
         "content_hash": content_hash,
+        "source_url": "https://example.com/docs/example",
+        "heading_breadcrumb": "Example",
         "vector": [0.0, 0.0],
+        **{field: "" for field in ingest_docs.RAG_METADATA_FIELDS},
     }
 
 
@@ -61,9 +64,7 @@ def test_invalid_incremental_delete_id_is_rejected(tmp_path):
         raise AssertionError("invalid ID was accepted")
 
 
-def test_incremental_upload_deletes_chunks_for_removed_source_directory(
-    tmp_path, monkeypatch
-):
+def test_incremental_upload_deletes_chunks_for_removed_source_directory(tmp_path, monkeypatch):
     """A full-corpus incremental run must sweep up stale chunks left behind
     when an entire known source directory is deleted or renamed on disk,
     even though nothing in the current run names that source explicitly."""
@@ -91,6 +92,9 @@ def test_incremental_upload_deletes_chunks_for_removed_source_directory(
         "file_path": "docs/example.md",
         "chunk_index": 0,
         "content_hash": "kept-hash",
+        "source_url": "https://example.com/docs/example",
+        "heading_breadcrumb": "Example",
+        **{field: "" for field in ingest_docs.RAG_METADATA_FIELDS},
     }
 
     result = ingest_docs.upload_lancedb_incremental([current_record], ["kept_source"])
@@ -109,12 +113,13 @@ def _source_record(doc_id: str, source: str, content_hash: str) -> dict:
         "file_path": f"{source}/x.md",
         "chunk_index": 0,
         "content_hash": content_hash,
+        "source_url": f"https://example.com/{source}",
+        "heading_breadcrumb": "Example",
+        **{field: "" for field in ingest_docs.RAG_METADATA_FIELDS},
     }
 
 
-def test_incremental_preserves_rows_for_known_source_absent_this_run(
-    tmp_path, monkeypatch
-):
+def test_incremental_preserves_rows_for_known_source_absent_this_run(tmp_path, monkeypatch):
     """A SOURCE_META source whose directory is simply not present this run (a
     partial local checkout) must have its indexed rows preserved, not swept —
     only a run that actually walked the source may delete from it."""
@@ -134,18 +139,14 @@ def test_incremental_preserves_rows_for_known_source_absent_this_run(
     # must survive.
     present_record = _source_record(present_id, "developer_docs", "present-hash")
 
-    result = ingest_docs.upload_lancedb_incremental(
-        [present_record], ["developer_docs"]
-    )
+    result = ingest_docs.upload_lancedb_incremental([present_record], ["developer_docs"])
 
     assert result is True
     remaining = {row["id"] for row in lance_client.docs_metadata(db)}
     assert remaining == {present_id, absent_id}
 
 
-def test_incremental_sweeps_retired_source_but_preserves_known_absent(
-    tmp_path, monkeypatch
-):
+def test_incremental_sweeps_retired_source_but_preserves_known_absent(tmp_path, monkeypatch):
     """Only a source no longer in SOURCE_META (truly retired) is swept when
     nothing this run names it; a known-but-absent SOURCE_META source is
     preserved in the same run."""
@@ -163,9 +164,7 @@ def test_incremental_sweeps_retired_source_but_preserves_known_absent(
 
     present_record = _source_record(present_id, "developer_docs", "p-hash")
 
-    result = ingest_docs.upload_lancedb_incremental(
-        [present_record], ["developer_docs"]
-    )
+    result = ingest_docs.upload_lancedb_incremental([present_record], ["developer_docs"])
 
     assert result is True
     remaining = {row["id"] for row in lance_client.docs_metadata(db)}

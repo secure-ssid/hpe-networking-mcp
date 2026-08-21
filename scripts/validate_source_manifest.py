@@ -7,8 +7,8 @@ a scraper path that no longer exists, an `output_dir` that doesn't follow
 the `ingestion/sources/<source>` convention, a source missing from
 `ingest_docs.py`'s `SOURCE_META`, or duplicate source keys.
 
-Exits non-zero on any FAIL. WARN-level issues (e.g. a source not yet wired
-into `rag.py`'s `_DOC_TYPE_TO_SOURCE`) are reported but don't fail the run.
+Exits non-zero on any FAIL. Deferred scraper gaps must be explicitly
+allowlisted below; unregistered scrapers or RAG doc_type mappings fail loudly.
 
 Usage:
     python scripts/validate_source_manifest.py
@@ -30,6 +30,21 @@ RAG_PY_PATH = ROOT / "src" / "hpe_networking_mcp" / "mcp_servers" / "rag.py"
 
 REQUIRED_FIELDS = ("source", "doc_type", "purpose", "seed_urls", "output_dir", "notes")
 
+# Declared source folders with no reproducible scraper yet. These sources are
+# still useful in the manifest because manually exported files under
+# ingestion/sources/<source> can be ingested, but the lack of a scraper is an
+# explicit deferred implementation item rather than an unexplained warning.
+SCRAPER_PENDING: dict[str, str] = {}
+
+# Sources refreshed by one shared orchestrated scraper step in
+# scripts/refresh_rag_sources.py instead of one per-source scraper command.
+SHARED_SCRAPER: dict[str, str] = {
+    "security_advisories": "ingestion/scrape_security_lifecycle.py",
+    "lifecycle_notices": "ingestion/scrape_security_lifecycle.py",
+    "juniper_lifecycle": "ingestion/scrape_security_lifecycle.py",
+    "juniper_security_advisories": "ingestion/scrape_security_lifecycle.py",
+}
+
 #: Valid values for an entry's ``extra_script_phases`` map: "pre" runs the
 #: script before its scraper (URL discovery), "post" after it.
 EXTRA_SCRIPT_PHASES = ("pre", "post")
@@ -42,7 +57,20 @@ class Check:
     detail: str
 
 
-def _load_dict_literal(path: Path, dict_name: str) -> dict[str, str] | None:
+def _literal_string_or_strings(node: ast.AST) -> str | tuple[str, ...] | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, (ast.Tuple, ast.List)):
+        values: list[str] = []
+        for item in node.elts:
+            if not isinstance(item, ast.Constant) or not isinstance(item.value, str):
+                return None
+            values.append(item.value)
+        return tuple(values)
+    return None
+
+
+def _load_dict_literal(path: Path, dict_name: str) -> dict[str, str | tuple[str, ...]] | None:
     """Return a top-level `dict_name = {...}` / `dict_name: T = {...}` string
     dict literal's contents, or None if the file/assignment can't be found or
     parsed as a plain string->string dict."""
@@ -65,10 +93,11 @@ def _load_dict_literal(path: Path, dict_name: str) -> dict[str, str] | None:
                 target_node = node
         if target_node is None or not isinstance(target_node.value, ast.Dict):
             continue
-        result: dict[str, str] = {}
+        result: dict[str, str | tuple[str, ...]] = {}
         for k, v in zip(target_node.value.keys, target_node.value.values):
-            if isinstance(k, ast.Constant) and isinstance(v, ast.Constant):
-                result[k.value] = v.value
+            value = _literal_string_or_strings(v)
+            if isinstance(k, ast.Constant) and isinstance(k.value, str) and value is not None:
+                result[k.value] = value
         return result
     return None
 
@@ -119,7 +148,24 @@ def validate() -> list[Check]:
 
         scraper = entry.get("scraper")
         if scraper is None:
-            checks.append(Check("WARN", f"{source}: scraper", "no scraper registered yet"))
+            if source in SHARED_SCRAPER:
+                shared_path = ROOT / SHARED_SCRAPER[source]
+                if shared_path.exists():
+                    checks.append(
+                        Check("OK", f"{source}: shared scraper exists", SHARED_SCRAPER[source])
+                    )
+                else:
+                    checks.append(
+                        Check(
+                            "FAIL",
+                            f"{source}: shared scraper exists",
+                            f"{SHARED_SCRAPER[source]} not found",
+                        )
+                    )
+            elif source in SCRAPER_PENDING:
+                checks.append(Check("OK", f"{source}: scraper pending", SCRAPER_PENDING[source]))
+            else:
+                checks.append(Check("FAIL", f"{source}: scraper", "no scraper registered"))
         else:
             scraper_path = ROOT / scraper
             if scraper_path.exists():
@@ -206,13 +252,24 @@ def validate() -> list[Check]:
         elif doc_type not in doc_type_to_source:
             checks.append(
                 Check(
-                    "WARN",
+                    "FAIL",
                     f"{source}: _DOC_TYPE_TO_SOURCE",
                     f"doc_type {doc_type!r} not registered in rag.py",
                 )
             )
         else:
-            checks.append(Check("OK", f"{source}: _DOC_TYPE_TO_SOURCE", "registered"))
+            mapped = doc_type_to_source[doc_type]
+            mapped_sources = {mapped} if isinstance(mapped, str) else set(mapped)
+            if source not in mapped_sources:
+                checks.append(
+                    Check(
+                        "FAIL",
+                        f"{source}: _DOC_TYPE_TO_SOURCE",
+                        f"doc_type {doc_type!r} maps to {sorted(mapped_sources)!r}, not {source!r}",
+                    )
+                )
+            else:
+                checks.append(Check("OK", f"{source}: _DOC_TYPE_TO_SOURCE", "registered"))
 
     dupes = {s: n for s, n in seen_sources.items() if n > 1}
     if dupes:

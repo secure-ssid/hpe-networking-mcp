@@ -7,7 +7,7 @@
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-0969da)](https://secure-ssid.github.io/hpe-networking-mcp/)
 [![Release](https://img.shields.io/github/v/release/secure-ssid/hpe-networking-mcp?display_name=tag)](https://github.com/secure-ssid/hpe-networking-mcp/releases)
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,722 backend tools, 3 minimal router tools, and nine platform surfaces with optional local RAG](docs/assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,144 generated operations, 6,726 backend tools, 3 minimal router tools, and nine platform surfaces with optional local RAG](docs/assets/hpe-networking-mcp-hero.svg)
 
 The banner tracks the current backend catalog: a large tool surface stays
 available on demand, while the MCP client itself only ever sees three router
@@ -106,13 +106,13 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | Non-additive profiles: 375 core tools / 2836 read-only optional starters / 5816 read-write optional starters; REST/OpenAPI platform API backend total: 6,708; protocol-only Central Streaming: 1; complete backend index: 6,722; direct-all: 6,729 |
+| Tool catalog | Non-additive profiles: 379 core tools / 2840 read-only optional starters / 5820 read-write optional starters; REST/OpenAPI platform API backend total: 6,711; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,726; direct-all: 6,733 |
 | RAG | 392,471 prose chunks; 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 345 lifecycle records |
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud |
 | Safety | Per-platform write gates, dry-run + confirmation, HTTP host/origin and bearer controls, credential-gated live-test config |
 
 Full per-backend counts live in [Tool catalog](docs/tool-catalog.md). See the
-[0.8.0 release notes](docs/release-notes-0.8.0.md) for everything added in the
+[0.9.0 release notes](docs/release-notes-0.9.0.md) for everything added in the
 current release, and the [capability gap matrix](docs/capability-gap-matrix.md)
 for reproducible tool/benchmark comparisons.
 
@@ -219,17 +219,34 @@ The full repository map, including generated/git-ignored paths, lives in
 
 ```bash
 uv run pytest tests/unit -q
-uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6708
+uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6711
 ```
 
-`--min-tools 6708` is the platform API compatibility floor (the
-6,708 vendor-facing platform API tools), not the complete registered backend
-total of 6,722, which also includes the protocol-only Central Streaming tool,
-the local GLP preflight diagnostic, and credential-free local tools —
-validation passes at or above the floor. See
+`--min-tools 6711` is the platform API compatibility floor (the
+6,711 vendor-facing platform API tools), not the complete registered backend
+total of 6,726, which also includes the protocol-only Central Streaming tool,
+the cross-platform `site-health` aggregator, the local GLP preflight
+diagnostic, and credential-free local tools — validation passes at or above
+the floor. See
 [Tool catalog](docs/tool-catalog.md) for both totals.
 
 The release helper runs unit tests, optional RAG/API eval when indexes exist, tool catalog floor checks, and local tool-index freshness checks. Unit tests also include static guards for the active MCP/pipeline code, committed low-token MCP config examples, local-only config files, router product/toolset docs, bounded generic read-only GET tools, MCP list default bounds, RAG/search top_k bounds, public tool-count claims, tool-count docstrings, rendered RAG/index doc-fact claims, tracked Markdown local links and images, Pages sitemap and robots metadata, documented router example arguments, product workflow tool-name tables, and wizard optional-product env tables.
+
+## AI-assisted development
+
+Significant portions of this project — RAG architecture, retrieval
+modernization, ingestion pipeline, Docker packaging, MCP tool surface, and
+test coverage — were developed with AI pair-programming assistance from
+**GitHub Copilot** (powered by Claude). Commits from AI-assisted sessions
+carry the trailer:
+
+```
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+```
+
+All design decisions, architectural choices, and final review are the
+responsibility of the project maintainer. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the full AI attribution policy.
 
 ## Related projects and thanks
 

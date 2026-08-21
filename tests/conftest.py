@@ -19,6 +19,23 @@ from hpe_networking_mcp.pipeline.models import (
 from hpe_networking_mcp.pipeline.state_store import StateStore
 
 
+@pytest.fixture(autouse=True)
+def _allow_placeholder_urls_in_tests(monkeypatch):
+    """Let the suite keep using RFC 2606 ``*.example.com`` hosts as fixtures.
+
+    ``pipeline.url_validation.validate_infra_url`` refuses unedited
+    documentation placeholder hosts by default, which is exactly what every
+    backend fixture here uses as its stand-in product host
+    (``apstra.example.com``, ``orch.example.com``, ...). Opt those fixtures
+    back in globally so the guard is exercised *deliberately* -- the tests
+    that assert the guard fires (``tests/unit/test_placeholder_url_guard.py``)
+    delete this variable first, the same way existing tests delete
+    ``HPE_MCP_ALLOW_LOCAL_PRODUCT_URLS`` before asserting the local-host rule.
+    """
+    monkeypatch.setenv("HPE_MCP_ALLOW_PLACEHOLDER_URLS", "1")
+    yield
+
+
 # ---------------------------------------------------------------------------
 # DeviceRecord fixtures — one per source_type
 # ---------------------------------------------------------------------------

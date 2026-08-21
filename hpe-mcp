@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Repo-root launcher — no need for `uv run` once the venv exists.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${ROOT}"
+
+if [[ -x "${ROOT}/.venv/bin/hpe-mcp" ]]; then
+  exec "${ROOT}/.venv/bin/hpe-mcp" "$@"
+fi
+
+if command -v uv >/dev/null 2>&1; then
+  exec uv run --project "${ROOT}" hpe-mcp "$@"
+fi
+
+echo "hpe-mcp: no .venv found. Run:  uv sync && uv pip install -e ." >&2
+exit 127
