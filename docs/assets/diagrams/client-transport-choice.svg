@@ -2,6 +2,7 @@
  viewBox="0.00 0.00 451.00 236.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="title desc" data-source-sha256="986551ff1d2cc792590a07459668fc12da546d0f2c294c2eb0c33a175e04ba5d"><title id="title">Choose an MCP client transport</title><desc id="desc">Decision tree for choosing stdio, local streamable HTTP, or protected non-loopback HTTP.</desc>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 224.86)">
 
+<polygon fill="white" stroke="none" points="-10.8,10.8 -10.8,-224.86 439.89,-224.86 439.89,10.8 -10.8,10.8"/>
 <!-- start -->
 <g id="node1" class="node">
 

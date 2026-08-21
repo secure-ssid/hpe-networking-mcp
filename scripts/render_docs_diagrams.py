@@ -270,8 +270,12 @@ def render() -> None:
                     str(source),
                     "--output",
                     str(temporary),
+                    # Opaque, matching the flow diagrams: the neutral theme
+                    # draws message labels in dark grey directly on the canvas,
+                    # which a transparent background turns into dark-on-black
+                    # under GitHub's dark theme.
                     "--backgroundColor",
-                    "transparent",
+                    "white",
                     "--theme",
                     "neutral",
                 ],

@@ -2,6 +2,7 @@
  viewBox="0.00 0.00 794.00 60.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="title desc" data-source-sha256="638cd0d8bfe67b4b04be21f26120cd7d6b5f349639463f5df2e23b385cfd685a"><title id="title">hpe-networking-mcp quickstart journey</title><desc id="desc">Six steps from cloning hpe-networking-mcp through setup, doctor checks, MCP connection, tool discovery, and a safe read-only call.</desc>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 49.2)">
 
+<polygon fill="white" stroke="none" points="-10.8,10.8 -10.8,-49.2 783.07,-49.2 783.07,10.8 -10.8,10.8"/>
 <!-- clone -->
 <g id="node1" class="node">
 
