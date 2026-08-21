@@ -1446,7 +1446,7 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
             capability = tool_write_capability(tool)
             if capability in ("write", "destructive"):
                 if global_readonly_enabled():
-                    blocked = global_write_blocked(name)
+                    blocked: dict[str, Any] | None = global_write_blocked(name)
                 elif platform is not None:
                     blocked = (
                         None
