@@ -534,7 +534,7 @@ uv run python ingestion/fetch_mist_openapi.py
 uv run python ingestion/scrape_security_lifecycle.py
 uv run python scripts/check_openapi_drift.py
 uv run python scripts/check_mist_openapi_drift.py
-uv run python ingestion/ingest_docs.py
+uv run --extra ingestion python ingestion/ingest_docs.py
 ```
 
 Built indexes live under `data/` and are git-ignored.

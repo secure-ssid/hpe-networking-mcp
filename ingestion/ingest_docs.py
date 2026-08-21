@@ -11,6 +11,10 @@ Usage:
     uv run python ingestion/ingest_docs.py --backend redis     # optional Redis Stack path
     uv run python ingestion/ingest_docs.py --source nac_docs   # one source only
     uv run python ingestion/ingest_docs.py --dry-run           # count chunks, no upload
+
+The default path needs the `ingestion` extra (`uv sync --extra ingestion`).
+`--backend redis` additionally needs the `redis` extra, and says so when it is
+absent rather than raising `ModuleNotFoundError` from an import.
 """
 
 import argparse
@@ -28,14 +32,35 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from bs4 import BeautifulSoup
 
+from hpe_networking_mcp import optional_deps
 from hpe_networking_mcp.pipeline.clients.ollama_client import OllamaClient
-from hpe_networking_mcp.pipeline.clients.redis_client import (
-    DOCS_INDEX,
-    ensure_index,
-    get_client,
-    upsert_docs,
-)
 from ingestion.chunking import chunk_text_with_breadcrumbs
+
+
+def redis_backend():
+    """The optional Redis Stack client module, or an actionable failure.
+
+    `--backend redis` is the legacy server deployment; the default LanceDB
+    path never touches it, and the two live in different extras. Importing
+    `redis_client` at module scope therefore killed the *documented*
+    `uv sync --extra ingestion` install with a raw
+    `ModuleNotFoundError: No module named 'redis'` before argparse ran --
+    on the one extra named after this very task.
+
+    Resolving it here mirrors `mcp_servers/rag.py`: an uninstalled extra is a
+    named, fixable condition that carries its own install command, never a
+    traceback through vendor internals.
+    """
+    try:
+        from hpe_networking_mcp.pipeline.clients import redis_client
+    except ImportError as exc:
+        raise optional_deps.missing(
+            "The Redis Stack ingest backend (`--backend redis`)",
+            module="redis",
+            extra="redis",
+        ) from exc
+    return redis_client
+
 
 SOURCES_DIR = Path(__file__).parent / "sources"
 
@@ -680,6 +705,7 @@ def _existing_ids(client, ids: list[str]) -> set[str]:
 
 
 def upload(records: list[dict], ollama: OllamaClient, client):
+    upsert_docs = redis_backend().upsert_docs
     skipped = 0
     uploaded = 0
     for batch_start in range(0, len(records), UPLOAD_BATCH):
@@ -1032,7 +1058,15 @@ def main():
         action="store_true",
         help="upsert changed LanceDB chunks instead of rebuilding every embedding",
     )
-    parser.add_argument("--index", default=DOCS_INDEX, dest="index")
+    # Left unresolved so `--help` needs no `redis` import. The default is
+    # `redis_client.DOCS_INDEX`, read in the redis branch below rather than
+    # retyped here, so the two cannot drift.
+    parser.add_argument(
+        "--index",
+        default=None,
+        dest="index",
+        help="Redis index name (--backend redis only; defaults to redis_client.DOCS_INDEX)",
+    )
     parser.add_argument(
         "--parallel",
         type=int,
@@ -1126,16 +1160,23 @@ def main():
             print("  rebuilding shared structured SQLite index...")
             print(f"  {specs_index.rebuild_shared()}")
     else:
+        redis_client = redis_backend()
+        index = args.index or redis_client.DOCS_INDEX
         print("\nConnecting to Redis Stack + Ollama...")
-        client = get_client()
-        ensure_index(client, args.index)
+        client = redis_client.get_client()
+        redis_client.ensure_index(client, index)
 
         with OllamaClient() as ollama:
-            print(f"Uploading to index '{args.index}'...")
+            print(f"Uploading to index '{index}'...")
             upload(all_records, ollama, client)
 
     print("Done.")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except optional_deps.MissingOptionalDependency as exc:
+        # The remedy is the whole point; a traceback through importlib buries
+        # it. Same `FAIL: ` shape the missing-sources guards above use.
+        raise SystemExit(f"FAIL: {exc}") from exc

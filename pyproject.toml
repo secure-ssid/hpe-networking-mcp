@@ -76,6 +76,11 @@ dependencies = [
 # tools -- `playwright` has no import site under src/ at all -- and it is the
 # bulk of the installed footprint, so it is opt-in. Every import site
 # degrades through hpe_networking_mcp.optional_deps, naming this command.
+#
+# This extra alone must be sufficient for the documented corpus build
+# (`uv sync --extra ingestion && uv run python ingestion/ingest_docs.py`);
+# tests/unit/test_runtime_imports.py runs that command with every other
+# extra blinded, so a module-scope import reaching across the split fails CI.
 ingestion = [
     "playwright>=1.58.0",
     "beautifulsoup4>=4.15.0",
@@ -86,9 +91,13 @@ ingestion = [
     "lancedb>=0.33.0",
     "fastembed>=0.8.0",
 ]
-# Legacy Redis Stack vector backend (HPE_MCP_RAG_BACKEND=redis). numpy rides
-# with it: pipeline/clients/redis_client.py is its only import site in the
-# whole package, packing query vectors to float32 bytes for Redis.
+# Legacy Redis Stack vector backend (HPE_MCP_RAG_BACKEND=redis, and
+# `ingestion/ingest_docs.py --backend redis`). Deliberately *not* folded into
+# `ingestion`: the default corpus build is LanceDB + SQLite end to end and
+# never touches this client, so shipping a server dependency to everyone who
+# wants the embedded path would be weight for nothing. numpy rides with it:
+# pipeline/clients/redis_client.py is its only import site in the whole
+# package, packing query vectors to float32 bytes for Redis.
 redis = [
     "redis>=8.0.1",
     "numpy>=2.2.6",

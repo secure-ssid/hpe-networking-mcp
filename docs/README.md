@@ -121,7 +121,8 @@ python3 scripts/setup_wizard.py
 python3 scripts/setup_wizard.py --products clearpass,mist
 
 # Build the RAG prose corpus locally (crawls vendor portals; hours)
-uv run python ingestion/ingest_docs.py
+# Needs the `ingestion` extra; `--backend redis` additionally needs `redis`.
+uv run --extra ingestion python ingestion/ingest_docs.py
 
 # Build the router tool catalog
 uv run python scripts/ingest_tools.py
