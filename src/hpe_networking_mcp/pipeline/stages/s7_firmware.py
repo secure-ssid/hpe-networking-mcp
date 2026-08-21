@@ -38,7 +38,8 @@ class FirmwareStage(Stage):
     ) -> StageResult:
         if record.firmware_action == FirmwareAction.SKIP:
             return StageResult.skipped(
-                f"AOS-S hardware cannot run AOS 10 — firmware upgrade skipped for {record.serial_number}"
+                f"AOS-S hardware cannot run AOS 10 — firmware upgrade skipped "
+                f"for {record.serial_number}"
             )
 
         if dry_run:
@@ -73,7 +74,9 @@ class FirmwareStage(Stage):
                     upgrade_status="ALREADY_AT_TARGET",
                 )
         except Exception as exc:
-            logger.warning("Pre-upgrade firmware check failed for %s: %s", record.serial_number, exc)
+            logger.warning(
+                "Pre-upgrade firmware check failed for %s: %s", record.serial_number, exc
+            )
 
         # 1. Set firmware compliance for the group (non-blocking — endpoint may not exist)
         logger.info(
@@ -91,7 +94,9 @@ class FirmwareStage(Stage):
                 },
             )
         except Exception as exc:
-            logger.warning("set-firmware-compliance failed: %s — continuing with direct upgrade", exc)
+            logger.warning(
+                "set-firmware-compliance failed: %s — continuing with direct upgrade", exc
+            )
 
         # 2. Trigger per-device firmware upgrade
         logger.info(
@@ -101,8 +106,17 @@ class FirmwareStage(Stage):
         )
         triggered = False
         for upgrade_path, upgrade_payload in [
-            ("/firmware/v1/upgrade", {"serials": [record.serial_number], "firmware_version": record.firmware_target}),
-            ("/network-services/v1alpha1/firmware-upgrade", {"serialNumbers": [record.serial_number], "firmwareVersion": record.firmware_target}),
+            (
+                "/firmware/v1/upgrade",
+                {"serials": [record.serial_number], "firmware_version": record.firmware_target},
+            ),
+            (
+                "/network-services/v1alpha1/firmware-upgrade",
+                {
+                    "serialNumbers": [record.serial_number],
+                    "firmwareVersion": record.firmware_target,
+                },
+            ),
         ]:
             try:
                 central.post(upgrade_path, data=upgrade_payload)

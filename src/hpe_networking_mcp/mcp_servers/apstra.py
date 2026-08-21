@@ -292,7 +292,10 @@ async def _apstra_login(
             token = _extract_apstra_token(response_payload(resp))
             if token:
                 return {"token": token, "endpoint": endpoint, "legacy_fallback": index > 0}
-            last_error = f"Login succeeded ({resp.status_code}) but no token in response at {endpoint}"
+            last_error = (
+                f"Login succeeded ({resp.status_code}) "
+                f"but no token in response at {endpoint}"
+            )
             continue
         is_last = index == len(_LOGIN_ENDPOINTS) - 1
         if resp.status_code in (404, 405) and not is_last:
@@ -700,7 +703,9 @@ async def apstra_get_connectivity_template(
     )
     out = await apstra_get(path)
     if "data" in out:
-        out["connectivity_template"] = _compact_record(out.pop("data"), _CONNECTIVITY_TEMPLATE_FIELDS)
+        out["connectivity_template"] = _compact_record(
+            out.pop("data"), _CONNECTIVITY_TEMPLATE_FIELDS
+        )
         out["blueprint_id"] = blueprint_id
     return out
 
@@ -907,7 +912,9 @@ async def apstra_create_connectivity_template(
     `confirm=True`.
     """
     path = f"/api/blueprints/{_path_segment(blueprint_id)}/obj-policy-import"
-    return await apstra_write("PUT", path, body=connectivity_template, dry_run=dry_run, confirm=confirm)
+    return await apstra_write(
+        "PUT", path, body=connectivity_template, dry_run=dry_run, confirm=confirm
+    )
 
 
 @mcp.tool(annotations=DESTRUCTIVE)

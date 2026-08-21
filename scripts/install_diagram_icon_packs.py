@@ -415,7 +415,10 @@ def _http_get(url: str, dest: Path) -> bool:
 
 
 def _best_product_image_url(slug: str) -> str | None:
-    page = f"{JUNIPER_SITE}/us/en/company/images/image-library-logos-and-product-photos/products/{slug}.html"
+    page = (
+        f"{JUNIPER_SITE}/us/en/company/images/"
+        f"image-library-logos-and-product-photos/products/{slug}.html"
+    )
     req = Request(page, headers={"User-Agent": "hpe-networking-mcp-local-icon-install/1.0"})
     try:
         with urlopen(req, timeout=60) as resp:  # noqa: S310
@@ -637,7 +640,9 @@ def install_juniper_public(*, skip_large_zips: bool = False, all_photos: bool = 
         "cloud",
     )
     for role in mist_roles:
-        src = _compact_role_source("mist_ap" if role != "cloud" else "cloud") or _compact_role_source(
+        src = _compact_role_source(
+            "mist_ap" if role != "cloud" else "cloud"
+        ) or _compact_role_source(
             role
         )
         if src:
@@ -789,7 +794,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.juniper or args.from_downloads:
         # public Juniper packs stay local/gitignored
         report["installed"].append(
-            {"kind": "juniper-public", **install_juniper_public(all_photos=bool(getattr(args, "juniper_all_photos", False) or args.from_downloads))}
+            {
+                "kind": "juniper-public",
+                **install_juniper_public(
+                    all_photos=bool(
+                        getattr(args, "juniper_all_photos", False) or args.from_downloads
+                    )
+                ),
+            }
         )
 
     if not report["installed"]:

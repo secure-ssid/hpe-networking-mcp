@@ -89,10 +89,32 @@ def _compact_exception_message(exc: Exception, max_chars: int = 240) -> str:
 # async-operation shape with slightly different vocabulary.
 _TERMINAL_SUCCESS_STATES = frozenset({"succeeded", "success", "completed", "complete", "ok"})
 _TERMINAL_FAILURE_STATES = frozenset(
-    {"failed", "failure", "error", "errored", "timeout", "timedout", "timed_out", "cancelled", "canceled", "aborted"}
+    {
+        "failed",
+        "failure",
+        "error",
+        "errored",
+        "timeout",
+        "timedout",
+        "timed_out",
+        "cancelled",
+        "canceled",
+        "aborted",
+    }
 )
 _IN_PROGRESS_STATES = frozenset(
-    {"initialized", "initializing", "running", "in_progress", "inprogress", "pending", "queued", "created", "accepted", "started"}
+    {
+        "initialized",
+        "initializing",
+        "running",
+        "in_progress",
+        "inprogress",
+        "pending",
+        "queued",
+        "created",
+        "accepted",
+        "started",
+    }
 )
 
 
@@ -319,7 +341,8 @@ class GLPClient:
                 raise RuntimeError(
                     f"GLP async-op {task_id} returned a malformed response with no "
                     "usable 'status'/'state' field — cannot determine completion. "
-                    f"Payload keys: {sorted(result)[:20] if isinstance(result, dict) else type(result).__name__}"
+                    f"Payload keys: "
+                    f"{sorted(result)[:20] if isinstance(result, dict) else type(result).__name__}"
                 )
 
             last_status = status
@@ -986,7 +1009,8 @@ class GLPClient:
     # GLP write — RBAC role assignments / scope groups, user lifecycle,
     # auto-subscription settings (identity v1, authorization v1beta1,
     # subscriptions v1). All confirmed against the committed manifest at
-    # src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/glp.json (createRoleAssignmentV1beta1,
+    # src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/glp.json
+    # (createRoleAssignmentV1beta1,
     # updateRoleAssignmentV1beta1, deleteRoleAssignmentV1beta1,
     # createScopeGroupV1beta1, updateScopeGroupV1beta1, deleteScopeGroupV1beta1,
     # addScopeGroupScopesV1beta1, deleteScopeGroupScopesV1beta1,

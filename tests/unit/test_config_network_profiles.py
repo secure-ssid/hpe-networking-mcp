@@ -142,7 +142,9 @@ def test_set_network_profile_dry_run_returns_payload_without_sending():
 
 def test_set_network_profile_posts_then_patches_on_412(monkeypatch):
     client = MagicMock()
-    client._request.side_effect = [_resp(status_code=412), _resp(status_code=200, payload={"ok": True})]
+    client._request.side_effect = [
+        _resp(status_code=412), _resp(status_code=200, payload={"ok": True})
+    ]
     monkeypatch.setattr(config, "get_client", lambda: client)
 
     result = config.set_network_profile(
@@ -187,7 +189,9 @@ def test_build_bgp_overlay_dry_run_shapes_payload():
 
     assert result["dry_run"] is True
     assert result["payload"] == {"name": "bgp-1", "router": [{"as-number": 65001}]}
-    assert result["params"] == {"object-type": "LOCAL", "scope-id": "s1", "device-function": "GATEWAY"}
+    assert result["params"] == {
+        "object-type": "LOCAL", "scope-id": "s1", "device-function": "GATEWAY"
+    }
 
 
 def test_build_ospf_overlay_rejects_bad_version():
@@ -254,7 +258,9 @@ def test_configure_application_experience_creates_both_profiles(monkeypatch):
 
 def test_build_config_checkpoint_policy_validates_delay_range():
     with pytest.raises(ValueError, match="post_checkpoint_delay must be between"):
-        config.build_config_checkpoint_policy("cp-1", scope_id="s1", device_function="GATEWAY", post_checkpoint_delay=3)
+        config.build_config_checkpoint_policy(
+            "cp-1", scope_id="s1", device_function="GATEWAY", post_checkpoint_delay=3
+        )
 
 
 def test_build_config_checkpoint_policy_dry_run():

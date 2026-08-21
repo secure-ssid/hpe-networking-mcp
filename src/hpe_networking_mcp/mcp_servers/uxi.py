@@ -119,8 +119,12 @@ def _cursor_params(next_cursor: str | None, page_size: int) -> dict[str, Any]:
 
 def _path_segment(value: str) -> str:
     text = str(value).strip()
-    if not text or len(text) > 128 or any(ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for ch in text):
-        raise ValueError("UXI resource IDs must be 1-128 ASCII letters, numbers, underscores, or dashes.")
+    if not text or len(text) > 128 or any(
+        ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for ch in text
+    ):
+        raise ValueError(
+            "UXI resource IDs must be 1-128 ASCII letters, numbers, underscores, or dashes."
+        )
     return quote(text, safe="")
 
 
@@ -165,7 +169,11 @@ def _safe_uxi_write_path(method: str, path: str) -> str:
 def _pick(record: Any, fields: tuple[str, ...]) -> Any:
     if not isinstance(record, dict):
         return record
-    return {field: record[field] for field in fields if field in record and record[field] not in (None, "")}
+    return {
+        field: record[field]
+        for field in fields
+        if field in record and record[field] not in (None, "")
+    }
 
 
 def _compact_items(data: Any, fields: tuple[str, ...] | None) -> Any:
@@ -204,7 +212,9 @@ async def _uxi_access_token(client_id: str, client_secret: str, token_url: str) 
         )
     payload = response_payload(resp)
     if resp.status_code >= 400:
-        raise RuntimeError(f"UXI token request failed with HTTP {resp.status_code}: {redact_sensitive(payload)}")
+        raise RuntimeError(
+            f"UXI token request failed with HTTP {resp.status_code}: {redact_sensitive(payload)}"
+        )
     if not isinstance(payload, dict) or not payload.get("access_token"):
         raise RuntimeError("UXI token response did not include access_token.")
     expires_in = int(payload.get("expires_in") or 3600)
@@ -253,7 +263,10 @@ async def _uxi_get_request(
             payload = bound_collection_response(payload, limit=limit, offset=offset)
         return {"status_code": resp.status_code, "data": payload, "url": url}
     except httpx.HTTPError as exc:
-        return {"error": f"{type(exc).__name__}: connection or protocol error", "url": f"{base_url}{path}"}
+        return {
+            "error": f"{type(exc).__name__}: connection or protocol error",
+            "url": f"{base_url}{path}",
+        }
     except Exception as exc:
         return {"error": str(exc), "url": f"{base_url}{path}"}
 
@@ -458,7 +471,9 @@ async def uxi_list_groups(next_cursor: str | None = None, page_size: int = 50) -
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def uxi_list_wired_networks(next_cursor: str | None = None, page_size: int = 50) -> dict[str, Any]:
+async def uxi_list_wired_networks(next_cursor: str | None = None, page_size: int = 50) -> dict[
+    str, Any
+]:
     """List UXI wired networks."""
     return await _uxi_get_request(
         "/wired-networks",
@@ -482,7 +497,9 @@ async def uxi_list_wired_networks(next_cursor: str | None = None, page_size: int
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def uxi_list_wireless_networks(next_cursor: str | None = None, page_size: int = 50) -> dict[str, Any]:
+async def uxi_list_wireless_networks(next_cursor: str | None = None, page_size: int = 50) -> dict[
+    str, Any
+]:
     """List UXI wireless networks."""
     return await _uxi_get_request(
         "/wireless-networks",
@@ -507,7 +524,9 @@ async def uxi_list_wireless_networks(next_cursor: str | None = None, page_size: 
 
 
 @mcp.tool(annotations=READ_ONLY)
-async def uxi_list_service_tests(next_cursor: str | None = None, page_size: int = 50) -> dict[str, Any]:
+async def uxi_list_service_tests(next_cursor: str | None = None, page_size: int = 50) -> dict[
+    str, Any
+]:
     """List UXI service tests."""
     return await _uxi_get_request(
         "/service-tests",
@@ -517,7 +536,9 @@ async def uxi_list_service_tests(next_cursor: str | None = None, page_size: int 
     )
 
 
-async def _uxi_list_assignments(path: str, next_cursor: str | None, page_size: int) -> dict[str, Any]:
+async def _uxi_list_assignments(path: str, next_cursor: str | None, page_size: int) -> dict[
+    str, Any
+]:
     return await _uxi_get_request(
         path,
         _cursor_params(next_cursor, page_size),
@@ -784,8 +805,10 @@ async def uxi_assign_service_test_to_group(
 
 
 # ---------------------------------------------------------------------------
-# Generated OpenAPI tools (see src/hpe_networking_mcp/mcp_servers/openapi_gen). The committed manifest
-# at src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/uxi.json is derived from the current UXI
+# Generated OpenAPI tools (see src/hpe_networking_mcp/mcp_servers/openapi_gen). The
+# committed manifest at
+# src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/uxi.json is derived from
+# the current UXI
 # v6.7 OpenAPI document published on the Aruba developer portal (ReadMe) and
 # exposes every documented operation as a directly-callable, typed MCPServer tool.
 # Every outbound call still flows through the OAuth token layer and the shared
@@ -799,11 +822,19 @@ async def uxi_assign_service_test_to_group(
 _UXI_API_PREFIX = "/networking-uxi/v1alpha1"
 
 
-def _uxi_generated_prepare(path: str) -> tuple[str | None, str | None, str | None, str | None, str | None]:
+def _uxi_generated_prepare(path: str) -> tuple[
+    str | None, str | None, str | None, str | None, str | None
+]:
     """Return (host, client_id, client_secret, token_url, error) for a generated path."""
     client_id, client_secret, base_url, token_url = _uxi_config()
     if not client_id or not client_secret:
-        return None, None, None, None, "UXI not configured. Set UXI_CLIENT_ID and UXI_CLIENT_SECRET."
+        return (
+            None,
+            None,
+            None,
+            None,
+            "UXI not configured. Set UXI_CLIENT_ID and UXI_CLIENT_SECRET.",
+        )
     if not path.startswith(_UXI_API_PREFIX + "/"):
         return None, None, None, None, f"Generated path must begin with {_UXI_API_PREFIX}/."
     try:

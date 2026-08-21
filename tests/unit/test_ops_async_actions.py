@@ -94,7 +94,9 @@ def test_disconnect_client_uses_async_request_when_ap_serial_is_provided(monkeyp
     monkeypatch.setattr(ops, "get_client", lambda: client)
     monkeypatch.setattr(ops, "atroubleshoot_async", fake_atroubleshoot)
 
-    result = asyncio.run(ops.disconnect_client(_AcceptedContext(), "aa:bb:cc:dd:ee:ff", ap_serial="AP1"))
+    result = asyncio.run(
+        ops.disconnect_client(_AcceptedContext(), "aa:bb:cc:dd:ee:ff", ap_serial="AP1")
+    )
 
     assert result == {
         "mac_address": "aa:bb:cc:dd:ee:ff",

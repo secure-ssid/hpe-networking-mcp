@@ -35,7 +35,10 @@ from hpe_networking_mcp.pipeline.clients.glp_client import (
 )
 
 MANIFEST = json.loads(
-    (Path(__file__).resolve().parents[2] / "src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/glp.json").read_text()
+    (
+        Path(__file__).resolve().parents[2]
+        / "src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/glp.json"
+    ).read_text()
 )
 MANIFEST_KEYS = {op["key"] for op in MANIFEST["operations"]}
 
@@ -163,7 +166,9 @@ class TestPollTask:
 
     def test_in_progress_then_success(self, monkeypatch):
         glp, inner = _client()
-        monkeypatch.setattr("hpe_networking_mcp.pipeline.clients.glp_client.time.sleep", lambda s: None)
+        monkeypatch.setattr(
+            "hpe_networking_mcp.pipeline.clients.glp_client.time.sleep", lambda s: None
+        )
         inner.get.side_effect = [
             {"status": "INITIALIZED"},
             {"status": "RUNNING"},
@@ -179,10 +184,14 @@ class TestPollTask:
         import logging
 
         glp, inner = _client()
-        monkeypatch.setattr("hpe_networking_mcp.pipeline.clients.glp_client.time.sleep", lambda s: None)
+        monkeypatch.setattr(
+            "hpe_networking_mcp.pipeline.clients.glp_client.time.sleep", lambda s: None
+        )
         inner.get.return_value = {"status": "QUIESCING"}
 
-        with caplog.at_level(logging.WARNING, logger="hpe_networking_mcp.pipeline.clients.glp_client"):
+        with caplog.at_level(
+            logging.WARNING, logger="hpe_networking_mcp.pipeline.clients.glp_client"
+        ):
             with pytest.raises(RuntimeError) as exc:
                 glp.poll_task("t1", timeout=1, interval=1)
 

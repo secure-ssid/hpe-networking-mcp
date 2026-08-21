@@ -43,7 +43,11 @@ def test_optional_backend_registration(monkeypatch):
 
 
 def test_validate_and_drawio_export(tmp_path, monkeypatch):
-    monkeypatch.setattr(design_mod, "write_text_artifact", lambda *a, **k: (_ for _ in ()).throw(AssertionError("no save")))
+    monkeypatch.setattr(
+        design_mod,
+        "write_text_artifact",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("no save")),
+    )
     out = _call(design_mod.validate_diagram_model, model=SAMPLE_MODEL)
     assert out.get("ok") is True or out.get("data", {}).get("ok") is True or "model" in str(out)
 
@@ -93,7 +97,10 @@ def test_next_ui_export():
     topo = result["export"]["content"]
     assert len(topo["nodes"]) == 3
     assert len(topo["links"]) == 2
-    assert "NeXt" in result["export"]["preview_html"] or "next" in result["export"]["preview_html"].lower()
+    assert (
+        "NeXt" in result["export"]["preview_html"]
+        or "next" in result["export"]["preview_html"].lower()
+    )
 
 
 def test_topology_conversion():
@@ -154,7 +161,10 @@ FLOW_MODEL = {
         {"id": "check", "label": "Ready?", "extra": {"shape": "decision"}},
         {"id": "done", "label": "Call a tool", "extra": {"shape": "terminal"}},
     ],
-    "links": [{"source": "clone", "target": "check"}, {"source": "check", "target": "done", "label": "yes"}],
+    "links": [
+        {"source": "clone", "target": "check"},
+        {"source": "check", "target": "done", "label": "yes"},
+    ],
 }
 
 

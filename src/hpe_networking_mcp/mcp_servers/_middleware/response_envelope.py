@@ -137,7 +137,9 @@ class ResponseEnvelopeMiddleware:
     def before_call(self, name: str, arguments: dict[str, Any]) -> None:
         return None
 
-    def after_call(self, name: str, arguments: dict[str, Any], result: Any) -> dict[str, Any] | None:
+    def after_call(
+        self, name: str, arguments: dict[str, Any], result: Any
+    ) -> dict[str, Any] | None:
         if not isinstance(result, dict) or _is_already_enveloped(result):
             return None
 

@@ -43,7 +43,9 @@ def _aaa_cases():
 
 
 @pytest.mark.parametrize(("kwargs", "expected_endpoint", "expected_payload"), _aaa_cases())
-def test_aaa_uses_async_troubleshooting_helper(monkeypatch, kwargs, expected_endpoint, expected_payload):
+def test_aaa_uses_async_troubleshooting_helper(
+    monkeypatch, kwargs, expected_endpoint, expected_payload
+):
     calls = []
     client = object()
 

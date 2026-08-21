@@ -187,8 +187,12 @@ def test_cli_never_generates_without_explicit_flag(monkeypatch, capsys):
 
 
 def test_committed_edgeconnect_baseline_digest_and_1216_operations_are_current():
-    manifest_path = ROOT / "src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/edgeconnect.json"
-    provenance_path = ROOT / "src/hpe_networking_mcp/mcp_servers/openapi_gen/provenance/edgeconnect.json"
+    manifest_path = (
+        ROOT / "src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/edgeconnect.json"
+    )
+    provenance_path = (
+        ROOT / "src/hpe_networking_mcp/mcp_servers/openapi_gen/provenance/edgeconnect.json"
+    )
     manifest_raw = manifest_path.read_bytes()
     manifest = json.loads(manifest_raw)
     provenance = json.loads(provenance_path.read_text())

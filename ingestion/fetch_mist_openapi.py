@@ -42,7 +42,9 @@ def main() -> int:
         )
 
     url = f"https://raw.githubusercontent.com/{REPOSITORY}/{args.ref}/{args.path}"
-    request = urllib.request.Request(url, headers={"User-Agent": "hpe-networking-mcp-openapi-ingestion"})
+    request = urllib.request.Request(
+        url, headers={"User-Agent": "hpe-networking-mcp-openapi-ingestion"}
+    )
     with urllib.request.urlopen(request, timeout=60) as response:
         payload = response.read()
 

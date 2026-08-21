@@ -30,7 +30,9 @@ def decompose_query(query: str) -> QueryExecutionPlan:
     q = query.lower()
 
     # Hardware specs query
-    if any(k in q for k in ["spec", "datasheet", "throughput", "capacity", "switching capacity", "poe budget of 6300", "stacking limit"]):
+    if any(k in q for k in ["spec", "datasheet", "throughput", "capacity",
+                            "switching capacity", "poe budget of 6300",
+                            "stacking limit"]):
         return QueryExecutionPlan(
             original_query=query,
             intent_summary="Hardware datasheet specifications lookup",
@@ -41,13 +43,15 @@ def decompose_query(query: str) -> QueryExecutionPlan:
                     operation_type="discovery",
                     tool_name="ask_docs",
                     arguments={"question": query},
-                    purpose="Retrieve exact hardware specifications table from authoritative datasheet catalog",
+                    purpose="Retrieve exact hardware specifications table from authoritative "
+                            "datasheet catalog",
                 )
             ],
         )
 
     # API endpoint / schema query
-    if any(k in q for k in ["endpoint", "method", "post to", "get to", "openapi", "rest api", "schema for"]):
+    if any(k in q for k in ["endpoint", "method", "post to", "get to", "openapi",
+                            "rest api", "schema for"]):
         return QueryExecutionPlan(
             original_query=query,
             intent_summary="Exact REST API endpoint and schema lookup",
@@ -58,7 +62,8 @@ def decompose_query(query: str) -> QueryExecutionPlan:
                     operation_type="discovery",
                     tool_name="lookup_api",
                     arguments={"query": query},
-                    purpose="Look up exact OpenAPI path, HTTP method, parameters, and payload schema",
+                    purpose="Look up exact OpenAPI path, HTTP method, parameters, and payload "
+                            "schema",
                 )
             ],
         )
@@ -159,7 +164,8 @@ def decompose_query(query: str) -> QueryExecutionPlan:
                 operation_type="discovery",
                 tool_name="ask_docs",
                 arguments={"question": query},
-                purpose="Search authoritative technical documentation, JVDs, and configuration guides",
+                purpose="Search authoritative technical documentation, JVDs, and configuration "
+                        "guides",
             )
         ],
     )

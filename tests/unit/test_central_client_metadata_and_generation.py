@@ -165,7 +165,9 @@ class TestGenerationAware401Collapse:
         client, tm = _make_client_with_real_token_manager(
             tmp_path, monkeypatch, tokens=("token-1", "token-2", "token-3")
         )
-        monkeypatch.setattr("hpe_networking_mcp.pipeline.clients.central_client.time.sleep", lambda s: None)
+        monkeypatch.setattr(
+            "hpe_networking_mcp.pipeline.clients.central_client.time.sleep", lambda s: None
+        )
         assert tm.generation == 1
 
         barrier = threading.Barrier(2, timeout=5)
@@ -210,7 +212,9 @@ class TestGenerationAware401Collapse:
         client, tm = _make_client_with_real_token_manager(
             tmp_path, monkeypatch, tokens=("token-1", "token-2")
         )
-        monkeypatch.setattr("hpe_networking_mcp.pipeline.clients.central_client.asyncio.sleep", _fake_async_sleep)
+        monkeypatch.setattr(
+            "hpe_networking_mcp.pipeline.clients.central_client.asyncio.sleep", _fake_async_sleep
+        )
 
         responses = iter(
             [
@@ -232,7 +236,9 @@ class TestGenerationAware401Collapse:
             async def request(self, method, url, **kwargs):
                 return next(responses)
 
-        monkeypatch.setattr("hpe_networking_mcp.pipeline.clients.central_client.httpx.AsyncClient", FakeAsyncClient)
+        monkeypatch.setattr(
+            "hpe_networking_mcp.pipeline.clients.central_client.httpx.AsyncClient", FakeAsyncClient
+        )
 
         resp = asyncio.run(client._arequest("GET", "/x"))
 

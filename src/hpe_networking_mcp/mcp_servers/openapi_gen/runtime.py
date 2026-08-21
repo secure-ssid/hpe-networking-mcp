@@ -33,7 +33,13 @@ from hpe_networking_mcp.mcp_servers import _sdk_compat
 from hpe_networking_mcp.mcp_servers.openapi_gen.manifest import load_manifest, manifest_exists
 from hpe_networking_mcp.mcp_servers.openapi_gen.naming import digest, snake
 from hpe_networking_mcp.mcp_servers.openapi_gen.preflight import build_write_impact
-from hpe_networking_mcp.mcp_servers.shared import DESTRUCTIVE, DIAGNOSTIC, IDEMPOTENT_WRITE, READ_ONLY, WRITE
+from hpe_networking_mcp.mcp_servers.shared import (
+    DESTRUCTIVE,
+    DIAGNOSTIC,
+    IDEMPOTENT_WRITE,
+    READ_ONLY,
+    WRITE,
+)
 
 # Executor protocols (implemented per platform in the backend module).
 ReadExecutor = Callable[..., Awaitable[dict[str, Any]]]
@@ -398,7 +404,9 @@ def _docstring(op: dict[str, Any], capability: str) -> str:
         lines.append("")
         lines.append(op["description"][:400])
     if op.get("deprecated"):
-        lines.extend(["", "Warning: this operation is marked deprecated by its source specification."])
+        lines.extend(
+            ["", "Warning: this operation is marked deprecated by its source specification."]
+        )
     if op.get("sunset"):
         lines.extend(["", f"Sunset: {op['sunset']}."])
     if capability != "read":

@@ -3,7 +3,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PRODUCTION_DIRS = ("src/hpe_networking_mcp/mcp_servers", "src/hpe_networking_mcp/pipeline")
-SESSION_OWNER = REPO_ROOT / "src" / "hpe_networking_mcp" / "pipeline" / "clients" / "central_client.py"
+SESSION_OWNER = (
+    REPO_ROOT / "src" / "hpe_networking_mcp" / "pipeline" / "clients" / "central_client.py"
+)
 
 
 def _full_name(node: ast.AST) -> str | None:
@@ -29,11 +31,15 @@ def test_production_code_does_not_import_requests():
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name == "requests" or alias.name.startswith("requests."):
-                        violations.append(f"{path.relative_to(REPO_ROOT)}:{node.lineno} imports {alias.name}")
+                        violations.append(
+                            f"{path.relative_to(REPO_ROOT)}:{node.lineno} imports {alias.name}"
+                        )
             elif isinstance(node, ast.ImportFrom) and (
                 node.module == "requests" or (node.module or "").startswith("requests.")
             ):
-                violations.append(f"{path.relative_to(REPO_ROOT)}:{node.lineno} imports from {node.module}")
+                violations.append(
+                    f"{path.relative_to(REPO_ROOT)}:{node.lineno} imports from {node.module}"
+                )
 
     assert violations == []
 

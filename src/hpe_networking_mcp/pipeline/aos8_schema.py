@@ -23,7 +23,8 @@ class AOS8Wlan:
     ``wpa3_transition``, ``passphrase_present``, and ``psk_hexkey_present`` are bounded,
     evidenced signals extracted directly from the AOS8 ``ssid_prof`` object
     (``wpa3_transition``, ``wpa_passphrase``, ``wpa_hexkey`` — see
-    ``src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/aos8.json`` `aos8_post_object_ssid_prof`
+    ``src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/aos8.json``
+    `aos8_post_object_ssid_prof`
     request-body properties). Only *presence* of a passphrase/PSK hex key is
     recorded here, never the secret value itself, so this dataclass is always
     safe to serialize and never needs redaction on its own.
@@ -153,7 +154,8 @@ class AOS8EthernetACLRule:
 
     Bounded and alias-based like `AOS8PolicyRule`, but there is no local
     OpenAPI evidence for the nested `acl_eth__policy` rule schema beyond the
-    named request-body property (`src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/aos8.json`
+    named request-body property
+    (`src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/aos8.json`
     `aos8_post_object_acl_eth`) -- every field not matched by a known L2
     alias (source/destination MAC, ethertype, VLAN, action, log) is retained
     verbatim in `unsupported_fields` rather than guessed.

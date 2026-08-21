@@ -123,7 +123,9 @@ def apstra_spec() -> dict:
             },
             "delete": _op("deleteBlueprint", "Delete one Apstra blueprint.", ["Blueprints"]),
         },
-        "/api/design/templates": {"get": _op("listDesignTemplates", "List Apstra design templates.")},
+        "/api/design/templates": {
+            "get": _op("listDesignTemplates", "List Apstra design templates.")
+        },
         "/api/blueprints/{blueprint_id}/anomalies": {
             "parameters": [_BP],
             "get": _op("listBlueprintAnomalies", "List anomalies for one blueprint."),
@@ -146,7 +148,9 @@ def apstra_spec() -> dict:
         },
         "/api/blueprints/{blueprint_id}/deploy": {
             "parameters": [_BP],
-            "get": _op("getBlueprintDeployStatus", "Get blueprint deployment status.", ["Blueprints"]),
+            "get": _op(
+                "getBlueprintDeployStatus", "Get blueprint deployment status.", ["Blueprints"]
+            ),
             "put": {
                 **_op("deployBlueprint", "Deploy a blueprint.", ["Blueprints"]),
                 "requestBody": _json_body(),
@@ -154,11 +158,16 @@ def apstra_spec() -> dict:
         },
         "/api/blueprints/{blueprint_id}/configuration": {
             "parameters": [_BP],
-            "get": _op("getBlueprintConfigurationStatus", "Get blueprint configuration deployment status."),
+            "get": _op(
+                "getBlueprintConfigurationStatus", "Get blueprint configuration deployment status."
+            ),
         },
         "/api/blueprints/{blueprint_id}/preview-config-summary": {
             "parameters": [_BP],
-            "get": _op("previewBlueprintConfiguration", "Preview and summarize generated device configurations."),
+            "get": _op(
+                "previewBlueprintConfiguration",
+                "Preview and summarize generated device configurations.",
+            ),
         },
         "/api/blueprints/{blueprint_id}/diff": {
             "parameters": [_BP],
@@ -166,7 +175,9 @@ def apstra_spec() -> dict:
         },
         "/api/blueprints/{blueprint_id}/diff-status": {
             "parameters": [_BP],
-            "get": _op("getBlueprintDiffStatus", "Get staged-vs-committed diff status for one blueprint."),
+            "get": _op(
+                "getBlueprintDiffStatus", "Get staged-vs-committed diff status for one blueprint."
+            ),
         },
         "/api/blueprints/{blueprint_id}/lock-status": {
             "parameters": [_BP],
@@ -182,12 +193,18 @@ def apstra_spec() -> dict:
         },
         "/api/blueprints/{blueprint_id}/revert": {
             "parameters": [_BP],
-            "post": _op("revertBlueprint", "Revert a blueprint to its latest backup.", ["Blueprints"]),
+            "post": _op(
+                "revertBlueprint", "Revert a blueprint to its latest backup.", ["Blueprints"]
+            ),
         },
         "/api/blueprints/{blueprint_id}/rollback": {
             "parameters": [_BP],
             "post": {
-                **_op("rollbackBlueprint", "Rollback a blueprint to a selected revision.", ["Blueprints"]),
+                **_op(
+                    "rollbackBlueprint",
+                    "Rollback a blueprint to a selected revision.",
+                    ["Blueprints"],
+                ),
                 "requestBody": _json_body(),
             },
         },
@@ -212,24 +229,46 @@ def apstra_spec() -> dict:
         },
         "/api/blueprints/{blueprint_id}/policy-types": {
             "parameters": [_BP],
-            "get": _op("listConnectivityTemplateTypes", "List connectivity-template types.", ["Connectivity"]),
+            "get": _op(
+                "listConnectivityTemplateTypes",
+                "List connectivity-template types.",
+                ["Connectivity"],
+            ),
         },
         "/api/blueprints/{blueprint_id}/endpoint-policies": {
             "parameters": [_BP],
-            "get": _op("listConnectivityTemplates", "List connectivity templates in one blueprint.", ["Connectivity"]),
+            "get": _op(
+                "listConnectivityTemplates",
+                "List connectivity templates in one blueprint.",
+                ["Connectivity"],
+            ),
             "post": {
-                **_op("createConnectivityTemplate", "Create a connectivity template.", ["Connectivity"]),
+                **_op(
+                    "createConnectivityTemplate",
+                    "Create a connectivity template.",
+                    ["Connectivity"],
+                ),
                 "requestBody": _json_body(),
             },
         },
         "/api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}": {
             "parameters": [_BP, _CT],
-            "get": _op("getConnectivityTemplate", "Get one connectivity template by ID.", ["Connectivity"]),
+            "get": _op(
+                "getConnectivityTemplate", "Get one connectivity template by ID.", ["Connectivity"]
+            ),
             "patch": {
-                **_op("updateConnectivityTemplate", "Update a connectivity template.", ["Connectivity"]),
+                **_op(
+                    "updateConnectivityTemplate",
+                    "Update a connectivity template.",
+                    ["Connectivity"],
+                ),
                 "requestBody": _json_body(),
             },
-            "delete": _op("deleteConnectivityTemplate", "Delete one connectivity template by ID.", ["Connectivity"]),
+            "delete": _op(
+                "deleteConnectivityTemplate",
+                "Delete one connectivity template by ID.",
+                ["Connectivity"],
+            ),
         },
         "/api/blueprints/{blueprint_id}/endpoint-policies/{policy_id}/application-points": {
             "parameters": [_BP, _CT],
@@ -257,12 +296,20 @@ def apstra_spec() -> dict:
         },
         "/api/blueprints/{blueprint_id}/obj-policy-export/{policy_id}": {
             "parameters": [_BP, _CT],
-            "get": _op("exportConnectivityTemplate", "Export one connectivity-template definition.", ["Connectivity"]),
+            "get": _op(
+                "exportConnectivityTemplate",
+                "Export one connectivity-template definition.",
+                ["Connectivity"],
+            ),
         },
         "/api/blueprints/{blueprint_id}/obj-policy-import": {
             "parameters": [_BP],
             "put": {
-                **_op("importConnectivityTemplates", "Import connectivity-template definitions.", ["Connectivity"]),
+                **_op(
+                    "importConnectivityTemplates",
+                    "Import connectivity-template definitions.",
+                    ["Connectivity"],
+                ),
                 "requestBody": _json_body(),
             },
         },
@@ -288,24 +335,40 @@ def apstra_spec() -> dict:
         "/api/blueprints/{blueprint_id}/obj-policy-batch-delete": {
             "parameters": [_BP],
             "post": {
-                **_op("deleteConnectivityTemplates", "Delete a batch of top-level connectivity templates.", ["Connectivity"]),
+                **_op(
+                    "deleteConnectivityTemplates",
+                    "Delete a batch of top-level connectivity templates.",
+                    ["Connectivity"],
+                ),
                 "requestBody": _json_body(),
             },
         },
         "/api/blueprints/{blueprint_id}/obj-policy-search": {
             "parameters": [_BP],
             "post": {
-                **_op("searchConnectivityTemplates", "Search connectivity templates.", ["Connectivity"]),
+                **_op(
+                    "searchConnectivityTemplates",
+                    "Search connectivity templates.",
+                    ["Connectivity"],
+                ),
                 "requestBody": _json_body(),
             },
         },
         "/api/blueprints/{blueprint_id}/obj-policy-locations-schema": {
             "parameters": [_BP],
-            "get": _op("getConnectivityLocationsSchema", "Get application-point location node types.", ["Connectivity"]),
+            "get": _op(
+                "getConnectivityLocationsSchema",
+                "Get application-point location node types.",
+                ["Connectivity"],
+            ),
         },
         "/api/blueprints/{blueprint_id}/experience/web/endpoint-policies": {
             "parameters": [_BP],
-            "get": _op("getConnectivityTemplateStatus", "Get UI-oriented connectivity-template status.", ["Connectivity"]),
+            "get": _op(
+                "getConnectivityTemplateStatus",
+                "Get UI-oriented connectivity-template status.",
+                ["Connectivity"],
+            ),
         },
         "/api/blueprints/{blueprint_id}/experience/web/obj-policies-by-application-points": {
             "parameters": [_BP],
@@ -609,7 +672,11 @@ def apstra_spec() -> dict:
         },
         "/api/user/login": {
             "post": {
-                **_op("apstraLoginLegacy", "Older-release session login (returns AuthToken).", ["Auth"]),
+                **_op(
+                    "apstraLoginLegacy",
+                    "Older-release session login (returns AuthToken).",
+                    ["Auth"],
+                ),
                 "requestBody": _json_body(),
             }
         },
@@ -648,7 +715,8 @@ def build_apstra_manifest() -> dict:
         "source_sha256": sha,
         "reviewed_operation_count": len(man["operations"]),
         "auth_endpoints_not_registered": ["POST /api/aaa/login", "POST /api/user/login"],
-        "auth_model": "AuthToken header session (see src/hpe_networking_mcp/mcp_servers/apstra.py _get_apstra_token).",
+        "auth_model": "AuthToken header session (see src/hpe_networking_mcp/mcp_servers/apstra.py "
+                      "_get_apstra_token).",
         "v07_optional_depth_additions": (
             "Added top-level resource pools (ip/ipv6/vlan/asn/vni/integer/device), "
             "device/rack profiles (device/linecard/chassis profiles, device-profile "

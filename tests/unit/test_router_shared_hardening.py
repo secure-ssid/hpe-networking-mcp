@@ -453,7 +453,9 @@ class TestStandaloneWriteGate:
         install_platform_write_gate(server)
 
         converted = asyncio.run(
-            server._tool_manager.call_tool("destroy_thing", {}, Context(mcp_server=server), convert_result=True)
+            server._tool_manager.call_tool(
+                "destroy_thing", {}, Context(mcp_server=server), convert_result=True
+            )
         )
 
         assert converted is not None
@@ -465,7 +467,9 @@ class TestStandaloneWriteGate:
         install_platform_write_gate(server)
 
         converted = asyncio.run(
-            server._tool_manager.call_tool("read_thing", {}, Context(mcp_server=server), convert_result=True)
+            server._tool_manager.call_tool(
+                "read_thing", {}, Context(mcp_server=server), convert_result=True
+            )
         )
 
         assert "ok" in json.dumps(converted, default=str)

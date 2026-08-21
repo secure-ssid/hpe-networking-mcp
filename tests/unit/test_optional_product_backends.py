@@ -1546,7 +1546,9 @@ def test_aos8_find_client_requires_exactly_one_selector(monkeypatch):
     ("tool_call", "expected_command", "output_key", "payload", "expected_item", "expect_path"),
     [
         (
-            lambda: aos8.aos8_find_client(mac="aa:bb:cc:dd:ee:01", config_path="/md/branch1", limit=1),
+            lambda: aos8.aos8_find_client(
+                mac="aa:bb:cc:dd:ee:01", config_path="/md/branch1", limit=1
+            ),
             "show user-table mac aa:bb:cc:dd:ee:01",
             "client",
             {
@@ -2433,7 +2435,9 @@ def test_aos8_list_ssid_profiles_uses_config_object(monkeypatch):
         ),
     ],
 )
-def test_aos8_wlan_object_reads_compact(monkeypatch, tool_func, expected_path, payload, output_key, expected_item):
+def test_aos8_wlan_object_reads_compact(
+    monkeypatch, tool_func, expected_path, payload, output_key, expected_item
+):
     called = {}
 
     class _Resp:
@@ -5684,7 +5688,9 @@ def test_edgeconnect_set_services_previews(monkeypatch):
 def test_edgeconnect_set_services_blocks_when_read_only(monkeypatch):
     monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-only")
 
-    out = asyncio.run(edgeconnect.edgeconnect_set_services({"zscaler_west": {"name": "Zscaler West"}}))
+    out = asyncio.run(
+        edgeconnect.edgeconnect_set_services({"zscaler_west": {"name": "Zscaler West"}})
+    )
 
     assert out["status"] == "blocked"
     assert out["tool"] == "edgeconnect_set_services"

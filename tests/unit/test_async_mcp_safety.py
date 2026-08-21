@@ -37,7 +37,9 @@ def test_async_mcp_tools_do_not_call_sync_http_or_blocking_sleep():
                 attr = _attribute_name(node.func)
                 name = _full_name(node.func)
                 if attr == "_request":
-                    violations.append(f"{path.name}:{func.lineno}:{func.name} calls sync _request()")
+                    violations.append(
+                        f"{path.name}:{func.lineno}:{func.name} calls sync _request()"
+                    )
                 if name == "time.sleep":
                     violations.append(f"{path.name}:{func.lineno}:{func.name} calls time.sleep()")
 

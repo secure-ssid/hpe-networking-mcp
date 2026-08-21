@@ -1754,8 +1754,10 @@ async def mist_get_site_sle_metric_summary(
 
 
 # ---------------------------------------------------------------------------
-# Generated OpenAPI tools (see src/hpe_networking_mcp/mcp_servers/openapi_gen). The committed manifest
-# at src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/mist.json is derived from the MIT-licensed
+# Generated OpenAPI tools (see src/hpe_networking_mcp/mcp_servers/openapi_gen). The
+# committed manifest at
+# src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/mist.json is derived from
+# the MIT-licensed
 # mistsys OpenAPI spec and exposes every documented /api/v1 operation as a
 # directly-callable, typed MCPServer tool. Registration is guarded by
 # HPE_MCP_MIST_GENERATED_TOOLS and defaults ON when the manifest exists.

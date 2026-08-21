@@ -63,14 +63,24 @@ class TestAutoDetectSwitch:
     def test_cx_firmware_routes_to_cx(self, monkeypatch):
         _patch_inventory(
             monkeypatch,
-            {"serialNumber": "SW1", "deviceType": "SWITCH", "firmwareVersion": "FL.10.16.1006", "model": "6300M"},
+            {
+                "serialNumber": "SW1",
+                "deviceType": "SWITCH",
+                "firmwareVersion": "FL.10.16.1006",
+                "model": "6300M",
+            },
         )
         assert device_type_for_troubleshoot("SW1", None) == "cx"
 
     def test_aos_s_firmware_routes_to_aos_s(self, monkeypatch):
         _patch_inventory(
             monkeypatch,
-            {"serialNumber": "SW2", "deviceType": "SWITCH", "firmwareVersion": "WC.16.11.0010", "model": "2930F"},
+            {
+                "serialNumber": "SW2",
+                "deviceType": "SWITCH",
+                "firmwareVersion": "WC.16.11.0010",
+                "model": "2930F",
+            },
         )
         assert device_type_for_troubleshoot("SW2", None) == "aos-s"
 

@@ -187,7 +187,8 @@ class ValidateStage(Stage):
         if record.target_group not in group_names:
             return StageResult.failed(
                 f"VALIDATION_FAILED: target_group '{record.target_group}' does not exist "
-                "in the target Central account. Create it before running the hpe_networking_mcp.pipeline."
+                "in the target Central account. Create it before running the "
+                "hpe_networking_mcp.pipeline."
             )
 
         # 4. Check for active critical alerts (warn only)
@@ -215,13 +216,18 @@ class ValidateStage(Stage):
                     config_status = str(health_items[0].get("configStatus", "")).upper()
                     if config_status and config_status != "SYNCHRONIZED":
                         warnings.append(
-                            f"configStatus={config_status!r} in target (device may need reconfiguration)"
+                            f"configStatus={config_status!r} in target "
+                            "(device may need reconfiguration)"
                         )
             except Exception as exc:
-                logger.warning("Config-health preflight check failed for %s: %s", record.serial_number, exc)
+                logger.warning(
+                    "Config-health preflight check failed for %s: %s", record.serial_number, exc
+                )
 
         # 7. AOS-S + AOS 10 target → mark firmware as skip
-        if record.hardware_series == HardwareSeries.AOS_S and record.firmware_target.startswith("10."):
+        if record.hardware_series == HardwareSeries.AOS_S and record.firmware_target.startswith(
+            "10."
+        ):
             record.firmware_action = FirmwareAction.SKIP
             warnings.append("AOS-S hardware cannot run AOS 10 — firmware upgrade will be skipped")
 

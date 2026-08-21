@@ -48,7 +48,9 @@ from hpe_networking_mcp.mcp_servers.openapi_gen import manifest as M  # noqa: E4
 from ingestion import readme_registry as rr  # noqa: E402
 
 PORTAL = "https://developer.arubanetworks.com"
-PROVENANCE_DIR = _REPO_ROOT / "src" / "hpe_networking_mcp" / "mcp_servers" / "openapi_gen" / "provenance"
+PROVENANCE_DIR = (
+    _REPO_ROOT / "src" / "hpe_networking_mcp" / "mcp_servers" / "openapi_gen" / "provenance"
+)
 
 # ClearPass 6.12.x groups its ~335-path surface into 16 ReadMe api-registry
 # categories. Discovered by walking the portal reference sidebar and reading

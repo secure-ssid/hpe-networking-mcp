@@ -430,7 +430,9 @@ def _map_central_type(dtype: str) -> str:
     return "generic"
 
 
-def layout_positions(model: DiagramModel, *, col_width: int = 180, row_height: int = 120) -> dict[str, tuple[int, int]]:
+def layout_positions(model: DiagramModel, *, col_width: int = 180, row_height: int = 120) -> dict[
+    str, tuple[int, int]
+]:
     """Simple layered grid layout (x, y) for Draw.io / Graphviz positions."""
     layers: dict[int, list[DiagramNode]] = {}
     for node in model.nodes:

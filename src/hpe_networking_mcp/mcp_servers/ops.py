@@ -151,11 +151,13 @@ async def cx_show(
     serial_number: str,
     commands: list[str],
 ) -> dict[str, Any]:
-    """Run 'show' commands on a CX switch (all must start with 'show ', max 20, async polls ~60s)."""
+    """Run 'show' commands on a CX switch (all must start with 'show ', max 20,
+    async polls ~60s)."""
     if not commands:
         return {"status": None, "errors": ["commands list cannot be empty"]}
     if len(commands) > 20:
-        return {"status": None, "errors": [f"commands list cannot exceed 20 items (got {len(commands)})"]}
+        return {"status": None,
+                "errors": [f"commands list cannot exceed 20 items (got {len(commands)})"]}
     for i, cmd in enumerate(commands):
         if not cmd.strip().lower().startswith("show "):
             return {"status": None, "errors": [f"Command {i} must start with 'show ': '{cmd}'"]}
@@ -214,7 +216,8 @@ async def aos_s_show(serial_number: str, commands: list[str]) -> dict[str, Any]:
 
 @mcp.tool(annotations=DIAGNOSTIC)
 async def gateway_show(serial_number: str, commands: list[str]) -> dict[str, Any]:
-    """Run 'show' commands on an Aruba gateway via async troubleshooting API. Each must start with 'show '."""
+    """Run 'show' commands on an Aruba gateway via async troubleshooting API.
+    Each must start with 'show '."""
     if not commands:
         return {"status": None, "errors": ["commands list cannot be empty"]}
     for i, cmd in enumerate(commands):
@@ -281,11 +284,17 @@ async def poe_bounce(
 
     try:
         result = await ctx.elicit(
-            message=f"⚠️ Confirm PoE BOUNCE on {serial_number} ports {ports}? Connected devices will temporarily lose power.",
+            message=(
+                f"⚠️ Confirm PoE BOUNCE on {serial_number} ports {ports}? "
+                "Connected devices will temporarily lose power."
+            ),
             schema=_ConfirmAction,
         )
     except Exception as exc:
-        return {"status": "CONFIRMATION_UNAVAILABLE", "error": f"client does not support elicitation; operation NOT performed: {exc}"}
+        return {
+            "status": "CONFIRMATION_UNAVAILABLE",
+            "error": f"client does not support elicitation; operation NOT performed: {exc}",
+        }
     if result.action != "accept" or not result.data.confirm:
         return {"status": "CANCELLED", "detail": "user declined confirmation"}
 
@@ -322,11 +331,17 @@ async def port_bounce(
 
     try:
         result = await ctx.elicit(
-            message=f"⚠️ Confirm PORT BOUNCE on {serial_number} ports {ports}? Connected devices will lose connectivity.",
+            message=(
+                f"⚠️ Confirm PORT BOUNCE on {serial_number} ports {ports}? "
+                "Connected devices will lose connectivity."
+            ),
             schema=_ConfirmAction,
         )
     except Exception as exc:
-        return {"status": "CONFIRMATION_UNAVAILABLE", "error": f"client does not support elicitation; operation NOT performed: {exc}"}
+        return {
+            "status": "CONFIRMATION_UNAVAILABLE",
+            "error": f"client does not support elicitation; operation NOT performed: {exc}",
+        }
     if result.action != "accept" or not result.data.confirm:
         return {"status": "CANCELLED", "detail": "user declined confirmation"}
 
@@ -390,8 +405,12 @@ async def reboot_device(
             elif "GATEWAY" in raw:
                 device_type = "GATEWAY"
         if not device_type:
-            errors.append(f"Could not determine device type for {serial_number}. Provide device_type explicitly.")
-            return {"serial_number": serial_number, "device_type": None, "response": None, "errors": errors}
+            errors.append(
+                f"Could not determine device type for {serial_number}. "
+                "Provide device_type explicitly."
+            )
+            return {"serial_number": serial_number, "device_type": None,
+                    "response": None, "errors": errors}
 
     dt = device_type.upper()
     if dt in ("AP", "ACCESS_POINT"):
@@ -403,16 +422,25 @@ async def reboot_device(
     elif dt in ("GATEWAY", "GW"):
         segment = "gateways"
     else:
-        errors.append(f"Unknown device_type '{device_type}'. Use 'AP', 'CX', 'AOS-S', or 'GATEWAY'.")
-        return {"serial_number": serial_number, "device_type": device_type, "response": None, "errors": errors}
+        errors.append(
+            f"Unknown device_type '{device_type}'. Use 'AP', 'CX', 'AOS-S', or 'GATEWAY'."
+        )
+        return {"serial_number": serial_number, "device_type": device_type,
+                "response": None, "errors": errors}
 
     try:
         result = await ctx.elicit(
-            message=f"⚠️ Confirm REBOOT of {device_type} {serial_number}? This will cause a service interruption.",
+            message=(
+                f"⚠️ Confirm REBOOT of {device_type} {serial_number}? "
+                "This will cause a service interruption."
+            ),
             schema=_ConfirmAction,
         )
     except Exception as exc:
-        return {"status": "CONFIRMATION_UNAVAILABLE", "error": f"client does not support elicitation; operation NOT performed: {exc}"}
+        return {
+            "status": "CONFIRMATION_UNAVAILABLE",
+            "error": f"client does not support elicitation; operation NOT performed: {exc}",
+        }
     if result.action != "accept" or not result.data.confirm:
         return {"status": "CANCELLED", "detail": "user declined confirmation"}
 
@@ -444,18 +472,26 @@ async def disconnect_client(
     if not ap_serial:
         cl = get_mcp_client().find_client(mac_address)
         if not cl:
-            return {"mac_address": mac_address, "response": None, "errors": ["Client not found in monitoring"]}
+            return {"mac_address": mac_address, "response": None,
+                    "errors": ["Client not found in monitoring"]}
         ap_serial = cl.get("connectedDeviceSerial")
         if not ap_serial:
-            return {"mac_address": mac_address, "response": None, "errors": ["Could not determine connected AP serial"]}
+            return {"mac_address": mac_address, "response": None,
+                    "errors": ["Could not determine connected AP serial"]}
 
     try:
         result = await ctx.elicit(
-            message=f"⚠️ Confirm DISCONNECT of client {mac_address}? The client will be forced off the network.",
+            message=(
+                f"⚠️ Confirm DISCONNECT of client {mac_address}? "
+                "The client will be forced off the network."
+            ),
             schema=_ConfirmAction,
         )
     except Exception as exc:
-        return {"status": "CONFIRMATION_UNAVAILABLE", "error": f"client does not support elicitation; operation NOT performed: {exc}"}
+        return {
+            "status": "CONFIRMATION_UNAVAILABLE",
+            "error": f"client does not support elicitation; operation NOT performed: {exc}",
+        }
     if result.action != "accept" or not result.data.confirm:
         return {"status": "CANCELLED", "detail": "user declined confirmation"}
 
@@ -490,7 +526,8 @@ def acknowledge_alert(
     errors: list[str] = []
 
     candidates = [
-        ("POST", "/network-notifications/v1/alerts/acknowledge", {"alert_id": [alert_id], "action": action}),
+        ("POST", "/network-notifications/v1/alerts/acknowledge",
+         {"alert_id": [alert_id], "action": action}),
         ("POST", f"/network-notifications/v1/alerts/{alert_id}/acknowledge", {"action": action}),
         ("PATCH", f"/network-notifications/v1/alerts/{alert_id}", {"status": action}),
     ]
@@ -508,7 +545,8 @@ def acknowledge_alert(
                 resp_body = response.json()
             except Exception:
                 resp_body = {}
-            return {"alert_id": alert_id, "action": action, "endpoint_used": endpoint, "response": resp_body, "errors": errors}
+            return {"alert_id": alert_id, "action": action, "endpoint_used": endpoint,
+                    "response": resp_body, "errors": errors}
         except Exception as exc:
             errors.append(str(exc))
 
@@ -572,7 +610,9 @@ async def find_mac_on_switch(serial_number: str, mac_address: str) -> dict[str, 
 
 
 @mcp.tool(annotations=DIAGNOSTIC)
-async def get_switch_port_errors(serial_number: str, interface: str | None = None) -> dict[str, Any]:
+async def get_switch_port_errors(serial_number: str, interface: str | None = None) -> dict[
+    str, Any
+]:
     """Get error counters for CX switch ports.
 
     Returns CRC errors, input errors, output errors, runts, giants, and
@@ -871,7 +911,10 @@ async def gateway_halt(ctx: Context, serial_number: str, dry_run: bool = False) 
             schema=_ConfirmAction,
         )
     except Exception as exc:
-        return {"status": "CONFIRMATION_UNAVAILABLE", "error": f"client does not support elicitation; operation NOT performed: {exc}"}
+        return {
+            "status": "CONFIRMATION_UNAVAILABLE",
+            "error": f"client does not support elicitation; operation NOT performed: {exc}",
+        }
     if result.action != "accept" or not result.data.confirm:
         return {"status": "CANCELLED", "detail": "user declined confirmation"}
     response, endpoint = await _arequest_troubleshooting(
@@ -901,7 +944,10 @@ async def reboot_ap_swarm(
             schema=_ConfirmAction,
         )
     except Exception as exc:
-        return {"status": "CONFIRMATION_UNAVAILABLE", "error": f"client does not support elicitation; operation NOT performed: {exc}"}
+        return {
+            "status": "CONFIRMATION_UNAVAILABLE",
+            "error": f"client does not support elicitation; operation NOT performed: {exc}",
+        }
     if result.action != "accept" or not result.data.confirm:
         return {"status": "CANCELLED", "detail": "user declined confirmation"}
     response, endpoint = await _arequest_troubleshooting(
@@ -1050,7 +1096,8 @@ async def ap_show(serial_number: str, commands: list[str]) -> dict[str, Any]:
     if not commands:
         return {"status": None, "errors": ["commands list cannot be empty"]}
     if len(commands) > 20:
-        return {"status": None, "errors": [f"commands list cannot exceed 20 items (got {len(commands)})"]}
+        return {"status": None,
+                "errors": [f"commands list cannot exceed 20 items (got {len(commands)})"]}
     for i, cmd in enumerate(commands):
         if not cmd.strip().lower().startswith("show "):
             return {"status": None, "errors": [f"Command {i} must start with 'show ': '{cmd}'"]}
