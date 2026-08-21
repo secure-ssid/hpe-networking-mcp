@@ -1,7 +1,9 @@
-# Prebuilt RAG/OpenAPI indexes
+# Building the RAG/OpenAPI indexes
 
-The core router catalog is quick to build locally. The full docs/API RAG index is
-larger, so public releases can include a prebuilt archive.
+The router tool catalog and the exact-API database are derived from OpenAPI
+specs committed to this repository, so they rebuild deterministically and are
+safe to publish. The RAG prose corpus is different: it is scraped vendor
+documentation, and this project does **not** distribute it.
 
 ## Current 0.8.0 snapshot
 
@@ -38,23 +40,28 @@ OpenAPI documents are parsed only into SQLite exact lookup. They are not
 embedded into LanceDB, which keeps prose retrieval smaller and avoids lossy
 semantic matching for endpoint paths, fields, and enum values.
 
-## Download indexes
+## Build the indexes
+
+### Tool catalog and exact-API database (derived, reproducible)
 
 ```bash
-uv run python scripts/download_indexes.py
+uv run python scripts/ingest_tools.py --complete-catalog
 ```
 
-This downloads the latest `hpe-networking-mcp-rag-index-latest.tar.gz` release asset and
-its `.sha256` checksum, verifies the archive, and safely unpacks only regular
-files/directories under `data/`:
+This regenerates `data/tools.lance` and `data/specs.sqlite` from the OpenAPI
+specs already in the repository. No network access and no scraping required.
 
-```text
-data/docs.lance
-data/tools.lance
-data/specs.sqlite
-data/SOURCE-MANIFEST.json
-data/INDEX-MANIFEST.json
+### RAG prose corpus (scraped, local-only)
+
+```bash
+uv run python ingestion/ingest_docs.py
 ```
+
+This crawls the vendor documentation portals declared in
+[`ingestion/source_manifest.json`](../ingestion/source_manifest.json). Run it
+only under your own acceptance of each vendor's terms of use. Expect it to
+take hours, and expect the first query afterwards to download the ~250 MB
+`nomic-embed-text-v1.5` embedding model into your Hugging Face cache.
 
 Then check the local setup:
 
@@ -62,24 +69,31 @@ Then check the local setup:
 uv run hpe-mcp-doctor
 ```
 
-CI and release builds use the immutable repository pin instead of the moving
-`latest` alias:
+### Why the corpus is not a release asset
 
-```bash
-uv run python scripts/download_indexes.py --manifest .github/index-bundle.json
-```
+`data/docs.lance` holds 392,471 verbatim chunks of HPE, Aruba, Juniper, and
+Mist documentation. Publishing it would redistribute third-party content this
+project has no licence to redistribute, and `ingestion/source_manifest.json`
+has always instructed "Do not commit scraped content". Two of its corpora are
+additionally obtained by driving Playwright with `headless=False` specifically
+to get past Akamai bot protection, which is not something to republish at
+scale on anyone's behalf.
 
-The tracked manifest names a dedicated `indexes-vX.Y.Z` GitHub Release and
-pins the archive's SHA-256 in the source tree. The script verifies that digest
-independently of the downloaded `.sha256` sidecar, so replacing both release
-assets cannot silently change what a commit validates.
+Releases therefore ship the wheel, source distribution, SBOM, provenance, and
+evidence bundle only. CI rebuilds the tool index from committed specs and does
+not assert `--strict-rag`, because no corpus is present.
 
-For custom archives, pass `--url` and optionally `--checksum-url`. Use
-`--expected-sha256` to pin a custom digest. `--skip-checksum` skips only the
-downloaded sidecar; a digest supplied by `--manifest` or
-`--expected-sha256` is always verified.
+### Moving an index between your own machines
 
-## Package indexes for a release
+`scripts/download_indexes.py` remains available as a hardened restorer for
+archives **you** host: it verifies a SHA-256 digest, rejects absolute paths,
+parent traversal, symlinks, and non-regular members, then stages and atomically
+replaces `data/`. Pass `--url`, and pin integrity with `--expected-sha256` or a
+`--manifest` file of your own. A digest supplied by `--manifest` or
+`--expected-sha256` is always verified; `--skip-checksum` only skips a
+downloaded sidecar.
+
+## Refresh and reconcile local indexes
 
 Build or refresh local indexes first:
 
@@ -130,59 +144,17 @@ dist/hpe-networking-mcp-rag-index-latest.tar.gz
 dist/hpe-networking-mcp-rag-index-latest.tar.gz.sha256
 ```
 
-Upload both the versioned archive/checksum and the `latest` archive/checksum to
-the GitHub Release so the downloader can always use and verify the latest
-release URL. Use `--skip-latest-copy` only if you intentionally want to package
-versioned assets without the downloader alias.
+Keep these archives local. Do not upload `hpe-networking-mcp-rag-index-*` to a
+GitHub Release: the versioned and `latest` archives both contain
+`data/docs.lance`, which is the scraped prose corpus described above. Use
+`--skip-latest-copy` when you only want the versioned archive.
 
-The release process first publishes the reviewed versioned archive/checksum to
-an immutable `indexes-vX.Y.Z` release and records its digest in
-`.github/index-bundle.json`. The product `vX.Y.Z` release workflow restores
-that exact pin, runs strict validation, and republishes versioned plus `latest`
-aliases alongside the wheel, source distribution, evidence bundle, SBOM, and
-provenance.
-
-Create the index release as a prerelease so it never displaces the most recent
-product release used by `/releases/latest/download/...`:
-
-```bash
-VERSION="v<project-version>"
-INDEX_TAG="indexes-${VERSION}"
-
-gh release create "$INDEX_TAG" \
-  --repo secure-ssid/hpe-networking-mcp \
-  --target main \
-  --title "RAG/OpenAPI index ${VERSION}" \
-  --notes "Immutable index input for ${VERSION}; no upstream source refresh." \
-  --prerelease \
-  --latest=false
-
-gh release upload "$INDEX_TAG" \
-  "dist/hpe-networking-mcp-rag-index-${VERSION}.tar.gz" \
-  "dist/hpe-networking-mcp-rag-index-${VERSION}.tar.gz.sha256" \
-  dist/hpe-networking-mcp-rag-index-latest.tar.gz \
-  dist/hpe-networking-mcp-rag-index-latest.tar.gz.sha256 \
-  --repo secure-ssid/hpe-networking-mcp
-```
-
-Both the archive and its `.sha256` sidecar are mandatory: CI verifies the
-repository-pinned digest first, then independently verifies the downloaded
-sidecar. After upload, update `.github/index-bundle.json` with the immutable
-tag, asset URLs, and digest in the same change that updates the package
-version/source manifest. Strict CI intentionally fails until all four agree.
-
-For an existing release, upload the four generated assets with:
-
-```bash
-VERSION="v<project-version>"
-gh release upload "$VERSION" \
-  "dist/hpe-networking-mcp-rag-index-${VERSION}.tar.gz" \
-  "dist/hpe-networking-mcp-rag-index-${VERSION}.tar.gz.sha256" \
-  dist/hpe-networking-mcp-rag-index-latest.tar.gz \
-  dist/hpe-networking-mcp-rag-index-latest.tar.gz.sha256 \
-  --repo secure-ssid/hpe-networking-mcp \
-  --clobber
-```
+A release ships the wheel, source distribution, evidence bundle, SBOM, and
+provenance. It does not ship an index. `scripts/package_indexes.py` exists so
+you can snapshot, checksum, and move an index between machines you control, and
+so `--check-local-manifests` can prove that `data/SOURCE-MANIFEST.json`,
+`data/INDEX-MANIFEST.json`, and `docs/project-facts.json` agree with the
+artifacts actually on disk.
 
 ## What is inside
 

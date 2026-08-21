@@ -228,16 +228,33 @@ class TestDriftJobsAreIndependent:
         strict_runs = _run_steps(workflow["jobs"]["strict-index"])
 
         assert any("scripts/validate_release.py" in run for run in test_runs)
-        assert any(
-            "scripts/download_indexes.py" in run
-            and "--manifest .github/index-bundle.json" in run
-            for run in strict_runs
-        )
+        # The strict job rebuilds the tool index from the OpenAPI specs
+        # committed to this repository rather than restoring a published
+        # bundle, so it stays reproducible without shipping any corpus.
+        assert any("scripts/ingest_tools.py" in run for run in strict_runs)
         strict = next(run for run in strict_runs if "scripts/validate_release.py" in run)
-        assert "--strict-rag" in strict
         assert "--strict-tool-index" in strict
         for run in (*test_runs, *strict_runs):
             assert not any(script in run for script in DRIFT_CHECK_SCRIPTS)
+
+    def test_ci_never_restores_or_asserts_the_scraped_prose_corpus(self, workflow):
+        """CI must not depend on an artifact this project refuses to publish.
+
+        ``data/docs.lance`` is 392,471 verbatim chunks of scraped HPE, Aruba,
+        Juniper, and Mist documentation. It is no longer uploaded to releases,
+        so any workflow step that downloads an index bundle or asserts
+        ``--strict-rag`` would fail closed forever.
+        """
+        for job_name, job in workflow["jobs"].items():
+            for run in _run_steps(job):
+                # Match invocation, not mention: the ruff lint step legitimately
+                # passes scripts/download_indexes.py as a file to check.
+                assert "python scripts/download_indexes.py" not in run, (
+                    f"job {job_name!r} restores an index bundle that is not published"
+                )
+                assert "--strict-rag" not in run, (
+                    f"job {job_name!r} asserts --strict-rag without a shipped corpus"
+                )
 
     def test_package_job_builds_and_smoke_installs_distributions(self, workflow):
         runs = _run_steps(workflow["jobs"]["package"])

@@ -24,7 +24,7 @@ JavaScript.
 | [product-workflows.md](product-workflows.md) | Typed ClearPass/Mist/Apstra/AOS8/EdgeConnect/UXI workflow roadmap |
 | [aos8-migration-contract-matrix.md](aos8-migration-contract-matrix.md) | Authoritative AOS8-to-Classic/New Central migration contract matrix gating 0.5.0 implementation |
 | [aos8-live-dryrun-evaluation.md](aos8-live-dryrun-evaluation.md) | Read-only live/fixture-backed evaluation record of the AOS8 migration pipeline against the contract matrix |
-| [release-indexes.md](release-indexes.md) | Download, package, and release prebuilt RAG/OpenAPI indexes |
+| [release-indexes.md](release-indexes.md) | Build the tool/API indexes from committed specs, build the RAG corpus locally, and why the corpus is never released |
 | [release-notes-0.8.0.md](release-notes-0.8.0.md) | Clean repository/package rename, MCP 2 transport repair, PII protection, interop tools, GLP inventory completion, strict RAG/catalog facts, and classified drift gates |
 | [release-notes-0.7.0.md](release-notes-0.7.0.md) | Artifact/live-test gates, source lifecycle provenance, structured RAG intelligence, Central/GLP/AOS8/optional-product depth, observability/security, router automation, and release artifact automation |
 | [central-v07-workflows.md](central-v07-workflows.md) | Central v0.7 depth workflows: VSF template lifecycle, bulk site/site-collection delete, firmware-compliance campaigns, config-health remediation, troubleshooting orchestration |
@@ -74,8 +74,8 @@ panels are defined in `assets/css/style.scss`.
 | `ingestion/` | Docs/API ingestion into LanceDB and SQLite |
 | `ingestion/source_manifest.json` | RAG source seeds for product docs, OpenAPI, security advisories, and end-of-sale/end-of-life lifecycle notices |
 | `scripts/setup_wizard.py` | Guided install, Central region, credentials, optional products, MCP configs, catalog, and doctor |
-| `scripts/download_indexes.py` | Restore prebuilt docs/API/tool indexes from GitHub Releases |
-| `scripts/package_indexes.py` | Package local indexes for a GitHub Release asset |
+| `scripts/download_indexes.py` | Hardened, checksum-verified restore of an index archive you host yourself |
+| `scripts/package_indexes.py` | Snapshot and checksum local indexes for transfer between your own machines |
 | `scripts/check_openapi_drift.py` / `scripts/check_mist_openapi_drift.py` | Detect Aruba ReadMe registry and official Mist OpenAPI changes |
 | `scripts/check_nowireless_source_drift.py` | Read-only, path-specific freshness check for the pinned community `nowireless4u/hpe-networking-mcp` inputs (GLP vendored specs, Axis platform source, capability-benchmark evidence paths); community pins are benchmarks/inputs, not API authority -- see [capability-gap-matrix.md](capability-gap-matrix.md) |
 | `scripts/check_security_lifecycle_drift.py` | Fresh/stale/unavailable/changed/coverage-gap state per security/lifecycle source, plus a bounded `source_freshness_result` artifact; see `ingestion/lifecycle_provenance.py` for the source-identity/schema pins under `ingestion/provenance/` |
@@ -102,8 +102,8 @@ python3 scripts/setup_wizard.py
 # Guided setup with selected optional products
 python3 scripts/setup_wizard.py --products clearpass,mist
 
-# Download prebuilt RAG/OpenAPI indexes
-uv run python scripts/download_indexes.py
+# Build the RAG prose corpus locally (crawls vendor portals; hours)
+uv run python ingestion/ingest_docs.py
 
 # Build the router tool catalog
 uv run python scripts/ingest_tools.py

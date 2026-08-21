@@ -121,13 +121,16 @@ Generalizes `scripts/download_indexes.py`'s safe-extraction pattern
 
 `.github/workflows/release-artifacts.yml` is an operator-triggered
 `workflow_dispatch` release gate. It validates that the requested `vX.Y.Z`
-tag matches `pyproject.toml`, restores the immutable index archive pinned in
-`.github/index-bundle.json`, runs the complete strict unit/RAG/API/tool-index
-contract, builds wheel and source distributions, builds and restores the
-release evidence bundle, attests the application/evidence artifacts produced
-by the workflow, and creates or updates the GitHub Release and tag. The
-locally built index archive is not claimed as a workflow-built subject; its
-integrity is established by the tracked digest and immutable index release.
+tag matches `pyproject.toml`, rebuilds the tool catalog and exact-API database
+from the OpenAPI specs committed to this repository, runs the strict
+API/tool-index contract, builds wheel and source distributions, builds and
+restores the release evidence bundle, attests the application/evidence
+artifacts produced by the workflow, and creates or updates the GitHub Release
+and tag.
+
+No RAG prose corpus is restored or published. `data/docs.lance` is scraped
+vendor documentation that this project has no licence to redistribute, so it
+is never a release asset and `--strict-rag` is never asserted in CI.
 
 The workflow uses least-required permissions (`contents: read` by default;
 `contents: write`, `id-token: write`, and `attestations: write` only on the
@@ -140,20 +143,20 @@ The main CI workflow has two release-related tiers:
 - The Python matrix runs every unit/protocol test and the artifact-free
   catalog/facts gate on Python 3.10, 3.11, and 3.12 on Linux plus Python 3.12
   on macOS.
-- `Strict RAG and tool index` restores `.github/index-bundle.json` and runs
-  `--strict-rag --strict-tool-index`. Repository administrators enable it
-  with the Actions variable `HPE_MCP_STRICT_INDEX_ENABLED=true` after the
-  pinned `indexes-vX.Y.Z` release exists; it then runs on pushes, pull
-  requests, and manual CI dispatches.
+- `Strict tool index` rebuilds the tool catalog from committed OpenAPI specs
+  and runs `--strict-tool-index`. Repository administrators enable it with the
+  Actions variable `HPE_MCP_STRICT_INDEX_ENABLED=true`; it then runs on
+  pushes, pull requests, and manual CI dispatches.
 
 The package job also builds wheel/sdist, installs the wheel into a fresh
 environment, and smoke-runs all four `hpe-mcp-*` console scripts.
 
-Strict index validation is intentionally lockstep. A package-version bump or
-change to `ingestion/source_manifest.json` requires: rebuild/reconcile local
-indexes, package and publish the new `indexes-vX.Y.Z` prerelease, then update
-the package version, source manifest, and `.github/index-bundle.json` together.
-Do not disable the strict job to work around that sequencing contract.
+Strict index validation stays reproducible because every input it needs is
+committed. A package-version bump or a change to
+`ingestion/source_manifest.json` requires rebuilding and reconciling the local
+indexes so `data/SOURCE-MANIFEST.json`, `data/INDEX-MANIFEST.json`, and
+`docs/project-facts.json` agree, but no release asset has to be republished to
+make CI pass.
 
 ## Testing and linting
 

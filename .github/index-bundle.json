@@ -1,8 +1,0 @@
-{
-  "schema_version": 1,
-  "release": "indexes-v0.8.0",
-  "archive": "hpe-networking-mcp-rag-index-v0.8.0.tar.gz",
-  "url": "https://github.com/secure-ssid/hpe-networking-mcp/releases/download/indexes-v0.8.0/hpe-networking-mcp-rag-index-v0.8.0.tar.gz",
-  "checksum_url": "https://github.com/secure-ssid/hpe-networking-mcp/releases/download/indexes-v0.8.0/hpe-networking-mcp-rag-index-v0.8.0.tar.gz.sha256",
-  "sha256": "6460dc6bd29ea441efd660335e2e244c5e51f6aaa159c57d2b8f6b09cc55c831"
-}
