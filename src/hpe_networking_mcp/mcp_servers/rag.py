@@ -1141,6 +1141,17 @@ VENDOR_CORPUS_REMEDY = (
     "with `git checkout -- vendor/openapi`, or re-fetch and re-verify every "
     "pin with `python scripts/vendor_openapi_corpus.py`"
 )
+#: A corpus that is present but incomplete is a third state, and it is the one
+#: an operator is most likely to misdiagnose: the remaining documents still
+#: answer, so the instinct is to blame the index. Restoring named files that
+#: git already holds is neither a rebuild nor a scrape, and the text says so.
+VENDOR_FILES_MISSING_REMEDY = (
+    "the named documents are committed and digest-pinned in "
+    "vendor/openapi/MANIFEST.json — restore them with "
+    "`git checkout -- vendor/openapi`; nothing here needs re-fetching, "
+    "scraping or a network, and the documents still on disk keep answering "
+    "meanwhile"
+)
 PROSE_CORPUS_REMEDY = (
     "build the prose corpus with `uv run python ingestion/ingest_docs.py` — it "
     "is scraped vendor documentation and is deliberately not distributed"
@@ -1258,10 +1269,18 @@ def _spec_index_state() -> dict[str, Any]:
 def _vendor_provenance(detail: bool, spec: str | None) -> dict[str, Any]:
     """Provenance for the committed OpenAPI corpus behind ``lookup_api``.
 
-    Three states are kept apart on purpose, because each has a different fix:
-    the corpus is absent (``available: False``), the corpus is present but
-    documents it declares are missing from disk (``files_missing``), and the
-    corpus is present but no index was built over it (``index.built``).
+    Three states are kept apart on purpose, because each has a different fix,
+    and each carries its own remedy rather than borrowing another's: the
+    corpus is absent (``available: False`` + ``remedy``), the corpus is
+    present but documents it declares are missing from disk
+    (``files_missing`` + ``remedy``), and the corpus is present but no index
+    was built over it (``index.built`` + ``index.remedy``).
+
+    ``available`` answers "did anything back this answer", not "is the corpus
+    whole": a partly restored corpus stays ``True`` because the documents
+    still on disk genuinely serve ``lookup_api``. ``files_missing`` is how a
+    caller weighs that, so it is always present -- an empty list is the
+    positive statement that nothing declared is gone.
     """
     corpus_dir = specs_index.VENDOR_OPENAPI_DIR
     manifest_path = corpus_dir / specs_index.VENDOR_MANIFEST_NAME
@@ -1297,6 +1316,8 @@ def _vendor_provenance(detail: bool, spec: str | None) -> dict[str, Any]:
     }
     if len(missing) > _MAX_MISSING_FILES:
         section["files_missing_count"] = len(missing)
+    if missing:
+        section["remedy"] = VENDOR_FILES_MISSING_REMEDY
     if unreadable:
         section["unreadable_entries"] = unreadable
     notice = corpus_dir / "NOTICE.md"
