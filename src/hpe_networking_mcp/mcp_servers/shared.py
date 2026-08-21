@@ -328,6 +328,31 @@ def optional_product_write_blocked(tool_name: str) -> dict[str, Any]:
     }
 
 
+#: Backend server names for the optional starter products.
+#:
+#: Not every one of these has an entry in :data:`_PLATFORM_WRITE_GATES` --
+#: ``design-core`` does not -- yet all of them are enableable through
+#: ``HPE_MCP_PRODUCT_ACCESS``. The write gate needs that distinction to tell a
+#: known product whose writes are merely *off* from a backend nothing can
+#: enable at all, so the two get different refusals.
+#:
+#: ``tool_router._OPTIONAL_SERVER_NAMES`` is derived independently from
+#: ``_OPTIONAL_BACKENDS``; ``test_write_gate_mechanism_parity`` pins the two
+#: together so this cannot silently fall behind.
+OPTIONAL_PRODUCT_SERVER_NAMES: frozenset[str] = frozenset(
+    {
+        "aos8-core",
+        "apstra-core",
+        "axis-core",
+        "clearpass-core",
+        "design-core",
+        "edgeconnect-core",
+        "mist-core",
+        "uxi-core",
+    }
+)
+
+
 _TRUTHY_FLAG_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -365,6 +390,43 @@ def global_write_blocked(tool_name: str) -> dict[str, Any]:
         "tool": tool_name,
         "status": "blocked",
     }
+
+
+def ungated_backend_write_blocked(
+    server: str | None,
+    tool_name: str,
+    *,
+    capability: str = "write",
+    execution_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the blocked response for a write on a backend with no known gate.
+
+    Deny-by-default. A ``write``/``destructive`` tool whose backend resolves to
+    no entry in :data:`_PLATFORM_WRITE_GATES` cannot be enabled by *any*
+    documented environment variable, so there is nothing an operator could set
+    to permit it. Allowing it would mean shipping an ungated write; refusing is
+    the only reading consistent with the rest of this module.
+
+    Reaching this is a packaging defect rather than a configuration mistake --
+    a backend grew a write tool without its platform being registered -- so the
+    message names the registry to fix instead of an env var to set.
+    """
+    where = f" on backend '{server}'" if server else ""
+    payload: dict[str, Any] = {
+        "error": (
+            f"Tool '{tool_name}' is disabled because it is a {capability} tool"
+            f"{where} with no write gate, so no setting can enable it. Register the "
+            "backend's platform in _PLATFORM_WRITE_GATES (mcp_servers/shared.py) "
+            "before shipping write tools on it."
+        ),
+        "tool": tool_name,
+        "status": "blocked",
+    }
+    if server:
+        payload["server"] = server
+    if execution_contract is not None:
+        payload["execution_contract"] = execution_contract
+    return payload
 
 
 # ---------------------------------------------------------------------------
@@ -1343,17 +1405,30 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
     and composes safely with :func:`hpe_networking_mcp.mcp_servers._middleware.install_middleware`
     in either order (each keeps its own saved original).
 
+    Deny-by-default, resolved in the same three tiers the router uses so both
+    paths refuse exactly the same calls:
+
+    1. the server's platform has a registered gate -> that gate decides;
+    2. no registered gate but a known optional product (``design-core`` is one)
+       -> the shared ``HPE_MCP_PRODUCT_ACCESS`` fallback decides;
+    3. neither -> refuse via :func:`ungated_backend_write_blocked`.
+
+    Tier 3 must deny rather than allow. The alternative is that adding a
+    backend, or adding a write tool to a today-read-only one, silently ships an
+    ungated write -- and unlike tiers 1 and 2 there is no setting an operator
+    could use to notice, because none applies.
+
     Returns:
-        ``True`` if a gate was installed (or refreshed), ``False`` if this
-        server needs no standalone gate.
+        ``True`` if a gate was installed (or refreshed), ``False`` only for the
+        router itself, which enforces both gates after resolving the backend
+        tool.
     """
     server_name = str(getattr(mcp_instance, "name", "")).strip().lower()
     if server_name == "hpe-networking-mcp":
         return False
     validate_access_profile_environment()
     platform = platform_for_server_name(server_name)
-    if platform is None and not global_readonly_enabled():
-        return False
+    optional_product = platform is None and server_name in OPTIONAL_PRODUCT_SERVER_NAMES
 
     original = _sdk_compat.claim_dispatcher(mcp_instance, _WRITE_GATE_INSTALLED_ATTR)
 
@@ -1366,21 +1441,30 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
         tool = _sdk_compat.get_tool(mcp_instance, name)
         if tool is not None:
             capability = tool_write_capability(tool)
-            platform_blocked = (
-                platform is not None and not platform_writes_allowed(platform)
-            )
-            if capability in ("write", "destructive") and (
-                global_readonly_enabled() or platform_blocked
-            ):
+            if capability in ("write", "destructive"):
                 if global_readonly_enabled():
                     blocked = global_write_blocked(name)
+                elif platform is not None:
+                    blocked = (
+                        None
+                        if platform_writes_allowed(platform)
+                        else platform_write_blocked(platform, name, capability=capability)
+                    )
+                elif optional_product:
+                    blocked = (
+                        None
+                        if optional_product_writes_allowed()
+                        else optional_product_write_blocked(name)
+                    )
                 else:
-                    assert platform is not None
-                    blocked = platform_write_blocked(
-                        platform,
+                    blocked = ungated_backend_write_blocked(
+                        server_name or None,
                         name,
                         capability=capability,
                     )
+            else:
+                blocked = None
+            if blocked is not None:
                 if convert_result:
                     try:
                         return tool.fn_metadata.convert_result(blocked)

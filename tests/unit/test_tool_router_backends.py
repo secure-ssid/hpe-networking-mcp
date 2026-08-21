@@ -224,8 +224,15 @@ def test_direct_mode_registers_enabled_backend_tools(monkeypatch):
     backend = MCPServer("backend")
     target = MCPServer("router-direct")
 
-    @backend.tool()
+    @backend.tool(annotations=router.READ_ONLY)
     def direct_example(value: str) -> str:
+        return value
+
+    # Unannotated, so it classifies as a *write* -- and this backend resolves to
+    # no registered gate and is not an optional product, so nothing can enable
+    # it. Direct mode must withhold it rather than publish an ungated write.
+    @backend.tool()
+    def direct_unannotated(value: str) -> str:
         return value
 
     monkeypatch.setattr(router, "_BACKENDS", {"demo": "demo.backend"})
@@ -242,6 +249,7 @@ def test_direct_mode_registers_enabled_backend_tools(monkeypatch):
 
     assert registered == ["direct_example"]
     assert "direct_example" in target._tool_manager._tools
+    assert "direct_unannotated" not in target._tool_manager._tools
 
 
 def test_public_docs_list_router_products_and_toolsets():

@@ -81,6 +81,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
     platform_writes_allowed,
     reject_unknown_env_choices,
     resolve_rag_backend,
+    ungated_backend_write_blocked,
     validate_access_profile_environment,
 )
 from hpe_networking_mcp.optional_deps import MissingOptionalDependency
@@ -326,6 +327,14 @@ def _server_platform(server: str | None) -> str | None:
 
 
 def _write_is_enabled(server: str | None, capability: str) -> bool:
+    """True when a ``write``/``destructive`` call on ``server`` is permitted.
+
+    Deny-by-default: a backend that resolves to neither a registered platform
+    gate nor a known optional product has no setting that could enable it, so
+    it is refused rather than allowed. Returning ``True`` here would mean any
+    newly added backend -- or any write tool added to a today-read-only one --
+    ships ungated.
+    """
     if capability not in {"write", "destructive"}:
         return True
     platform = _server_platform(server)
@@ -333,7 +342,7 @@ def _write_is_enabled(server: str | None, capability: str) -> bool:
         return platform_writes_allowed(platform)
     if server in _OPTIONAL_SERVER_NAMES:
         return _optional_writes_allowed()
-    return True
+    return False
 
 
 def _readonly_blocks(tool: Any) -> bool:
@@ -1697,14 +1706,20 @@ async def _dispatch_tool(
         return global_write_blocked(name)
     contract = _execution_contract(tool, server, schema, arguments=args)
     platform = _server_platform(server)
-    if (
-        capability in {"write", "destructive"}
-        and platform in PLATFORM_WRITE_GATE_NAMES
-        and not _write_is_enabled(server, capability)
-    ):
-        assert contract is not None
-        return platform_write_blocked(
-            platform,
+    # Per-platform gate, then deny-by-default for a backend that has none:
+    # ``_write_is_enabled`` already refuses an unregistered platform, so the
+    # refusal payload is chosen on whether a gate exists to name.
+    if capability in {"write", "destructive"} and not _write_is_enabled(server, capability):
+        if platform in PLATFORM_WRITE_GATE_NAMES:
+            assert contract is not None
+            return platform_write_blocked(
+                platform,
+                name,
+                capability=capability,
+                execution_contract=contract,
+            )
+        return ungated_backend_write_blocked(
+            server,
             name,
             capability=capability,
             execution_contract=contract,

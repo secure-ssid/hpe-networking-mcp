@@ -378,14 +378,29 @@ class TestStandaloneWriteGate:
         assert _call(glp, "destroy_thing")["status"] == "blocked"
         assert _call(central, "destroy_thing") == {"destroyed": True}
 
-    def test_ungated_server_is_left_untouched(self):
+    def test_ungated_server_refuses_writes_and_still_serves_reads(self):
+        """A backend with no registered gate denies writes -- it is not skipped.
+
+        This asserted the opposite until the deny-by-default fix: the gate
+        declined to install whenever ``platform_for_server_name`` returned
+        ``None``, so a destructive tool on ``rag-core`` executed. Nothing was
+        exploitable because those backends are entirely read-only today, but the
+        contract was fail-open -- adding one write tool to ``rag.py`` would have
+        shipped an ungated destructive call.
+        """
         from hpe_networking_mcp.mcp_servers.shared import _WRITE_GATE_INSTALLED_ATTR
 
         server = _gated_backend("rag-core")
 
-        assert install_platform_write_gate(server) is False
-        assert not hasattr(server._tool_manager, _WRITE_GATE_INSTALLED_ATTR)
-        assert _call(server, "destroy_thing") == {"destroyed": True}
+        assert install_platform_write_gate(server) is True
+        assert hasattr(server._tool_manager, _WRITE_GATE_INSTALLED_ATTR)
+        blocked = _call(server, "destroy_thing")
+        assert blocked["status"] == "blocked"
+        # No env var could have enabled it, so the refusal names the registry.
+        assert "_PLATFORM_WRITE_GATES" in blocked["error"]
+        assert blocked["server"] == "rag-core"
+        # Reads are untouched: the gate short-circuits before any capability check.
+        assert _call(server, "read_thing") == {"ok": True}
 
     def test_safe_profile_blocks_writes_on_ungated_standalone_server(
         self, monkeypatch
