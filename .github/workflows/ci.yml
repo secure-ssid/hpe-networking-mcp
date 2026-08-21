@@ -53,27 +53,19 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev --extra ingestion --extra redis --extra tui
 
-      # Paths are src-layout: the modules moved under
-      # src/hpe_networking_mcp/ during the package rename, so the old
-      # top-level pipeline/*.py arguments made this step fail with
-      # "No such file or directory" instead of linting anything.
-      - name: Ruff lint (release-artifact automation modules)
-        run: |
-          uv run ruff check \
-            src/hpe_networking_mcp/pipeline/sbom.py \
-            src/hpe_networking_mcp/pipeline/release_packaging.py \
-            src/hpe_networking_mcp/pipeline/release_restore.py \
-            src/hpe_networking_mcp/pipeline/artifact_contracts.py \
-            src/hpe_networking_mcp/pipeline/live_test_config.py \
-            src/hpe_networking_mcp/pipeline/clients/lance_client.py \
-            src/hpe_networking_mcp/pipeline/project_facts.py \
-            src/hpe_networking_mcp/mcp_servers/shared.py \
-            scripts/run_v07_validation_matrix.py scripts/build_release_bundle.py \
-            scripts/restore_release_bundle.py scripts/project_facts.py \
-            scripts/package_indexes.py scripts/download_indexes.py \
-            scripts/refresh_rag_sources.py scripts/validate_source_manifest.py \
-            scripts/add_rag_source.py scripts/report_capability_gaps.py \
-            scripts/validate_release.py
+      # Whole-tree, not a file list. The previous form named ~20 paths
+      # explicitly, so every module added after it was written -- and every
+      # module nobody remembered to append -- was silently unlinted. A gate
+      # that only inspects what someone remembered to enrol is not a gate.
+      #
+      # Widening it surfaced 443 findings across 78 files (E501, plus I001
+      # and F401 fixed by `--fix`). All of them are fixed in the tree, none
+      # are suppressed: there is no `exclude`, no `per-file-ignores` and no
+      # `# noqa` carrying this. `[tool.ruff]` in pyproject.toml holds the
+      # line-length and the E/F/I rule selection, so this step and a local
+      # `ruff check .` agree by construction.
+      - name: Ruff lint
+        run: uv run ruff check .
 
       # Matrix jobs stay artifact-free and exercise every unit/protocol test
       # plus code-derived catalog facts. The separate strict-index job rebuilds
