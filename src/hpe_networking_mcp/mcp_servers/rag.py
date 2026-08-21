@@ -1,4 +1,4 @@
-"""MCP server — Aruba/HPE documentation RAG tools (15 tools).
+"""MCP server — Aruba/HPE documentation RAG tools (16 tools).
 
 Covers: hybrid (vector + BM25) search over ingested Aruba Central developer
 docs, tech docs, NAC docs, VSG docs, HTML tech docs, Junos CLI, Junos
@@ -9,17 +9,21 @@ summaries; exact structured security-advisory/lifecycle lookup, bounded
 list/filter/pagination, an exact-only advisory<->lifecycle correlation, an
 exact curated hardware datasheet catalog lookup (CX/EX/AP specs, not part of
 the document corpus), bounded RAG index diagnostics (ingestion delta, source
-freshness, citation completeness), local skills/runbook browse+load helpers,
-and a search over the user's own local personal/internal document collection
-(separate index, never shared).
+freshness, citation completeness), corpus provenance for both the committed
+OpenAPI corpus and the locally built prose index, local skills/runbook
+browse+load helpers, and a search over the user's own local personal/internal
+document collection (separate index, never shared).
 
 Default backend is the embedded stack — LanceDB + fastembed, no servers
 needed (`clone -> uv sync -> run`). Set HPE_MCP_RAG_BACKEND=redis for the
 optional Redis Stack + Ollama server deployment (vector-only + source boost).
 """
 
+import importlib.util
+import json
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -1112,6 +1116,325 @@ def rag_diagnostics(include_ingestion_delta: bool = True) -> dict[str, Any]:
             result["ingestion_delta"] = {"error": str(exc)}
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Corpus provenance — what backed an answer, how fresh, under what licence
+# ---------------------------------------------------------------------------
+
+#: Where a locally built prose index lives. Mirrors ``lance_client.DATA_DIR``
+#: and its ``docs`` table *without* importing that module: ``lance_client`` is
+#: only imported on the LanceDB backend, and this tool has to answer the same
+#: way under ``HPE_MCP_RAG_BACKEND=redis``. Read through the module attribute
+#: so a test can point it somewhere else.
+PROSE_DATA_DIR = specs_index.ROOT / "data"
+PROSE_DOCS_INDEX_NAME = "docs.lance"
+#: Written by ``scripts/package_indexes.py --write-local-manifests``. It is the
+#: only on-disk record of *what* went into the built prose index and when each
+#: source was last refreshed; the index directory itself says neither.
+PROSE_INDEX_MANIFEST_NAME = "INDEX-MANIFEST.json"
+
+#: Restoring 23 MB that is already committed is a different command from
+#: building an index over it, so the two remedies are never interchanged.
+VENDOR_CORPUS_REMEDY = (
+    "the vendored OpenAPI corpus is committed to this repository — restore it "
+    "with `git checkout -- vendor/openapi`, or re-fetch and re-verify every "
+    "pin with `python scripts/vendor_openapi_corpus.py`"
+)
+PROSE_CORPUS_REMEDY = (
+    "build the prose corpus with `uv run python ingestion/ingest_docs.py` — it "
+    "is scraped vendor documentation and is deliberately not distributed"
+)
+PROSE_MANIFEST_REMEDY = (
+    "describe the built index with "
+    "`uv run python scripts/package_indexes.py --write-local-manifests`"
+)
+_REDIS_PROSE_NOTE = (
+    "HPE_MCP_RAG_BACKEND=redis keeps the prose corpus inside the Redis server "
+    "rather than in data/docs.lance; this tool reports the on-disk index only, "
+    "so freshness for a Redis corpus has to come from that deployment"
+)
+
+#: The extra whose absence turns prose retrieval off entirely. The default
+#: install ships neither, so "no corpus" and "no retrieval stack" are two
+#: distinct facts and both are reported.
+_PROSE_MODULE, _PROSE_EXTRA = ("redis", "redis") if _BACKEND == "redis" else (
+    "lancedb",
+    "ingestion",
+)
+
+#: Manifest keys that pin a document to a re-fetchable upstream. Group A (the
+#: 30 New Central documents) pins through the ReadMe api-registry; group B
+#: (mist.openapi.json) pins to a git commit. See vendor/openapi/NOTICE.md.
+_PIN_KEYS = ("registry_id", "registry_sha256", "upstream_repo", "upstream_commit")
+
+#: A missing-file list is a bug report, not a corpus dump.
+_MAX_MISSING_FILES = 20
+
+
+def _repo_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(specs_index.ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _load_json(path: Path) -> tuple[Any, str | None]:
+    """Parse ``path``, returning the reason instead of raising.
+
+    Provenance is what a caller reaches for when something already looks
+    wrong. A truncated manifest raising out of the tool would replace the one
+    answer that could explain the state of the install with a stack trace.
+    """
+    try:
+        return json.loads(path.read_text(encoding="utf-8")), None
+    except FileNotFoundError:
+        return None, f"{_repo_path(path)} is not present"
+    except (OSError, ValueError) as exc:
+        return None, f"{_repo_path(path)} is unreadable: {exc}"
+
+
+def _vendor_document(entry: Any) -> dict[str, Any] | None:
+    """One manifest entry as a provenance row, or None if it says nothing."""
+    if not isinstance(entry, dict):
+        return None
+    name = Path(str(entry.get("file") or "")).name
+    if not name:
+        return None
+    document: dict[str, Any] = {
+        "file": name,
+        "title": entry.get("title"),
+        "source_url": entry.get("source_url"),
+        "sha256": entry.get("sha256"),
+        "fetched": entry.get("fetched"),
+        "license": entry.get("license"),
+        "api_paths": entry.get("path_count"),
+    }
+    if pin := {key: entry[key] for key in _PIN_KEYS if entry.get(key)}:
+        document["pin"] = pin
+    return document
+
+
+def _license_groups(documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Per-licence counts, verbatim and never merged.
+
+    ``vendor/openapi`` holds two regimes: 30 proprietary-but-redistributable
+    HPE documents and one MIT Juniper document. Collapsing them into a single
+    line would let a redistributor read "MIT" over material that is not MIT,
+    which is the one claim this corpus must never make. The text is the
+    manifest's own, so it cannot drift from NOTICE.md.
+    """
+    groups: dict[Any, dict[str, Any]] = {}
+    for document in documents:
+        text = document["license"]
+        group = groups.setdefault(
+            text, {"license": text, "document_count": 0, "api_paths": 0}
+        )
+        group["document_count"] += 1
+        group["api_paths"] += int(document["api_paths"] or 0)
+    return sorted(
+        groups.values(),
+        key=lambda group: (-group["document_count"], str(group["license"] or "")),
+    )
+
+
+def _selected_document_name(spec: str) -> str:
+    """The document filename inside a ``lookup_api`` ``file_path``.
+
+    Hits come back as ``openapi_specs/<file>#<ref>``, so a caller holding one
+    can hand it straight back without having to parse it first.
+    """
+    return Path(spec.split("#", 1)[0].strip()).name.casefold()
+
+
+def _spec_index_state() -> dict[str, Any]:
+    db_path = Path(specs_index.DB_PATH)
+    state: dict[str, Any] = {"built": db_path.is_file(), "path": _repo_path(db_path)}
+    if not state["built"]:
+        state["remedy"] = specs_index.MISSING_INDEX_REMEDY
+    return state
+
+
+def _vendor_provenance(detail: bool, spec: str | None) -> dict[str, Any]:
+    """Provenance for the committed OpenAPI corpus behind ``lookup_api``.
+
+    Three states are kept apart on purpose, because each has a different fix:
+    the corpus is absent (``available: False``), the corpus is present but
+    documents it declares are missing from disk (``files_missing``), and the
+    corpus is present but no index was built over it (``index.built``).
+    """
+    corpus_dir = specs_index.VENDOR_OPENAPI_DIR
+    manifest_path = corpus_dir / specs_index.VENDOR_MANIFEST_NAME
+    common = {
+        "corpus": _repo_path(corpus_dir),
+        "backs": ["lookup_api", "list_api_families"],
+        "index": _spec_index_state(),
+    }
+    data, error = _load_json(manifest_path)
+    entries = data.get("specs") if isinstance(data, dict) else None
+    entries = entries if isinstance(entries, list) else []
+    documents = [row for row in map(_vendor_document, entries) if row is not None]
+    unreadable = len(entries) - len(documents)
+    if not documents:
+        return {
+            "available": False,
+            "error": error
+            or f"{_repo_path(manifest_path)} declares no readable vendored document",
+            "remedy": VENDOR_CORPUS_REMEDY,
+            **common,
+        }
+
+    missing = [row["file"] for row in documents if not (corpus_dir / row["file"]).is_file()]
+    fetched = sorted(row["fetched"] for row in documents if row["fetched"])
+    section: dict[str, Any] = {
+        "available": True,
+        "document_count": len(documents),
+        "api_paths": sum(int(row["api_paths"] or 0) for row in documents),
+        "fetched": {"earliest": fetched[0], "latest": fetched[-1]} if fetched else None,
+        "licenses": _license_groups(documents),
+        "files_missing": missing[:_MAX_MISSING_FILES],
+        **common,
+    }
+    if len(missing) > _MAX_MISSING_FILES:
+        section["files_missing_count"] = len(missing)
+    if unreadable:
+        section["unreadable_entries"] = unreadable
+    notice = corpus_dir / "NOTICE.md"
+    if notice.is_file():
+        section["notice"] = _repo_path(notice)
+
+    if spec is None and not detail:
+        section["detail_hint"] = (
+            "call with detail=True for every document's source_url, sha256, fetch "
+            "date, licence and upstream pin, or spec=<file> for one"
+        )
+        return section
+    if spec is None:
+        section["documents"] = documents
+        return section
+    wanted = _selected_document_name(spec)
+    section["documents"] = [row for row in documents if row["file"].casefold() == wanted]
+    if not section["documents"]:
+        section["note"] = (
+            f"the corpus holds no document named {spec!r} — call with detail=True "
+            "to list every document it does hold"
+        )
+    return section
+
+
+def _prose_backend_installed() -> bool:
+    try:
+        return importlib.util.find_spec(_PROSE_MODULE) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def _prose_remedy() -> str:
+    if _prose_backend_installed():
+        return PROSE_CORPUS_REMEDY
+    return f"{optional_deps.install_remedy(_PROSE_EXTRA)}, then {PROSE_CORPUS_REMEDY}"
+
+
+def _prose_sources(manifest: Any) -> list[dict[str, Any]] | None:
+    """Per-source rows from the index manifest, or None when it describes none.
+
+    ``None`` rather than ``[]``: an empty list would read as "the index was
+    built and holds nothing from any source", which is a different — and, on a
+    machine that has one, false — statement from "nothing here describes it".
+    """
+    sources = manifest.get("sources") if isinstance(manifest, dict) else None
+    if not isinstance(sources, dict):
+        return None
+    rows = [
+        {
+            "source": name,
+            "indexed_chunks": detail.get("indexed_chunk_count"),
+            "last_refreshed_at": detail.get("last_refreshed_at"),
+            "required": bool(detail.get("required")),
+        }
+        for name, detail in sorted(sources.items())
+        if isinstance(detail, dict)
+    ]
+    return rows or None
+
+
+def _prose_provenance() -> dict[str, Any]:
+    """Provenance for the locally built prose index behind ``ask_docs``.
+
+    Absent by default and legitimately so — the corpus is scraped vendor
+    documentation this project does not redistribute — so absence is reported
+    with the command that would produce it, never as an empty corpus.
+    """
+    index_path = PROSE_DATA_DIR / PROSE_DOCS_INDEX_NAME
+    section: dict[str, Any] = {
+        "available": index_path.exists(),
+        "index_path": _repo_path(index_path),
+        "backend": _BACKEND,
+        "retrieval_installed": _prose_backend_installed(),
+        "backs": ["search_docs", "ask_docs"],
+        "sources": None,
+    }
+    if _BACKEND == "redis":
+        section["note"] = _REDIS_PROSE_NOTE
+    if not section["available"]:
+        section["remedy"] = _prose_remedy()
+        return section
+
+    manifest_path = PROSE_DATA_DIR / PROSE_INDEX_MANIFEST_NAME
+    manifest, error = _load_json(manifest_path)
+    if error is not None:
+        section["error"] = error
+        section["remedy"] = PROSE_MANIFEST_REMEDY
+        return section
+    section["manifest"] = _repo_path(manifest_path)
+    artifacts = manifest.get("artifacts") if isinstance(manifest, dict) else None
+    built = artifacts.get(PROSE_DOCS_INDEX_NAME) if isinstance(artifacts, dict) else None
+    section["built_at"] = built.get("modified_at") if isinstance(built, dict) else None
+    section["sources"] = _prose_sources(manifest)
+    if section["sources"] is None:
+        section["remedy"] = PROSE_MANIFEST_REMEDY
+    return section
+
+
+@mcp.tool(annotations=READ_ONLY_LOCAL)
+def corpus_provenance(
+    detail: bool = False,
+    spec: str | None = None,
+) -> dict[str, Any]:
+    """Report what material backs an answer — corpus, freshness, licence, digest.
+
+    Use this to weigh a `lookup_api`, `search_docs` or `ask_docs` answer
+    instead of trusting it: a spec fetched before a feature shipped cannot
+    describe it, and a document under a proprietary licence cannot be
+    redistributed on the strength of this repository's MIT licence.
+
+    Two corpora, reported together because a caller cannot tell which one
+    served it:
+
+    - `api_specs` — the committed, digest-pinned `vendor/openapi` corpus that
+      backs `lookup_api`. Present in every clone and every image; needs no
+      network and no local build.
+    - `prose_docs` — the locally built document index that backs `search_docs`
+      and `ask_docs`. Scraped vendor documentation, deliberately not
+      distributed, so it is normally absent and says so with the command that
+      builds it.
+
+    Three absences stay three answers: no corpus (`available: false`), a
+    corpus whose declared files are gone (`files_missing`), and a corpus with
+    no index built over it (`index.built: false`) each carry their own remedy.
+
+    Args:
+        detail: return every document's source URL, SHA-256, fetch date,
+            licence and upstream pin. Off by default — the summary is a few
+            hundred tokens, the full corpus is several thousand.
+        spec: return one document instead of all of them. Accepts a bare
+            filename or a `lookup_api` `file_path` such as
+            `openapi_specs/mist.openapi.json#Wlan`.
+    """
+    return {
+        "api_specs": _vendor_provenance(detail=detail, spec=spec),
+        "prose_docs": _prose_provenance(),
+    }
 
 
 _CVE_RE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)

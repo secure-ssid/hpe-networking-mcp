@@ -24,6 +24,21 @@ time. This file is the compact index into those pages. See
   server willing to dispatch `reboot_device` and `disconnect_client`.
   Deployments relying on the implicit default must set the variable explicitly.
 
+### Added
+
+- **`corpus_provenance`** — one read-only `rag-core` tool reporting what backs
+  an answer. For the committed, digest-pinned `vendor/openapi` corpus behind
+  `lookup_api` it returns the document count, API-path count, fetch dates and
+  per-licence breakdown on a clean checkout with no network and no local
+  build, with each document's `source_url`, SHA-256 and upstream pin available
+  on request (`detail=True`, or `spec=` with a `lookup_api` `file_path`). For
+  the locally built prose corpus behind `search_docs`/`ask_docs` it reports the
+  per-source chunk counts and refresh times when the index exists, and names
+  the command that builds it when it does not. A missing corpus, a corpus with
+  missing files, and a corpus with no index built over it stay three distinct
+  answers, each with its own remedy; a malformed manifest degrades rather than
+  raising.
+
 ## [0.9.0] - 2026-08-16
 
 Feature release. Full detail in [docs/release-notes-0.9.0.md](docs/release-notes-0.9.0.md).

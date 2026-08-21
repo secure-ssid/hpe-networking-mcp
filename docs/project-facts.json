@@ -137,7 +137,7 @@
       "HPE_MCP_UXI_GENERATED_TOOLS": "1",
       "HPE_MCP_UXI_WRITES": "1"
     },
-    "registered_total": 6727,
+    "registered_total": 6728,
     "by_server": {
       "aos8-core": 311,
       "apstra-core": 155,
@@ -154,13 +154,13 @@
       "glp-core": 1014,
       "interop-core": 5,
       "mist-core": 1080,
-      "rag-core": 15,
+      "rag-core": 16,
       "site-health": 1,
       "uxi-core": 49
     },
     "generated_registered": 6127,
     "generated_excluded": 17,
-    "curated_total": 600,
+    "curated_total": 601,
     "credential_free_local": {
       "design-core": 8,
       "interop-core": 5
@@ -169,7 +169,8 @@
       "central-streaming": 1
     },
     "non_api_local": {
-      "glp-core": 1
+      "glp-core": 1,
+      "rag-core": 1
     },
     "platform_backend_total": 6711,
     "platform_curated_total": 584,
@@ -209,7 +210,7 @@
     "tools": {
       "minimal": 3,
       "default": 18,
-      "direct_all": 6734,
+      "direct_all": 6735,
       "default_recommended_profile": 18
     },
     "direct_all_added_native_tools": 7

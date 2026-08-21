@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
   <title id="title">hpe-networking-mcp platform and tool coverage</title>
-  <desc id="desc">The low-token router searches 6,727 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms.</desc>
+  <desc id="desc">The low-token router searches 6,728 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#071426"/>
@@ -82,7 +82,7 @@
 
     <rect x="550" y="330" width="525" height="140" rx="18" fill="#69e2d7"/>
     <text x="580" y="372" class="router">Catalog tiers</text>
-      <text x="580" y="408" class="router">6,144 generated | 6,727 backend | 6,734 direct-all</text>
+      <text x="580" y="408" class="router">6,144 generated | 6,728 backend | 6,735 direct-all</text>
     <text x="580" y="444" class="router">Writes remain dry-run and confirmation gated</text>
   </g>
 </svg>
