@@ -37,10 +37,13 @@ cp config/credentials.yaml.example secrets/credentials.yaml
 openssl rand -hex 32 > secrets/mcp_http_bearer_token
 chmod 600 secrets/credentials.yaml secrets/mcp_http_bearer_token
 
-# 2. Build and start the router alongside the unchanged redis/ollama services.
-#    The spec index ships in the image -- there is nothing to populate first.
+# 2. Build and start the router. The spec index ships in the image -- there is
+#    nothing to populate first. Naming the service matters: `redis` and
+#    `ollama` are in docker-compose.yml's default profile, so omitting
+#    `mcp-router` here would also start two containers the default image has
+#    no client for (see "Prose retrieval" below).
 docker compose -f docker-compose.yml -f docker-compose.router.yml \
-  --profile router up -d --build
+  --profile router up -d --build mcp-router
 
 # 3. Verify:
 curl http://127.0.0.1:8010/livez
@@ -48,7 +51,8 @@ curl http://127.0.0.1:8010/livez
 
 A plain `docker compose up` (no `-f docker-compose.router.yml`, no
 `--profile router`) continues to start only `redis`/`ollama`, exactly as
-before this overlay existed.
+before this overlay existed. The overlay declares no `depends_on`, which is
+what lets `up -d mcp-router` bring up the router on its own.
 
 ## Security choices
 
@@ -111,91 +115,119 @@ make that the default.
   steps and how to add more `*_FILE` secrets (optional-product API tokens,
   etc.).
 
-### The spec index ships in the image; nothing is ever downloaded for you
+### This image is the exact-API-lookup deployment
 
-The image **contains** `/app/data/specs.sqlite`. It is built during the image
-build, in a throwaway stage, from the 31 digest-pinned OpenAPI documents
-committed under `vendor/openapi/`, so `lookup_api` answers on a bare
-`docker run` with no credentials, no network, and no extra step. The corpus
-itself never reaches the runtime image.
+The image **contains** `/app/data/specs.sqlite` — 2,734 endpoints, 6,363
+schemas and 31,432 fields, built during the image build in a throwaway stage
+from the 31 digest-pinned OpenAPI documents committed under `vendor/openapi/`.
+`lookup_api` therefore answers on a bare `docker run` with no credentials, no
+network, and no provisioning step. The corpus itself never reaches the runtime
+image.
 
-Nothing else is provisioned automatically. Neither the `Dockerfile` build, nor
-`docker/entrypoint.sh`, nor `docker-compose.router.yml` downloads an index at
-build or at container start. The RAG prose corpus (`data/docs.lance`) is
-scraped vendor documentation this project does not distribute, so `ask_docs`
-and `search_docs` have nothing to answer from until you build it yourself —
-see [release-indexes.md](release-indexes.md).
+**The default image does no prose retrieval by any backend**, and that is the
+whole statement — switching backends is not a way around it. `ask_docs` and
+`search_docs` read a corpus built from scraped vendor documentation this
+project has no licence to redistribute, so it can never ship in an image; you
+build it yourself. On top of that the default image installs neither of the
+two clients that could read one: the embedded LanceDB/ONNX stack (~700 MB) is
+in the `ingestion` extra, and the `HPE_MCP_RAG_BACKEND=redis` alternative
+needs the `redis` extra. Starting `docker-compose.yml`'s `redis` and `ollama`
+services changes nothing on its own. What you actually get, verified in the
+built image rather than inferred:
 
-> **The overlay does not shadow the baked index.**
-> `docker-compose.router.yml` bind-mounts `./data/docs.lance` and
-> `./data/tools.lance` individually, never `./data` as a whole, precisely so
-> that `/app/data/specs.sqlite` from the image stays visible. `lookup_api`
-> therefore works on a first `docker compose up` with an empty host `./data`.
-> Pinned by `tests/unit/test_docker_router_packaging.py`.
->
-> To run a *different* index than the image's, add an explicit mount for it:
->
-> ```yaml
-> - ./data/specs.sqlite:/app/data/specs.sqlite:ro
-> ```
+* `lookup_api` — full answers from the baked spec index.
+* `ask_docs` — answers, but from the spec index, not the prose corpus. It
+  falls back to structured evidence excerpts sourced `openapi_specs`, so the
+  provenance in the reply says where the answer came from.
+* `search_docs` — the degraded shape (`error` + `degraded` + `hint`), never a
+  confident empty list:
 
-If you host your own archive internally, package it with
-`scripts/package_indexes.py` -- which emits the checksum manifest -- and
-restore it with the manifest *you* generated, or with the
-`spec-index-manifest.json` published alongside a release:
+```text
+The document corpus needs the optional `lancedb` package, which is not
+installed — rebuild the image with `docker build --build-arg
+INSTALL_EXTRAS=ingestion` — see docs/production-deployment.md
+```
+
+#### Building a RAG-capable image
+
+If you have built a corpus and want it served from a container, build once
+with the extra and point the overlay at that tag:
 
 ```bash
-# Optional: restore from an archive you host yourself, or from a release's
-# spec-index-manifest.json. The pinned digest is verified before anything is
-# unpacked, and there is no default URL: --manifest or --url is required.
-docker compose -f docker-compose.yml -f docker-compose.router.yml \
-  run --rm --no-deps mcp-router \
-  uv run python scripts/download_indexes.py --manifest /app/state/your-index-bundle.json \
-  --output-dir /app/data-download
+# 1. Build the corpus on the host (hours; accepts each vendor's terms
+#    yourself) — see release-indexes.md.
+uv run python ingestion/ingest_docs.py
 
-# Move the verified output into the bind-mounted ./data on the host, then
-# restart mcp-router so it picks up the new files:
-mv data-download/data/* data/
+# 2. Build an image that can read it. `ingestion` gets the embedded LanceDB
+#    backend, which needs no services. For the Redis backend instead, use
+#    INSTALL_EXTRAS=redis and set HPE_MCP_RAG_BACKEND=redis; `all` gets both.
+docker build --build-arg INSTALL_EXTRAS=ingestion \
+  -t hpe-networking-mcp-router:rag .
+
+# 3. In docker-compose.router.yml set `image:` to that tag and add the
+#    mounts, read-only, individually — never `./data:/app/data`, which
+#    would shadow the baked spec index:
+#      - ./data/docs.lance:/app/data/docs.lance:ro
+#      - ./data/tools.lance:/app/data/tools.lance:ro
+docker compose -f docker-compose.yml -f docker-compose.router.yml \
+  --profile router up -d --build mcp-router
+```
+
+No CI job publishes a RAG tag; this is a supported local build. The default
+overlay declares no host mounts at all, because the default image has no code
+that could open one. The `redis`/`ollama` services in `docker-compose.yml` are
+infrastructure for this build and for running from source — start them
+deliberately (drop `mcp-router` from the command above, or `up -d redis`), not
+because the router needs them.
+
+#### Nothing is ever downloaded for you
+
+Neither the `Dockerfile` build, nor `docker/entrypoint.sh`, nor
+`docker-compose.router.yml` fetches an index at build or at container start.
+If you host your own archive internally, package it with
+`scripts/package_indexes.py` — which emits the checksum manifest — and restore
+it with the manifest *you* generated, or with the `spec-index-manifest.json`
+published alongside a release:
+
+```bash
+# Optional, and run on the host: /app/data inside the container is read-only
+# (see below), so a restore has nowhere to land there. The pinned digest is
+# verified before anything is unpacked, and there is no default URL --
+# --manifest or --url is required.
+uv run python scripts/download_indexes.py --manifest your-bundle.json
+
+# Then restart the router so a RAG-enabled image picks up the new files:
 docker compose -f docker-compose.yml -f docker-compose.router.yml \
   --profile router restart mcp-router
 ```
 
-`docker-compose.router.yml` bind-mounts the two artifacts the image cannot
-ship — `./data/docs.lance` (scraped prose corpus) and `./data/tools.lance`
-(router tool index) — **read-only**, and nothing else. So:
-
-* The host, not the container, is the source of truth for those two artifacts
-  — you can inspect, diff, or roll them back with ordinary shell tools between
-  container restarts. Restart `mcp-router` after replacing them so the running
-  process picks up the change.
-* The mounts are read-only from the container's point of view, so the
-  container process cannot overwrite the host's `data/` even if compromised.
-  The baked `/app/data/specs.sqlite` is root-owned and mode `0444` for the
-  same reason: it is no longer covered by a read-only mount.
-* Both host paths start empty. `data/` is git-ignored, so a clone ships
-  neither, and the overlay cannot smuggle in a prebuilt corpus.
-* `scripts/download_indexes.py` already refuses non-HTTPS URLs, verifies a
-  SHA-256 digest independently of any downloaded `.sha256` sidecar when a
-  pinned manifest is used, rejects path-traversal/symlink members inside the
-  archive, and swaps the new index into place atomically — see
-  `tests/unit/test_download_indexes.py`. This packaging relies on those
-  existing guarantees rather than re-implementing them; it only decides
-  *when* that script runs (explicitly, never automatically).
-* If you maintain your own index build pipeline instead, point those two
-  paths at whatever directory your pipeline populates -- the Compose bind
-  mounts don't care how `data/docs.lance` and `data/tools.lance` got there,
-  only that they exist before `mcp-router` starts (or after a restart).
+`scripts/download_indexes.py` refuses non-HTTPS URLs, verifies a SHA-256
+digest independently of any downloaded `.sha256` sidecar when a pinned
+manifest is used, rejects path-traversal/symlink members inside the archive,
+and swaps the new index into place atomically — see
+`tests/unit/test_download_indexes.py`. This packaging relies on those existing
+guarantees rather than re-implementing them; it only decides *when* that
+script runs (explicitly, never automatically).
 
 ### Non-root, minimal runtime image
 
 * The container runs as a dedicated, non-root `mcp` user (uid/gid `10001`),
   not a shared "system" uid range.
 * `/app` (application code and the `uv`-managed virtualenv) is owned by
-  `root` at the top level; only `/app/state`, `/app/outputs`, `/app/data`,
-  and the `mcp` user's own home directory (`/home/mcp`, used for the `uv`
-  cache) are writable by the running process. The baked
-  `/app/data/specs.sqlite` inside that directory is root-owned and mode
-  `0444`, so the router can read its own index but not rewrite it.
+  `root` at the top level; only `/app/state`, `/app/outputs` and the `mcp`
+  user's own home directory (`/home/mcp`, used for the `uv` cache) are
+  writable by the running process.
+* `/app/data` is **not** writable, and that is deliberate. Unlink and rename
+  are governed by the directory's permissions, not the file's, so a writable
+  `/app/data` would let anything running as `mcp` delete the baked
+  `specs.sqlite` and drop a different index in its place — precisely the
+  substitution a read-only file mode looks like it prevents and does not. The
+  directory is root-owned `0555` and the index inside it root-owned `0444`.
+  The query layer opens it with `file:…?mode=ro`, so nothing legitimate needs
+  write access there; verified with `lookup_api` and with LanceDB reads
+  through read-only bind mounts under that locked directory. Rebuilding the
+  index *inside* the container consequently needs a writable mount over
+  `/app/data` or a different user — build it on the host instead.
 * Dependencies are resolved once, at build time, from the committed
   `uv.lock` (`uv sync --frozen`) — the runtime image sets `UV_NO_SYNC=1` so
   `uv run hpe-mcp-router` at container start never attempts network
@@ -218,24 +250,29 @@ ship — `./data/docs.lance` (scraped prose corpus) and `./data/tools.lance`
   `docker-compose.yml` with GPU acceleration, that remains a separate,
   already-documented `deploy.resources.reservations.devices` block in
   `docker-compose.yml` — unaffected by this overlay.
-* **`fastembed`'s ONNX Runtime backend** needs `libgomp1` at runtime; the
-  image installs it. If you change the base image, keep an equivalent
-  OpenMP runtime library available or embeddings-backed RAG tools will fail
-  to import.
+* **`fastembed`'s ONNX Runtime backend** needs `libgomp1`; the image installs
+  it so that a `--build-arg INSTALL_EXTRAS=ingestion` build works without
+  changing the runtime stage. The default image has no `fastembed` to use it.
+  If you change the base image, keep an equivalent OpenMP runtime library
+  available or embeddings-backed RAG tools will fail to import in a
+  RAG-enabled build.
 * **Non-loopback exposure needs a real proxy.** Setting
   `ports: ["0.0.0.0:8010:8010"]` (or binding to a LAN interface) without
   putting TLS termination, auth, and network policy in front of the
   container is explicitly out of scope for this packaging and is not the
   default; see "Loopback-only exposure by default" above.
-* **Prose-corpus provisioning is a host-visible extra step**, not a
-  one-command `docker run`. `lookup_api` works out of the box because the
-  image ships `data/specs.sqlite`, but `ask_docs` and `search_docs` need
+* **Prose retrieval needs both a corpus and a RAG-enabled build**, and is not
+  a one-command `docker run`. `lookup_api` works out of the box because the
+  image ships `data/specs.sqlite`; `ask_docs` and `search_docs` need
   `data/docs.lance`, which you build yourself
-  (`uv run python ingestion/ingest_docs.py`) and bind-mount. The overlay
-  mounts that path on its own rather than mounting `./data` wholesale, so
-  leaving it empty costs you only the RAG tools: the router still starts and
-  serves non-RAG tools (Central/GLP/monitoring/config/ops/NAC) against the
-  baked spec index.
+  (`uv run python ingestion/ingest_docs.py`) and mount, plus an image built
+  with `--build-arg INSTALL_EXTRAS=ingestion`. Setting
+  `HPE_MCP_RAG_BACKEND=redis` and starting the `redis` service is not an
+  alternative route: that client is in the `redis` extra and is likewise
+  absent from the default image. Without one of them the router still starts
+  and serves every non-RAG tool (Central/GLP/monitoring/config/ops/NAC) plus
+  `lookup_api` against the baked spec index, and the prose tools report their
+  remedy.
 * **Firmware upgrade caveat carries over unchanged**: `set_firmware_compliance`
   remains the supported path; `/firmware/v1/upgrade` still 404s on this
   Central instance regardless of how the router is deployed.
@@ -254,7 +291,7 @@ docker compose -f docker-compose.yml -f docker-compose.router.yml --profile rout
 # Full build + start + healthcheck (requires a local Docker daemon):
 docker build -t hpe-networking-mcp-router:local .
 docker compose -f docker-compose.yml -f docker-compose.router.yml \
-  --profile router up -d --build
+  --profile router up -d --build mcp-router
 curl http://127.0.0.1:8010/livez
 docker compose -f docker-compose.yml -f docker-compose.router.yml \
   --profile router down

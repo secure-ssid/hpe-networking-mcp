@@ -1,3 +1,17 @@
+# Optional localhost-only backing services for a RAG-enabled install: Redis
+# Stack as the `HPE_MCP_RAG_BACKEND=redis` vector store, Ollama for local
+# generation. Neither is required by the router.
+#
+# They are in the default profile, so a bare `docker compose up` starts them
+# and nothing else -- unchanged, and the behaviour docker-build.yml asserts.
+# But the published router image installs no `redis` client (it lives in the
+# `redis` extra) and no LanceDB stack (the `ingestion` extra), so starting
+# these alongside it buys nothing: use
+# `docker compose -f docker-compose.yml -f docker-compose.router.yml \
+#    --profile router up -d mcp-router` to start the router on its own.
+# Start these deliberately, when running from source or from an image built
+# with the matching extra -- see docs/production-deployment.md.
+
 services:
   redis:
     image: redis/redis-stack:latest
