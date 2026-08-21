@@ -14,7 +14,8 @@ from hpe_networking_mcp.mcp_servers import monitoring
 
 @pytest.fixture(autouse=True)
 def _central_writes_enabled(monkeypatch):
-    monkeypatch.delenv("HPE_MCP_CENTRAL_WRITES", raising=False)
+    """Central is deny-by-default as of 0.9.1; these tests exercise writes."""
+    monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
 
 
 # ---------------------------------------------------------------------------

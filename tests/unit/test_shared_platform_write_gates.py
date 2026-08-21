@@ -34,11 +34,12 @@ from hpe_networking_mcp.mcp_servers.shared import (
 
 
 class TestDefaults:
-    def test_central_defaults_enabled(self, monkeypatch):
+    def test_central_defaults_disabled(self, monkeypatch):
         monkeypatch.delenv("HPE_MCP_ACCESS_PROFILE", raising=False)
         monkeypatch.delenv("HPE_MCP_CENTRAL_WRITES", raising=False)
         assert access_profile() == "custom"
-        assert platform_writes_allowed("central") is True
+        # 0.9.1: Central is deny-by-default
+        assert platform_writes_allowed("central") is False
 
     def test_glp_defaults_disabled(self, monkeypatch):
         monkeypatch.delenv("HPE_MCP_GLP_V2BETA1_WRITES", raising=False)

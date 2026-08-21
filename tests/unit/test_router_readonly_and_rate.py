@@ -276,7 +276,8 @@ class TestStandaloneGateReadonly:
         mcp_obj = self._backend()
         sh.install_platform_write_gate(mcp_obj)
         monkeypatch.delenv("HPE_MCP_READONLY", raising=False)
-        # central writes are enabled by default -> the write runs.
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
+        # readonly off -> the platform gate alone decides, and it is open here.
         assert self._call(mcp_obj, "w") == {"ran": "w"}
 
     def test_full_profile_allows_standalone_central_write(self, monkeypatch):

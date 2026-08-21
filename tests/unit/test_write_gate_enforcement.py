@@ -829,23 +829,25 @@ class TestPlatformWriteFlagsDefaults:
 
     def test_product_access_read_only_does_not_shut_central(self, monkeypatch):
         """The axes are independent in both directions."""
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
         monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-only")
 
         assert optional_product_writes_allowed() is False
         assert platform_writes_allowed("central") is True
 
-    def test_central_documented_default_is_open_and_opt_out_works(self, monkeypatch):
-        assert platform_writes_allowed("central") is True
-        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "0")
+    def test_central_documented_default_is_closed_and_opt_in_works(self, monkeypatch):
+        # 0.9.1: Central is deny-by-default
         assert platform_writes_allowed("central") is False
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
+        assert platform_writes_allowed("central") is True
 
     @pytest.mark.parametrize("platform", sorted(PLATFORM_WRITE_GATE_NAMES))
     def test_no_platform_gate_is_open_by_shared_toggle_alone_when_disabled(
         self, platform, monkeypatch
     ):
-        """With everything unset, only Central is open; nothing else is."""
-        expected_open = platform == "central"
-        assert platform_writes_allowed(platform) is expected_open
+        """With everything unset, no platform gate is open -- Central included."""
+        # 0.9.1: Central is deny-by-default
+        assert platform_writes_allowed(platform) is False
 
 
 class TestStandaloneGateBlocksBeforeToolBody:
@@ -1071,8 +1073,9 @@ class TestReadOnlyDispatcherCannotReachWrites:
         """End-to-end: a real destructive Central tool, spied at the HTTP seam.
 
         ``central-nac``'s ``delete_authz_policy`` is one of the pinned
-        platform-gate-only tools, and Central's gate is open by default -- so
-        this proves the *read-only dispatcher* is what stops it, not the gate.
+        platform-gate-only tools, and Central's gate is opened explicitly
+        here -- so this proves the *read-only dispatcher* is what stops it,
+        not the gate.
         """
         nac = importlib.import_module("hpe_networking_mcp.mcp_servers.nac")
 
@@ -1080,6 +1083,7 @@ class TestReadOnlyDispatcherCannotReachWrites:
             raise AssertionError("HTTP client constructed for a refused read call")
 
         monkeypatch.setattr(nac, "get_client", _boom)
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
         assert platform_writes_allowed("central") is True
 
         tools = dict(nac.mcp._tool_manager._tools)
@@ -1314,9 +1318,10 @@ ACCESS_MATRIX = [
     #  aggregate_read_only)
     ("safe-read-only", None, False, False, False, True),
     ("safe-read-only", "read-only", False, False, False, True),
-    ("custom", None, True, False, False, False),
-    ("custom", "read-only", True, False, False, False),
-    ("custom", "read-write", True, False, True, False),
+    # 0.9.1: Central is deny-by-default, so custom no longer opens it
+    ("custom", None, False, False, False, False),
+    ("custom", "read-only", False, False, False, False),
+    ("custom", "read-write", False, False, True, False),
     ("full-read-write", None, True, True, True, False),
     ("full-read-write", "read-write", True, True, True, False),
 ]
@@ -1476,4 +1481,5 @@ class TestAmbientEnvNeutralization:
         assert global_readonly_enabled() is False
         assert optional_product_writes_allowed() is False
         assert platform_writes_allowed("glp") is False
-        assert platform_writes_allowed("central") is True
+        # 0.9.1: Central is deny-by-default
+        assert platform_writes_allowed("central") is False
