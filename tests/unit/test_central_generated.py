@@ -1,4 +1,5 @@
-"""Unit tests for the generated Aruba Central backend (hpe_networking_mcp.mcp_servers.central_generated).
+"""Unit tests for the generated Aruba Central backend
+(hpe_networking_mcp.mcp_servers.central_generated).
 
 Covers: committed manifest counts, direct registration on a dedicated server,
 representative read/write dispatch, the Central write gate + dry_run/confirm,
