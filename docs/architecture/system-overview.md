@@ -26,6 +26,15 @@ path.
 | Local indexes | Hybrid documentation retrieval, exact OpenAPI/advisory lookup, and semantic tool discovery |
 | Vendor APIs | External REST systems reached by async HTTP clients; Streaming uses a bounded WSS collector |
 
+## Client boundary
+
+The router is model-agnostic: VS Code/Copilot, Copilot CLI, Claude, Crush,
+MCPJam, LibreChat, and Open WebUI own model selection, chat memory, and host
+approval UX. The standalone `hpe-mcp` client is an optional local fallback
+with heuristic, OpenAI-compatible, Anthropic, and Ollama adapters; it exposes
+bounded activity and tool results rather than hidden chain-of-thought. Keep
+the router focused on discovery, dispatch, safety, and transport.
+
 The normal MCP profile keeps the client-visible surface small:
 
 ```env
@@ -39,7 +48,7 @@ Optional products are disabled until explicitly enabled:
 HPE_MCP_PRODUCTS=clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design
 ```
 
-The full catalog contains 6,144 generated operations and 6,722 backend tools
+The full catalog contains 6,144 generated operations and 6,726 backend tools
 when every platform and guarded write is indexed. Minimal mode exposes only
 `find_tool`, `invoke_read_tool`, and `invoke_tool` to the MCP client.
 

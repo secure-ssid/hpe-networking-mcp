@@ -167,6 +167,14 @@ JSON.
   `scripts/validate_source_manifest.py` fails the manifest if a `discover_*`
   script does not declare `pre`, if a phase value is not `pre`/`post`, or if a
   phase names a script that is not in `extra_scripts`.
+* **No silent scraper/RAG mapping gaps.** `validate_source_manifest.py` fails
+  any source missing a scraper unless the source is explicitly listed in the
+  script's `SCRAPER_PENDING` allowlist with a reason. It also fails any
+  manifest `doc_type` that is not registered in `rag.py`'s
+  `_DOC_TYPE_TO_SOURCE`, or that maps to the wrong source. Shared legacy
+  `doc_type` values (for example `security-advisory` and `lifecycle`) must map
+  to every source using that tag, so deprecated `doc_type=` filters still
+  narrow instead of searching the full corpus.
 * **Declared step environment.** A step's required environment is declared
   next to its command, not inherited from whatever the shell exported: the
   tool-catalog rebuild carries the canonical complete-catalog environment,
@@ -176,10 +184,11 @@ JSON.
   against the registered catalog.
 * **Downstream chain derived last.** Whether the rebuild/gate chain is planned
   is decided after *all* mutating steps are known -- including
-  source-triggered structured steps. A scraperless source such as
-  `security_advisories` still triggers the security/lifecycle scrape, so it
-  still gets generated-manifest validation, both index rebuilds, local
-  manifest reconciliation, and the eval gate last.
+  source-triggered structured steps. The shared security/lifecycle scraper
+  (`ingestion/scrape_security_lifecycle.py`) refreshes the Aruba and Juniper
+  advisory/lifecycle sources, so those sources still get generated-manifest
+  validation, both index rebuilds, local manifest reconciliation, and the eval
+  gate last.
 * **Planned first.** `--plan` (alias `--dry-run`) prints the whole plan as
   JSON -- steps, triggers, unrunnable entries with reasons, snapshot targets
   -- and exits without executing a command or opening a socket.

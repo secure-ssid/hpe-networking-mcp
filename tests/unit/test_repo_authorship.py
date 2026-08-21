@@ -22,6 +22,7 @@ apply it as your own commit rather than merging the bot's branch, for example
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -67,14 +68,50 @@ def _is_agent(identity: str) -> bool:
     return any(marker in lowered for marker in _AGENT_MARKERS)
 
 
+def _synthetic_pr_merge_sha() -> str | None:
+    """SHA of the merge commit CI synthesizes for a ``pull_request`` run.
+
+    ``actions/checkout`` checks out ``refs/pull/N/merge`` — a commit GitHub
+    creates on the fly, commits as ``GitHub <noreply@github.com>``, and never
+    pushes to any branch. It is an artifact of running CI, not repository
+    history, and it never renders as a contributor, so counting it would fail
+    every pull request while saying nothing about the code under review.
+    ``GITHUB_SHA`` is exactly that commit, so drop it by identity.
+
+    The default checkout is depth-1, so its parents are hidden behind a
+    shallow graft and cannot be walked to reach the PR's own head — matching
+    on the SHA is the only reliable handle. On ``push`` events this returns
+    ``None`` and nothing is dropped, so a bot-committed merge that someone
+    actually landed is still caught.
+    """
+    if os.environ.get("GITHUB_EVENT_NAME") != "pull_request":
+        return None
+    return os.environ.get("GITHUB_SHA") or None
+
+
+def _log_records(body_format: str) -> list[tuple[str, str]]:
+    """``(sha, formatted_body)`` for each commit, minus the CI merge artifact."""
+    raw = _git_bytes("log", "HEAD", f"--pretty=format:%H\x1f{body_format}%x00")
+    skip = _synthetic_pr_merge_sha()
+    records = []
+    for chunk in raw.decode("utf-8", errors="replace").split("\0"):
+        chunk = chunk.strip("\n")
+        if not chunk or "\x1f" not in chunk:
+            continue
+        sha, _, body = chunk.partition("\x1f")
+        if skip and sha == skip:
+            continue
+        records.append((sha, body))
+    return records
+
+
 @pytest.fixture(scope="module")
 def history() -> list[str]:
-    """Commit identities reachable from HEAD, as ``author\tcommitter`` rows."""
+    """Commit identities in this repository's history, as ``author\tcommitter`` rows."""
     try:
-        raw = _git_bytes("log", "HEAD", "--pretty=format:%an <%ae>\t%cn <%ce>")
+        return [body for _sha, body in _log_records("%an <%ae>\t%cn <%ce>")]
     except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
         pytest.skip("not a git checkout")
-    return [line for line in raw.decode("utf-8", errors="replace").splitlines() if line]
 
 
 def test_no_commit_is_authored_by_an_agent(history):
@@ -97,10 +134,11 @@ def test_no_commit_is_committed_by_an_agent(history):
 
 def test_no_commit_message_co_credits_an_agent():
     try:
-        raw = _git_bytes("log", "HEAD", "--pretty=format:%B%x00")
+        records = _log_records("%B")
     except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
         pytest.skip("not a git checkout")
 
+    raw = "\n".join(body for _sha, body in records).encode("utf-8", errors="replace")
     offenders = sorted(
         {
             identity

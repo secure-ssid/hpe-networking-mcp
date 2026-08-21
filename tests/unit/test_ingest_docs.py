@@ -16,7 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ingestion import ingest_docs
-from ingestion.chunking import CHUNK_SIZE, chunk_text
+from ingestion.chunking import CHUNK_SIZE, MIN_CHUNK_SIZE, _merge_small_chunks, chunk_text
 
 
 def test_collect_points_ids_stable_across_relative_and_absolute_invocation(
@@ -77,6 +77,72 @@ def test_chunk_text_still_prefers_structural_separators():
 
     assert all(len(chunk) <= CHUNK_SIZE for chunk in chunks)
     assert any("Paragraph one." in chunk for chunk in chunks)
+
+
+def test_chunk_text_merges_orphan_heading_into_following_body():
+    # Real-world defect (found via ask_docs("EX4400 switch power
+    # specifications") returning only a bare "# EX4400 -- specifications"
+    # heading): a short heading immediately followed by a blank line and a
+    # body paragraph large enough that heading+body would exceed CHUNK_SIZE
+    # is split into its own tiny, low-information "orphan" chunk that can
+    # outrank the real content for title-keyword queries. It must instead be
+    # folded into a neighboring chunk.
+    heading = "# Widget X specifications"
+    body_paragraph_1 = "x" * 790  # heading + body_paragraph_1 > CHUNK_SIZE
+    body_paragraph_2 = "y" * 250  # stays its own (already >= MIN_CHUNK_SIZE)
+    text = f"{heading}\n\n{body_paragraph_1}\n\n{body_paragraph_2}"
+
+    chunks = chunk_text(text)
+
+    assert heading not in chunks  # never isolated on its own
+    assert all(len(chunk) >= MIN_CHUNK_SIZE for chunk in chunks)
+    assert any(heading in chunk and "x" in chunk for chunk in chunks)
+    assert any("y" * 250 in chunk for chunk in chunks)
+
+
+def test_merge_small_chunks_folds_run_of_tiny_chunks_forward():
+    # Several consecutive sub-threshold chunks (e.g. produced by adjacent
+    # recursive splits, not just a single isolated heading) must fold
+    # forward together rather than surviving as separate tiny chunks.
+    chunks = ["tiny one", "tiny two", "tiny three", "z" * 300]
+
+    merged = _merge_small_chunks(chunks)
+
+    assert all(len(chunk) >= MIN_CHUNK_SIZE for chunk in merged)
+    assert merged == ["tiny one\n\ntiny two\n\ntiny three\n\n" + "z" * 300]
+
+
+def test_merge_small_chunks_folds_trailing_chunk_backward():
+    # A small chunk with no successor (text ends on a short final piece)
+    # has nothing to merge forward into, so it must fold into the previous
+    # chunk instead of surviving as its own tiny final chunk.
+    chunks = ["a" * 300, "b" * 300, "tiny tail"]
+
+    merged = _merge_small_chunks(chunks)
+
+    assert merged == ["a" * 300, "b" * 300 + "\n\ntiny tail"]
+
+
+def test_merge_small_chunks_returns_single_chunk_when_all_input_is_small():
+    # A document that never reaches MIN_CHUNK_SIZE in total has nothing to
+    # merge with -- it is returned as its own (undersized) single chunk
+    # rather than being dropped or left as multiple sub-threshold pieces.
+    chunks = ["a" * 30, "b" * 30, "c" * 30]
+
+    merged = _merge_small_chunks(chunks)
+
+    assert merged == ["a" * 30 + "\n\n" + "b" * 30 + "\n\n" + "c" * 30]
+
+
+def test_merge_small_chunks_noop_when_all_chunks_already_adequate():
+    chunks = ["p" * 250, "q" * 300, "r" * 400]
+
+    assert _merge_small_chunks(chunks) == chunks
+
+
+def test_merge_small_chunks_noop_for_single_chunk_input():
+    assert _merge_small_chunks(["only chunk"]) == ["only chunk"]
+    assert _merge_small_chunks([]) == []
 
 
 def test_schema_to_text_skips_boolean_property_schemas():

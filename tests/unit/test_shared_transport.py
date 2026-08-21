@@ -519,3 +519,109 @@ class TestRealStreamableHttpTransport:
                     pass
 
         asyncio.run(_run())
+
+    def test_restart_rejects_stale_session_and_allows_fresh_initialize(self):
+        import httpx
+        import uvicorn
+        from mcp.server.mcpserver import MCPServer
+
+        host = "127.0.0.1"
+        port = _free_loopback_port()
+        init_payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "session-lifecycle-smoke", "version": "1"},
+            },
+        }
+        request_headers = {
+            "Accept": "application/json, text/event-stream",
+            "Content-Type": "application/json",
+        }
+
+        async def _run():
+            servers = []
+            tasks = []
+
+            async def start_server(name: str):
+                server = MCPServer(name)
+
+                @server.tool()
+                def ping() -> str:
+                    return "pong"
+
+                transport_security = _configure_http_transport(host, port)
+                app = server.streamable_http_app(
+                    host=host,
+                    transport_security=transport_security,
+                )
+                config = uvicorn.Config(app, host=host, port=port, log_level="warning")
+                uv_server = uvicorn.Server(config)
+                task = asyncio.create_task(uv_server.serve())
+                await _wait_for_port(host, port)
+                servers.append(uv_server)
+                tasks.append(task)
+
+            try:
+                await start_server("session-lifecycle-before")
+                async with httpx.AsyncClient(base_url=f"http://{host}:{port}") as client:
+                    initialized = await client.post(
+                        "/mcp",
+                        headers=request_headers,
+                        json=init_payload,
+                    )
+                    assert initialized.status_code == 200
+                    session_id = initialized.headers["mcp-session-id"]
+
+                    established_headers = {
+                        **request_headers,
+                        "Mcp-Session-Id": session_id,
+                        "Mcp-Protocol-Version": "2025-06-18",
+                    }
+                    listed = await client.post(
+                        "/mcp",
+                        headers=established_headers,
+                        json={
+                            "jsonrpc": "2.0",
+                            "id": 2,
+                            "method": "tools/list",
+                            "params": {},
+                        },
+                    )
+                    assert listed.status_code == 200
+
+                servers[0].should_exit = True
+                await tasks[0]
+
+                await start_server("session-lifecycle-after")
+                async with httpx.AsyncClient(base_url=f"http://{host}:{port}") as client:
+                    stale = await client.post(
+                        "/mcp",
+                        headers=established_headers,
+                        json={
+                            "jsonrpc": "2.0",
+                            "id": 3,
+                            "method": "tools/list",
+                            "params": {},
+                        },
+                    )
+                    assert stale.status_code == 404
+                    assert "Session not found" in stale.text
+
+                    fresh = await client.post(
+                        "/mcp",
+                        headers=request_headers,
+                        json={**init_payload, "id": 4},
+                    )
+                    assert fresh.status_code == 200
+                    assert fresh.headers["mcp-session-id"] != session_id
+            finally:
+                for server in servers[1:]:
+                    server.should_exit = True
+                for task in tasks[1:]:
+                    await task
+
+        asyncio.run(_run())

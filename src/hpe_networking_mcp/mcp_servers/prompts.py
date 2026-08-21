@@ -27,6 +27,27 @@ DESIGN_PROMPT_NAMES = ("network_design_diagram",)
 #: Backend server name required for DESIGN_PROMPT_NAMES.
 DESIGN_BACKEND_SERVER = "design-core"
 
+#: ClearPass-oriented prompts (need clearpass-core tools in the catalog).
+CLEARPASS_PROMPT_NAMES = ("clearpass_policy_review",)
+CLEARPASS_BACKEND_SERVER = "clearpass-core"
+
+#: Mist-oriented prompts (need mist-core tools in the catalog).
+MIST_PROMPT_NAMES = ("mist_scope_audit",)
+MIST_BACKEND_SERVER = "mist-core"
+
+#: UXI-oriented prompts (need uxi-core tools in the catalog).
+UXI_PROMPT_NAMES = ("uxi_diagnostics",)
+UXI_BACKEND_SERVER = "uxi-core"
+
+#: Core operator prompts always registered (Central/GLP/interop/rag path).
+CORE_OPERATOR_PROMPT_NAMES = (
+    "morning_report",
+    "central_scope_resolve",
+    "central_scope_audit",
+    "wlan_sync_check",
+    "cross_platform_rf_check",
+)
+
 
 def register_router_prompts(
     mcp: MCPServer, enabled_backends: Collection[str] | None = None
@@ -36,16 +57,18 @@ def register_router_prompts(
     Args:
         enabled_backends: Optional collection of enabled backend server names
             (the keys of ``tool_router._BACKENDS``). When supplied, prompts
-            that depend on a backend which is not enabled are skipped -- today
-            that is :data:`AOS8_PROMPT_NAMES` (needs :data:`AOS8_BACKEND_SERVER`)
-            and :data:`DESIGN_PROMPT_NAMES` (needs :data:`DESIGN_BACKEND_SERVER`).
-            When omitted (the default), every prompt is registered, preserving
+            that depend on a backend which is not enabled are skipped --
+            AOS8, design, ClearPass, Mist, and UXI prompt groups. When
+            omitted (the default), every prompt is registered, preserving
             the previous behavior for any caller that does not know its backend
             set.
     """
     enabled = None if enabled_backends is None else set(enabled_backends)
     aos8_enabled = enabled is None or AOS8_BACKEND_SERVER in enabled
     design_enabled = enabled is None or DESIGN_BACKEND_SERVER in enabled
+    clearpass_enabled = enabled is None or CLEARPASS_BACKEND_SERVER in enabled
+    mist_enabled = enabled is None or MIST_BACKEND_SERVER in enabled
+    uxi_enabled = enabled is None or UXI_BACKEND_SERVER in enabled
 
     @mcp.prompt(
         name="network_health_overview",
@@ -224,6 +247,155 @@ Live device/tenant state is **not** a RAG question — use monitoring tools afte
 
 Return: short cited explanation, key caveats, and the safest next MCP call."""
 
+    @mcp.prompt(
+        name="morning_report",
+        description=(
+            "Last-24h ops digest across enabled platforms "
+            "(engineer detail or executive summary)."
+        ),
+    )
+    def morning_report(mode: str = "engineer") -> str:
+        return f"""Build a morning operations report (mode hint: `{mode}`).
+
+Prefer the bundled runbook:
+1. `find_tool` / `list_skills` then `invoke_read_tool("load_skill", {{"name": "morning-report"}})`.
+2. Follow that skill exactly with `find_tool` + `invoke_read_tool` only.
+
+If skills are unavailable, approximate the same read-only flow:
+1. Tenant/site health and worst scopes.
+2. Active critical/high alerts (grouped).
+3. Recent audit activity (bounded).
+4. Optional Mist alarms/SLE, UXI sensor status, GLP reporting failures — only
+   when those tools exist; skip missing products with a one-line note.
+5. Lead with GREEN/YELLOW/RED. Engineer mode = structured sections; executive
+   mode = short business language without tool names.
+Never clear alerts or run destructive tools."""
+
+    @mcp.prompt(
+        name="central_scope_resolve",
+        description="Resolve a Central site/group/global name to scope_id metadata.",
+    )
+    def central_scope_resolve(scope_query: str) -> str:
+        return f"""Resolve Central scope reference `{scope_query}`.
+
+Prefer `load_skill(name="central-scope-walker")` via `invoke_read_tool`, then:
+1. org-wide/global → `get_global_scope_id`.
+2. else `find_scope` / `list_scopes` (and sites/groups helpers if needed).
+3. Match exact id, exact name, then unique substring; if ambiguous, list candidates.
+Return scope_id, scope_name, type, and any device-count fields. Read-only."""
+
+    @mcp.prompt(
+        name="central_scope_audit",
+        description="Bounded Central config hygiene audit for scopes, WLANs, roles, auth.",
+    )
+    def central_scope_audit(scope_name: str = "org-wide") -> str:
+        return f"""Run a bounded Aruba Central configuration scope audit for `{scope_name}`.
+
+Prefer `load_skill(name="central-scope-audit")`.
+Workflow (read-only):
+1. Resolve scope (`central-scope-walker` / `find_scope` / global).
+2. Inventory SSIDs/WLANs and scope maps.
+3. Sample roles, auth servers/groups, AAA profiles, named VLANs.
+4. Sample config assignments when available.
+5. Rank findings REGRESSION / DRIFT / INFO. Do not claim a full VSG tree audit —
+   this catalog lacks committed/effective scope-tree APIs.
+No config writes."""
+
+    @mcp.prompt(
+        name="wlan_sync_check",
+        description="Compare Central and Mist WLAN/SSID inventories for drift (read-only).",
+    )
+    def wlan_sync_check(scope_name: str = "org-wide") -> str:
+        return f"""Compare WLAN/SSID configuration between Central and Mist for `{scope_name}`.
+
+Prefer `load_skill(name="wlan-sync-validation")`.
+Workflow:
+1. Confirm which platforms are enabled; partial results if only one side exists.
+2. List Central SSIDs/WLANs for the scope; list Mist WLANs for the site/org.
+3. Classify: in-sync / drift / Central-only / Mist-only.
+4. Optional field mapping via interop `translate_central_wlan_to_mist` /
+   `translate_mist_wlan_to_central` — honor translator warnings.
+Read-only. Never print PSK values. No WLAN create/delete."""
+
+    @mcp.prompt(
+        name="cross_platform_rf_check",
+        description="Site RF/channel health using Central and optional Mist assurance tools.",
+    )
+    def cross_platform_rf_check(site_name: str) -> str:
+        return f"""Assess RF/channel health for site `{site_name}`.
+
+Prefer `load_skill(name="cross-platform-rf-check")`.
+Workflow (read-only):
+1. Resolve the site on Central and/or Mist.
+2. Central: sample AP radios, channel utilization, air quality, neighbors/rogues.
+3. Mist (if enabled): site SLE/assurance snapshot and alarms.
+4. Summarize per-band pressure and AP outliers. Do not change channels or power.
+If Mist channel-planning APIs are absent, say so — do not invent planner data."""
+
+    if clearpass_enabled:
+
+        @mcp.prompt(
+            name="clearpass_policy_review",
+            description=(
+                "Review ClearPass services, enforcement policies, roles, "
+                "and recent auth failures. Requires clearpass backend."
+            ),
+        )
+        def clearpass_policy_review(service_name: str = "") -> str:
+            focus = service_name or "catalog"
+            return f"""Review ClearPass policy/service posture (focus: `{focus}`).
+
+Prefer `load_skill(name="clearpass-policy-audit")`.
+Workflow (read-only):
+1. Confirm ClearPass tools exist (`clearpass_status` / find_tool).
+2. List services; detail the named service when provided.
+3. List/get enforcement policies and roles (bounded).
+4. Sample auth failures / access-tracker sessions.
+Refer to services by name in operator output. No disconnect/guest/write calls.
+There is no policy-flow Mermaid compiler in this catalog — say so if asked to draw one."""
+
+    if mist_enabled:
+
+        @mcp.prompt(
+            name="mist_scope_audit",
+            description=(
+                "Bounded Mist site/WLAN/assurance audit. Requires mist backend."
+            ),
+        )
+        def mist_scope_audit(site_name: str = "org-wide") -> str:
+            return f"""Run a bounded Juniper Mist configuration/assurance audit for `{site_name}`.
+
+Prefer `load_skill(name="mist-scope-audit")`.
+Workflow (read-only):
+1. `mist_status` / list sites.
+2. WLAN inventory for the scope (avoid huge N+1 site walks unless asked).
+3. Org inventory sample, alarms, SLE/assurance.
+4. Optional NAC tags/portals/IdPs/user MACs when relevant.
+Do not claim full template-governance coverage — org RF/WLAN template list tools
+are not wrapped here. No Mist writes."""
+
+    if uxi_enabled:
+
+        @mcp.prompt(
+            name="uxi_diagnostics",
+            description=(
+                "UXI sensor/synthetic-test diagnostics with optional "
+                "Central/Mist/AOS8 correlation. Requires uxi backend."
+            ),
+        )
+        def uxi_diagnostics(focus: str = "") -> str:
+            topic = focus or "unhealthy sensors"
+            return f"""Diagnose UXI synthetic sensors/tests (focus: `{topic}`).
+
+Prefer `load_skill(name="uxi-diagnostics")`.
+Workflow (read-only):
+1. `uxi_status`, list sensors/agents/tests/networks (bounded).
+2. Status detail only for unhealthy/offline sensors.
+3. Correlate sensor MAC/network/group to Central/Mist/AOS8 only if those
+   backends are enabled; skip others with INFO.
+4. Verdict GO / DEGRADED / CRITICAL.
+Sensor MACs are synthetic — not end-user devices. No UXI assignment writes."""
+
     if design_enabled:
         @mcp.prompt(
             name="network_design_diagram",
@@ -247,7 +419,8 @@ Prefer the skill path when available:
 2. Follow that runbook exactly.
 
 Otherwise use `find_tool` + `invoke_read_tool` (all design tools are read-only):
-0. If preferences are unstated, ask the operator for format (Draw.io/Graphviz/NeXt), icon style (generic vs vendor icons), and target site/scope.
+0. If preferences are unstated, ask the operator for format (Draw.io/Graphviz/NeXt),
+   icon style (generic vs vendor icons), and target site/scope.
 1. If a live site is in scope (`{site_name or "unspecified"}`), resolve the site and call
    monitoring `get_topology` for nodes/links.
 2. Or build a structured model: nodes[{{id,label,role,vendor}}], links[{{source,target}}],
@@ -273,6 +446,7 @@ Return: which export ran, saved paths (if any), and how to open the artifact."""
     def aos8_migration_readiness(config_path: str = "/md") -> str:
         return f"""Assess ArubaOS 8 -> Aruba Central migration readiness for node `{config_path}`.
 
+Prefer `load_skill(name="aos8-migration-readiness")` when skills are available.
 Use `find_tool`/`invoke_read_tool` (or the aos8 tool names directly, if known) for every step
 below -- this is read-only discovery and planning, never a write.
 Workflow:

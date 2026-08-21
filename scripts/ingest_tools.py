@@ -38,6 +38,7 @@ SERVERS = [
     ("central-nac", "hpe_networking_mcp.mcp_servers.nac"),
     ("central-ops", "hpe_networking_mcp.mcp_servers.ops"),
     ("central-streaming", "hpe_networking_mcp.mcp_servers.central_streaming"),
+    ("site-health", "hpe_networking_mcp.mcp_servers.site_health"),
     ("glp-core", "hpe_networking_mcp.mcp_servers.glp"),
     ("rag-core", "hpe_networking_mcp.mcp_servers.rag"),
     # Credential-free and always loaded by the router (tool_router's

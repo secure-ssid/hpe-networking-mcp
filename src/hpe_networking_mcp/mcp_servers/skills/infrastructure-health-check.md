@@ -8,7 +8,7 @@ description: |
   standup, or needs a baseline before deeper troubleshooting.
 platforms: [central, glp, mist, clearpass]
 tags: [health, monitoring, daily-standup, baseline]
-tools: [get_tenant_health, list_sites, get_alerts, list_devices, list_glp_reporting_statuses, find_tool, invoke_read_tool]
+tools: [get_tenant_health, list_sites, list_active_alerts, list_devices, list_glp_reporting_statuses, find_tool, invoke_read_tool]
 ---
 
 # Cross-platform infrastructure health snapshot
@@ -43,7 +43,7 @@ in under 30 seconds.
 
 ### Step 3 — Active alerts
 
-**Tool:** `get_alerts` / alert list tools (severity critical/major first)
+**Tool:** `list_active_alerts` / alert list tools (severity critical/major first)
 **Why:** Alerts often explain health drops faster than device walks.
 **Expected result:** Top alerts with severity, scope, and age.
 **If anomaly:** Group repeated alert types; note flapping vs sustained.

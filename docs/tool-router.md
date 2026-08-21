@@ -143,6 +143,44 @@ If the semantic tool index is unavailable and no keyword fallback matches,
 `find_tool` returns a compact error with a rebuild hint instead of an empty
 success-shaped result.
 
+### Unknown tool names
+
+Guessing a tool name instead of calling `find_tool` first still gets a
+structured answer instead of a bare protocol error. A name with a
+recognized optional-product prefix (`mist_`, `clearpass_`, `apstra_`,
+`aos8_`, `edgeconnect_`, `uxi_`, `axis_`) whose backend isn't currently
+loaded reports that distinctly from an ordinary typo:
+
+<div class="docs-callout docs-callout--info" markdown="1">
+
+```json
+{
+  "error": "Unknown tool: mist_get_site_stats",
+  "reason": "platform_not_configured",
+  "platform": "mist",
+  "hint": "The 'mist' backend is not currently enabled. Set HPE_MCP_PRODUCTS=mist (or include it in HPE_MCP_TOOLSETS) and configure Mist credentials, then restart the server.",
+  "suggestions": []
+}
+```
+
+Any other unresolved name -- including a typo of a tool on an
+**already-enabled** platform -- instead gets the ordinary fuzzy "did you
+mean" fallback:
+
+```json
+{
+  "error": "Unknown tool: get_devices",
+  "hint": "Use find_tool to discover available tools, then invoke_read_tool for read-only results or invoke_tool for intentional writes.",
+  "suggestions": [{"name": "list_devices", "score": 0.5}]
+}
+```
+</div>
+
+`design` is intentionally excluded from the prefix check: its tools
+(`list_diagram_icons`, `drawio_network_design_diagram`, ...) don't share a
+`design_` prefix, so a `design_...` guess falls through to the fuzzy path
+above instead of a possibly-wrong platform claim.
+
 ## Dispatch reads with `invoke_read_tool`
 
 `invoke_read_tool(name, arguments=None, cursor=None)` refuses any tool that is
@@ -380,9 +418,9 @@ MCP hop.
 |---|---:|
 | Minimal router | 3 client-visible tools |
 | Default router | 18 client-visible tools[^compliance-tool] |
-| Platform API backend index | 6,708 tools |
-| Complete backend index (platform APIs + Central Streaming + local GLP preflight + `design-core` + `interop-core`) | 6,722 tools |
-| Direct-all router | 6,729 client-visible tools |
+| Platform API backend index | 6,711 tools |
+| Complete backend index (platform APIs + Central Streaming + `site-health` + local GLP preflight + `design-core` + `interop-core`) | 6,726 tools |
+| Direct-all router | 6,733 client-visible tools |
 
 </div>
 
@@ -399,11 +437,11 @@ MCP hop.
 
 The complete catalog spans nine platform surfaces plus RAG, `design-core`,
 and `interop-core`: nine generated manifests contain 6,144 reproducible
-operations (6,127 register as active generated tools; 577 platform curated
-tools bring the REST/OpenAPI platform API backend total to 6,708). The
-protocol-only `central-streaming` backend adds one vendor-facing tool. Adding
+operations (6,127 register as active generated tools; 584 platform curated
+tools bring the REST/OpenAPI platform API backend total to 6,711). The
+protocol-only `central-streaming` backend and the cross-platform `site-health` aggregator each add one vendor-facing tool. Adding
 the two credential-free local backends (`design-core`: 7, `interop-core`: 5)
-yields the complete 6,722-tool registered backend catalog. Minimal mode does not
+yields the complete 6,726-tool registered backend catalog. Minimal mode does not
 expose that schema surface to the MCP client -- it searches the catalog on
 demand.
 
@@ -427,6 +465,7 @@ early or blocking an MCP call for the full server window.
 | `central-generated` | Complete generated Central API surface |
 | `config` | Central configuration tools |
 | `monitoring` | Health, alerts, events, clients, devices |
+| `site-health` | Bounded cross-platform Central/Mist site health |
 | `nac` | MAC registration, MPSK, visitors, auth policy tools |
 | `ops` | Troubleshooting and operational tools |
 | `glp` | GreenLake Platform devices and documented attribute grouping, subscriptions, users, Audit Logs v2beta1, workspaces, reporting, service catalog, and guarded writes |
@@ -572,6 +611,28 @@ payload (`router_dependency_plan`, `router_reconciliation_plan`, or
 `compliance_report` -- see [artifact-contracts.md](artifact-contracts.md))
 ready for `hpe_networking_mcp.pipeline.artifact_contracts.write_artifact`; none of the three
 write to disk themselves.
+
+## Why the router does not adopt FastMCP code-mode
+
+FastMCP code-mode is useful when a model needs to write a sandboxed program that
+chains many tool calls. It is not enabled here because it would add a second
+execution language, sandbox/runtime dependency, and policy boundary to a router
+that already has explicit per-tool annotations, write gates, response budgets,
+rate limiting, and audit-oriented dispatch.
+
+The low-risk equivalent needed by this project is already available:
+`invoke_read_tool_batch` performs up to 25 ordered, read-only calls in one MCP
+round trip. Each entry independently passes the same annotation gate, cursor
+validation, response bounds, and per-backend rate gate as a single
+`invoke_read_tool` call. It cannot execute writes, diagnostics, arbitrary
+Python, or filesystem/network code.
+
+This is an intentional additive choice rather than a FastMCP migration. A
+future sandboxed execution feature would need an isolated runtime, a
+capability-aware API limited to explicitly selected read tools, instruction
+and resource limits, cancellation, provenance for every sub-call, and an
+expanded security/evaluation gate. Until those requirements are met, batching
+provides the round-trip reduction without weakening the router's safety model.
 
 ## Why `invoke_tool` is destructive
 

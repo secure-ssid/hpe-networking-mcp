@@ -98,8 +98,13 @@ Used to clone the repository in [Step 1](#1-install).
 
 ### An MCP-capable client
 
-Cursor, VS Code, Claude, or any client that supports stdio or streamable HTTP
-MCP servers. See [mcp-client-recipes.md](mcp-client-recipes.md).
+VS Code with GitHub Copilot is the primary supported host path. Copilot CLI is
+also supported when you already have a subscription; Crush, Claude, Cursor,
+or any client that supports stdio or streamable HTTP MCP servers can be used
+as alternatives. See [mcp-client-recipes.md](mcp-client-recipes.md) for the
+host decision guide and safe-read-only configs. `hpe-mcp` is also available
+as an optional local plain-streaming chat client; it is not a replacement for
+an MCP host.
 
   </div>
   <div class="step-card" markdown="1">
@@ -126,12 +131,13 @@ files, replace MCP path placeholders, choose a Central API gateway region, fill
 credentials without echoing secrets, enable optional products, build the router
 tool catalog, and run the local doctor.
 
-Installing the project also puts four console commands on your `PATH`:
+Installing the project also puts five console commands on your `PATH`:
 
 | Command | What it does |
 |---|---|
 | `hpe-mcp-router` | Run the unified `hpe-networking-mcp` MCP router (transport from `MCP_TRANSPORT`) |
 | `hpe-mcp-doctor` | Local setup diagnostic; no Central/GLP API calls |
+| `hpe-mcp` | Optional local plain-streaming chat client; use `--repl` or `--tui` only for the legacy interfaces |
 | `hpe-mcp-run-pipeline` | Switch migration pipeline CLI |
 | `hpe-mcp-run-ssid` | Underlay/overlay SSID builder CLI |
 
@@ -220,7 +226,7 @@ Starting hpe-networking-mcp HTTP router
   mode:     minimal
   toolsets: central,glp,rag
   products: none
-  profile:  custom
+  profile:  safe-read-only
   optional: read-only
   bearer:   disabled (set MCP_HTTP_BEARER_TOKEN to require a shared secret)
   metrics:  0 (http snapshot: 0)
@@ -370,18 +376,22 @@ HPE_MCP_TOOLSETS=central,glp,rag
 ```
 
 This exposes only the router discovery/dispatch surface and keeps tool-list
-token cost low. The router can search 6,722 backend tools when all platforms
+token cost low. The router can search 6,726 backend tools when all platforms
 and guarded writes are indexed, while minimal mode exposes only three
 client-visible tools: `find_tool`, `invoke_read_tool`, and `invoke_tool`.
 
 Your client can either launch the router itself (stdio) or connect to one
 already running (streamable HTTP, from [Step 2](#2-try-it-credential-free)).
 [mcp-client-recipes.md](mcp-client-recipes.md) has the full decision guide and
-copy/paste blocks for generic clients, Cursor, VS Code, and the included
-`.claude/launch.json` launch profiles — including the accessible
+copy/paste blocks for VS Code + GitHub Copilot first, then Copilot CLI,
+generic clients, Cursor, Claude, and the optional existing frontends —
+including the accessible
 transport-choice diagram used to make that call. The first profile in
 `.claude/launch.json` is the same `minimal` `hpe-networking-mcp` setup shown
-above; the rest are direct debug servers.
+above; the rest are direct debug servers. For an optional local fallback,
+`hpe-mcp` starts plain streaming chat with the safe-read-only local-router
+profile; select `--provider`/`--model` only when using its model adapters, and
+use `--repl` or `--tui` for the explicit legacy interfaces.
 
 ## 5. Build the tool catalog
 
@@ -397,7 +407,7 @@ Include optional product starters:
 uv run python scripts/ingest_tools.py --products all
 ```
 
-The safe default hides optional write tools. Build all 6,722 backend tools only
+The safe default hides optional write tools. Build all 6,726 backend tools only
 for an intentional lab read/write profile:
 
 ```bash
@@ -484,14 +494,14 @@ check [troubleshooting.md](troubleshooting.md) for the matching fix.
 python3 scripts/setup_wizard.py --yes --skip-credentials --skip-catalog
 uv run hpe-mcp-doctor
 uv run pytest tests/unit -q
-uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6708
+uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6711
 ```
 
-`--min-tools 6708` is the platform API compatibility floor (the
-6,708 vendor-facing platform API tools), not the complete registered backend
-total of 6,722, which also includes the protocol-only Central Streaming tool,
-the local GLP preflight diagnostic, and credential-free local tools —
-validation passes at or above the floor. See
+`--min-tools 6711` is the platform API compatibility floor (the
+6,711 vendor-facing platform API tools), not the complete registered backend
+total of 6,726, which also includes the protocol-only Central Streaming tool,
+the cross-platform site-health aggregator, the local GLP preflight diagnostic,
+and credential-free local tools — validation passes at or above the floor. See
 [tool-catalog.md](tool-catalog.md) for both totals.
 
 Add `--strict-rag` only if you have built the local prose corpus with

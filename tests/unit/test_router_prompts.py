@@ -5,7 +5,11 @@ from mcp.server.mcpserver import MCPServer
 import hpe_networking_mcp.mcp_servers.tool_router as router
 from hpe_networking_mcp.mcp_servers.prompts import (
     AOS8_BACKEND_SERVER,
+    CLEARPASS_BACKEND_SERVER,
+    CORE_OPERATOR_PROMPT_NAMES,
     DESIGN_BACKEND_SERVER,
+    MIST_BACKEND_SERVER,
+    UXI_BACKEND_SERVER,
     register_router_prompts,
 )
 
@@ -29,6 +33,7 @@ def test_router_registers_guided_prompts():
         "critical_alerts_review",
         "failed_clients_investigation",
         "explain_how_it_works",
+        *CORE_OPERATOR_PROMPT_NAMES,
     } <= set(prompts)
 
 
@@ -131,3 +136,62 @@ def test_design_prompt_names_export_tools():
 def test_prompts_default_includes_design_when_backends_unspecified():
     prompts, _ = _prompts_with_backends(None)
     assert "network_design_diagram" in prompts
+
+
+def test_core_operator_prompts_guide_skills_and_router():
+    _prompts, server = _prompts_with_backends({"central-monitoring", "rag-core", "interop-core"})
+    morning = server._prompt_manager.get_prompt("morning_report")
+    assert morning is not None
+    text = morning.fn("executive")
+    assert "morning-report" in text
+    assert "find_tool" in text
+    assert "invoke_read_tool" in text
+    assert "executive" in text
+
+    audit = server._prompt_manager.get_prompt("central_scope_audit")
+    assert audit is not None
+    assert "central-scope-audit" in audit.fn("HQ")
+    assert "Read-only" in audit.fn("HQ") or "read-only" in audit.fn("HQ").lower()
+
+    wlan = server._prompt_manager.get_prompt("wlan_sync_check")
+    assert wlan is not None
+    assert "wlan-sync-validation" in wlan.fn("HQ")
+    assert "translate_central_wlan_to_mist" in wlan.fn("HQ")
+
+
+def test_optional_product_prompts_gate_on_backends():
+    without, _ = _prompts_with_backends({"central-config", "glp-core"})
+    assert "clearpass_policy_review" not in without
+    assert "mist_scope_audit" not in without
+    assert "uxi_diagnostics" not in without
+    assert "morning_report" in without
+
+    with_all, server = _prompts_with_backends(
+        {
+            "central-config",
+            CLEARPASS_BACKEND_SERVER,
+            MIST_BACKEND_SERVER,
+            UXI_BACKEND_SERVER,
+        }
+    )
+    assert "clearpass_policy_review" in with_all
+    assert "mist_scope_audit" in with_all
+    assert "uxi_diagnostics" in with_all
+
+    cp = server._prompt_manager.get_prompt("clearpass_policy_review")
+    assert cp is not None
+    assert "clearpass-policy-audit" in cp.fn("Guest")
+    mist = server._prompt_manager.get_prompt("mist_scope_audit")
+    assert mist is not None
+    assert "mist-scope-audit" in mist.fn("HQ")
+    uxi = server._prompt_manager.get_prompt("uxi_diagnostics")
+    assert uxi is not None
+    assert "uxi-diagnostics" in uxi.fn("offline")
+
+
+def test_prompts_default_includes_optional_product_prompts_when_unspecified():
+    prompts, _ = _prompts_with_backends(None)
+    assert "clearpass_policy_review" in prompts
+    assert "mist_scope_audit" in prompts
+    assert "uxi_diagnostics" in prompts
+    assert "morning_report" in prompts

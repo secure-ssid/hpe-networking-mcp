@@ -31,6 +31,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,28 @@ ROOT = repo_root()
 SOURCES_DIR = ROOT / "ingestion" / "sources"
 DEFAULT_FRESHNESS_ARTIFACT = ROOT / "outputs" / "source-freshness.json"
 FRESHNESS_MAX_AGE_DAYS = 7
+
+
+def _ensure_ingestion_importable() -> None:
+    """Make the top-level ``ingestion`` package importable regardless of launch.
+
+    ``ingestion/`` lives outside ``src/`` (it is dev/build tooling, not part
+    of the installed package), so ``from ingestion import ingest_docs`` only
+    succeeds when the repo root happens to already be on ``sys.path``. The
+    real MCP router is launched as
+    ``python3 src/hpe_networking_mcp/mcp_servers/rag.py`` with
+    ``PYTHONPATH=<repo>/src`` only (see ``.cursor/mcp.dev.json``); under that
+    launch ``sys.path[0]`` is the script's own directory, not the repo root,
+    so the bare import raises ``ModuleNotFoundError`` (reproduced directly).
+    Inserting ``repo_root()`` -- already computed via ``Path(__file__)``, so
+    it is independent of ``sys.path``/CWD -- fixes this without duplicating
+    ``ingest_docs.collect_points``' extraction/hashing logic here. In an
+    installed wheel (no ``ingestion/`` directory at all) this is a no-op and
+    the subsequent import still raises the same clean ``ModuleNotFoundError``.
+    """
+    root_str = str(ROOT)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
 
 # The source families this diagnostic is scoped to. Kept in sync with
 # src/hpe_networking_mcp/pipeline/clients/advisory_index.SOURCE_DIRS, which indexes the same
@@ -137,6 +160,7 @@ def full_corpus_delta(
         Same shape as :func:`ingestion_delta`:
         ``{"sources": {family: {status, new, changed, removed, unchanged}}}``.
     """
+    _ensure_ingestion_importable()
     from ingestion import ingest_docs
 
     families = tuple(
@@ -164,8 +188,9 @@ def _content_hash_delta(
     reuse the identical, already-reviewed diff logic over a larger family
     set instead of duplicating it.
     """
-    from ingestion import ingest_docs
+    _ensure_ingestion_importable()
     from hpe_networking_mcp.pipeline.clients import lance_client
+    from ingestion import ingest_docs
 
     connect_kwargs = {} if data_dir is None else {"data_dir": data_dir}
     db = lance_client.connect(**connect_kwargs)

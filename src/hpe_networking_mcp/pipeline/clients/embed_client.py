@@ -87,3 +87,7 @@ class EmbedClient:
         """Embed a single query string, with nomic's search_query prefix."""
         vectors = list(self.model.embed([_QUERY_PREFIX + text[:_MAX_CHARS]]))
         return vectors[0].tolist()
+
+    def warm_up(self) -> None:
+        """Load the ONNX model before serving the first user query."""
+        self.embed_query("warm up local documentation retrieval")

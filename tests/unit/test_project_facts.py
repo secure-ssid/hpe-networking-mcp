@@ -92,11 +92,12 @@ def test_tracked_tool_totals_are_internally_consistent():
     local = sum(tools["credential_free_local"].values())
     protocol_only = sum(tools["protocol_only"].values())
     non_api_local = sum(tools["non_api_local"].values())
-    assert (
-        tools["platform_backend_total"]
-        == tools["registered_total"] - local - protocol_only - non_api_local
+    aggregators = sum(tools["non_platform_aggregators"].values())
+    assert tools["platform_backend_total"] == (
+        tools["registered_total"] - local - protocol_only - non_api_local - aggregators
     )
     assert tools["interop_tools"] == tools["by_server"]["interop-core"]
+    assert tools["non_platform_aggregators"]["site-health"] == 1
 
 
 def test_tracked_router_modes_are_internally_consistent():
@@ -194,11 +195,11 @@ def test_published_canonical_counts_match_the_documented_contract():
     tools = TRACKED["tools"]
     router_tools = TRACKED["router_modes"]["tools"]
 
-    assert tools["registered_total"] == 6722  # complete registered backend identities
-    assert tools["platform_backend_total"] == 6708  # platform API total / compatibility floor
+    assert tools["registered_total"] == 6726  # complete registered backend identities
+    assert tools["platform_backend_total"] == 6711  # platform API total / compatibility floor
     assert router_tools["minimal"] == 3
     assert router_tools["default"] == 18
-    assert router_tools["direct_all"] == 6729
+    assert router_tools["direct_all"] == 6733
     assert tools["non_api_local"] == {"glp-core": 1}
 
 
@@ -322,9 +323,36 @@ def test_specs_counts_cover_every_contract_table(tmp_path):
     assert project_facts.specs_counts(db_path) == dict.fromkeys(project_facts.SPECS_TABLES, 1)
 
 
+def test_placeholder_specs_db_is_not_mistaken_for_an_index(tmp_path):
+    """An empty ``specs.sqlite`` must read as *absent*, not as an index.
+
+    ``sqlite3.connect`` creates the file on first write, so a checkout with
+    no corpus can still end up with a zero-byte ``data/specs.sqlite``.
+    Counting it raises ``OperationalError`` mid-derivation instead of taking
+    the documented no-data path, which is how a stray file turns into a hard
+    CI failure.
+    """
+    import sqlite3
+
+    empty = tmp_path / "specs.sqlite"
+    sqlite3.connect(empty).close()
+    assert empty.is_file()
+    assert project_facts.specs_index_present(empty) is False
+
+    foreign = tmp_path / "not-sqlite.sqlite"
+    foreign.write_text("this is not a database", encoding="utf-8")
+    assert project_facts.specs_index_present(foreign) is False
+
+    real = tmp_path / "real.sqlite"
+    with sqlite3.connect(real) as connection:
+        for table in project_facts.SPECS_TABLES:
+            connection.execute(f"CREATE TABLE {table} (id INTEGER)")
+    assert project_facts.specs_index_present(real) is True
+
+
 @pytest.mark.skipif(
-    not project_facts.SPECS_DB_PATH.is_file(),
-    reason="local data/specs.sqlite is required for the exact structured-count contract",
+    not project_facts.specs_index_present(),
+    reason="a real local data/specs.sqlite is required for the structured-count contract",
 )
 def test_tracked_specs_counts_match_the_local_structured_index():
     assert TRACKED["indexes"]["specs_sqlite"] == project_facts.specs_counts()

@@ -96,8 +96,35 @@ class TestEntryClassification:
             raise rr.RegistryParseError("no oasPublicUrl pointer found in page HTML")
 
         monkeypatch.setattr(rr, "fetch_spec_for_page", _unparsable)
+        monkeypatch.setattr(
+            rr,
+            "fetch_registry_spec",
+            lambda pointer, **k: (_ for _ in ()).throw(
+                rr.RegistryParseError("registry response is missing paths")
+            ),
+        )
 
         assert rr.check_entry_drift(_entry()).result_class == taxonomy.PARSER_ERROR
+
+    def test_unparsable_page_falls_back_to_manifest_registry(self, monkeypatch):
+        def _unparsable(url, **k):
+            raise rr.RegistryParseError("no oasPublicUrl pointer found in page HTML")
+
+        observed = {}
+
+        def _registry(pointer, **k):
+            observed["pointer"] = pointer
+            return _SPEC
+
+        monkeypatch.setattr(rr, "fetch_spec_for_page", _unparsable)
+        monkeypatch.setattr(rr, "fetch_registry_spec", _registry)
+
+        result = rr.check_entry_drift(_entry(project="p", portal_version="v"))
+
+        assert result.result_class == taxonomy.FRESH
+        assert result.observed_registry_id == "abc123"
+        assert observed["pointer"].registry_id == "abc123"
+        assert "direct api-registry fetch" in result.detail
 
     def test_offline_reports_not_checked_never_fresh(self):
         result = rr.check_entry_drift(_entry(), offline=True)

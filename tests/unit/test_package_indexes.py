@@ -5,6 +5,8 @@ import sqlite3
 import sys
 import tarfile
 
+import pytest
+
 from scripts import package_indexes
 
 
@@ -211,6 +213,139 @@ def test_check_local_manifests_tolerates_a_no_data_checkout(tmp_path, monkeypatc
     assert lenient == []
 
 
+def _real_doc_row(doc_id: str, source: str) -> dict:
+    return {
+        "id": doc_id,
+        "text": f"Content for {source}",
+        "source": source,
+        "doc_type": source,
+        "file_path": f"{source}/x.md",
+        "chunk_index": 0,
+        "vector": [0.0, 0.0],
+    }
+
+
+def _write_index_inputs_with_docs_rows(tmp_path, monkeypatch, doc_rows, declared_sources):
+    """Like ``_write_index_inputs``, but backs ``data/docs.lance`` with a real
+    LanceDB table so ``_index_contents``' per-source chunk counts are real,
+    not the "no LanceDB table" fallback.
+    """
+    from hpe_networking_mcp.pipeline.clients import lance_client
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(parents=True)
+    db = lance_client.connect(data_dir)
+    lance_client.create_docs_table(db, doc_rows)
+    (data_dir / "tools.lance").mkdir()
+    (data_dir / "tools.lance" / "part.bin").write_text("tools")
+    with sqlite3.connect(data_dir / "specs.sqlite") as conn:
+        conn.execute("CREATE TABLE endpoints (id TEXT)")
+
+    sources_root = tmp_path / "ingestion_sources"
+    sources_root.mkdir()
+    source_manifest = tmp_path / "source_manifest.json"
+    source_manifest.write_text(
+        json.dumps([{"source": s} for s in declared_sources], indent=2) + "\n"
+    )
+    monkeypatch.setattr(package_indexes, "DATA_DIR", data_dir)
+    monkeypatch.setattr(package_indexes, "SOURCE_MANIFEST", source_manifest)
+    monkeypatch.setattr(package_indexes, "SOURCES_ROOT", sources_root)
+    monkeypatch.setattr(package_indexes, "LOCAL_SOURCE_MANIFEST", data_dir / "SOURCE-MANIFEST.json")
+    monkeypatch.setattr(package_indexes, "LOCAL_INDEX_MANIFEST", data_dir / "INDEX-MANIFEST.json")
+    return data_dir, sources_root
+
+
+_REQUIRED_DECLARED = [
+    "security_advisories",
+    "lifecycle_notices",
+    "juniper_lifecycle",
+    "juniper_security_advisories",
+]
+
+
+def test_artifact_manifest_records_per_source_required_status_and_counts(tmp_path, monkeypatch):
+    rows = [
+        _real_doc_row("11111111-1111-1111-1111-111111111111", "security_advisories"),
+        _real_doc_row("22222222-2222-2222-2222-222222222222", "lifecycle_notices"),
+        _real_doc_row("33333333-3333-3333-3333-333333333333", "juniper_lifecycle"),
+        _real_doc_row("44444444-4444-4444-4444-444444444444", "devhub"),
+        # juniper_security_advisories intentionally has zero rows, no folder.
+    ]
+    data_dir, sources_root = _write_index_inputs_with_docs_rows(
+        tmp_path, monkeypatch, rows, [*_REQUIRED_DECLARED, "devhub"]
+    )
+    (sources_root / "devhub").mkdir()
+    (sources_root / "devhub" / "page.md").write_text("devhub content", encoding="utf-8")
+
+    sources = package_indexes._artifact_manifest("vtest")["sources"]
+
+    assert sources["security_advisories"]["required"] is True
+    assert sources["devhub"]["required"] is False
+    assert sources["security_advisories"]["indexed_chunk_count"] == 1
+    assert sources["juniper_security_advisories"]["indexed_chunk_count"] == 0
+    assert sources["juniper_security_advisories"]["present"] is False
+    assert sources["juniper_security_advisories"]["sha256"] is None
+    assert sources["devhub"]["present"] is True
+    assert sources["devhub"]["sha256"] is not None
+    assert sources["devhub"]["last_refreshed_at"]
+
+
+def test_artifact_manifest_source_restored_updates_presence_and_digest(tmp_path, monkeypatch):
+    """A source folder that reappears after being absent is reported present
+    again with a fresh digest/timestamp -- the 'restored source' contract."""
+    rows = [_real_doc_row("55555555-5555-5555-5555-555555555555", "devhub")]
+    _, sources_root = _write_index_inputs_with_docs_rows(tmp_path, monkeypatch, rows, ["devhub"])
+
+    before = package_indexes._artifact_manifest("vtest")["sources"]["devhub"]
+    assert before["present"] is False
+
+    (sources_root / "devhub").mkdir()
+    (sources_root / "devhub" / "page.md").write_text("restored content", encoding="utf-8")
+
+    after = package_indexes._artifact_manifest("vtest")["sources"]["devhub"]
+    assert after["present"] is True
+    assert after["file_count"] == 1
+    assert after["sha256"] is not None
+
+
+def test_package_indexes_refuses_when_required_source_has_zero_indexed_chunks(
+    tmp_path, monkeypatch
+):
+    rows = [_real_doc_row("66666666-6666-6666-6666-666666666666", "devhub")]
+    _write_index_inputs_with_docs_rows(tmp_path, monkeypatch, rows, [*_REQUIRED_DECLARED, "devhub"])
+
+    with pytest.raises(SystemExit, match="required source"):
+        package_indexes.package_indexes("vtest", tmp_path / "dist")
+
+
+def test_package_indexes_succeeds_when_required_sources_are_indexed(tmp_path, monkeypatch):
+    rows = [
+        _real_doc_row("10000000-0000-0000-0000-000000000000", "security_advisories"),
+        _real_doc_row("20000000-0000-0000-0000-000000000000", "lifecycle_notices"),
+        _real_doc_row("30000000-0000-0000-0000-000000000000", "juniper_lifecycle"),
+        _real_doc_row("40000000-0000-0000-0000-000000000000", "juniper_security_advisories"),
+    ]
+    _write_index_inputs_with_docs_rows(tmp_path, monkeypatch, rows, _REQUIRED_DECLARED)
+
+    archive, checksum = package_indexes.package_indexes("vtest", tmp_path / "dist")
+
+    assert archive.exists()
+    assert checksum.exists()
+
+
+def test_check_local_manifests_flags_required_source_with_zero_indexed_chunks(
+    tmp_path, monkeypatch
+):
+    rows = [_real_doc_row("77777777-7777-7777-7777-777777777777", "devhub")]
+    _write_index_inputs_with_docs_rows(tmp_path, monkeypatch, rows, [*_REQUIRED_DECLARED, "devhub"])
+    package_indexes.write_local_manifests("vtest")
+
+    problems = package_indexes.check_local_manifests()
+
+    assert any("required source" in problem for problem in problems)
+    assert any("security_advisories" in problem for problem in problems)
+
+
 def test_committed_local_manifest_pair_matches_declared_sources():
     """The real data/ pair, when present, must describe all declared sources.
 
@@ -218,8 +353,6 @@ def test_committed_local_manifest_pair_matches_declared_sources():
     restored bundle has nothing to reconcile. Strict release validation runs
     the same check with artifacts required.
     """
-    import pytest
-
     if not (package_indexes.DATA_DIR / "docs.lance").exists():
         pytest.skip("no local data/docs.lance to reconcile")
     assert package_indexes.check_local_manifests() == []

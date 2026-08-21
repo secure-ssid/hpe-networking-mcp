@@ -145,7 +145,7 @@ STRUCTURED_STEPS: tuple[dict[str, Any], ...] = (
         # Without both of these the catalog is built from a strictly smaller
         # selection (read-only optional tools, curated-only GLP) and
         # validate_release.py --strict-tool-index correctly reports the
-        # rebuilt index as stale against the 6,715-tool registered catalog.
+        # rebuilt index as stale against the 6,718-tool registered catalog.
         # Declared here rather than assumed from the ambient shell so a plan
         # is reproducible; see scripts/ingest_tools.py's own usage note and
         # scripts/validate_release.py::_strict_env.

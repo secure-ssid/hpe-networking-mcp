@@ -31,7 +31,39 @@ def test_bundled_skills_load_and_exclude_template():
     assert "infrastructure-health-check" in names
     assert "ssid-review" in names
     assert "network-design-diagram" in names
-    assert len(names) >= 7
+    assert "morning-report" in names
+    assert "central-scope-walker" in names
+    assert "central-scope-audit" in names
+    assert "clearpass-policy-audit" in names
+    assert "wlan-sync-validation" in names
+    assert "cross-platform-rf-check" in names
+    assert "mist-scope-audit" in names
+    assert "uxi-diagnostics" in names
+    assert "aos8-migration-readiness" in names
+    assert len(names) >= 15
+
+
+def test_operator_skills_declare_router_entrypoints_and_read_only_bias():
+    """High-value operator runbooks must steer through the router and gate writes."""
+    registry = get_registry()
+    required = {
+        "morning-report": ("morning", "invoke_read_tool"),
+        "central-scope-audit": ("list_scopes", "Read-only"),
+        "wlan-sync-validation": ("translate_central_wlan_to_mist", "Read-only"),
+        "cross-platform-rf-check": ("get_channel_utilization", "Read-only"),
+        "clearpass-policy-audit": ("clearpass_list_services", "Read-only"),
+        "mist-scope-audit": ("mist_list_wlans", "Read-only"),
+        "uxi-diagnostics": ("uxi_list_sensors", "synthetic"),
+        "aos8-migration-readiness": ("aos8_migration_dependency_plan", "preview"),
+    }
+    for name, needles in required.items():
+        skill = registry.lookup(name)
+        assert isinstance(skill, Skill)
+        body = skill.body
+        tools = set(skill.tools)
+        assert "find_tool" in tools or "find_tool" in body
+        for needle in needles:
+            assert needle in body or needle in tools
 
 
 def test_list_skills_compact_by_default_and_detail_flag():

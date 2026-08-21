@@ -375,6 +375,92 @@ class TestUnknownToolSuggest:
 
         assert "create_vlan" in str(result)
 
+    def test_platform_hint_resolver_reports_unconfigured_platform(self):
+        """(a) A prefix-matched, unconfigured-platform guess gets the
+        distinct platform_not_configured shape instead of a fuzzy hint."""
+
+        def list_devices() -> str:
+            return "ok"
+
+        def platform_hint_resolver(name: str):
+            if name.startswith("mist_"):
+                return {
+                    "reason": "platform_not_configured",
+                    "platform": "mist",
+                    "hint": "The 'mist' backend is not currently enabled.",
+                }
+            return None
+
+        srv = _make_server_with_tool(list_devices)
+        install_middleware(
+            srv,
+            [
+                UnknownToolSuggestMiddleware(
+                    lambda: srv._tool_manager._tools,
+                    suggestion_provider=lambda name, limit: [
+                        {"name": "SHOULD_NOT_APPEAR", "score": 1.0}
+                    ],
+                    platform_hint_resolver=platform_hint_resolver,
+                )
+            ],
+        )
+
+        result = _call(srv, "mist_get_site_stats", {})
+
+        assert result["reason"] == "platform_not_configured"
+        assert result["platform"] == "mist"
+        assert result["suggestions"] == []
+        assert "SHOULD_NOT_APPEAR" not in str(result)
+
+    def test_platform_hint_resolver_none_falls_back_to_fuzzy_for_unknown_name(self):
+        """(b) A genuinely unknown name with no platform-prefix match is
+        unaffected: the resolver returns None and fuzzy suggestions run."""
+
+        def list_devices() -> str:
+            return "ok"
+
+        srv = _make_server_with_tool(list_devices)
+        install_middleware(
+            srv,
+            [
+                UnknownToolSuggestMiddleware(
+                    lambda: srv._tool_manager._tools,
+                    platform_hint_resolver=lambda name: None,
+                )
+            ],
+        )
+
+        result = _call(srv, "get_devices", {})
+
+        assert "reason" not in result
+        assert "list_devices" in str(result)
+
+    def test_platform_hint_resolver_none_for_already_enabled_platform_typo(self):
+        """(c) A typo of an already-enabled platform's tool must not be
+        misreported as platform_not_configured -- the resolver already
+        encodes "is it enabled" and returns None for this case, so the
+        ordinary fuzzy path still runs."""
+
+        def mist_status() -> str:
+            return "ok"
+
+        srv = _make_server_with_tool(mist_status)
+        install_middleware(
+            srv,
+            [
+                UnknownToolSuggestMiddleware(
+                    lambda: srv._tool_manager._tools,
+                    # Simulates: mist IS enabled, so a mist_ prefix never blocks.
+                    platform_hint_resolver=lambda name: None,
+                )
+            ],
+        )
+
+        result = _call(srv, "mist_statuss", {})
+
+        assert "reason" not in result
+        assert "mist_status" in str(result)
+
 
 class TestResponseEnvelope:
     def test_wraps_error_dict(self):
@@ -417,6 +503,9 @@ class TestResponseEnvelope:
             ("confirmation_required", 409),
             ("not_found", 404),
             ("failed", 500),
+            ("unknown_tool", 404),
+            ("invalid_cursor", 400),
+            ("invalid_call", 400),
         ],
     )
     def test_named_status_precedes_generic_error_fallback(self, status, expected):
@@ -431,6 +520,52 @@ class TestResponseEnvelope:
         assert result is not None
         assert result["ok"] is False
         assert result["status"] == expected
+
+    @pytest.mark.parametrize(
+        ("message", "expected"),
+        [
+            ("Client error '404 Not Found' for url 'https://x/y'", 404),
+            ("Client error '422 Unprocessable Entity' for url 'https://x/y'", 422),
+            ("Client error '429 Too Many Requests' for url 'https://x/y'", 429),
+            ("Server error '503 Service Unavailable' for url 'https://x/y'", 503),
+        ],
+    )
+    def test_upstream_http_code_recovered_from_message(self, message, expected):
+        result = ResponseEnvelopeMiddleware().after_call("read_tool", {}, {"error": message})
+
+        assert result is not None
+        assert result["ok"] is False
+        assert result["status"] == expected
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "connection refused",
+            "returned 404 devices",
+            "timed out after 30 seconds on port 443",
+            "Client error '999 Nonsense' for url 'https://x/y'",
+        ],
+    )
+    def test_unparseable_message_still_falls_back_to_500(self, message):
+        result = ResponseEnvelopeMiddleware().after_call("read_tool", {}, {"error": message})
+
+        assert result is not None
+        assert result["status"] == 500
+
+    def test_backend_status_code_field_beats_message_and_fallback(self):
+        result = ResponseEnvelopeMiddleware().after_call(
+            "read_tool",
+            {},
+            {"status_code": 403, "error": "Client error '404 Not Found' for url 'https://x/y'"},
+        )
+
+        assert result is not None
+        assert result["status"] == 403
+
+    def test_successful_status_code_does_not_envelope_without_error(self):
+        assert ResponseEnvelopeMiddleware().after_call(
+            "read_tool", {}, {"status_code": 200, "data": {"items": []}}
+        ) is None
 
     def test_bare_blocked_status_is_enveloped_as_forbidden(self):
         result = ResponseEnvelopeMiddleware().after_call(

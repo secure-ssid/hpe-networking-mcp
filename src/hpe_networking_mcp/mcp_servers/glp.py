@@ -790,6 +790,9 @@ def get_glp_workspace_contact(workspace_id: str) -> dict[str, Any]:
     return _glp_read(f"/workspaces/v1/workspaces/{_path_part(workspace_id)}/contact")
 
 
+_REPORTING_STATUSES_PATH = "/reporting/v1/statuses"
+
+
 @mcp.tool(annotations=READ_ONLY)
 def list_glp_reporting_statuses(
     filter: str | None = None,
@@ -797,9 +800,27 @@ def list_glp_reporting_statuses(
     limit: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
-    """List GreenLake reporting status records with bounded pagination."""
+    """List GreenLake reporting status records with bounded pagination.
+
+    Args:
+        filter: REQUIRED OData filter expression. `getReportingStatuses`
+            declares it required, and GLP answers 422 with no detail when it
+            is omitted, so this is rejected locally instead of round-tripping
+            an opaque error.
+    """
+    if not (filter or "").strip():
+        return {
+            "data": None,
+            "endpoint_used": _REPORTING_STATUSES_PATH,
+            "errors": [
+                "filter is a required query parameter for "
+                "GET /reporting/v1/statuses (getReportingStatuses); GLP answers "
+                "422 Unprocessable Entity when it is omitted. Pass an OData "
+                "filter expression."
+            ],
+        }
     return _glp_read(
-        "/reporting/v1/statuses",
+        _REPORTING_STATUSES_PATH,
         _paged_params(limit, offset, filter=filter, sort=sort),
     )
 

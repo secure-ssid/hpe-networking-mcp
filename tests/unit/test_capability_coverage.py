@@ -151,7 +151,7 @@ def test_lookup_api_annotates_generated_hits(monkeypatch):
     monkeypatch.setattr(
         rag.specs_index,
         "lookup",
-        lambda query, top_k=10: [
+        lambda query, top_k=10, *, source=None, platform=None, version=None, include_metadata=False: [
             {
                 "text": "GET /firmware/v1/compliance",
                 "source": "openapi_specs",
