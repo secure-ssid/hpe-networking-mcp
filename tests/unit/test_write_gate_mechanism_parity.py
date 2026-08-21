@@ -44,6 +44,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
     DESTRUCTIVE,
     DIAGNOSTIC,
     IDEMPOTENT_WRITE,
+    PLATFORM_WRITE_GATE_NAMES,
     READ_ONLY,
     WRITE,
     install_platform_write_gate,
@@ -59,8 +60,26 @@ CATALOG: tuple[tuple[str, Any], ...] = (
     ("parity_diagnostic", DIAGNOSTIC),
 )
 
-#: A backend whose name resolves to a gated platform (``central-config`` -> ``central``).
-BACKEND_SERVER = "central-config"
+#: Backend name shapes, derived from the real backend maps rather than hard-coded.
+#: Pinning only ``central-config`` would pin the one shape where all three
+#: mechanisms already agree, and would miss that they disagree everywhere else.
+GATED_SERVER = "central-config"  # -> platform "central", a registered gate
+
+#: An ``_OPTIONAL_SERVER_NAMES`` member whose platform is absent from the gate
+#: registry. Router dispatch and the backend gate historically ignored it while
+#: direct-mode registration gated it -- one mechanism of three.
+UNGATED_OPTIONAL_SERVER = next(
+    (
+        name
+        for name in sorted(router._OPTIONAL_SERVER_NAMES)
+        if router._server_platform(name) not in PLATFORM_WRITE_GATE_NAMES
+    ),
+    None,
+)
+
+#: A backend in neither map at all -- the shape any newly added backend has on
+#: the day it is added, before anyone remembers the write-gate registry.
+UNKNOWN_SERVER = "future-core"
 
 GATE_ENV = (
     "HPE_MCP_ACCESS_PROFILE",
@@ -81,20 +100,20 @@ def _pure_tool(tool_name: str):
     return _tool
 
 
-def _fresh_backend() -> MCPServer:
-    """A backend carrying the catalog."""
-    backend = MCPServer(BACKEND_SERVER)
+def _fresh_backend(server: str) -> MCPServer:
+    """A backend carrying the catalog, named so it resolves to the shape under test."""
+    backend = MCPServer(server)
     for name, annotation in CATALOG:
         backend.add_tool(_pure_tool(name), name=name, annotations=annotation)
     return backend
 
 
-def _install_catalog(monkeypatch, backend: MCPServer) -> None:
+def _install_catalog(monkeypatch, backend: MCPServer, server: str) -> None:
     """Point the router's resolved-catalog globals at ``backend``."""
     index = {name: _sdk_compat.get_tool(backend, name) for name, _ in CATALOG}
     monkeypatch.setattr(router, "_tool_index", index)
     monkeypatch.setattr(router, "_tool_servers", {n: backend for n in index})
-    monkeypatch.setattr(router, "_tool_backend_names", {n: BACKEND_SERVER for n in index})
+    monkeypatch.setattr(router, "_tool_backend_names", {n: server for n in index})
     monkeypatch.setattr(router, "_load_all_backends", lambda: None)
 
 
@@ -105,8 +124,8 @@ def _blocked(payload: Any) -> bool:
 # ── the three observations ───────────────────────────────────────────────────
 
 
-def _refused_by_router_dispatch(monkeypatch, backend: MCPServer) -> set[str]:
-    _install_catalog(monkeypatch, backend)
+def _refused_by_router_dispatch(monkeypatch, backend: MCPServer, server: str) -> set[str]:
+    _install_catalog(monkeypatch, backend, server)
     refused = set()
     for name, _ in CATALOG:
         result = asyncio.run(router._dispatch_tool(object(), name, {}))
@@ -127,20 +146,24 @@ def _refused_by_backend_gate(backend: MCPServer) -> set[str]:
     return refused
 
 
-def _withheld_by_direct_registration(monkeypatch, backend: MCPServer) -> set[str]:
-    _install_catalog(monkeypatch, backend)
+def _withheld_by_direct_registration(monkeypatch, backend: MCPServer, server: str) -> set[str]:
+    _install_catalog(monkeypatch, backend, server)
     # A *fresh* target, not the module-level router server: mechanism 3 must be
     # observable without relying on the router's write-gate exemption.
     registered = set(router._register_direct_backend_tools(MCPServer("parity-target")))
     return {name for name, _ in CATALOG if name not in registered}
 
 
-def _observe_all(monkeypatch) -> dict[str, set[str]]:
+def _observe_all(monkeypatch, server: str = GATED_SERVER) -> dict[str, set[str]]:
     """Every mechanism gets its own backend so one's gate cannot leak into another."""
     return {
-        "router_dispatch": _refused_by_router_dispatch(monkeypatch, _fresh_backend()),
-        "backend_gate": _refused_by_backend_gate(_fresh_backend()),
-        "direct_registration": _withheld_by_direct_registration(monkeypatch, _fresh_backend()),
+        "router_dispatch": _refused_by_router_dispatch(
+            monkeypatch, _fresh_backend(server), server
+        ),
+        "backend_gate": _refused_by_backend_gate(_fresh_backend(server)),
+        "direct_registration": _withheld_by_direct_registration(
+            monkeypatch, _fresh_backend(server), server
+        ),
     }
 
 
@@ -173,6 +196,44 @@ def assert_mechanisms_agree(observed: dict[str, set[str]]) -> set[str]:
 # ── tests ────────────────────────────────────────────────────────────────────
 
 
+def _backend_shape_cases():
+    cases = [pytest.param(GATED_SERVER, id="registered-gate")]
+    if UNGATED_OPTIONAL_SERVER is None:
+        cases.append(
+            pytest.param(
+                None,
+                id="optional-without-gate",
+                marks=pytest.mark.skip(
+                    reason="every _OPTIONAL_SERVER_NAMES platform is now in the gate "
+                    "registry -- this shape no longer exists, which is the good state"
+                ),
+            )
+        )
+    else:
+        cases.append(pytest.param(UNGATED_OPTIONAL_SERVER, id="optional-without-gate"))
+    cases.append(pytest.param(UNKNOWN_SERVER, id="unknown-backend"))
+    return cases
+
+
+def test_the_two_optional_server_sets_cannot_drift():
+    """The gate's optional-product list must match the router's, exactly.
+
+    Tier 2 of the write gate (``shared.OPTIONAL_PRODUCT_SERVER_NAMES``) and the
+    router's ``_OPTIONAL_SERVER_NAMES`` are built from different literals in
+    different modules -- the router derives its set from ``_OPTIONAL_BACKENDS``,
+    which also carries import paths the gate has no business knowing. A product
+    added to one and not the other silently changes which refusal a write gets,
+    or whether it is refused at all, so pin them rather than trusting review.
+    """
+    gate_side = set(shared.OPTIONAL_PRODUCT_SERVER_NAMES)
+    router_side = set(router._OPTIONAL_SERVER_NAMES)
+    assert gate_side == router_side, (
+        "shared.OPTIONAL_PRODUCT_SERVER_NAMES and tool_router._OPTIONAL_SERVER_NAMES "
+        f"disagree; only in shared: {sorted(gate_side - router_side)}, "
+        f"only in tool_router: {sorted(router_side - gate_side)}"
+    )
+
+
 @pytest.mark.parametrize(
     "env",
     [
@@ -183,13 +244,14 @@ def assert_mechanisms_agree(observed: dict[str, set[str]]) -> set[str]:
         pytest.param({"HPE_MCP_ACCESS_PROFILE": "full-read-write"}, id="full-read-write"),
     ],
 )
-def test_all_three_mechanisms_gate_the_same_tools(monkeypatch, env):
+@pytest.mark.parametrize("server", _backend_shape_cases())
+def test_all_three_mechanisms_gate_the_same_tools(monkeypatch, env, server):
     for key in GATE_ENV:
         monkeypatch.delenv(key, raising=False)
     for key, value in env.items():
         monkeypatch.setenv(key, value)
 
-    gated = assert_mechanisms_agree(_observe_all(monkeypatch))
+    gated = assert_mechanisms_agree(_observe_all(monkeypatch, server))
 
     # Read and diagnostic capabilities are never gated, on any path.
     assert "parity_read" not in gated
@@ -242,3 +304,77 @@ def test_parity_check_catches_a_one_sided_capability_drift(monkeypatch):
     assert "parity_destructive" in message
     # The mechanisms that still hold the line must not be reported as dissenting.
     assert "dissenting mechanisms: ['backend_gate']" in message
+
+
+@pytest.mark.parametrize("server", _backend_shape_cases())
+def test_the_mechanisms_agree_for_every_backend_shape(monkeypatch, server):
+    """Parity must hold for *every* backend shape, not only for Central.
+
+    The three mechanisms resolve an unregistered platform three different ways:
+    router dispatch used to require ``platform in PLATFORM_WRITE_GATE_NAMES``
+    before gating at all, the backend gate declined to install when
+    ``platform_for_server_name`` returned ``None``, and only direct-mode
+    registration gated via the ``_OPTIONAL_SERVER_NAMES`` branch. So an optional
+    backend without a registered gate was gated by one mechanism of three, and a
+    brand-new backend by none -- ``_write_is_enabled`` terminated in ``return
+    True``.
+
+    Deny-by-default means every shape must refuse a write under a closed gate.
+    """
+    for key in GATE_ENV:
+        monkeypatch.delenv(key, raising=False)
+    # Deny-by-default *without* an aggregate read-only gate. That distinction is
+    # the whole point: under safe-read-only or HPE_MCP_READONLY every mechanism
+    # short-circuits on `global_readonly_enabled()` and they agree by accident,
+    # which is exactly why the divergence stayed invisible. Here each mechanism
+    # must reach its own platform-resolution path to decide.
+    monkeypatch.delenv("HPE_MCP_ACCESS_PROFILE", raising=False)
+
+    gated = assert_mechanisms_agree(_observe_all(monkeypatch, server))
+
+    assert gated == {"parity_write", "parity_idempotent_write", "parity_destructive"}, (
+        f"backend {server!r}: a write/destructive tool is reachable under "
+        f"deny-by-default; only {sorted(gated)} refused"
+    )
+    assert "parity_read" not in gated
+    assert "parity_diagnostic" not in gated
+
+
+def test_an_unregistered_backend_cannot_be_write_enabled_by_any_setting(monkeypatch):
+    """Opening every documented gate must still not open an unregistered backend.
+
+    ``full-read-write`` plus every platform toggle is the most permissive
+    configuration the product documents. A backend with no gate entry is not
+    reachable by any of them, so there is nothing an operator could set to
+    enable it -- which is precisely why allowing it by default was wrong.
+    """
+    for key in GATE_ENV:
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("HPE_MCP_ACCESS_PROFILE", "full-read-write")
+    monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-write")
+
+    gated = assert_mechanisms_agree(_observe_all(monkeypatch, UNKNOWN_SERVER))
+    assert gated == {"parity_write", "parity_idempotent_write", "parity_destructive"}
+
+    # ...while a registered backend does open, so this is a real distinction and
+    # not the whole world being denied.
+    assert assert_mechanisms_agree(_observe_all(monkeypatch, GATED_SERVER)) == set()
+
+
+def test_refusing_an_ungated_backend_never_touches_reads(monkeypatch):
+    """The deny-by-default flip must not cost a single read.
+
+    Guards the reason the flip was safe to make: at the time of the change no
+    write/destructive tool existed on any backend whose platform is absent from
+    the gate registry, and reads short-circuit before any gate is consulted.
+    """
+    for key in GATE_ENV:
+        monkeypatch.delenv(key, raising=False)
+
+    for server in (GATED_SERVER, UNKNOWN_SERVER):
+        backend = _fresh_backend(server)
+        _install_catalog(monkeypatch, backend, server)
+        for readable in ("parity_read", "parity_diagnostic"):
+            result = asyncio.run(router._dispatch_tool(object(), readable, {}))
+            assert not _blocked(result), f"{server}: {readable} was refused"
+            assert result["executed"] == readable
