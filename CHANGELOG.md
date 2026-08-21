@@ -47,7 +47,6 @@ Feature release. Full detail in [docs/release-notes-0.9.0.md](docs/release-notes
 - **`scripts/benchmark_rag.py`** and **`scripts/benchmark_milvus.py`** latency harnesses.
 - **`scripts/migrate_rag_metadata.py`**: metadata migration for prebuilt indexes.
 - **Claude Code** MCP client example (`examples/mcp-clients/claude-code.mcp.json`).
-- **AI attribution**: CONTRIBUTING.md and README now document AI-assisted development.
 
 ### Fixed
 
