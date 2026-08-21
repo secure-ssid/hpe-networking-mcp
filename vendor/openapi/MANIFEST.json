@@ -330,6 +330,17 @@
       "registry_id": "tdgmkhmq0s6frc",
       "path_count": 4,
       "registry_sha256": "6274fdb825e18055967f235bd4de94654f926179194e7e1555d57c486dd1bb58"
+    },
+    {
+      "file": "mist.openapi.json",
+      "source_url": "https://raw.githubusercontent.com/mistsys/mist_openapi/315b30ff4fa65c1dc3a2b5c1f27931e1b14ed01e/mist.openapi.json",
+      "sha256": "2c3d769ef188bbce1b9db7a0774b5a10812d0a5bc11960b768de47b66bb88bbf",
+      "fetched": "2026-08-21",
+      "license": "MIT",
+      "title": "Mist API",
+      "upstream_repo": "mistsys/mist_openapi",
+      "upstream_commit": "315b30ff4fa65c1dc3a2b5c1f27931e1b14ed01e",
+      "path_count": 756
     }
   ]
 }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import sqlite3
 from pathlib import Path
 
@@ -13,6 +14,9 @@ from scripts.build_spec_index import build_spec_index
 
 ROOT = Path(__file__).resolve().parents[2]
 VENDOR = ROOT / "vendor" / "openapi"
+
+REGISTRY_MANIFEST = ROOT / "ingestion" / "openapi_registry_manifest.json"
+MANIFEST = VENDOR / "MANIFEST.json"
 
 # The four keys Task 5 and Task 6 consume. ``specs_index.build`` also reports
 # ``responses`` and ``skipped``; neither is part of this contract.
@@ -121,13 +125,98 @@ def test_indexed_rows_carry_the_scraped_source_family(built):
     ``source_family`` is written into every row and is the leading column of
     ``idx_endpoints_source_platform_version``; if the vendored directory name
     changed it, every metadata-filtered query would quietly stop matching.
+
+    ``platform`` is asserted as an exact set for the same reason: it is what
+    ``lookup_api``'s ``platform=`` filter matches on, and a document whose
+    platform failed to resolve lands as ``NULL`` and disappears from every
+    filtered query while still counting as an indexed row.
     """
     out, _ = built
     with sqlite3.connect(out) as conn:
         families = {row[0] for row in conn.execute("SELECT DISTINCT source_family FROM endpoints")}
         platforms = {row[0] for row in conn.execute("SELECT DISTINCT platform FROM endpoints")}
     assert families == {"openapi_specs"}
-    assert platforms == {"central"}
+    assert platforms == {"central", "mist"}
+
+
+def test_every_vendored_spec_resolves_a_source_url(built):
+    """No indexed document may answer "where did this come from?" with NULL.
+
+    The corpus is vendored so it can be redistributed with verifiable
+    provenance, and a row with a NULL ``source_url`` has none. This covers all
+    31 documents, not the commit-pinned one alone: the registry manifest
+    describes 30 of them and the corpus's own ``MANIFEST.json`` describes all
+    31, so between the two there is no excuse for a gap.
+
+    The spec-file count is asserted alongside, because "no NULLs" passes
+    vacuously on an index that dropped the documents entirely.
+    """
+    out, _ = built
+    declared = {entry["file"] for entry in json.loads(MANIFEST.read_text())["specs"]}
+    with sqlite3.connect(out) as conn:
+        indexed = {row[0] for row in conn.execute("SELECT DISTINCT spec_file FROM endpoints")}
+        unattributed = [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT spec_file FROM endpoints "
+                "WHERE source_url IS NULL OR source_url = ''"
+            )
+        ]
+    assert indexed == declared, f"not indexed: {declared - indexed}"
+    assert not unattributed, f"indexed with no source_url: {unattributed}"
+
+
+def test_central_provenance_still_comes_from_the_registry_manifest(built):
+    """The vendored manifest fills gaps; it must never take over.
+
+    ``ingestion/openapi_registry_manifest.json`` stays authoritative for the
+    documents it declares. It supplies ``source_url`` *and* the portal
+    ``version`` — the corpus manifest supplies only the former — so a change
+    that quietly moved every row onto the fallback would show up here twice:
+    as a version that stopped resolving, and as a URL that stopped being the
+    portal reference page.
+    """
+    out, _ = built
+    registries = json.loads(REGISTRY_MANIFEST.read_text())["registries"]
+    expected = {
+        Path(entry["output_path"]).name: entry["source_url"] for entry in registries.values()
+    }
+    with sqlite3.connect(out) as conn:
+        observed = dict(
+            conn.execute(
+                "SELECT DISTINCT spec_file, source_url FROM endpoints WHERE platform = 'central'"
+            )
+        )
+        versions = {
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT version FROM endpoints WHERE platform = 'central'"
+            )
+        }
+    assert observed == expected
+    assert versions and all(versions), "central rows lost their portal version"
+
+
+def test_the_registry_manifest_wins_over_the_vendored_one():
+    """Precedence at the seam itself, where the two disagree.
+
+    Both manifests record the same ``source_url`` for the 30 Central
+    documents, so no build can distinguish "primary won" from "fallback won"
+    by value. This asserts the rule directly on conflicting inputs.
+    """
+    primary = {"a.json": {"source_url": "https://portal.example/a", "version": "v26.05"}}
+    fallback = {
+        "a.json": {"source_url": "https://raw.example/a"},
+        "b.json": {"source_url": "https://raw.example/b"},
+    }
+
+    kept = specs_index._resolve_source_meta("a.json", primary, fallback)
+    assert kept == {"source_url": "https://portal.example/a", "version": "v26.05"}
+
+    filled = specs_index._resolve_source_meta("b.json", primary, fallback)
+    assert filled == {"source_url": "https://raw.example/b"}
+
+    assert specs_index._resolve_source_meta("c.json", primary, fallback) == {}
 
 
 def test_build_refuses_an_empty_corpus(tmp_path):
