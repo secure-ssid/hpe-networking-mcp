@@ -250,7 +250,6 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = _build_parser().parse_args()
-    strict = args.strict_rag or args.strict_tool_index
 
     if args.strict_rag and args.skip_rag:
         # --skip-rag used to win silently, so `--strict-rag --skip-rag`
@@ -311,11 +310,17 @@ def main() -> int:
     # RAG artifact/source counts). --require-indexes makes the exact SQLite
     # and RAG counts part of the strict contract rather than an optional
     # extra that vanishes with the data directory.
+    #
+    # It is tied to --strict-rag, not to strict generally: the index-derived
+    # facts come from data/specs.sqlite and data/docs.lance, neither of which a
+    # clean checkout can build. Passing --ignore-index-facts alongside it used
+    # to emit a self-contradicting `--require-indexes --ignore-indexes`, where
+    # the requirement won and the caller's opt-out was silently ignored.
     facts_command = [sys.executable, "scripts/project_facts.py"]
-    if strict:
-        facts_command.append("--require-indexes")
     if args.ignore_index_facts:
         facts_command.append("--ignore-indexes")
+    elif args.strict_rag:
+        facts_command.append("--require-indexes")
     print("\n==> Canonical project facts", flush=True)
     subprocess.run(facts_command, cwd=ROOT, check=True, env=_strict_env())
 

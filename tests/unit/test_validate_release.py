@@ -346,6 +346,27 @@ def test_strict_tool_index_alone_does_not_demand_unbuildable_artifacts(monkeypat
 
     assert any("--check-local-manifests --allow-missing-artifacts" in item for item in flattened)
     assert any("check_generated_tool_manifests.py" in item for item in flattened)
+    # The index-derived facts come from artifacts this job cannot build.
+    assert not any("--require-indexes" in item for item in flattened)
+
+
+def test_ignore_index_facts_never_contradicts_require_indexes(monkeypatch):
+    """``--ignore-index-facts`` must win, not be appended alongside its opposite."""
+    commands = _recorded_commands(
+        monkeypatch,
+        [
+            "--skip-tests",
+            "--skip-rag",
+            "--strict-tool-index",
+            "--ignore-index-facts",
+            "--min-tools",
+            "1",
+        ],
+    )
+    facts = next(item for item in (" ".join(c) for c in commands) if "project_facts.py" in item)
+
+    assert "--ignore-indexes" in facts
+    assert "--require-indexes" not in facts
 
 
 def test_non_strict_mode_tolerates_a_no_data_checkout(monkeypatch):
