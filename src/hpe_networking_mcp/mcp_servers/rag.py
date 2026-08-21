@@ -24,6 +24,7 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
+from hpe_networking_mcp import optional_deps
 from hpe_networking_mcp.mcp_servers.shared import READ_ONLY, READ_ONLY_LOCAL, resolve_rag_backend
 from hpe_networking_mcp.mcp_servers.skills import list_skills_payload, load_skill_payload
 from hpe_networking_mcp.pipeline import artifact_contracts as contracts
@@ -45,17 +46,35 @@ mcp = MCPServer("rag-core")
 
 _BACKEND = resolve_rag_backend()
 
+#: Set when ``HPE_MCP_RAG_BACKEND=redis`` is selected on an install without
+#: the ``redis`` extra. The RAG tools then degrade with the install command
+#: instead of the whole server failing to import -- every non-RAG tool the
+#: router serves is unaffected by a missing vector backend.
+_REDIS_MISSING: optional_deps.MissingOptionalDependency | None = None
+
 if _BACKEND == "redis":
     from hpe_networking_mcp.pipeline.clients.ollama_client import OllamaClient
-    from hpe_networking_mcp.pipeline.clients.redis_client import get_client as _get_redis_client
-    from hpe_networking_mcp.pipeline.clients.redis_client import vector_search
 
     _ollama = OllamaClient()
+    _redis = None
     try:
-        _redis = _get_redis_client()
-        _redis.ping()
-    except Exception:
-        _redis = None
+        from hpe_networking_mcp.pipeline.clients.redis_client import (
+            get_client as _get_redis_client,
+        )
+        from hpe_networking_mcp.pipeline.clients.redis_client import vector_search
+    except ImportError as exc:
+        _REDIS_MISSING = optional_deps.missing(
+            "The Redis vector backend (HPE_MCP_RAG_BACKEND=redis)",
+            module="redis",
+            extra="redis",
+        )
+        _REDIS_MISSING.__cause__ = exc
+    else:
+        try:
+            _redis = _get_redis_client()
+            _redis.ping()
+        except Exception:
+            _redis = None
 else:
     from hpe_networking_mcp.pipeline.clients import lance_client
     from hpe_networking_mcp.pipeline.clients.embed_client import EmbedClient
@@ -525,6 +544,21 @@ def _dedup_by_content(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return result
 
 
+def _degraded_optional_dep(
+    exc: optional_deps.MissingOptionalDependency,
+) -> list[dict[str, Any]]:
+    """Render an uninstalled extra the same way an unbuilt index is rendered.
+
+    Same reasoning as :func:`_degraded_spec_index`, same three keys, for the
+    same reason: an empty list is a real answer ("the corpus was consulted and
+    holds nothing") and an absent package consulted nothing. ``error`` is the
+    full diagnostic naming the capability and the missing module; ``hint`` is
+    the ``pip install`` alone, taken from the exception so the command is
+    written once in ``optional_deps`` and cannot drift.
+    """
+    return [{"error": str(exc), "degraded": True, "hint": exc.remedy}]
+
+
 def _search_lancedb(query: str, top_k: int, source_filter: SourceFilter) -> list[dict[str, Any]]:
     try:
         db = lance_client.connect()
@@ -556,6 +590,8 @@ def _search_lancedb(query: str, top_k: int, source_filter: SourceFilter) -> list
                 top_k=max(top_k * 6, 30),
                 source_filter=source_filter,
             )
+    except optional_deps.MissingOptionalDependency as exc:
+        return _degraded_optional_dep(exc)
     except (FileNotFoundError, ValueError) as exc:
         return [{"error": str(exc)}]
     hits = _boost_model_match(_boost_sources(hits, query), query)
@@ -564,6 +600,8 @@ def _search_lancedb(query: str, top_k: int, source_filter: SourceFilter) -> list
 
 
 def _search_redis(query: str, top_k: int, source_filter: SourceFilter) -> list[dict[str, Any]]:
+    if _REDIS_MISSING is not None:
+        return _degraded_optional_dep(_REDIS_MISSING)
     if _redis is None:
         return [{"error": "Redis not available — is the Redis Stack server running?"}]
 
@@ -1403,9 +1441,16 @@ def search_internal_docs(
     from hpe_networking_mcp.cli_client import personal_ingest
 
     top_k = _clamp_top_k(top_k, 20)
-    hits = personal_ingest.search_personal(query, collection=collection, top_k=top_k)
+    # The personal index is LanceDB + fastembed, both in the `ingestion`
+    # extra. Without it there is nothing to search, and saying so beats
+    # returning [] -- which reads as "you have no such document".
+    try:
+        hits = personal_ingest.search_personal(query, collection=collection, top_k=top_k)
+        if not hits:
+            counts = personal_ingest.personal_collection_counts()
+    except optional_deps.MissingOptionalDependency as exc:
+        return _degraded_optional_dep(exc)
     if not hits:
-        counts = personal_ingest.personal_collection_counts()
         if not counts:
             return [
                 {

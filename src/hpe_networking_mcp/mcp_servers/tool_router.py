@@ -83,6 +83,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
     validate_access_profile_environment,
 )
 from hpe_networking_mcp.pipeline import artifact_contracts as _artifact_contracts
+from hpe_networking_mcp.optional_deps import MissingOptionalDependency
 from hpe_networking_mcp.pipeline import compliance as _compliance
 from hpe_networking_mcp.pipeline import router_automation as _router_automation
 from hpe_networking_mcp.pipeline.clients import error_help as _error_help
@@ -1065,6 +1066,7 @@ def find_tool(
     by_name: dict[str, dict[str, Any]] = {}
     semantic_error: str | None = None
 
+    semantic_hint = "Rebuild the tool index with `uv run python scripts/ingest_tools.py`."
     exact_hit = _exact_discovery_hit(query, include_schema=include_schema)
     if exact_hit is not None and _matches_discovery_filters(
         exact_hit,
@@ -1169,10 +1171,16 @@ def find_tool(
     except Exception as exc:
         semantic_error = f"{type(exc).__name__}: {exc}"
 
+        # The embedder and the vector store live in the `ingestion` extra, so
+        # "rebuild the index" is the wrong instruction when the package is
+        # simply absent -- rebuilding needs the same package. Carry the
+        # install command through instead; `hint` stays present either way.
+        if isinstance(exc, MissingOptionalDependency):
+            semantic_hint = exc.remedy
     if not by_name and semantic_error:
         failure: dict[str, Any] = {
             "error": f"Tool semantic search unavailable: {semantic_error}",
-            "hint": "Rebuild the tool index with `uv run python scripts/ingest_tools.py`.",
+            "hint": semantic_hint,
         }
         if _backend_load_errors:
             failure["backend_load_errors"] = backend_load_errors()

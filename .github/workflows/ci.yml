@@ -45,8 +45,13 @@ jobs:
       - name: Set up Python
         run: uv python install ${{ matrix.python }}
 
+      # The ingestion/redis/tui packages became optional extras, so a bare
+      # `uv sync` no longer installs them. Named explicitly to keep this
+      # environment exactly what it was before the split -- the suite covers
+      # the document parsers, the LanceDB client and the Textual widgets, and
+      # dropping them would quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --group dev --extra ingestion --extra redis --extra tui
 
       # Paths are src-layout: the modules moved under
       # src/hpe_networking_mcp/ during the package rename, so the old
@@ -138,8 +143,13 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      # The ingestion/redis/tui packages became optional extras, so a bare
+      # `uv sync` no longer installs them. Named explicitly to keep this
+      # environment exactly what it was before the split -- the suite covers
+      # the document parsers, the LanceDB client and the Textual widgets, and
+      # dropping them would quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --group dev --extra ingestion --extra redis --extra tui
 
       # The RAG prose corpus is deliberately not published (it is scraped vendor
       # documentation), so CI cannot restore it and does not assert --strict-rag.
@@ -218,11 +228,16 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --group dev --extra ingestion --extra redis --extra tui
 
       - name: Resolve RAG source inventory (offline)
         run: >-
           uv run python ingestion/check_updates.py --offline --dry-run
+      # The ingestion/redis/tui packages became optional extras, so a bare
+      # `uv sync` no longer installs them. Named explicitly to keep this
+      # environment exactly what it was before the split -- the suite covers
+      # the document parsers, the LanceDB client and the Textual widgets, and
+      # dropping them would quietly stop testing them.
           --exit-code-mode classified
           --json-artifact outputs/drift/rag-source-freshness.json
 
@@ -345,11 +360,16 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --group dev --extra ingestion --extra redis --extra tui
 
       - name: Check official security and lifecycle sources
         run: >-
           uv run python scripts/check_security_lifecycle_drift.py
+      # The ingestion/redis/tui packages became optional extras, so a bare
+      # `uv sync` no longer installs them. Named explicitly to keep this
+      # environment exactly what it was before the split -- the suite covers
+      # the document parsers, the LanceDB client and the Textual widgets, and
+      # dropping them would quietly stop testing them.
           --drift-artifact-path outputs/drift/security-lifecycle-drift.json
 
       - name: Upload source-freshness artifact

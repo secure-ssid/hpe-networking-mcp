@@ -63,25 +63,47 @@ dependencies = [
     "pyyaml>=6.0.0",
     "rich>=13.0.0",
     "mcp[cli]>=2.0.0,<3",
-    # RAG
     "httpx>=0.27.0",
+    # Live MCP backends: central-streaming and mist both open WSS sessions
+    # from module scope (mcp_servers/central_streaming.py,
+    # mcp_servers/mist.py), so this is server runtime, not pipeline weight.
+    "websockets>=14.0",
+]
+
+[project.optional-dependencies]
+# The document pipeline: scraping, office/PDF extraction, chunking, embedding
+# and the LanceDB vector store. None of it is reachable from serving MCP
+# tools -- `playwright` has no import site under src/ at all -- and it is the
+# bulk of the installed footprint, so it is opt-in. Every import site
+# degrades through hpe_networking_mcp.optional_deps, naming this command.
+ingestion = [
+    "playwright>=1.58.0",
+    "beautifulsoup4>=4.15.0",
     "langchain-text-splitters>=0.2.0",
     "pypdf>=6.14.2",
     "python-pptx>=1.0.2",
     "python-docx>=1.2.0",
-    "beautifulsoup4>=4.15.0",
-    "playwright>=1.58.0",
-    "redis>=8.0.1",
-    "numpy>=2.2.6",
     "lancedb>=0.33.0",
     "fastembed>=0.8.0",
-    "websockets>=14.0",
+]
+# Legacy Redis Stack vector backend (HPE_MCP_RAG_BACKEND=redis). numpy rides
+# with it: pipeline/clients/redis_client.py is its only import site in the
+# whole package, packing query vectors to float32 bytes for Redis.
+redis = [
+    "redis>=8.0.1",
+    "numpy>=2.2.6",
+]
+# `hpe-mcp --tui` only. The default CLI, the REPL and every server path run
+# without it.
+tui = [
     "textual>=8.2.8",
 ]
-
-[project.optional-dependencies]
 milvus-lite = [
     "pymilvus[milvus-lite]>=2.5.0,<3",
+]
+# Everything, for a checkout that wants the full feature set in one command.
+all = [
+    "hpe-networking-mcp[ingestion,redis,tui,milvus-lite]",
 ]
 
 [project.scripts]

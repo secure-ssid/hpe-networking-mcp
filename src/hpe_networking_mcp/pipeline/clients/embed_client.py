@@ -15,6 +15,8 @@ from __future__ import annotations
 import os
 from typing import Iterable
 
+from hpe_networking_mcp.optional_deps import require
+
 EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5"
 EMBEDDING_DIMS = 768
 # nomic-embed context window; truncate to stay safe (matches the Ollama client)
@@ -55,7 +57,10 @@ class EmbedClient:
     @property
     def model(self):
         if self._model is None:
-            from fastembed import TextEmbedding
+            fastembed = require(
+                "fastembed", extra="ingestion", capability="Local embedding"
+            )
+            TextEmbedding = fastembed.TextEmbedding
             kwargs = {"providers": self.providers} if self.providers else {}
             self._model = TextEmbedding(model_name=self.model_name, **kwargs)
         return self._model

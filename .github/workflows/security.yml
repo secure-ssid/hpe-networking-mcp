@@ -44,8 +44,13 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      # The ingestion/redis/tui packages became optional extras, so a bare
+      # `uv sync` no longer installs them. They are named explicitly here to
+      # keep the audited/scanned environment exactly what it was before the
+      # split -- an extra that silently drops out of the resolve is an extra
+      # nobody is auditing.
       - name: Install security tooling
-        run: uv sync --group security
+        run: uv sync --group security --extra ingestion --extra redis --extra tui
 
       # Gate on medium+ severity only; see [tool.bandit] in pyproject.toml
       # for the rationale and the inline `# nosec` policy for confirmed
@@ -81,8 +86,11 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      # Same reason as the bandit job above: name the extras so pip-audit
+      # still sees playwright/lancedb/fastembed/redis and their transitive
+      # trees, which are the largest CVE surface this project pulls in.
       - name: Install project and security tooling
-        run: uv sync --group dev --group security
+        run: uv sync --group dev --group security --extra ingestion --extra redis --extra tui
 
       # Audits the resolved, synced environment directly (no separate
       # requirements.txt export) so results always match what CI actually

@@ -21,6 +21,7 @@ import shlex
 import sys
 from typing import Sequence
 
+from hpe_networking_mcp import optional_deps
 from hpe_networking_mcp.cli_client.banner import print_banner
 from hpe_networking_mcp.cli_client.commands import (
     cmd_ai_reason,
@@ -995,7 +996,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         try:
             if getattr(args, "tui", False):
-                from hpe_networking_mcp.cli_client.tui import run_tui
+                # `textual` lives in the `tui` extra; every other CLI mode
+                # (default, --repl) runs without it, so a missing package is
+                # a message about --tui, not a broken install.
+                try:
+                    from hpe_networking_mcp.cli_client.tui import run_tui
+                except ImportError as exc:
+                    raise optional_deps.missing(
+                        "`hpe-mcp --tui`", module="textual", extra="tui"
+                    ) from exc
 
                 return run_tui(
                     cfg,
@@ -1025,8 +1034,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                     model=cfg.ai_model,
                 )
             )
-        except ImportError:
-            console.print("[yellow]Textual is not installed; use the plain chat or --repl mode.[/]")
+        except optional_deps.MissingOptionalDependency as exc:
+            print_error(
+                str(exc), json_mode=bool(args.json), code="optional_dependency_missing"
+            )
+            return 2
+        except ImportError as exc:
+            # Not the TUI extra: chat/--repl reached here too, and blaming
+            # Textual for an unrelated import failure sends the reader to the
+            # wrong fix.
+            print_error(f"import failed: {exc}", json_mode=bool(args.json), code="import_failed")
             return 2
         except KeyboardInterrupt:
             return 130
