@@ -126,19 +126,14 @@ jobs:
         run: |
           mkdir -p data dist
           uv run python scripts/build_spec_index.py data/specs.sqlite
-          # Rooted at data/ because scripts/download_indexes.py rejects every
-          # archive member outside it.
-          tar -czf "dist/spec-index-${TAG}.tar.gz" data/specs.sqlite
-          (
-            cd dist
-            sha256sum "spec-index-${TAG}.tar.gz" > "spec-index-${TAG}.tar.gz.sha256"
-          )
-          python - <<'PY'
-          import hashlib
+          uv run python - <<'PY'
           import json
           import os
           import pathlib
           import sys
+          import tempfile
+
+          from hpe_networking_mcp.pipeline.release_packaging import build_deterministic_archive
 
           tag = os.environ["TAG"]
           server = os.environ["SERVER_URL"]
@@ -146,10 +141,21 @@ jobs:
               raise SystemExit(f"refusing to pin a non-https download URL: {server}")
 
           archive = pathlib.Path(f"dist/spec-index-{tag}.tar.gz")
-          digest = hashlib.sha256()
-          with archive.open("rb") as handle:
-              for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                  digest.update(chunk)
+          # Staged alone so the archive carries exactly one member, and built
+          # with the release packaging primitives rather than `tar -czf`: fixed
+          # mtime/uid/gid/mode, fixed gzip header, sorted entries. Two runs over
+          # one index then yield one digest, so the published sha256 is a
+          # property of the index and not of the clock the release ran on.
+          # arcname_prefix is data/ because scripts/download_indexes.py rejects
+          # every archive member outside it. The staging directory sits in dist/
+          # so the hard link cannot cross a filesystem boundary.
+          with tempfile.TemporaryDirectory(dir="dist") as staging:
+              staged = pathlib.Path(staging)
+              os.link("data/specs.sqlite", staged / "specs.sqlite")
+              sha256 = build_deterministic_archive(staged, archive, arcname_prefix="data")
+
+          checksum = archive.with_name(f"{archive.name}.sha256")
+          checksum.write_text(f"{sha256}  {archive.name}\n", encoding="utf-8")
 
           url = f"{server}/{os.environ['REPOSITORY']}/releases/download/{tag}/{archive.name}"
           manifest = pathlib.Path("dist/spec-index-manifest.json")
@@ -161,7 +167,7 @@ jobs:
                       "archive": archive.name,
                       "url": url,
                       "checksum_url": f"{url}.sha256",
-                      "sha256": digest.hexdigest(),
+                      "sha256": sha256,
                   },
                   indent=2,
               )
