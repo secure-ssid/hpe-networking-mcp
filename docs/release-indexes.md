@@ -26,8 +26,8 @@ whenever an index is rebuilt, and verify with
 | Lifecycle records | 345 |
 | Generated operation manifests | 6,144 |
 | Platform API backend catalog | 6,711 |
-| Complete backend catalog (+ Central Streaming, `site-health`, local GLP preflight, `design-core`, `interop-core`) | 6,726 |
-| Registered router tool index rows | 6,726 |
+| Complete backend catalog (+ Central Streaming, `site-health`, local GLP preflight, `design-core`, `interop-core`) | 6,727 |
+| Registered router tool index rows | 6,727 |
 
 The prose index covers 30 of the 31 declared sources: `openapi_specs` is
 parsed only into `data/specs.sqlite` (see below), while several declared

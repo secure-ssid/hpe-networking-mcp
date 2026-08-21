@@ -120,20 +120,104 @@ def build_dot(model: DiagramModel, *, rankdir: str = "TB") -> str:
     return "\n".join(lines) + "\n"
 
 
+# --- Flow diagrams ---------------------------------------------------------
+# Topology drawings answer "what is connected to what": undirected links,
+# vendor icons, and rank bands derived from network role. Documentation
+# flowcharts answer "what happens next", so they need the opposite defaults --
+# arrowheads, labels that size their own node, and no role banding. They must
+# also stay reproducible on any machine: an icon path is absolute and private
+# (``resources/diagram_icons/`` is gitignored), so a committed artifact that
+# referenced one would render only on the machine that drew it.
+
+#: Node shapes a flow model may request via ``extra.shape``.
+_FLOW_SHAPES: dict[str, str] = {
+    "box": "box",
+    "decision": "diamond",
+    "store": "cylinder",
+    "terminal": "oval",
+}
+
+_FLOW_FILL = "#ECECEC"
+_FLOW_STROKE = "#999999"
+_FLOW_TEXT = "#333333"
+_FLOW_EDGE = "#666666"
+
+
+def _flow_label(text: str) -> str:
+    r"""Escape ``text`` for DOT, turning real newlines into centered ``\n`` breaks."""
+    return _esc(text).replace("\n", "\\n")
+
+
+def build_flow_dot(model: DiagramModel, *, rankdir: str = "LR") -> str:
+    """DOT for a documentation flowchart: directed, auto-sized, icon-free.
+
+    Args:
+        model: Nodes carry the step label; ``extra.shape`` selects a shape from
+            :data:`_FLOW_SHAPES`. Links are drawn in order with optional labels.
+        rankdir: Graphviz direction; ``LR`` keeps a linear journey a wide band
+            rather than a tall ribbon.
+
+    The model title is deliberately not drawn: these render inside a
+    ``<figure>`` that already carries a caption, and a duplicated heading
+    inside the image cannot be selected, translated, or restyled by the page.
+    """
+    lines = [
+        "digraph flow {",
+        f'  graph [rankdir={rankdir}, bgcolor="transparent", fontname="Helvetica", '
+        "nodesep=0.35, ranksep=0.45, pad=0.15, splines=true];",
+        f'  node [fontname="Helvetica", fontsize=11, fontcolor="{_FLOW_TEXT}", '
+        f'shape=box, style="filled,rounded", fillcolor="{_FLOW_FILL}", '
+        f'color="{_FLOW_STROKE}", penwidth=1, margin="0.18,0.10"];',
+        f'  edge [fontname="Helvetica", fontsize=9, fontcolor="{_FLOW_TEXT}", '
+        f'color="{_FLOW_EDGE}", penwidth=1.1, arrowsize=0.7];',
+    ]
+
+    for node in model.nodes:
+        requested = str(node.extra.get("shape", "box")).strip().lower()
+        if requested not in _FLOW_SHAPES:
+            raise ValueError(
+                f"node {node.id!r}: unknown flow shape {requested!r}; "
+                f"expected one of {sorted(_FLOW_SHAPES)}"
+            )
+        shape = _FLOW_SHAPES[requested]
+        attrs = [f'label="{_flow_label(node.label)}"']
+        if shape != "box":
+            attrs.append(f"shape={shape}")
+        if shape == "diamond":
+            # A diamond's label box is inscribed, so default margins wrap the
+            # text into a very tall lozenge; flatten it back out.
+            attrs.append('margin="0.02,0.02"')
+        lines.append(f'  "{_esc(node.id)}" [{", ".join(attrs)}];')
+
+    for link in model.links:
+        label = link.label or link.bandwidth or ""
+        edge = f'  "{_esc(link.source)}" -> "{_esc(link.target)}"'
+        if label:
+            edge += f' [label="{_flow_label(label)}"]'
+        lines.append(f"{edge};")
+
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
 def export_graphviz(
     model: DiagramModel,
     *,
     rankdir: str = "TB",
     render_format: str | None = None,
+    flow: bool = False,
 ) -> dict[str, Any]:
     """Build DOT; optionally render via system ``dot`` to svg/png/pdf bytes path info.
 
     ``render_format``: None | svg | png | pdf. Rendering requires Graphviz ``dot``
     on PATH; when missing, DOT is still returned and render is skipped.
+
+    ``flow``: draw a documentation flowchart (:func:`build_flow_dot`) instead of
+    a network topology -- directed edges, self-sizing labels, and no icons.
     """
     if rankdir not in {"TB", "LR", "BT", "RL"}:
         rankdir = "TB"
-    dot = build_dot(model, rankdir=rankdir)
+    dot = build_flow_dot(model, rankdir=rankdir) if flow else build_dot(model, rankdir=rankdir)
     result: dict[str, Any] = {
         "format": "graphviz",
         "filename_ext": ".dot",

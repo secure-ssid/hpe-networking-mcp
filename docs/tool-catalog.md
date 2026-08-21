@@ -1,6 +1,6 @@
 # Tool catalog
 
-hpe-networking-mcp registers **6,726 backend tools** when every generated surface and
+hpe-networking-mcp registers **6,727 backend tools** when every generated surface and
 guarded write is enabled: 6,711 platform API tools across nine vendor
 surfaces (Aruba Central, GreenLake Platform, ClearPass, Juniper Mist,
 Apstra, ArubaOS 8, EdgeConnect, UXI, Axis Atmos Cloud) plus 7 credential-free
@@ -9,7 +9,7 @@ make no vendor API call at all, plus the always-loaded cross-platform
 `site-health` aggregator, the protocol-only Central Streaming collector, and
 the local GLP preflight diagnostic. Direct-all router mode adds seven more
 router-native tools (present only in `direct` mode, not part of the backend
-registry itself) for **6,733 client-visible tools total**. The recommended
+registry itself) for **6,734 client-visible tools total**. The recommended
 minimal router exposes only `find_tool`, `invoke_read_tool`, and
 `invoke_tool`, then searches the larger index on demand.
 
@@ -55,9 +55,9 @@ type rather than breaking valid defaults.
 | `site-health` | 1 | 1 | Bounded cross-platform Central/Mist site-health aggregation with explicit availability states -- aggregator, not a vendor API surface |
 | `central-streaming` | 1 | 1 | Protocol-only authenticated Central WebSocket event collection -- no REST/OpenAPI operation backs it |
 | `glp-core` preflight | 1 | 1 | Local GreenLake credential/scope preflight -- inspects local configuration, makes no vendor API call |
-| `design-core` | 7 | 7 | Diagram/network-design tools (drawio, Graphviz, next-ui exports) -- credential-free, no vendor API call |
+| `design-core` | 8 | 8 | Diagram/network-design tools (drawio, Graphviz, next-ui exports) -- credential-free, no vendor API call |
 | `interop-core` | 5 | 5 | Central <-> Mist WLAN/site concept translation and bounded trend normalization -- credential-free, always loaded |
-| **Complete backend total** | **3,174** | **6,726** | Platform API total + `site-health` + `central-streaming` + local GLP preflight + `design-core` + `interop-core` |
+| **Complete backend total** | **3,175** | **6,727** | Platform API total + `site-health` + `central-streaming` + local GLP preflight + `design-core` + `interop-core` |
 
 [^glp-preflight]: `docs/project-facts.json` reports `tools.by_server["glp-core"]` as
     1,014 -- the 1,013 vendor-facing tools plus the local `glp_preflight`
@@ -71,8 +71,8 @@ platform-API benchmark comparison in
 real, registered, client-dispatchable backend tools, so they are still
 counted toward release validation's tool-catalog floor (a conservative
 lower bound set at the platform-only total, checked against the complete
-6,726-tool registered catalog) and are included in the **complete**
-backend total (6,726) reported everywhere else in this repository
+6,727-tool registered catalog) and are included in the **complete**
+backend total (6,727) reported everywhere else in this repository
 (`docs/project-facts.json`'s `tools.registered_total`,
 [`docs/release-indexes.md`](release-indexes.md)'s "Complete backend catalog",
 and the router-modes table below).
@@ -110,7 +110,7 @@ operations register as active generated tools.
 |---|---:|---|
 | `minimal` | 3 | Recommended low-token discovery and dispatch |
 | `default` | 18 | Router convenience wrappers (`list_sites`, `ask_docs`, `plan_tool_workflow`, etc.) |
-| `direct` + `HPE_MCP_TOOLSETS=all` | 6,733 | Full schema introspection and debugging |
+| `direct` + `HPE_MCP_TOOLSETS=all` | 6,734 | Full schema introspection and debugging |
 
 The `default` count (18) is measured identically whether every toolset is
 loaded or only the documented recommended client profile
@@ -121,7 +121,7 @@ being loaded, which both scenarios satisfy. `docs/project-facts.json`'s
 documented-profile measurement separately from the "every toolset" scenario
 so the two are never assumed to match without being independently checked.
 
-`direct` mode's 6,733 = the complete 6,726 backend total + 7 router-native
+`direct` mode's 6,734 = the complete 6,727 backend total + 7 router-native
 tools that have no backend-identity equivalent at all (`find_tool`,
 `invoke_read_tool`, `invoke_tool`, `invoke_read_tool_batch`,
 `plan_tool_workflow`, `plan_reconciliation_schedule`,

@@ -376,7 +376,7 @@ HPE_MCP_TOOLSETS=central,glp,rag
 ```
 
 This exposes only the router discovery/dispatch surface and keeps tool-list
-token cost low. The router can search 6,726 backend tools when all platforms
+token cost low. The router can search 6,727 backend tools when all platforms
 and guarded writes are indexed, while minimal mode exposes only three
 client-visible tools: `find_tool`, `invoke_read_tool`, and `invoke_tool`.
 
@@ -407,7 +407,7 @@ Include optional product starters:
 uv run python scripts/ingest_tools.py --products all
 ```
 
-The safe default hides optional write tools. Build all 6,726 backend tools only
+The safe default hides optional write tools. Build all 6,727 backend tools only
 for an intentional lab read/write profile:
 
 ```bash
@@ -499,7 +499,7 @@ uv run python scripts/validate_release.py --catalog-products all --strict-tool-i
 
 `--min-tools 6711` is the platform API compatibility floor (the
 6,711 vendor-facing platform API tools), not the complete registered backend
-total of 6,726, which also includes the protocol-only Central Streaming tool,
+total of 6,727, which also includes the protocol-only Central Streaming tool,
 the cross-platform site-health aggregator, the local GLP preflight diagnostic,
 and credential-free local tools — validation passes at or above the floor. See
 [tool-catalog.md](tool-catalog.md) for both totals.

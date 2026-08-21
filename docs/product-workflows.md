@@ -21,7 +21,7 @@ The ArubaOS 8-to-Classic/New Central migration rows below are gated by the autho
 | Optional products, guarded writes included | 3,757 |
 | **Platform API backend catalog** | **6,711** |
 | `design-core` + `interop-core` (credential-free, no vendor API) | 12 |
-| **Complete backend catalog** | **6,726** |
+| **Complete backend catalog** | **6,727** |
 
 ## Promotion rule
 

@@ -124,3 +124,29 @@ def test_visual_styles_keep_mobile_and_accessibility_rules():
     assert ".docs-callout--warning" in css
     assert ".docs-figure" in css
     assert "min-width: 0" in css
+
+
+def test_flow_diagrams_render_inside_a_github_img():
+    """GitHub embeds SVGs via <img>, which blocks scripts and does not lay out HTML.
+
+    Mermaid's flowcharts put their labels in <foreignObject> and declare
+    width="100%" with no intrinsic width, so an <img> stretched them to the full
+    README column: the six-step quickstart became a 2,900px tall ribbon with
+    empty label boxes. Flow diagrams are rendered by the design backend instead,
+    which emits native <text> and concrete point dimensions.
+    """
+    flow_sources = sorted(DIAGRAM_SOURCE_DIR.glob("*.json"))
+
+    assert flow_sources, "expected committed flow diagram models"
+    for source in flow_sources:
+        svg = (DIAGRAM_DIR / f"{source.stem}.svg").read_text()
+        root = ET.fromstring(svg)
+
+        assert "foreignObject" not in svg, f"{source.stem}: HTML labels do not render in an <img>"
+        assert "/Users/" not in svg and "/private/" not in svg, (
+            f"{source.stem}: absolute local path would only resolve on one machine"
+        )
+        assert root.attrib["width"].endswith("pt"), f"{source.stem}: needs an intrinsic width"
+        assert int(root.attrib["width"].removesuffix("pt")) <= 985, (
+            f"{source.stem}: too wide; GitHub would scale its labels below 10px"
+        )

@@ -1,0 +1,124 @@
+{
+  "title": "Narrowing down a failure",
+  "rankdir": "TB",
+  "nodes": [
+    {
+      "id": "start",
+      "label": "Something is\nnot working"
+    },
+    {
+      "id": "doctor",
+      "label": "Run scripts/doctor.py"
+    },
+    {
+      "id": "local",
+      "label": "Local setup\npasses?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "auth",
+      "label": "401 / 403?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "transport",
+      "label": "Connection /\n406 / port?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "catalog",
+      "label": "Tool missing?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "rag",
+      "label": "Docs or API\nanswer stale?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "fixlocal",
+      "label": "Fix paths, dependencies,\ncredentials, or local config"
+    },
+    {
+      "id": "fixauth",
+      "label": "Check gateway, token URL,\nclient ID/secret, workspace"
+    },
+    {
+      "id": "fixtransport",
+      "label": "Check stdio vs HTTP,\nURL, port, headers, allow-lists"
+    },
+    {
+      "id": "fixcatalog",
+      "label": "Check toolsets/products,\nthen rebuild tools index"
+    },
+    {
+      "id": "fixrag",
+      "label": "Refresh sources and rebuild\ndocs/spec indexes"
+    }
+  ],
+  "links": [
+    {
+      "source": "start",
+      "target": "doctor"
+    },
+    {
+      "source": "doctor",
+      "target": "local"
+    },
+    {
+      "source": "local",
+      "target": "fixlocal",
+      "label": "No"
+    },
+    {
+      "source": "local",
+      "target": "auth",
+      "label": "Yes"
+    },
+    {
+      "source": "auth",
+      "target": "fixauth",
+      "label": "Yes"
+    },
+    {
+      "source": "auth",
+      "target": "transport",
+      "label": "No"
+    },
+    {
+      "source": "transport",
+      "target": "fixtransport",
+      "label": "Yes"
+    },
+    {
+      "source": "transport",
+      "target": "catalog",
+      "label": "No"
+    },
+    {
+      "source": "catalog",
+      "target": "fixcatalog",
+      "label": "Yes"
+    },
+    {
+      "source": "catalog",
+      "target": "rag",
+      "label": "No"
+    },
+    {
+      "source": "rag",
+      "target": "fixrag",
+      "label": "Yes"
+    }
+  ]
+}

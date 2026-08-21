@@ -1,4 +1,4 @@
-"""MCP server — optional network design / diagram backend (7 curated tools).
+"""MCP server — optional network design / diagram backend (8 curated tools).
 
 Enabled via tool router env:
   HPE_MCP_PRODUCTS=design
@@ -258,6 +258,49 @@ def export_graphviz_topology(
         body = {
             "ok": True,
             "approach": "export_graphviz_topology",
+            "export": _maybe_truncate_content(export),
+            **save_info,
+        }
+        return _bound_dict(body)
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@mcp.tool(annotations=READ_ONLY)
+def export_flow_diagram(
+    model: dict[str, Any],
+    rankdir: str = "LR",
+    render_format: str | None = "svg",
+    save: bool = False,
+    filename_stem: str = "flow_diagram",
+) -> dict[str, Any]:
+    """Export a documentation flowchart (steps and decisions) as DOT and SVG.
+
+    Use for process drawings -- quickstart journeys, routing decisions,
+    troubleshooting trees. Prefer ``export_graphviz_topology`` for physical
+    network topology, which draws undirected links and vendor icons instead.
+
+    Unlike the topology exporters this never embeds an icon path, so the
+    artifact renders identically on any machine and is safe to commit.
+
+    Args:
+        model: Canonical design model. Each node's ``extra.shape`` may request
+            ``box`` (default), ``decision``, ``store``, or ``terminal``; a
+            label may contain newlines. Link ``label`` annotates the arrow.
+        rankdir: Graphviz direction TB|LR|BT|RL. ``LR`` keeps a linear
+            sequence a wide band rather than a tall ribbon.
+        render_format: svg|png|pdf, or null for DOT only. Rendering needs
+            Graphviz ``dot`` on PATH.
+        save: Write artifacts under outputs/diagrams/.
+        filename_stem: Safe filename stem when save=True.
+    """
+    try:
+        parsed = parse_model(model)
+        export = export_graphviz(parsed, rankdir=rankdir, render_format=render_format, flow=True)
+        save_info = _save_export(export, stem=filename_stem, save=save)
+        body = {
+            "ok": True,
+            "approach": "export_flow_diagram",
             "export": _maybe_truncate_content(export),
             **save_info,
         }

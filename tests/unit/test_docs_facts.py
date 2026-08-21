@@ -305,7 +305,7 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
         ),
         (
             REPO_ROOT / "docs" / "tool-catalog.md",
-            f"| **Complete backend total** | **3,174** | **{registered_total:,}** |",
+            f"| **Complete backend total** | **3,175** | **{registered_total:,}** |",
         ),
         (
             REPO_ROOT / "docs" / "tool-router.md",
