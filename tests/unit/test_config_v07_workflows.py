@@ -47,8 +47,12 @@ class FakeClient:
 
 @pytest.fixture(autouse=True)
 def _central_writes_enabled(monkeypatch):
-    """Default: Central write gate enabled (matches historical default)."""
-    monkeypatch.delenv("HPE_MCP_CENTRAL_WRITES", raising=False)
+    """These workflows exercise write behavior, so open Central's gate.
+
+    Central is deny-by-default as of 0.9.1, so the gate has to be opened
+    explicitly; tests that assert the blocked path set the var to "0".
+    """
+    monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
 
 
 # ---------------------------------------------------------------------------

@@ -277,10 +277,16 @@ def test_multipart_write_uses_httpx_files(monkeypatch):
     assert "Content-Type" not in cap["headers"]
 
 
-def test_write_gate_default_enabled(monkeypatch):
-    # Central writes default ON (historical behavior); dry-run still previews.
+def test_write_gate_default_disabled(monkeypatch):
     monkeypatch.delenv("HPE_MCP_CENTRAL_WRITES", raising=False)
     _patch_client(monkeypatch)
+    out = asyncio.run(_tool_fn(DELETE_TOOL)(name="p1", dry_run=True))
+    # 0.9.1: Central is deny-by-default
+    assert out["status"] == "blocked"
+    assert out["platform"] == "central"
+
+    # Opting in restores the dry-run preview.
+    monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
     out = asyncio.run(_tool_fn(DELETE_TOOL)(name="p1", dry_run=True))
     assert out["dry_run"] is True
     assert out["method"] == "DELETE"

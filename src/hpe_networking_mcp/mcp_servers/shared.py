@@ -371,12 +371,11 @@ def global_write_blocked(tool_name: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 #
 # Under the compatibility-preserving ``custom`` profile, Central and GLP keep
-# their existing, independently-audited gates as the default behavior:
-#   - Central (ops/config tools): writes have always been enabled with no
-#     gate. That default is preserved; HPE_MCP_CENTRAL_WRITES=0 is a new,
-#     opt-*out* safety valve for anyone who wants a read-only Central MCP
-#     server without touching HPE_MCP_PRODUCT_ACCESS (which also governs
-#     the optional-product backends below).
+# their existing, independently-audited gates, and both are fail-closed:
+#   - Central (ops/config tools): writes stay disabled until
+#     HPE_MCP_CENTRAL_WRITES=1 is set, so an operator opts *in* explicitly
+#     without touching HPE_MCP_PRODUCT_ACCESS (which also governs the
+#     optional-product backends below).
 #   - GLP writes stay fail-closed behind HPE_MCP_GLP_V2BETA1_WRITES=1,
 #     enforced at the GLPClient layer (hpe_networking_mcp.pipeline.clients.glp_client). The gate
 #     below just gives that platform a name in the same lookup table so
@@ -399,11 +398,9 @@ class PlatformWriteGate:
         platform: canonical lowercase platform key (e.g. "mist").
         env_var: the platform-specific override env var name.
         default_enabled: write-enabled state used when ``env_var`` is unset
-            and there is no shared fallback -- True (Central's historical
-            "no gate" behavior), False (GLP's historical fail-closed
-            behavior), or None to fall back to
-            :func:`optional_product_writes_allowed` (unchanged legacy
-            behavior for the optional-product backends).
+            and there is no shared fallback. ``default_enabled=False``
+            denies until the operator opts in; ``None`` defers to
+            :func:`optional_product_writes_allowed`.
     """
 
     platform: str
@@ -412,7 +409,7 @@ class PlatformWriteGate:
 
 
 _PLATFORM_WRITE_GATES: dict[str, PlatformWriteGate] = {
-    "central": PlatformWriteGate("central", "HPE_MCP_CENTRAL_WRITES", True),
+    "central": PlatformWriteGate("central", "HPE_MCP_CENTRAL_WRITES", False),
     "glp": PlatformWriteGate("glp", "HPE_MCP_GLP_V2BETA1_WRITES", False),
     "aos8": PlatformWriteGate("aos8", "HPE_MCP_AOS8_WRITES", None),
     "edgeconnect": PlatformWriteGate("edgeconnect", "HPE_MCP_EDGECONNECT_WRITES", None),

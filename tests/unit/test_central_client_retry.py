@@ -150,6 +150,7 @@ class TestRetryBehavior:
 
     def test_5xx_not_retried_for_post_by_default(self, monkeypatch):
         monkeypatch.setattr(time, "sleep", lambda s: None)
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
         client = _make_client([
             _make_response(503),
         ])
@@ -158,6 +159,7 @@ class TestRetryBehavior:
 
     def test_5xx_retried_for_post_when_opted_in(self, monkeypatch):
         monkeypatch.setattr(time, "sleep", lambda s: None)
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
         client = _make_client([
             _make_response(503),
             _make_response(200),
@@ -216,14 +218,16 @@ class TestRetryBehavior:
         client._request("GET", "/x")
         assert sleeps == [300.0]
 
-    def test_post_accepts_real_httpx_success_response(self):
+    def test_post_accepts_real_httpx_success_response(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
         client = _make_client([
             _make_httpx_response(200, text='{"accepted": true}'),
         ])
 
         assert client.post("/x") == {"accepted": True}
 
-    def test_post_async_accepts_real_httpx_success_response(self):
+    def test_post_async_accepts_real_httpx_success_response(self, monkeypatch):
+        monkeypatch.setenv("HPE_MCP_CENTRAL_WRITES", "1")
         client = _make_client([
             _make_httpx_response(202, headers={"Location": "/task/1"}),
         ])
