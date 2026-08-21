@@ -283,7 +283,9 @@ def _release_note_rows(platform: str) -> list[dict[str, Any]]:
     table = lance_client.docs_table(db)
     if table is None:
         raise FileNotFoundError(
-            "Embedded docs index is missing; rebuild or download the prebuilt indexes"
+            "Embedded docs index is missing; release notes come from the prose "
+            "corpus, which this project does not publish — build it with "
+            "`uv run python ingestion/ingest_docs.py`"
         )
     return (
         table.search()

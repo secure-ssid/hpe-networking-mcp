@@ -279,8 +279,8 @@ def _classify_rag_source_freshness() -> dict[str, Any]:
             "rag_source_freshness",
             "coverage_gap",
             "local RAG index (data/docs.lance, data/specs.sqlite) is not present; "
-            "download via scripts/download_indexes.py or build via "
-            "ingestion/ingest_docs.py",
+            "build data/specs.sqlite with scripts/build_spec_index.py and the "
+            "prose corpus with ingestion/ingest_docs.py",
             read_enabled=False,
             write_enabled=False,
             credentials_configured=False,

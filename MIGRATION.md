@@ -67,13 +67,19 @@ per-client MCP config at your own pace instead of a single cutover moment.
 
    Or point `CREDS_PATH` at the existing legacy file instead of copying it
    (see [External credentials via `CREDS_PATH`](#external-credentials-via-creds_path)).
-3. **Rebuild or re-download local indexes.** `data/` is git-ignored in both
-   repos, so the new checkout starts with no local RAG/tool indexes:
+3. **Rebuild local indexes.** `data/` is git-ignored in both repos, so the new
+   checkout starts with no local RAG/tool indexes. Both commands below are
+   offline — they read the committed `vendor/openapi` corpus and the committed
+   server modules, not the network:
 
    ```bash
-   uv run python scripts/download_indexes.py
+   uv run python scripts/build_spec_index.py
    uv run python scripts/ingest_tools.py --products all
    ```
+
+   The prose corpus (`data/docs.lance`) is not published by this project;
+   rebuild it with `uv run python ingestion/ingest_docs.py` if you use
+   `ask_docs` / `search_docs`.
 
 4. **Reinstall any private diagram icon packs**, if you use the diagram
    tooling. These are local-only and never committed:

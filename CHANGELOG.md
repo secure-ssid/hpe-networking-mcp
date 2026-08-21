@@ -198,9 +198,10 @@ walkthrough.
 ### Notes
 
 - Local, git-ignored artifacts are unaffected by the rename: rebuild
-  `data/docs.lance`, `data/tools.lance`, and `data/specs.sqlite` locally
-  (`uv run python scripts/download_indexes.py` or
-  `uv run python ingestion/ingest_docs.py`) the same way you did before.
+  `data/specs.sqlite` with `uv run python scripts/build_spec_index.py`,
+  `data/tools.lance` with `uv run python scripts/ingest_tools.py`, and
+  `data/docs.lance` with `uv run python ingestion/ingest_docs.py`, the same
+  way you did before.
 - `config/credentials.yaml` and any private diagram icon packs are never
   committed and are not affected by the rename.
 - No upstream API or documentation source was refreshed while preparing this

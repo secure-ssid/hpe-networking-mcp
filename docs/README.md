@@ -88,7 +88,8 @@ panels are defined in `assets/css/style.scss`.
 | `ingestion/` | Docs/API ingestion into LanceDB and SQLite |
 | `ingestion/source_manifest.json` | RAG source seeds for product docs, OpenAPI, security advisories, and end-of-sale/end-of-life lifecycle notices |
 | `scripts/setup_wizard.py` | Guided install, Central region, credentials, optional products, MCP configs, catalog, and doctor |
-| `scripts/download_indexes.py` | Hardened, checksum-verified restore of an index archive you host yourself |
+| `scripts/build_spec_index.py` | Offline rebuild of `data/specs.sqlite` from the committed `vendor/openapi` corpus — no network, no scrape |
+| `scripts/download_indexes.py` | Hardened, checksum-verified restore of an index archive from a release pin (`--manifest`) or one you host yourself (`--url`) |
 | `scripts/package_indexes.py` | Snapshot and checksum local indexes for transfer between your own machines |
 | `scripts/check_openapi_drift.py` / `scripts/check_mist_openapi_drift.py` | Detect Aruba ReadMe registry and official Mist OpenAPI changes |
 | `scripts/check_nowireless_source_drift.py` | Read-only, path-specific freshness check for the pinned community `nowireless4u/hpe-networking-mcp` inputs (GLP vendored specs, Axis platform source, capability-benchmark evidence paths); community pins are benchmarks/inputs, not API authority -- see [capability-gap-matrix.md](capability-gap-matrix.md) |
