@@ -14,14 +14,22 @@ generated manifests, and the local indexes. Regenerate the facts file
 whenever an index is rebuilt, and verify with
 `uv run python scripts/project_facts.py --require-indexes`.
 
+The endpoint/schema/field counts are marked **offline** below: those are
+reproduced exactly by any clone from the committed `vendor/openapi` corpus
+with `python scripts/build_spec_index.py`, and `--require-indexes` compares
+them for real. The rest need the scraped prose corpus, which this project
+does not distribute, so they are compared only where that artifact exists --
+see `indexes.offline_derivable` and `indexes.locally_built` in the facts
+file.
+
 | Artifact content | Count |
 |---|---:|
 | LanceDB prose chunks | 392,471 |
 | Indexed prose sources | 30 |
 | Declared RAG sources | 31 |
-| Exact endpoints | 4,106 |
-| Schemas | 8,890 |
-| Fields | 50,675 |
+| Exact endpoints (offline) | 2,734 |
+| Schemas (offline) | 6,363 |
+| Fields (offline) | 31,432 |
 | Security advisories | 104 |
 | Lifecycle records | 345 |
 | Generated operation manifests | 6,144 |

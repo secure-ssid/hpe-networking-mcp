@@ -99,15 +99,17 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        if current.get("indexes") is None:
-            try:
-                tracked = project_facts.load()
-            except project_facts.ProjectFactsError:
-                tracked = {}
-            # Preserve previously recorded index facts rather than erasing
-            # them from a no-data checkout: the artifacts are git-ignored, so
-            # "not present here" is not evidence that they changed.
-            current["indexes"] = tracked.get("indexes")
+        try:
+            tracked = project_facts.load()
+        except project_facts.ProjectFactsError:
+            tracked = {}
+        # Preserve previously recorded locally-built index facts rather than
+        # erasing them: the scraped artifacts are git-ignored, so "not present
+        # here" is not evidence that they changed. Offline-derivable counts are
+        # always taken fresh -- any clone can rebuild those.
+        current["indexes"] = project_facts.merge_unbuilt_index_facts(
+            current.get("indexes"), tracked.get("indexes")
+        )
         if current.get("router_modes") is None:
             try:
                 tracked = project_facts.load()
@@ -141,6 +143,8 @@ def main() -> int:
 
     tools = current["tools"]
     indexes = current.get("indexes") or {}
+    local = indexes.get(project_facts.LOCALLY_BUILT) or {}
+    unbuilt = project_facts.unbuilt_index_families(current)
     router_modes = current.get("router_modes") or {}
     router_tools = router_modes.get("tools") or {}
     print(
@@ -152,9 +156,9 @@ def main() -> int:
         f"{current['generated_operations']['total']} generated operations, "
         f"{current['rag_sources']['count']} declared RAG sources"
         + (
-            f", {indexes.get('docs_lance', {}).get('rows', 0)} doc chunks"
-            if indexes
-            else " (index facts skipped: no local data/)"
+            f", {local.get('docs_lance', {}).get('rows', 0)} doc chunks"
+            if local.get("docs_lance")
+            else ""
         )
         + (
             f", router modes minimal={router_tools.get('minimal')}/"
@@ -163,6 +167,13 @@ def main() -> int:
             else " (router-mode facts skipped: --skip-router-modes)"
         )
     )
+    # Not built is not drift. Say which artifacts were simply absent, so a
+    # clean run on a fresh clone cannot be misread as having checked them.
+    if unbuilt:
+        print(
+            "Locally-built index facts not compared (artifact absent, not drift): "
+            + ", ".join(unbuilt)
+        )
     return 0
 
 
