@@ -167,11 +167,59 @@ def test_router_overlay_requires_explicit_allowed_hosts_and_origins():
         assert "*" not in value, f"{key} must not use a wildcard"
 
 
-def test_router_overlay_data_mount_is_read_only_and_starts_unpopulated():
+def _router_host_mounts() -> list[tuple[str, str, str]]:
     config = _load_yaml(ROUTER_OVERLAY)
     volumes = config["services"]["mcp-router"]["volumes"]
-    data_mount = next(v for v in volumes if v.startswith("./data:"))
-    assert data_mount.endswith(":ro"), "data/ must be mounted read-only into the container"
+    return [tuple(volume.split(":")) for volume in volumes if volume.startswith("./")]
+
+
+def test_router_overlay_host_data_mounts_are_read_only_and_start_unpopulated():
+    """Host-supplied index artifacts are read-only and ship with nothing in them.
+
+    Both properties are load-bearing. Read-only means a compromised container
+    cannot rewrite the operator's own `data/` on the host. Unpopulated means
+    the overlay cannot smuggle in a prebuilt corpus: `data/docs.lance` is
+    scraped vendor documentation this project has no licence to redistribute,
+    so it must be absent from a clone and built by the operator.
+    """
+    mounts = _router_host_mounts()
+    assert mounts, "the overlay must still bind the host-built index artifacts"
+
+    tracked = subprocess.run(
+        ["git", "ls-files", "data"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+
+    for source, target, mode in mounts:
+        relative = source.removeprefix("./")
+        assert mode == "ro", f"{source} must be mounted read-only into the container"
+        assert target == f"/app/{relative}", f"{source} must map to /app/{relative}"
+        assert not any(path.startswith(relative) for path in tracked), (
+            f"{source} is tracked in git; the overlay must start unpopulated"
+        )
+
+
+def test_router_overlay_does_not_shadow_the_baked_spec_index():
+    """The image builds `data/specs.sqlite` from `vendor/openapi/` and ships it.
+
+    The overlay used to mount `./data:/app/data:ro`, which hid that file and
+    made the documented production deployment the one path that ran without
+    the index the image had just built. Only artifacts the image cannot ship
+    may be mounted, and never the directory holding the baked one.
+    """
+    assert "/app/data/specs.sqlite" in DOCKERFILE.read_text(), (
+        "the Dockerfile no longer bakes the spec index; this guard is stale"
+    )
+
+    shadowing = [
+        (source, target)
+        for source, target, _mode in _router_host_mounts()
+        if target in ("/app/data", "/app/data/", "/app/data/specs.sqlite")
+    ]
+    assert not shadowing, f"these mounts hide the image's spec index: {shadowing}"
 
 
 def test_router_overlay_validates_standalone_and_merged_with_docker_cli(tmp_path):

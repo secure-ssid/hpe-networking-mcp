@@ -37,15 +37,12 @@ cp config/credentials.yaml.example secrets/credentials.yaml
 openssl rand -hex 32 > secrets/mcp_http_bearer_token
 chmod 600 secrets/credentials.yaml secrets/mcp_http_bearer_token
 
-# 2. The overlay bind-mounts ./data over the image's baked spec index, so
-#    populate the host directory first (offline, seconds, no network):
-uv run python scripts/build_spec_index.py data/specs.sqlite
-
-# 3. Build and start the router alongside the unchanged redis/ollama services:
+# 2. Build and start the router alongside the unchanged redis/ollama services.
+#    The spec index ships in the image -- there is nothing to populate first.
 docker compose -f docker-compose.yml -f docker-compose.router.yml \
   --profile router up -d --build
 
-# 4. Verify:
+# 3. Verify:
 curl http://127.0.0.1:8010/livez
 ```
 
@@ -129,17 +126,18 @@ scraped vendor documentation this project does not distribute, so `ask_docs`
 and `search_docs` have nothing to answer from until you build it yourself —
 see [release-indexes.md](release-indexes.md).
 
-> **The `./data` bind mount replaces the baked index.**
-> `docker-compose.router.yml` mounts `./data:/app/data:ro`, which shadows
-> `/app/data/specs.sqlite` from the image. If you use that overlay, populate
-> the host directory first:
+> **The overlay does not shadow the baked index.**
+> `docker-compose.router.yml` bind-mounts `./data/docs.lance` and
+> `./data/tools.lance` individually, never `./data` as a whole, precisely so
+> that `/app/data/specs.sqlite` from the image stays visible. `lookup_api`
+> therefore works on a first `docker compose up` with an empty host `./data`.
+> Pinned by `tests/unit/test_docker_router_packaging.py`.
 >
-> ```bash
-> uv run python scripts/build_spec_index.py data/specs.sqlite
+> To run a *different* index than the image's, add an explicit mount for it:
+>
+> ```yaml
+> - ./data/specs.sqlite:/app/data/specs.sqlite:ro
 > ```
->
-> An empty host `./data` leaves `lookup_api` with no index even though the
-> image shipped one.
 
 If you host your own archive internally, package it with
 `scripts/package_indexes.py` -- which emits the checksum manifest -- and
@@ -162,15 +160,20 @@ docker compose -f docker-compose.yml -f docker-compose.router.yml \
   --profile router restart mcp-router
 ```
 
-`docker-compose.router.yml` bind-mounts `./data` **read-only**
-(`./data:/app/data:ro`) into the container, so:
+`docker-compose.router.yml` bind-mounts the two artifacts the image cannot
+ship — `./data/docs.lance` (scraped prose corpus) and `./data/tools.lance`
+(router tool index) — **read-only**, and nothing else. So:
 
-* The host, not the container, is the source of truth for which index is
-  live — you can inspect, diff, or roll back `./data` with ordinary shell
-  tools between container restarts. Restart `mcp-router` after replacing
-  `./data`'s contents so the running process picks up the change.
-* The mount is read-only from the container's point of view, so
-  the container process cannot itself overwrite `data/` even if compromised.
+* The host, not the container, is the source of truth for those two artifacts
+  — you can inspect, diff, or roll them back with ordinary shell tools between
+  container restarts. Restart `mcp-router` after replacing them so the running
+  process picks up the change.
+* The mounts are read-only from the container's point of view, so the
+  container process cannot overwrite the host's `data/` even if compromised.
+  The baked `/app/data/specs.sqlite` is root-owned and mode `0444` for the
+  same reason: it is no longer covered by a read-only mount.
+* Both host paths start empty. `data/` is git-ignored, so a clone ships
+  neither, and the overlay cannot smuggle in a prebuilt corpus.
 * `scripts/download_indexes.py` already refuses non-HTTPS URLs, verifies a
   SHA-256 digest independently of any downloaded `.sha256` sidecar when a
   pinned manifest is used, rejects path-traversal/symlink members inside the
@@ -178,11 +181,10 @@ docker compose -f docker-compose.yml -f docker-compose.router.yml \
   `tests/unit/test_download_indexes.py`. This packaging relies on those
   existing guarantees rather than re-implementing them; it only decides
   *when* that script runs (explicitly, never automatically).
-* If you maintain your own index build pipeline instead, just point
-  `./data` at whatever directory your pipeline populates -- the Compose
-  bind mount doesn't care how `data/docs.lance`, `data/tools.lance`, and
-  `data/specs.sqlite` got there, only that they exist before `mcp-router`
-  starts (or after a restart).
+* If you maintain your own index build pipeline instead, point those two
+  paths at whatever directory your pipeline populates -- the Compose bind
+  mounts don't care how `data/docs.lance` and `data/tools.lance` got there,
+  only that they exist before `mcp-router` starts (or after a restart).
 
 ### Non-root, minimal runtime image
 
@@ -191,7 +193,9 @@ docker compose -f docker-compose.yml -f docker-compose.router.yml \
 * `/app` (application code and the `uv`-managed virtualenv) is owned by
   `root` at the top level; only `/app/state`, `/app/outputs`, `/app/data`,
   and the `mcp` user's own home directory (`/home/mcp`, used for the `uv`
-  cache) are writable by the running process.
+  cache) are writable by the running process. The baked
+  `/app/data/specs.sqlite` inside that directory is root-owned and mode
+  `0444`, so the router can read its own index but not rewrite it.
 * Dependencies are resolved once, at build time, from the committed
   `uv.lock` (`uv sync --frozen`) — the runtime image sets `UV_NO_SYNC=1` so
   `uv run hpe-mcp-router` at container start never attempts network
@@ -227,10 +231,11 @@ docker compose -f docker-compose.yml -f docker-compose.router.yml \
   one-command `docker run`. `lookup_api` works out of the box because the
   image ships `data/specs.sqlite`, but `ask_docs` and `search_docs` need
   `data/docs.lance`, which you build yourself
-  (`uv run python ingestion/ingest_docs.py`) and bind-mount. Mounting
-  `./data` at all replaces the baked spec index, so populate it with
-  `scripts/build_spec_index.py` too; the router itself still starts and
-  serves non-RAG tools (Central/GLP/monitoring/config/ops/NAC) either way.
+  (`uv run python ingestion/ingest_docs.py`) and bind-mount. The overlay
+  mounts that path on its own rather than mounting `./data` wholesale, so
+  leaving it empty costs you only the RAG tools: the router still starts and
+  serves non-RAG tools (Central/GLP/monitoring/config/ops/NAC) against the
+  baked spec index.
 * **Firmware upgrade caveat carries over unchanged**: `set_firmware_compliance`
   remains the supported path; `/firmware/v1/upgrade` still 404s on this
   Central instance regardless of how the router is deployed.

@@ -113,7 +113,13 @@ RUN mkdir -p /app/state /app/outputs /app/data \
 # and WORKDIR is /app. data/ is excluded from the build context by
 # .dockerignore, so this file can only come from the specindex stage — never
 # from a developer's local data/ directory.
-COPY --from=specindex --chown=mcp:mcp /spec-index/specs.sqlite /app/data/specs.sqlite
+#
+# Left root-owned and mode 0444 on purpose. docker-compose.router.yml used to
+# mount ./data over /app/data read-only, which both protected this file and
+# hid it; the overlay now mounts only the artifacts the image cannot ship, so
+# the file mode is what keeps the router process from rewriting its own index.
+# The query layer opens it with `file:...?mode=ro`, so read-only is enough.
+COPY --from=specindex --chmod=444 /spec-index/specs.sqlite /app/data/specs.sqlite
 
 COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
