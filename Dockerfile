@@ -34,16 +34,28 @@
 #     is left untouched here; MCP_HOST/MCP_ALLOWED_HOSTS/MCP_ALLOWED_ORIGINS
 #     are opt-in overrides supplied by the compose overlay, not this image.
 
+# Base images are pinned by digest and written literally, not through an ARG.
+# Dependabot's Docker parser matches the tag with /(?<tag>[\w][\w.-]{0,127})/,
+# which cannot match `${VAR}`, so an ARG-indirected FROM is skipped outright --
+# invisible, not mis-parsed. A digest with no bump mechanism silently stops
+# receiving Debian security updates, so the pin and the `docker` ecosystem in
+# .github/dependabot.yml are one change; neither is correct alone. The tag is
+# kept beside the digest so the line stays readable and both move together.
+#
+# Trivy, not Dependabot, is the detector: .github/workflows/security.yml scans
+# the built image on every push and fails on fixable HIGH/CRITICAL. The monthly
+# Dependabot interval is a fix-delivery cadence, not a security SLA.
+#
 # uv is copied into the runtime stage (run_http_router.sh execs `uv run`), so
 # its own vendored Rust crates are in the image's scan surface. 0.11.x ships
 # quinn-proto 0.11.14 (GHSA-4w2j-m93h-cj5j) and rustls-webpki 0.103.9
 # (GHSA-82j2-j2ch-gfr8); the 0.12 line clears both. Keep this at/above 0.12.5.
-ARG UV_VERSION=0.12.5
-ARG PYTHON_VERSION=3.12-slim-bookworm
+FROM ghcr.io/astral-sh/uv:0.12.5@sha256:e85be844203885286c60ffad8a858d48afb6c5a5c237ca0e67f12e74b8f174b1 AS uv-bin
 
-FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv-bin
-
-FROM python:${PYTHON_VERSION} AS builder
+# Builder and runtime MUST carry byte-identical references -- one interpreter
+# version, one CVE surface. The ARG used to guarantee that structurally; now
+# only a test does (test_docker_router_packaging.py).
+FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS builder
 COPY --from=uv-bin /uv /uvx /usr/local/bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
@@ -101,7 +113,8 @@ COPY vendor/ ./vendor/
 RUN mkdir -p /spec-index \
     && /app/.venv/bin/python scripts/build_spec_index.py /spec-index/specs.sqlite
 
-FROM python:${PYTHON_VERSION} AS runtime
+# Byte-identical to the builder FROM above, by test.
+FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS runtime
 
 # scripts/run_http_router.sh execs `uv run hpe-mcp-router`; keep the uv
 # binary in the runtime image too (UV_NO_SYNC below makes this a pure local
