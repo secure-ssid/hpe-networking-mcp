@@ -19,3 +19,21 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "ci"
+
+  # The Dockerfile's base images are digest-pinned, which is only safe with a
+  # bump mechanism: without this entry a pinned digest quietly stops receiving
+  # Debian and uv security updates. The FROM lines are written literally for
+  # this reason -- Dependabot's tag regex cannot match `${VAR}`, so an
+  # ARG-indirected image reference is skipped entirely.
+  #
+  # Detection is Trivy's job (.github/workflows/security.yml, every push);
+  # this interval only governs how fast the fix PR shows up unprompted.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "deps"

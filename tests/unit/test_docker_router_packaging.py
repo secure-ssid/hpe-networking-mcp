@@ -28,6 +28,59 @@ SECRETS_DIR = REPO_ROOT / "secrets"
 GITIGNORE = REPO_ROOT / ".gitignore"
 
 
+DEPENDABOT = REPO_ROOT / ".github" / "dependabot.yml"
+# `FROM <image> AS <stage>`, external references only -- `FROM builder AS …`
+# has no registry reference to pin.
+FROM_LINE = re.compile(r"^FROM\s+(?P<ref>\S+)\s+AS\s+(?P<stage>\S+)\s*$", re.MULTILINE)
+
+
+def _external_from_lines() -> dict[str, str]:
+    stages = {m.group("stage") for m in FROM_LINE.finditer(DOCKERFILE.read_text())}
+    return {
+        m.group("stage"): m.group("ref")
+        for m in FROM_LINE.finditer(DOCKERFILE.read_text())
+        if m.group("ref") not in stages
+    }
+
+
+def test_builder_and_runtime_share_one_interpreter_reference():
+    """One interpreter version, one CVE surface.
+
+    `ARG PYTHON_VERSION` used to guarantee this structurally, but Dependabot's
+    Docker parser cannot match a tag through `${VAR}` and skips the line
+    entirely, so the references had to be inlined to be updatable at all. That
+    trades a structural guarantee for two literal strings a hand edit can
+    drift apart -- this test is what replaces it.
+    """
+    refs = _external_from_lines()
+    assert refs["builder"] == refs["runtime"], (
+        "builder and runtime must resolve to a byte-identical image reference"
+    )
+
+
+def test_external_base_images_are_digest_pinned_and_literal():
+    """A floating tag means two builds a week apart are not the same image.
+
+    The reference must also be literal: `${VAR}` is invisible to Dependabot,
+    so an ARG-indirected pin would never receive a bump PR.
+    """
+    for stage, ref in _external_from_lines().items():
+        assert "@sha256:" in ref, f"{stage} base image is not digest-pinned: {ref}"
+        assert "$" not in ref, f"{stage} base image is ARG-indirected: {ref}"
+        tag, _, digest = ref.partition("@")
+        assert ":" in tag, f"{stage} keeps no human-readable tag beside {digest}"
+
+
+def test_dependabot_watches_the_dockerfile():
+    """A digest pin with no bump mechanism silently stops receiving security
+    updates. The pin and this ecosystem entry are one change."""
+    config = yaml.safe_load(DEPENDABOT.read_text())
+    ecosystems = {entry["package-ecosystem"] for entry in config["updates"]}
+    assert "docker" in ecosystems, (
+        "digest-pinned base images require a `docker` Dependabot ecosystem"
+    )
+
+
 def test_dockerfile_runs_as_non_root_user():
     text = DOCKERFILE.read_text()
     assert re.search(r"^USER\s+mcp\s*$", text, re.MULTILINE), (
