@@ -317,7 +317,7 @@
         }
       },
       "tools_lance": {
-        "rows": 6726,
+        "rows": 6728,
         "rows_by_server": {
           "aos8-core": 311,
           "apstra-core": 155,
@@ -329,12 +329,12 @@
           "central-ops": 41,
           "central-streaming": 1,
           "clearpass-core": 845,
-          "design-core": 7,
+          "design-core": 8,
           "edgeconnect-core": 1270,
           "glp-core": 1014,
           "interop-core": 5,
           "mist-core": 1080,
-          "rag-core": 15,
+          "rag-core": 16,
           "site-health": 1,
           "uxi-core": 49
         }
