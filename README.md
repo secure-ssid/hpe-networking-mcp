@@ -7,7 +7,7 @@
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-0969da)](https://secure-ssid.github.io/hpe-networking-mcp/)
 [![Release](https://img.shields.io/github/v/release/secure-ssid/hpe-networking-mcp?display_name=tag)](https://github.com/secure-ssid/hpe-networking-mcp/releases)
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,722 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](docs/assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,144 generated operations, 6,722 backend tools, 3 minimal router tools, and nine platform surfaces with optional local RAG](docs/assets/hpe-networking-mcp-hero.svg)
 
 The banner tracks the current backend catalog: a large tool surface stays
 available on demand, while the MCP client itself only ever sees three router

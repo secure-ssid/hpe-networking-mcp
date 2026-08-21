@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
-  <title id="title">hpe-networking-mcp 0.7.0</title>
+  <title id="title">hpe-networking-mcp 0.8.0</title>
   <desc id="desc">Low-token HPE Networking MCP toolkit with 6,144 generated operations and 6,722 backend tools across nine platform surfaces.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -37,7 +37,7 @@
     <text x="472" y="79" class="label">minimal router tools</text>
 
     <rect x="672" width="350" height="112" rx="18" fill="#0d2239" stroke="#275174"/>
-    <text x="696" y="45" class="pill">Nine platform surfaces + embedded RAG</text>
-    <text x="696" y="76" class="label">RAG, exact OpenAPI, migrations, diagnostics</text>
+    <text x="696" y="45" class="pill">Nine platform surfaces + optional local RAG</text>
+    <text x="696" y="76" class="label">exact OpenAPI, migrations, diagnostics, local RAG</text>
   </g>
 </svg>
