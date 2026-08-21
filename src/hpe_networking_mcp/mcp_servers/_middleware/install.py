@@ -1,13 +1,16 @@
-"""Middleware installer for ``mcp.server.mcpserver`` tool managers.
+"""Middleware installer for ``mcp.server.mcpserver`` tool dispatch.
 
-Monkey-patches ``ToolManager.call_tool`` to run each installed
-middleware's ``before_call`` and ``after_call`` hooks. This is a
-deliberate trade: the shim has no middleware API, we don't want a new
-dependency, and patching a single method keeps blast radius small.
+Intercepts the server's tool dispatcher (through
+``hpe_networking_mcp.mcp_servers._sdk_compat``, the one module allowed to touch
+the SDK's private tool manager) to run each installed middleware's
+``before_call`` and ``after_call`` hooks. This is a deliberate trade: the SDK's
+own ``ServerMiddleware`` chain is inbound-wire-message tier and never sees the
+in-process calls this package makes, we don't want a new dependency, and
+replacing a single dispatcher keeps blast radius small.
 
-Note on async: ``ToolManager.call_tool`` returns a coroutine, so the
-installer wraps it as ``async def`` and awaits middleware hooks that return
-awaitables. Synchronous hooks remain supported for simple mutations.
+Note on async: the dispatcher is a coroutine function, so the installer wraps it
+as ``async def`` and awaits middleware hooks that return awaitables.
+Synchronous hooks remain supported for simple mutations.
 """
 
 from __future__ import annotations
@@ -18,6 +21,8 @@ from typing import Any, Protocol
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.utilities.func_metadata import _convert_to_content
+
+from hpe_networking_mcp.mcp_servers import _sdk_compat
 
 logger = logging.getLogger(__name__)
 
@@ -116,17 +121,13 @@ async def _run_on_error(middlewares, name, args, exc, context=None):
 
 
 def install_middleware(server: MCPServer, middlewares: list[Middleware]) -> None:
-    """Install ``middlewares`` on ``server``'s tool manager.
+    """Install ``middlewares`` on ``server``'s tool dispatcher.
 
     Idempotent — a server that already has middleware installed will have
     its chain *replaced* rather than stacked, so re-imports in tests
     don't accumulate.
     """
-    tm = server._tool_manager
-    # Preserve the *real* original so re-install doesn't stack.
-    original = getattr(tm, _INSTALLED_ATTR, None) or tm.call_tool
-    if not getattr(tm, _INSTALLED_ATTR, None):
-        setattr(tm, _INSTALLED_ATTR, original)
+    original = _sdk_compat.claim_dispatcher(server, _INSTALLED_ATTR)
 
     async def wrapped_call_tool(name, arguments, context=None, convert_result=False):  # noqa: ANN001,ANN202
         args = dict(arguments) if arguments else {}
@@ -145,7 +146,7 @@ def install_middleware(server: MCPServer, middlewares: list[Middleware]) -> None
                     middlewares, name, args, substitute, context=context
                 )
                 if convert_result:
-                    tool = tm.get_tool(name)
+                    tool = _sdk_compat.get_tool(server, name)
                     if tool is not None:
                         try:
                             return tool.fn_metadata.convert_result(substitute)
@@ -156,7 +157,7 @@ def install_middleware(server: MCPServer, middlewares: list[Middleware]) -> None
 
         result = await _run_after(middlewares, name, args, raw_result, context=context)
         if convert_result:
-            tool = tm.get_tool(name)
+            tool = _sdk_compat.get_tool(server, name)
             if tool is not None:
                 try:
                     return tool.fn_metadata.convert_result(result)
@@ -166,4 +167,4 @@ def install_middleware(server: MCPServer, middlewares: list[Middleware]) -> None
                     raise
         return result
 
-    tm.call_tool = wrapped_call_tool  # type: ignore[method-assign]
+    _sdk_compat.set_dispatcher(server, wrapped_call_tool)

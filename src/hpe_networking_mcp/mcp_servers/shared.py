@@ -17,6 +17,7 @@ from urllib.parse import quote, unquote, urlsplit
 from dotenv import load_dotenv
 from mcp.types import ToolAnnotations
 
+from hpe_networking_mcp.mcp_servers import _sdk_compat
 from hpe_networking_mcp.pipeline.clients.central_client import CentralClient
 from hpe_networking_mcp.pipeline.clients.glp_client import GLPClient
 from hpe_networking_mcp.pipeline.clients.mcp_client import MCPClient
@@ -1315,16 +1316,28 @@ def tool_write_capability(tool: Any) -> str:
 def install_platform_write_gate(mcp_instance: Any) -> bool:
     """Enforce aggregate and platform write gates on every backend tool call.
 
-    Wraps ``mcp_instance._tool_manager.call_tool`` so any tool whose
-    annotations classify it as ``write``/``destructive`` is refused *before*
-    the tool body runs whenever either (a) an aggregate read-only gate is
-    active -- returning :func:`global_write_blocked` -- or (b) the server's
+    Intercepts the server's tool dispatcher (via
+    :func:`hpe_networking_mcp.mcp_servers._sdk_compat.set_dispatcher`) so any
+    tool whose annotations classify it as ``write``/``destructive`` is refused
+    *before* the tool body runs whenever either (a) an aggregate read-only gate
+    is active -- returning :func:`global_write_blocked` -- or (b) the server's
     platform gate is disabled -- returning
     :func:`platform_write_blocked`. Read-only and diagnostic tools are never
     affected. Aggregate read-only mode also protects standalone servers that
     have no platform gate. The router itself remains untouched because it
     enforces both gates after resolving the backend tool; wrapping its generic
     destructive dispatcher would also block diagnostic calls.
+
+    Coverage. The dispatcher is the single choke point every call path funnels
+    through, so the gate applies to all three of them: a ``tools/call`` arriving
+    over a transport (the SDK's handler delegates to ``MCPServer.call_tool``,
+    which delegates here), a direct in-process ``server.call_tool(name, ...)``
+    by name, and the router's raw dispatch
+    (:func:`hpe_networking_mcp.mcp_servers._sdk_compat.call_tool_raw`). Note
+    that the SDK's ``ServerMiddleware`` chain is *not* an alternative position:
+    it observes inbound wire messages only, and backend servers here are
+    imported and called in-process, so a middleware-tier gate would see none of
+    this traffic.
 
     Idempotent: installing twice replaces the wrapper rather than stacking it,
     and composes safely with :func:`hpe_networking_mcp.mcp_servers._middleware.install_middleware`
@@ -1342,13 +1355,10 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
     if platform is None and not global_readonly_enabled():
         return False
 
-    manager = mcp_instance._tool_manager
-    original = getattr(manager, _WRITE_GATE_INSTALLED_ATTR, None) or manager.call_tool
-    if not getattr(manager, _WRITE_GATE_INSTALLED_ATTR, None):
-        setattr(manager, _WRITE_GATE_INSTALLED_ATTR, original)
+    original = _sdk_compat.claim_dispatcher(mcp_instance, _WRITE_GATE_INSTALLED_ATTR)
 
     async def gated_call_tool(name, arguments, context=None, convert_result=False):  # noqa: ANN001,ANN202
-        tool = manager.get_tool(name)
+        tool = _sdk_compat.get_tool(mcp_instance, name)
         if tool is not None:
             capability = tool_write_capability(tool)
             platform_blocked = (
@@ -1380,7 +1390,7 @@ def install_platform_write_gate(mcp_instance: Any) -> bool:
             name, arguments, context=context, convert_result=convert_result
         )
 
-    manager.call_tool = gated_call_tool  # type: ignore[method-assign]
+    _sdk_compat.set_dispatcher(mcp_instance, gated_call_tool)
     return True
 
 

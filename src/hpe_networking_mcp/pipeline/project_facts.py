@@ -246,10 +246,12 @@ def registered_tool_identities() -> dict[str, list[str]]:
     _assert_catalog_env()
     import importlib
 
+    from hpe_networking_mcp.mcp_servers import _sdk_compat
+
     identities: dict[str, list[str]] = {}
     for server, module_path in _server_modules():
         module = importlib.import_module(module_path)
-        identities[server] = sorted(module.mcp._tool_manager._tools)
+        identities[server] = _sdk_compat.tool_names(module.mcp)
     return dict(sorted(identities.items()))
 
 
@@ -422,15 +424,18 @@ def _run_router_mode_probe(
         ``"direct_all_tools"`` (sorted names after direct-mode registration)
         when ``register_direct`` is True.
     """
+    # Executed source, not prose: it must use the same public helper as
+    # in-process code so an SDK rename breaks here too, and visibly.
     probe = (
         "import json\n"
+        "from hpe_networking_mcp.mcp_servers import _sdk_compat as c\n"
         "from hpe_networking_mcp.mcp_servers import tool_router as r\n"
-        "result = {'tools': sorted(r.mcp._tool_manager._tools)}\n"
+        "result = {'tools': c.tool_names(r.mcp)}\n"
     )
     if register_direct:
         probe += (
             "r._register_direct_backend_tools()\n"
-            "result['direct_all_tools'] = sorted(r.mcp._tool_manager._tools)\n"
+            "result['direct_all_tools'] = c.tool_names(r.mcp)\n"
         )
     probe += "print(json.dumps(result))\n"
 

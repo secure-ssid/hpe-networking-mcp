@@ -29,6 +29,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any, Literal, Optional
 from urllib.parse import quote
 
+from hpe_networking_mcp.mcp_servers import _sdk_compat
 from hpe_networking_mcp.mcp_servers.openapi_gen.manifest import load_manifest, manifest_exists
 from hpe_networking_mcp.mcp_servers.openapi_gen.naming import digest, snake
 from hpe_networking_mcp.mcp_servers.openapi_gen.preflight import build_write_impact
@@ -617,7 +618,7 @@ def register_generated_tools(
             return []
         manifest = load_manifest(platform)
 
-    existing = set(mcp._tool_manager._tools.keys())
+    existing = set(_sdk_compat.tool_names(mcp))
     registered: list[str] = []
     # A write can only be preflighted when the same path is readable, which the
     # manifest already tells us -- so this self-configures per platform.
