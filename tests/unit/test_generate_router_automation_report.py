@@ -13,15 +13,15 @@ from __future__ import annotations
 
 import importlib
 import json
-import sys
-from pathlib import Path
-
-import pytest
 
 # Developer .env often pins HPE_MCP_ROUTER_MODE=minimal for day-to-day
 # clients. Planners only register in non-minimal mode, so force default
 # before importing the router / report script for this module.
 import os
+import sys
+from pathlib import Path
+
+import pytest
 
 os.environ["HPE_MCP_ROUTER_MODE"] = "default"
 

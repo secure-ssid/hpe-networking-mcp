@@ -10,7 +10,6 @@ host blocks plain TLS clients with 403), then bucket the entries per book.
 Outputs: /tmp/aos_<book>_urls.json (one list per book) and /tmp/aos_all_urls.json.
 """
 import json
-import re
 import time
 from pathlib import Path
 from urllib.parse import urljoin

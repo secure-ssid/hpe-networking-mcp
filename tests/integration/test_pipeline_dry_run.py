@@ -29,7 +29,6 @@ from hpe_networking_mcp.pipeline.stages.s1_discover import DiscoverStage
 from hpe_networking_mcp.pipeline.stages.s2_validate import ValidateStage
 from hpe_networking_mcp.pipeline.state_store import StateStore
 
-
 pytestmark = pytest.mark.skipif(
     not os.getenv("SOURCE_CLIENT_ID"),
     reason="Live credentials not set — skipping integration test",

@@ -3,14 +3,13 @@
 Scrape New Central techdocs (MadCap Flare) pages and convert to markdown.
 Content is in <div class="body"> or <div role="main"> in SSR HTML.
 """
-import html as htmllib
 import json
 import re
 import subprocess
 import time
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-import urllib.request
 
 OUTPUT_DIR = Path(__file__).parent / "markdown_techdocs"
 OUTPUT_DIR.mkdir(exist_ok=True)

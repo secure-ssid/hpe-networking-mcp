@@ -1,5 +1,6 @@
 import os
 import time
+
 import httpx
 
 OLLAMA_URL = "http://localhost:11434"

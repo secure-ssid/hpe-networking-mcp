@@ -13,7 +13,6 @@ from hpe_networking_mcp.pipeline.models import (
     HardwareSeries,
     Persona,
     SourceType,
-    StageStatus,
     TargetAccount,
 )
 from hpe_networking_mcp.pipeline.state_store import StateStore

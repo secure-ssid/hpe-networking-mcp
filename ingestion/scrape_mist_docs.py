@@ -16,10 +16,10 @@ Usage: python ingestion/scrape_mist_docs.py
 Reads: ingestion/mist_docs_urls.json (written by discover_mist_docs_urls.py)
 Writes: ingestion/sources/mist_docs/*.md
 """
+import json
 import re
 import subprocess
 import time
-import json
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed

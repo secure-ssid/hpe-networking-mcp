@@ -1,7 +1,6 @@
 """Tests for src/hpe_networking_mcp/pipeline/state_store.py."""
 
 from hpe_networking_mcp.pipeline.models import StageStatus
-from hpe_networking_mcp.pipeline.state_store import StateStore
 
 
 def test_initial_status_is_pending(state, run_id):

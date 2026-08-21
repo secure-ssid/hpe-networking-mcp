@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from scripts.check_generated_tool_manifests import validate_all, validate_manifest
 from hpe_networking_mcp.mcp_servers.openapi_gen.manifest import SCHEMA_VERSION
+from scripts.check_generated_tool_manifests import validate_all, validate_manifest
 
 
 def _manifest() -> dict:

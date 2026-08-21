@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from hpe_networking_mcp.mcp_servers.design_lib.icons import icon_path_for
-from hpe_networking_mcp.mcp_servers.design_lib.model import DiagramModel, ROLE_LAYER
+from hpe_networking_mcp.mcp_servers.design_lib.model import ROLE_LAYER, DiagramModel
 
 _ROLE_SHAPE: dict[str, str] = {
     "cloud": "cloud",

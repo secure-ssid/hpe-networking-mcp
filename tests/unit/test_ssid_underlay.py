@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, call
 
-import pytest
-
 from hpe_networking_mcp.pipeline.create_ssid import (
     _build_ssid_body,
     build_overlay_ssid,
@@ -14,7 +12,6 @@ from hpe_networking_mcp.pipeline.create_ssid import (
     get_underlay_ssid,
     list_underlay_ssids,
 )
-
 
 # ---------------------------------------------------------------------------
 # _build_ssid_body

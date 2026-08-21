@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from hpe_networking_mcp.mcp_servers import design as design_mod
 from hpe_networking_mcp.mcp_servers.design_lib import model as design_model
-from hpe_networking_mcp.mcp_servers.tool_router import _OPTIONAL_BACKENDS, _TOOLSET_BACKENDS, _build_backends
+from hpe_networking_mcp.mcp_servers.tool_router import (
+    _OPTIONAL_BACKENDS,
+    _TOOLSET_BACKENDS,
+    _build_backends,
+)
 
 SAMPLE_MODEL = {
     "title": "Branch lab",
@@ -42,9 +44,6 @@ def test_optional_backend_registration(monkeypatch):
 
 def test_validate_and_drawio_export(tmp_path, monkeypatch):
     monkeypatch.setattr(design_mod, "write_text_artifact", lambda *a, **k: (_ for _ in ()).throw(AssertionError("no save")))
-    # re-import save path via files module for save test later
-    from hpe_networking_mcp.mcp_servers.design_lib import files as design_files
-
     out = _call(design_mod.validate_diagram_model, model=SAMPLE_MODEL)
     assert out.get("ok") is True or out.get("data", {}).get("ok") is True or "model" in str(out)
 

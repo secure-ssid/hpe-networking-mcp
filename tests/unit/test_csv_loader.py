@@ -8,7 +8,12 @@ from pathlib import Path
 import pytest
 
 from hpe_networking_mcp.pipeline.csv_loader import CSVValidationError, load_csv
-from hpe_networking_mcp.pipeline.models import FirmwareAction, HardwareSeries, SourceType, TargetAccount
+from hpe_networking_mcp.pipeline.models import (
+    FirmwareAction,
+    HardwareSeries,
+    SourceType,
+    TargetAccount,
+)
 
 
 def _write_csv(tmp_path: Path, content: str) -> str:

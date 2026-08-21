@@ -13,7 +13,6 @@ from mcp.server.mcpserver import MCPServer
 import hpe_networking_mcp.mcp_servers.tool_router as router
 from hpe_networking_mcp.mcp_servers.shared import READ_ONLY
 
-
 FIRMWARE_RECORD = {
     "generated_tool": "get_firmware_compliance",
     "classification": "generated-only",

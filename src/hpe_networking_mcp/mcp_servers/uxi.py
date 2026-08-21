@@ -47,12 +47,16 @@ from hpe_networking_mcp.mcp_servers.shared import (
     bound_collection_response,
     bounded_response_payload,
     clamp_limit,
-    platform_write_blocked as _platform_write_blocked,
-    platform_writes_allowed as _platform_writes_allowed,
     redact_sensitive,
     response_payload,
     safe_api_path,
     validate_product_base_url,
+)
+from hpe_networking_mcp.mcp_servers.shared import (
+    platform_write_blocked as _platform_write_blocked,
+)
+from hpe_networking_mcp.mcp_servers.shared import (
+    platform_writes_allowed as _platform_writes_allowed,
 )
 
 mcp = MCPServer("uxi-core")

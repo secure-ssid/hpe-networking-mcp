@@ -5,7 +5,12 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 
-from hpe_networking_mcp.pipeline.models import AccountContext, DeviceRecord, StageResult, StageStatus
+from hpe_networking_mcp.pipeline.models import (
+    AccountContext,
+    DeviceRecord,
+    StageResult,
+    StageStatus,
+)
 from hpe_networking_mcp.pipeline.state_store import StateStore
 
 logger = logging.getLogger(__name__)

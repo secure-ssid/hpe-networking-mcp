@@ -7,6 +7,7 @@ import re
 import subprocess
 import time
 from pathlib import Path
+
 from playwright.sync_api import sync_playwright
 
 MIN_MARKDOWN_CHARS = 400

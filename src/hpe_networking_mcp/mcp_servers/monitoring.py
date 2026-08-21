@@ -33,7 +33,6 @@ from urllib.parse import quote
 from mcp.server.mcpserver import Context, MCPServer
 from pydantic import BaseModel
 
-from hpe_networking_mcp.pipeline.scope_ids import normalize_scope_id
 from hpe_networking_mcp.mcp_servers.shared import (
     DESTRUCTIVE,
     IDEMPOTENT_WRITE,
@@ -50,6 +49,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
     safe_api_path,
     validate_write_result,
 )
+from hpe_networking_mcp.pipeline.scope_ids import normalize_scope_id
 
 mcp = MCPServer("central-monitoring")
 

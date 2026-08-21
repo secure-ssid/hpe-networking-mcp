@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from hpe_networking_mcp.pipeline.vlan_loader import load_vlan_config_file, parse_vlans_from_aos8_config
-
+from hpe_networking_mcp.pipeline.vlan_loader import (
+    load_vlan_config_file,
+    parse_vlans_from_aos8_config,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers

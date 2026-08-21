@@ -1,8 +1,6 @@
 """Tests for dedup_records() ingestion-time deduplication."""
 import hashlib
 
-import pytest
-
 from ingestion import ingest_docs
 
 

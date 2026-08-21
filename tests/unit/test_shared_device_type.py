@@ -22,7 +22,6 @@ import pytest
 from hpe_networking_mcp.mcp_servers import shared
 from hpe_networking_mcp.mcp_servers.shared import device_type_for_troubleshoot
 
-
 # ---------------------------------------------------------------------------
 # Explicit device_type normalization
 # ---------------------------------------------------------------------------

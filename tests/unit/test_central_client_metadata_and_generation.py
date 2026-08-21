@@ -20,7 +20,10 @@ from unittest.mock import MagicMock
 
 import httpx
 
-from hpe_networking_mcp.pipeline.clients.central_client import CentralClient, reset_deprecation_warning_cache
+from hpe_networking_mcp.pipeline.clients.central_client import (
+    CentralClient,
+    reset_deprecation_warning_cache,
+)
 from hpe_networking_mcp.pipeline.clients.token_manager import TokenManager
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import hpe_networking_mcp.mcp_servers.shared as shared
 import hpe_networking_mcp.cli.run_pipeline as run_pipeline
+import hpe_networking_mcp.mcp_servers.shared as shared
 from hpe_networking_mcp.pipeline.config import build_account_contexts
 from hpe_networking_mcp.pipeline.models import AccountContext
 
