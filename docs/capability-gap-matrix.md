@@ -28,6 +28,8 @@ Counts below describe the full read-write registration of the *platform API* bac
 
 The 6,144 manifest records are provenance-bearing generated operations. Only 6,127 register as executable generated tools because 17 are intentionally excluded. Adding 584 curated tools yields 6,711 executable platform API backend tools. The three minimal-router tools are a separate client-visible dispatch surface, not three additional backend capabilities.
 
+In 2 of the rows above the curated count sits below the backend's own registration on purpose: `glp-core` defines 108 curated tools of which 107 count here (`glp_preflight`), and `rag-core` defines 16 curated tools of which 15 count here (`corpus_provenance`). Those tools inspect local configuration, cache, or committed-corpus state, make no vendor API call, and describe the catalog rather than extending it, so counting them in a platform API benchmark would inflate it. The set is `NON_API_LOCAL_TOOLS` in `src/hpe_networking_mcp/pipeline/project_facts.py`; [`docs/tool-catalog.md`](tool-catalog.md) lists them as their own rows.
+
 ## Protocol-only capabilities
 
 These capabilities are documented by RAG but are not REST/OpenAPI operations. They are tracked separately from manifest totals and map to curated transport/workflow tools when one exists.
