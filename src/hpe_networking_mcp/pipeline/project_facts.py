@@ -581,16 +581,68 @@ def declared_source_facts() -> dict[str, Any]:
     return {"count": len(sources), "sources": sources}
 
 
-def specs_counts(path: Path = SPECS_DB_PATH) -> dict[str, int]:
-    """Return exact row counts for the structured API/advisory tables.
+def specs_tables_present(path: Path = SPECS_DB_PATH) -> set[str]:
+    """Which :data:`SPECS_TABLES` the index at ``path`` actually carries.
+
+    Resolved from the database rather than assumed, because the two builders
+    produce different table sets: ``scripts/build_spec_index.py`` indexes the
+    committed OpenAPI corpus and writes ``endpoints``/``schemas``/``fields``,
+    while ``advisories`` and ``lifecycle_events`` come only from
+    ``ingestion/ingest_docs.py``, which needs a scrape. A spec-only index is
+    therefore a legitimate artifact, not a damaged one -- it is exactly what
+    ships baked into the container image.
+
+    Returns an empty set for a missing file, a non-SQLite file, or a
+    placeholder database carrying none of the contract tables.
 
     Args:
         path: The shared structured index; defaults to ``data/specs.sqlite``.
     """
+    if not path.is_file():
+        return set()
+    try:
+        connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    except sqlite3.Error:  # pragma: no cover - unreadable file
+        return set()
+    try:
+        rows = connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        present = {row[0] for row in rows}
+    except sqlite3.DatabaseError:  # not a sqlite database at all
+        return set()
+    finally:
+        connection.close()
+    return present & set(SPECS_TABLES)
+
+
+def specs_counts(path: Path = SPECS_DB_PATH) -> dict[str, int]:
+    """Return exact row counts for the structured tables ``path`` carries.
+
+    A table the index does not have is **omitted**, never reported as ``0``.
+    The distinction is the whole point of a facts module: ``advisories: 0``
+    asserts the corpus was consulted and held nothing, when in truth it was
+    never built. An absent key says "not present"; a zero says "present and
+    empty". ``scripts/package_indexes.py``'s ``_sqlite_counts`` already omits
+    on the same reasoning.
+
+    Counting every name in :data:`SPECS_TABLES` unconditionally instead
+    raised ``OperationalError: no such table: advisories`` on a spec-only
+    index -- a supported artifact -- aborting fact derivation mid-way.
+
+    Keys follow :data:`SPECS_TABLES` order, so a full index still renders in
+    the canonical order the committed facts file uses.
+
+    Args:
+        path: The shared structured index; defaults to ``data/specs.sqlite``.
+    """
+    present = specs_tables_present(path)
+    if not present:
+        return {}
     counts: dict[str, int] = {}
     connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     try:
         for table in SPECS_TABLES:
+            if table not in present:
+                continue
             # table is always one of the hardcoded SPECS_TABLES constant
             # above, never external/user input.
             counts[table] = connection.execute(
@@ -611,27 +663,15 @@ def specs_index_present(path: Path = SPECS_DB_PATH) -> bool:
     middle of fact derivation instead of taking the documented
     no-data-checkout path.
 
-    A file holding *some* of the expected tables is a real index that has
-    been damaged or truncated, so it stays present here and fails loudly in
-    :func:`specs_counts` rather than being silently downgraded to "absent".
+    A file holding *some* of the expected tables is still a real index: the
+    offline build writes the three OpenAPI tables and no more. It stays
+    present here, and :func:`specs_counts` reports exactly what it carries
+    rather than failing or inventing zeros for the rest.
 
     Args:
         path: The shared structured index; defaults to ``data/specs.sqlite``.
     """
-    if not path.is_file():
-        return False
-    try:
-        connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
-    except sqlite3.Error:  # pragma: no cover - unreadable file
-        return False
-    try:
-        rows = connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        present = {row[0] for row in rows}
-    except sqlite3.DatabaseError:  # not a sqlite database at all
-        return False
-    finally:
-        connection.close()
-    return bool(present & set(SPECS_TABLES))
+    return bool(specs_tables_present(path))
 
 
 def _column_counts(table, column: str) -> dict[str, int]:
