@@ -1,0 +1,70 @@
+{
+  "title": "How MCP and RAG fit together",
+  "rankdir": "LR",
+  "nodes": [
+    {
+      "id": "client",
+      "label": "MCP client"
+    },
+    {
+      "id": "find",
+      "label": "find_tool"
+    },
+    {
+      "id": "read",
+      "label": "invoke_read_tool"
+    },
+    {
+      "id": "write",
+      "label": "invoke_tool"
+    },
+    {
+      "id": "catalog",
+      "label": "tools.lance",
+      "extra": {
+        "shape": "store"
+      }
+    },
+    {
+      "id": "rag",
+      "label": "RAG indexes\ndocs.lance + specs.sqlite",
+      "extra": {
+        "shape": "store"
+      }
+    },
+    {
+      "id": "live",
+      "label": "Central / GLP /\noptional APIs"
+    }
+  ],
+  "links": [
+    {
+      "source": "client",
+      "target": "find"
+    },
+    {
+      "source": "client",
+      "target": "read"
+    },
+    {
+      "source": "client",
+      "target": "write"
+    },
+    {
+      "source": "find",
+      "target": "catalog"
+    },
+    {
+      "source": "read",
+      "target": "rag"
+    },
+    {
+      "source": "read",
+      "target": "live"
+    },
+    {
+      "source": "write",
+      "target": "live"
+    }
+  ]
+}

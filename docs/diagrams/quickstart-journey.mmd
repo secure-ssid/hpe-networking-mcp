@@ -1,9 +1,0 @@
-flowchart TD
-    clone["1. Clone<br/>hpe-networking-mcp"]
-    wizard["2. Run<br/>setup_wizard.py"]
-    doctor["3. Check<br/>scripts/doctor.py"]
-    connect["4. Connect<br/>stdio or HTTP"]
-    discover["5. Discover<br/>find_tool"]
-    invoke["6. Call safely<br/>invoke_read_tool"]
-
-    clone --> wizard --> doctor --> connect --> discover --> invoke

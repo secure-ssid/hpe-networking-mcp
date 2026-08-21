@@ -1,0 +1,51 @@
+{
+  "title": "How an MCP client connects",
+  "rankdir": "TB",
+  "nodes": [
+    {
+      "id": "start",
+      "label": "How does your MCP client\nconnect?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "stdio",
+      "label": "Client launches the process\nUse .mcp.json"
+    },
+    {
+      "id": "http",
+      "label": "Client connects to a running server\nUse .mcp.http.json"
+    },
+    {
+      "id": "local",
+      "label": "Local-only listener\n127.0.0.1:8010"
+    },
+    {
+      "id": "remote",
+      "label": "Non-loopback listener\nallow-lists + bearer token"
+    }
+  ],
+  "links": [
+    {
+      "source": "start",
+      "target": "stdio",
+      "label": "Launch command"
+    },
+    {
+      "source": "start",
+      "target": "http",
+      "label": "Remote/local URL"
+    },
+    {
+      "source": "http",
+      "target": "local",
+      "label": "Same machine"
+    },
+    {
+      "source": "http",
+      "target": "remote",
+      "label": "Other host"
+    }
+  ]
+}

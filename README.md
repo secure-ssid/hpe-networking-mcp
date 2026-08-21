@@ -7,7 +7,7 @@
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-0969da)](https://secure-ssid.github.io/hpe-networking-mcp/)
 [![Release](https://img.shields.io/github/v/release/secure-ssid/hpe-networking-mcp?display_name=tag)](https://github.com/secure-ssid/hpe-networking-mcp/releases)
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,726 backend tools, 3 minimal router tools, and nine platform surfaces with optional local RAG](docs/assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,144 generated operations, 6,727 backend tools, 3 minimal router tools, and nine platform surfaces with optional local RAG](docs/assets/hpe-networking-mcp-hero.svg)
 
 The banner tracks the current backend catalog: a large tool surface stays
 available on demand, while the MCP client itself only ever sees three router
@@ -106,7 +106,7 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | Non-additive profiles: 379 core tools / 2840 read-only optional starters / 5820 read-write optional starters; REST/OpenAPI platform API backend total: 6,711; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,726; direct-all: 6,733 |
+| Tool catalog | Non-additive profiles: 379 core tools / 2841 read-only optional starters / 5821 read-write optional starters; REST/OpenAPI platform API backend total: 6,711; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,727; direct-all: 6,734 |
 | RAG | 392,471 prose chunks; 4,106 endpoints, 8,890 schemas, 50,675 fields, 104 advisories, 345 lifecycle records |
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud |
 | Safety | Per-platform write gates, dry-run + confirmation, HTTP host/origin and bearer controls, credential-gated live-test config |
@@ -224,7 +224,7 @@ uv run python scripts/validate_release.py --catalog-products all --strict-tool-i
 
 `--min-tools 6711` is the platform API compatibility floor (the
 6,711 vendor-facing platform API tools), not the complete registered backend
-total of 6,726, which also includes the protocol-only Central Streaming tool,
+total of 6,727, which also includes the protocol-only Central Streaming tool,
 the cross-platform `site-health` aggregator, the local GLP preflight
 diagnostic, and credential-free local tools — validation passes at or above
 the floor. See

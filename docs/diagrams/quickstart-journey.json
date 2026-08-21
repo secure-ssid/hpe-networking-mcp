@@ -1,0 +1,19 @@
+{
+  "title": "hpe-networking-mcp quickstart journey",
+  "rankdir": "LR",
+  "nodes": [
+    { "id": "clone", "label": "1. Clone\nhpe-networking-mcp" },
+    { "id": "wizard", "label": "2. Run\nsetup_wizard.py" },
+    { "id": "doctor", "label": "3. Check\nscripts/doctor.py" },
+    { "id": "connect", "label": "4. Connect\nstdio or HTTP" },
+    { "id": "discover", "label": "5. Discover\nfind_tool" },
+    { "id": "invoke", "label": "6. Call safely\ninvoke_read_tool" }
+  ],
+  "links": [
+    { "source": "clone", "target": "wizard" },
+    { "source": "wizard", "target": "doctor" },
+    { "source": "doctor", "target": "connect" },
+    { "source": "connect", "target": "discover" },
+    { "source": "discover", "target": "invoke" }
+  ]
+}

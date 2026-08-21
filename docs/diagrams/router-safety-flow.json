@@ -1,0 +1,110 @@
+{
+  "title": "How the router gates a tool call",
+  "rankdir": "TB",
+  "nodes": [
+    {
+      "id": "request",
+      "label": "Describe the task"
+    },
+    {
+      "id": "find",
+      "label": "find_tool"
+    },
+    {
+      "id": "capability",
+      "label": "Capability",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "read",
+      "label": "read\ninvoke_read_tool"
+    },
+    {
+      "id": "diagnostic",
+      "label": "diagnostic\ninvoke_tool"
+    },
+    {
+      "id": "write",
+      "label": "write\ndry_run preview"
+    },
+    {
+      "id": "destructive",
+      "label": "destructive\ndry_run + confirm"
+    },
+    {
+      "id": "gate",
+      "label": "Enabled by global and\nplatform gates?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "blocked",
+      "label": "Blocked response\nwith next action",
+      "extra": {
+        "shape": "terminal"
+      }
+    },
+    {
+      "id": "execute",
+      "label": "Dispatch to backend",
+      "extra": {
+        "shape": "terminal"
+      }
+    }
+  ],
+  "links": [
+    {
+      "source": "request",
+      "target": "find"
+    },
+    {
+      "source": "find",
+      "target": "capability"
+    },
+    {
+      "source": "capability",
+      "target": "read"
+    },
+    {
+      "source": "read",
+      "target": "execute"
+    },
+    {
+      "source": "capability",
+      "target": "diagnostic"
+    },
+    {
+      "source": "diagnostic",
+      "target": "execute"
+    },
+    {
+      "source": "capability",
+      "target": "write"
+    },
+    {
+      "source": "write",
+      "target": "gate"
+    },
+    {
+      "source": "capability",
+      "target": "destructive"
+    },
+    {
+      "source": "destructive",
+      "target": "gate"
+    },
+    {
+      "source": "gate",
+      "target": "blocked",
+      "label": "No"
+    },
+    {
+      "source": "gate",
+      "target": "execute",
+      "label": "Yes, confirmed"
+    }
+  ]
+}

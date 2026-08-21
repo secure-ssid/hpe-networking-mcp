@@ -1,0 +1,52 @@
+{
+  "title": "The six setup wizard steps",
+  "rankdir": "LR",
+  "nodes": [
+    {
+      "id": "install",
+      "label": "1. Install"
+    },
+    {
+      "id": "creds",
+      "label": "2. Credentials"
+    },
+    {
+      "id": "products",
+      "label": "3. Products"
+    },
+    {
+      "id": "configs",
+      "label": "4. MCP configs"
+    },
+    {
+      "id": "catalog",
+      "label": "5. Catalog"
+    },
+    {
+      "id": "doctor",
+      "label": "6. Doctor"
+    }
+  ],
+  "links": [
+    {
+      "source": "install",
+      "target": "creds"
+    },
+    {
+      "source": "creds",
+      "target": "products"
+    },
+    {
+      "source": "products",
+      "target": "configs"
+    },
+    {
+      "source": "configs",
+      "target": "catalog"
+    },
+    {
+      "source": "catalog",
+      "target": "doctor"
+    }
+  ]
+}

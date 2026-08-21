@@ -146,3 +146,47 @@ def test_list_icons_and_roles():
 def test_known_roles_cover_sample():
     for node in SAMPLE_MODEL["nodes"]:
         assert node["role"] in design_model.KNOWN_ROLES
+
+
+FLOW_MODEL = {
+    "title": "Quickstart",
+    "nodes": [
+        {"id": "clone", "label": "1. Clone\nthe repo"},
+        {"id": "check", "label": "Ready?", "extra": {"shape": "decision"}},
+        {"id": "done", "label": "Call a tool", "extra": {"shape": "terminal"}},
+    ],
+    "links": [{"source": "clone", "target": "check"}, {"source": "check", "target": "done", "label": "yes"}],
+}
+
+
+def test_flow_export_is_directed_and_machine_independent():
+    """Flow DOT must be portable: topology exports embed absolute, gitignored icon paths."""
+    out = _call(design_mod.export_flow_diagram, model=FLOW_MODEL, render_format=None)
+    dot = out["export"]["content"]
+
+    assert "digraph" in dot and "->" in dot
+    assert "image=" not in dot, "flow diagrams must not reference machine-local icon files"
+    assert "shape=diamond" in dot and "shape=oval" in dot
+    assert 'label="yes"' in dot
+
+
+def test_flow_export_rejects_unknown_shape():
+    """A typo must fail loudly instead of silently degrading to a plain box."""
+    broken = {
+        "title": "Broken",
+        "nodes": [{"id": "a", "label": "A", "extra": {"shape": "hexagonal-prism"}}],
+        "links": [],
+    }
+    out = _call(design_mod.export_flow_diagram, model=broken, render_format=None)
+
+    assert out["ok"] is False
+    assert "hexagonal-prism" in out["error"]
+
+
+def test_topology_export_is_unchanged_by_flow_mode():
+    """Flow mode is additive; the network topology exporter keeps its own defaults."""
+    topology = _call(design_mod.export_graphviz_topology, model=SAMPLE_MODEL)
+    dot = topology["export"]["content"]
+
+    assert dot.startswith("digraph network")
+    assert "rank=same" in dot

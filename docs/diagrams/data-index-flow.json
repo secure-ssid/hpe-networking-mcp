@@ -1,0 +1,73 @@
+{
+  "title": "How documentation becomes searchable data",
+  "rankdir": "LR",
+  "nodes": [
+    {
+      "id": "sources",
+      "label": "Official docs\nOpenAPI / advisories"
+    },
+    {
+      "id": "ingest",
+      "label": "Ingestion\nchunk + parse"
+    },
+    {
+      "id": "docs",
+      "label": "docs.lance\nhybrid prose",
+      "extra": {
+        "shape": "store"
+      }
+    },
+    {
+      "id": "specs",
+      "label": "specs.sqlite\nAPI + advisories",
+      "extra": {
+        "shape": "store"
+      }
+    },
+    {
+      "id": "tools",
+      "label": "tools.lance\ntool catalog",
+      "extra": {
+        "shape": "store"
+      }
+    },
+    {
+      "id": "rag",
+      "label": "RAG tools\nask_docs / lookup_api"
+    },
+    {
+      "id": "router",
+      "label": "Router\nfind_tool"
+    }
+  ],
+  "links": [
+    {
+      "source": "sources",
+      "target": "ingest"
+    },
+    {
+      "source": "ingest",
+      "target": "docs"
+    },
+    {
+      "source": "ingest",
+      "target": "specs"
+    },
+    {
+      "source": "ingest",
+      "target": "tools"
+    },
+    {
+      "source": "docs",
+      "target": "rag"
+    },
+    {
+      "source": "specs",
+      "target": "rag"
+    },
+    {
+      "source": "tools",
+      "target": "router"
+    }
+  ]
+}

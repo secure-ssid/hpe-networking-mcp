@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
-"""Render Mermaid diagrams and terminal transcripts, verify committed SVG freshness.
+"""Render documentation diagrams and terminal transcripts, verify SVG freshness.
 
-Two documentation source kinds live under docs/diagrams/ and render to
-docs/assets/diagrams/ with the same accessible, responsive SVG contract:
+Three documentation source kinds live under docs/diagrams/ and render to
+docs/assets/diagrams/ with the same accessible SVG contract:
 
-- ``*.mmd``  Mermaid diagram sources rendered with the mermaid CLI.
+- ``*.json`` Flowchart models rendered by this project's own ``design`` MCP
+  server (``export_flow_diagram`` -> Graphviz). Graphviz writes native
+  ``<text>`` and concrete ``width``/``height``, so the artifact keeps its
+  intrinsic size inside a GitHub ``<img>``; Mermaid emits ``width="100%"``
+  with HTML labels in ``<foreignObject>``, which has no intrinsic width and
+  therefore stretches to the full README column -- a six-step journey became
+  a 2,900px tall ribbon.
+- ``*.mmd``  Mermaid sources rendered with the mermaid CLI. Retained only for
+  sequence diagrams, which Graphviz has no concept of (no lifelines).
 - ``*.term`` Plain-text terminal transcripts rendered directly to SVG, used
   for credential-free/local command output examples (no live API calls).
 """
@@ -14,6 +22,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import html
+import json
 import re
 import subprocess
 import tempfile
@@ -22,6 +31,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DIR = ROOT / "docs" / "diagrams"
 OUTPUT_DIR = ROOT / "docs" / "assets" / "diagrams"
+FLOW_WIDTH_RE = re.compile(r'<svg[^>]*\swidth="(\d+)pt"')
+#: GitHub renders README/docs images inside an ~896 CSS-px column and only ever
+#: scales them down. Graphviz emits points (1pt = 4/3px), so an artifact wider
+#: than this is shrunk, taking its 11pt labels below 10px with it. The bound is
+#: the width at which that floor is hit: 896 / (11 * 4/3) * 11 ~= 985pt.
+FLOW_MAX_WIDTH_PT = 985
+FLOW_README_COLUMN_PX = 896
 MERMAID_CLI = "@mermaid-js/mermaid-cli@11.4.1"
 SVG_OPEN_RE = re.compile(r"<svg\b([^>]*)>")
 HASH_RE = re.compile(r'data-source-sha256="([0-9a-f]{64})"')
@@ -204,8 +220,41 @@ def _render_terminal_svg(source: Path) -> str:
     )
 
 
+def _render_flow_svg(source: Path) -> str:
+    """Render a flow model through the project's own ``design`` MCP server.
+
+    Graphviz prepends an XML declaration, a DOCTYPE, and a comment naming the
+    exact ``dot`` build. Dropping everything before the root element keeps the
+    committed artifact byte-stable across Graphviz upgrades, so the freshness
+    gate only fires when a diagram's own source really changed.
+    """
+    from hpe_networking_mcp.mcp_servers.design_lib.graphviz_export import export_graphviz
+    from hpe_networking_mcp.mcp_servers.design_lib.model import parse_model
+
+    raw = json.loads(source.read_text())
+    rankdir = raw.get("rankdir", "LR")
+    export = export_graphviz(
+        parse_model(raw), rankdir=rankdir, render_format="svg", flow=True
+    )
+    rendered = export.get("rendered")
+    if rendered is None:
+        raise SystemExit(
+            f"{source.name}: {export.get('render_error', 'Graphviz render failed')}"
+        )
+    svg = rendered["content"]
+    start = svg.find("<svg")
+    if start < 0:
+        raise SystemExit(f"Graphviz output for {source.name} has no <svg> root")
+    return svg[start:]
+
+
 def render() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for source in sorted(SOURCE_DIR.glob("*.json")):
+        if source.stem not in ACCESSIBILITY:
+            raise SystemExit(f"Missing accessibility metadata for {source.name}")
+        output = OUTPUT_DIR / f"{source.stem}.svg"
+        output.write_text(_decorate_svg(_render_flow_svg(source), source))
     for source in sorted(SOURCE_DIR.glob("*.mmd")):
         if source.stem not in ACCESSIBILITY:
             raise SystemExit(f"Missing accessibility metadata for {source.name}")
@@ -239,12 +288,16 @@ def render() -> None:
 
 def check() -> None:
     errors: list[str] = []
+    flow_sources = sorted(SOURCE_DIR.glob("*.json"))
     mermaid_sources = sorted(SOURCE_DIR.glob("*.mmd"))
     terminal_sources = sorted(SOURCE_DIR.glob("*.term"))
-    stem_overlap = {s.stem for s in mermaid_sources} & {s.stem for s in terminal_sources}
-    if stem_overlap:
-        errors.append(f"diagram source stem collision between .mmd and .term: {sorted(stem_overlap)}")
-    sources = mermaid_sources + terminal_sources
+    by_stem: dict[str, list[str]] = {}
+    for source in (*flow_sources, *mermaid_sources, *terminal_sources):
+        by_stem.setdefault(source.stem, []).append(source.name)
+    collisions = {stem: names for stem, names in sorted(by_stem.items()) if len(names) > 1}
+    if collisions:
+        errors.append(f"diagram sources collide on one output name: {collisions}")
+    sources = flow_sources + mermaid_sources + terminal_sources
     expected_outputs = {f"{source.stem}.svg" for source in sources}
     actual_outputs = {path.name for path in OUTPUT_DIR.glob("*.svg")}
     if expected_outputs != actual_outputs:
@@ -253,6 +306,7 @@ def check() -> None:
             f"actual={sorted(actual_outputs)}"
         )
     terminal_stems = {s.stem for s in terminal_sources}
+    flow_stems = {s.stem for s in flow_sources}
     for source in sources:
         output = OUTPUT_DIR / f"{source.stem}.svg"
         if not output.exists():
@@ -274,6 +328,17 @@ def check() -> None:
             for marker in ('width="100%"', "viewBox="):
                 if marker not in svg:
                     errors.append(f"{output.relative_to(ROOT)} is not responsive; missing {marker}")
+        if source.stem in flow_stems:
+            width = FLOW_WIDTH_RE.search(svg)
+            if width is None:
+                errors.append(f"{output.relative_to(ROOT)} has no intrinsic width")
+            elif int(width.group(1)) > FLOW_MAX_WIDTH_PT:
+                errors.append(
+                    f"{output.relative_to(ROOT)} is {width.group(1)}pt wide; over "
+                    f"{FLOW_MAX_WIDTH_PT}pt a {FLOW_README_COLUMN_PX}px README column "
+                    "scales the label text below 10px. Set \"rankdir\" to the other "
+                    f"axis in {source.relative_to(ROOT)}."
+                )
     if errors:
         raise SystemExit("\n".join(errors))
 

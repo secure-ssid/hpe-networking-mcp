@@ -108,7 +108,7 @@ HPE_MCP_TOOLSETS=central,glp,rag
 | Need to rebuild the tool catalog | — | `uv run python scripts/ingest_tools.py` | Router catalog reflects the currently enabled toolsets/products |
 | Need optional products in the catalog | `HPE_MCP_PRODUCTS` | `uv run python scripts/ingest_tools.py --products clearpass,mist` | `find_tool` can locate the selected optional product tools |
 | `find_tool` cannot locate an expected optional product tool | `HPE_MCP_PRODUCTS` matches the products the catalog was built with | Rebuild the catalog with the same `--products` list | `find_tool` returns the expected tool |
-| Release validation expects the full read-write catalog (6,726 tools) | Stale access-profile, write-gate, product, or generated-tool environment values | `uv run python scripts/ingest_tools.py --complete-catalog` | Catalog rebuilds under the canonical pinned environment at the full read-write tool count (the validate-release tool-catalog floor is a REST/OpenAPI platform API compatibility floor of 6,711, not the exact complete-catalog count) |
+| Release validation expects the full read-write catalog (6,727 tools) | Stale access-profile, write-gate, product, or generated-tool environment values | `uv run python scripts/ingest_tools.py --complete-catalog` | Catalog rebuilds under the canonical pinned environment at the full read-write tool count (the validate-release tool-catalog floor is a REST/OpenAPI platform API compatibility floor of 6,711, not the exact complete-catalog count) |
 
 First useful call, once the catalog is built:
 

@@ -1,0 +1,77 @@
+{
+  "title": "Choosing and protecting a transport",
+  "rankdir": "LR",
+  "nodes": [
+    {
+      "id": "client",
+      "label": "MCP client"
+    },
+    {
+      "id": "choice",
+      "label": "Transport",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "stdio",
+      "label": "stdio\nclient launches router"
+    },
+    {
+      "id": "local",
+      "label": "Local HTTP\n127.0.0.1:8010"
+    },
+    {
+      "id": "remote",
+      "label": "Non-loopback HTTP"
+    },
+    {
+      "id": "guard",
+      "label": "Required protection\nhost allow-list + bearer token"
+    },
+    {
+      "id": "router",
+      "label": "hpe-networking-mcp",
+      "extra": {
+        "shape": "terminal"
+      }
+    }
+  ],
+  "links": [
+    {
+      "source": "client",
+      "target": "choice"
+    },
+    {
+      "source": "choice",
+      "target": "stdio",
+      "label": "stdio"
+    },
+    {
+      "source": "stdio",
+      "target": "router"
+    },
+    {
+      "source": "choice",
+      "target": "local",
+      "label": "same host"
+    },
+    {
+      "source": "local",
+      "target": "router"
+    },
+    {
+      "source": "choice",
+      "target": "remote",
+      "label": "another host"
+    },
+    {
+      "source": "remote",
+      "target": "guard"
+    },
+    {
+      "source": "guard",
+      "target": "router"
+    }
+  ]
+}

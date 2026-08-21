@@ -1,0 +1,164 @@
+{
+  "title": "Which optional product to enable",
+  "rankdir": "LR",
+  "nodes": [
+    {
+      "id": "goal",
+      "label": "What do you\nneed?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "campus",
+      "label": "Access, assurance,\nfabric, or migration"
+    },
+    {
+      "id": "operations",
+      "label": "Operations, experience,\nor cloud policy"
+    },
+    {
+      "id": "nac",
+      "label": "Access control / NAC"
+    },
+    {
+      "id": "assurance",
+      "label": "Wireless / WAN assurance"
+    },
+    {
+      "id": "fabric",
+      "label": "Data-center fabric"
+    },
+    {
+      "id": "migrate",
+      "label": "Controller migration"
+    },
+    {
+      "id": "sdwan",
+      "label": "SD-WAN operations"
+    },
+    {
+      "id": "experience",
+      "label": "Synthetic experience"
+    },
+    {
+      "id": "cloud",
+      "label": "Cloud access policy"
+    },
+    {
+      "id": "clearpass",
+      "label": "ClearPass",
+      "extra": {
+        "shape": "terminal"
+      }
+    },
+    {
+      "id": "mist",
+      "label": "Juniper Mist",
+      "extra": {
+        "shape": "terminal"
+      }
+    },
+    {
+      "id": "apstra",
+      "label": "Apstra",
+      "extra": {
+        "shape": "terminal"
+      }
+    },
+    {
+      "id": "aos8",
+      "label": "ArubaOS 8",
+      "extra": {
+        "shape": "terminal"
+      }
+    },
+    {
+      "id": "edge",
+      "label": "EdgeConnect",
+      "extra": {
+        "shape": "terminal"
+      }
+    },
+    {
+      "id": "uxi",
+      "label": "HPE Aruba UXI",
+      "extra": {
+        "shape": "terminal"
+      }
+    },
+    {
+      "id": "axis",
+      "label": "Axis Atmos Cloud",
+      "extra": {
+        "shape": "terminal"
+      }
+    }
+  ],
+  "links": [
+    {
+      "source": "goal",
+      "target": "campus"
+    },
+    {
+      "source": "goal",
+      "target": "operations"
+    },
+    {
+      "source": "campus",
+      "target": "nac"
+    },
+    {
+      "source": "nac",
+      "target": "clearpass"
+    },
+    {
+      "source": "campus",
+      "target": "assurance"
+    },
+    {
+      "source": "assurance",
+      "target": "mist"
+    },
+    {
+      "source": "campus",
+      "target": "fabric"
+    },
+    {
+      "source": "fabric",
+      "target": "apstra"
+    },
+    {
+      "source": "campus",
+      "target": "migrate"
+    },
+    {
+      "source": "migrate",
+      "target": "aos8"
+    },
+    {
+      "source": "operations",
+      "target": "sdwan"
+    },
+    {
+      "source": "sdwan",
+      "target": "edge"
+    },
+    {
+      "source": "operations",
+      "target": "experience"
+    },
+    {
+      "source": "experience",
+      "target": "uxi"
+    },
+    {
+      "source": "operations",
+      "target": "cloud"
+    },
+    {
+      "source": "cloud",
+      "target": "axis"
+    }
+  ]
+}

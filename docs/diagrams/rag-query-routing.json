@@ -1,0 +1,83 @@
+{
+  "title": "How a question routes to the right tool",
+  "rankdir": "TB",
+  "nodes": [
+    {
+      "id": "q",
+      "label": "User question"
+    },
+    {
+      "id": "api",
+      "label": "Exact API / enum\n/ path?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "cve",
+      "label": "CVE or\nadvisory ID?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "live",
+      "label": "Live device or\ntenant state?",
+      "extra": {
+        "shape": "decision"
+      }
+    },
+    {
+      "id": "lookup",
+      "label": "lookup_api\nspecs.sqlite"
+    },
+    {
+      "id": "advisory",
+      "label": "lookup_advisory"
+    },
+    {
+      "id": "docs",
+      "label": "ask_docs / search_docs\ndocs.lance"
+    },
+    {
+      "id": "tool",
+      "label": "find_tool then\ninvoke_read_tool"
+    }
+  ],
+  "links": [
+    {
+      "source": "q",
+      "target": "api"
+    },
+    {
+      "source": "api",
+      "target": "lookup",
+      "label": "yes"
+    },
+    {
+      "source": "api",
+      "target": "cve",
+      "label": "no"
+    },
+    {
+      "source": "cve",
+      "target": "advisory",
+      "label": "yes"
+    },
+    {
+      "source": "cve",
+      "target": "live",
+      "label": "no"
+    },
+    {
+      "source": "live",
+      "target": "docs",
+      "label": "no"
+    },
+    {
+      "source": "live",
+      "target": "tool",
+      "label": "yes"
+    }
+  ]
+}

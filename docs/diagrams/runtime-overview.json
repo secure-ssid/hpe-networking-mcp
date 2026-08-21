@@ -1,0 +1,26 @@
+{
+  "title": "hpe-networking-mcp runtime overview",
+  "rankdir": "LR",
+  "nodes": [
+    { "id": "user", "label": "User / operator" },
+    { "id": "client", "label": "MCP client" },
+    { "id": "router", "label": "Low-token router\n3-tool minimal surface" },
+    { "id": "catalog", "label": "Tool catalog\nlocal index", "extra": { "shape": "store" } },
+    { "id": "core", "label": "Central / GLP / RAG" },
+    { "id": "streaming", "label": "Central Streaming WSS" },
+    { "id": "optional", "label": "Optional products" },
+    { "id": "indexes", "label": "LanceDB + SQLite", "extra": { "shape": "store" } },
+    { "id": "apis", "label": "Vendor REST APIs", "extra": { "shape": "terminal" } }
+  ],
+  "links": [
+    { "source": "user", "target": "client" },
+    { "source": "client", "target": "router" },
+    { "source": "router", "target": "catalog" },
+    { "source": "router", "target": "core" },
+    { "source": "router", "target": "optional" },
+    { "source": "core", "target": "indexes" },
+    { "source": "core", "target": "apis" },
+    { "source": "core", "target": "streaming" },
+    { "source": "optional", "target": "apis" }
+  ]
+}
