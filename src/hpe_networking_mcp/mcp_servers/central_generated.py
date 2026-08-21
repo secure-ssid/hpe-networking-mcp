@@ -16,7 +16,7 @@ Design notes:
   hand-tuned Central tools.
 * Reads (GET/HEAD) execute directly and are response-bounded.
 * Writes (POST/PUT/PATCH/DELETE) run behind the Central write gate
-  (``HPE_MCP_CENTRAL_WRITES``, default enabled) and every generated write
+  (``HPE_MCP_CENTRAL_WRITES``, denied by default) and every generated write
   defaults to ``dry_run=True`` and requires ``confirm=True`` to execute.
 * JSON, ``application/x-www-form-urlencoded``, ``multipart/form-data`` and raw
   bodies are all supported, chosen from the manifest's declared content type.
@@ -52,8 +52,7 @@ _CENTRAL_ALLOWED_PREFIXES: tuple[str, ...] = ("/network-config/",)
 _EXECUTE_HINT = (
     "Re-run with dry_run=False and confirm=True to execute this Central write "
     "(requires HPE_MCP_ACCESS_PROFILE=full-read-write or "
-    "HPE_MCP_ACCESS_PROFILE=custom; Central writes default to enabled under "
-    "custom and HPE_MCP_CENTRAL_WRITES=0 opts out)."
+    "HPE_MCP_ACCESS_PROFILE=custom with HPE_MCP_CENTRAL_WRITES=1)."
 )
 
 # Auth header/cookie names that must never be forwarded from model-supplied

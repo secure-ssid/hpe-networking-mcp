@@ -1724,8 +1724,8 @@ def execute_config_health_remediation(
     result["chunks_failed"] and each chunk's "error"). dry_run=True
     (default) returns the chunk plan with no network calls. Set
     dry_run=False and confirm=True to execute — requires full-read-write or
-    custom access; Central writes default to enabled under custom and
-    HPE_MCP_CENTRAL_WRITES=0 opts out. After each successful chunk,
+    custom access with HPE_MCP_CENTRAL_WRITES=1 (Central writes are denied by
+    default). After each successful chunk,
     get_device_config_issues is read back for every serial in that chunk;
     resync is asynchronous device-side, so a read_back entry may still show
     the prior issue if the device has not yet reported back — re-run

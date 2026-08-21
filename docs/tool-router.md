@@ -126,7 +126,7 @@ compact shape attached to router-dispatched write responses (see
 {
   "platform": "central",
   "capability": "write",
-  "gate": {"env_var": "HPE_MCP_CENTRAL_WRITES", "state": "enabled", "source": "platform_default"},
+  "gate": {"env_var": "HPE_MCP_CENTRAL_WRITES", "state": "enabled", "source": "platform_override"},
   "dry_run": {"supported": true, "state": "default_preview"},
   "confirm": {"supported": true, "required": true},
   "idempotent": true,
@@ -354,9 +354,9 @@ fully read-only while `HPE_MCP_READONLY` is set.
 <div class="docs-callout docs-callout--warning" markdown="1">
 <h3>Per-platform write gates</h3>
 
-Under `custom`, Central defaults to writes **enabled**
-(`HPE_MCP_CENTRAL_WRITES=0` opts out), while GLP defaults to writes
-**disabled** (`HPE_MCP_GLP_V2BETA1_WRITES=1` opts in). A blocked GLP write
+Under `custom`, Central defaults to writes **disabled**
+(`HPE_MCP_CENTRAL_WRITES=1` opts in), as does GLP
+(`HPE_MCP_GLP_V2BETA1_WRITES=1` opts in). A blocked GLP write
 looks like this:
 
 ```json

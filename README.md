@@ -96,9 +96,17 @@ first query both need network access.
 - `invoke_read_tool` blocks any backend tool that is not annotated read-only.
 - `invoke_tool` is deliberately marked destructive because it can also dispatch write/destructive backend tools — use it only when a write is intended.
 - Use `dry_run=True` first when supported; real execution then requires either `confirm=True` or MCP elicitation, depending on the tool schema.
-- `HPE_MCP_ACCESS_PROFILE=custom` preserves the current per-platform behavior; use `safe-read-only` to block every write or `full-read-write` to enable ordinary writes on every loaded platform.
+- Writes are opt-in on every platform, Central included: under the default `HPE_MCP_ACCESS_PROFILE=custom` each platform's write gate stays closed until you set it. Use `safe-read-only` to block every write regardless of the per-platform gates, or `full-read-write` to enable ordinary writes on every loaded platform.
 - Full read/write mode does not bypass dry-run, confirmation, elicitation, or dedicated safeguards such as the separate AOS8 rollback gate.
 - Credentials stay in `config/credentials.yaml` or environment variables and are never committed.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `HPE_MCP_ACCESS_PROFILE` | `custom` | `safe-read-only` denies all writes; `full-read-write` allows all; `custom` uses per-platform gates below |
+| `HPE_MCP_<PLATFORM>_WRITES` | `0` | Set `1` to expose that platform's write **and destructive** tools |
+
+Destructive operations (`reboot_device`, `disconnect_client`) are gated by the
+same flag as writes — there is no separate "operational" tier that bypasses it.
 
 See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write-safety model.
 

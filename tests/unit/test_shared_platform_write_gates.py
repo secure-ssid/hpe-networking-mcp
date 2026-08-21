@@ -1,7 +1,7 @@
 """Unit tests for the per-platform write-gate helpers in hpe_networking_mcp.mcp_servers.shared.
 
 Covers:
-- The custom compatibility profile preserves Central's historical default.
+- The custom profile leaves Central's gate closed until HPE_MCP_CENTRAL_WRITES is set.
 - GLP defaults disabled (preserves the historical fail-closed behavior).
 - Safe-read-only blocks every platform; full-read-write opens every platform.
 - The optional-product backends fall back to HPE_MCP_PRODUCT_ACCESS

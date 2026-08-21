@@ -246,7 +246,7 @@ class TestStandaloneGateReadonly:
         import hpe_networking_mcp.mcp_servers.shared as sh
 
         return _GateMCP(
-            "central-config",  # central: writes enabled by default
+            "central-config",  # resolves to the central platform gate; tests open it explicitly
             {
                 "r": _GateTool(sh.READ_ONLY),
                 "w": _GateTool(sh.DESTRUCTIVE),
