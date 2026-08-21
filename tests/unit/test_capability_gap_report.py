@@ -13,6 +13,11 @@ class _FakePath:
         return self._content
 
 
+# The totals below are typed by hand on purpose. Their only other possible
+# source is docs/capability-gap-matrix.md, which is rendered from these same
+# counts -- deriving them from it would compare the code against itself and
+# assert nothing. A changed annotation must cost a human one conscious
+# re-type here, and that edit is the moment to regenerate the report.
 def test_capability_report_counts_and_classification_are_deterministic():
     first = report_capability_gaps.render_report()
     second = report_capability_gaps.render_report()
@@ -47,3 +52,26 @@ def test_capability_report_detects_stale_or_missing_output():
         _FakePath(exists=True, content=rendered + "\nstale"), rendered
     )
     assert not report_capability_gaps.check_report(_FakePath(exists=False), rendered)
+
+
+def test_the_committed_matrix_file_is_not_stale():
+    """Counts nobody wrote to disk are counts nobody reads.
+
+    The test above pins code to counts and the test above that pins the
+    checker's behaviour against a fake path. Neither looks at the report
+    actually committed, so the cheapest way to green a changed annotation --
+    re-type the literal, skip `--write` -- left the published matrix stating
+    a number the code contradicts, and every doc pinned to that matrix by
+    tests/unit/test_docs_capability_totals_consistency.py agreeing with the
+    stale value. `scripts/validate_release.py` runs `--check`, but it runs
+    the unit suite first, so the suite has to be able to say this itself.
+    """
+    rendered = report_capability_gaps.render_report()
+
+    assert report_capability_gaps.check_report(
+        report_capability_gaps.REPORT_PATH, rendered
+    ), (
+        f"{report_capability_gaps.REPORT_PATH.name} no longer matches what the "
+        "committed code renders; regenerate it with "
+        "`python3 scripts/report_capability_gaps.py --write`"
+    )
