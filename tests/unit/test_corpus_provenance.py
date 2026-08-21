@@ -179,6 +179,49 @@ class TestMalformedManifestDegrades:
         assert api_specs["available"] is True
         assert api_specs["files_missing"] == ["gone.json"]
 
+    def test_a_declared_file_absent_from_disk_carries_its_own_remedy(self, empty_corpus):
+        """The third absence is a restore, and must not be read as a rebuild.
+
+        A partly restored corpus still answers, so the only remedy in the
+        response used to be ``index.remedy`` -- which sends the operator to
+        rebuild an index over documents that are not there. The two states
+        are separate facts and get separate instructions.
+        """
+        (empty_corpus / "kept.json").write_text("{}")
+        (empty_corpus / specs_index.VENDOR_MANIFEST_NAME).write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "specs": [
+                        {"file": "kept.json", "path_count": 3, "license": "MIT"},
+                        {"file": "gone.json", "path_count": 1, "license": "MIT"},
+                    ],
+                }
+            )
+        )
+
+        api_specs = rag.corpus_provenance()["api_specs"]
+
+        assert api_specs["files_missing"] == ["gone.json"]
+        assert api_specs["remedy"] == rag.VENDOR_FILES_MISSING_REMEDY
+        assert api_specs["remedy"] != rag.VENDOR_CORPUS_REMEDY
+        assert api_specs["remedy"] != api_specs["index"].get("remedy")
+        assert "git checkout" in api_specs["remedy"]
+        assert "MANIFEST.json" in api_specs["remedy"]
+        # A restore, not a scrape: no fetch command may appear here.
+        assert "vendor_openapi_corpus.py" not in api_specs["remedy"]
+        assert "ingest_docs.py" not in api_specs["remedy"]
+
+    def test_a_complete_corpus_carries_no_remedy_at_all(self):
+        """``available`` is not a completeness claim, so ``files_missing`` is
+        always reported -- but a remedy appears only when there is something
+        to remedy, or it stops meaning anything."""
+        api_specs = rag.corpus_provenance()["api_specs"]
+
+        assert api_specs["available"] is True
+        assert api_specs["files_missing"] == []
+        assert "remedy" not in api_specs
+
 
 class TestDetailIsOptIn:
     """A model-facing tool pays for every token it returns by default."""
