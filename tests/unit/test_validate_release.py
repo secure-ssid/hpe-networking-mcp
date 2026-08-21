@@ -350,6 +350,50 @@ def test_strict_tool_index_alone_does_not_demand_unbuildable_artifacts(monkeypat
     assert not any("--require-indexes" in item for item in flattened)
 
 
+def test_strict_index_facts_demands_the_offline_openapi_counts(monkeypatch):
+    """The half of strict mode a corpus-free job can hold to.
+
+    ``data/specs.sqlite`` rebuilds offline from the committed
+    ``vendor/openapi`` corpus, so requiring it costs nothing and closes the
+    hole the release workflow ran in for real: with the index built after
+    validation instead of before, ``indexes.offline_derivable.*`` was skipped
+    as "not built" and the published endpoint/schema/field counts were never
+    compared with the database the release then shipped.
+    """
+    commands = _recorded_commands(
+        monkeypatch,
+        [
+            "--skip-tests",
+            "--skip-rag",
+            "--strict-tool-index",
+            "--strict-index-facts",
+            "--min-tools",
+            "1",
+        ],
+    )
+    facts = next(item for item in (" ".join(c) for c in commands) if "project_facts.py" in item)
+
+    assert "--require-indexes" in facts
+    # Still no --strict-rag: the scraped prose corpus stays optional.
+    assert any("--allow-missing-artifacts" in " ".join(c) for c in commands)
+
+
+def test_strict_index_facts_cannot_be_silently_dropped(monkeypatch):
+    """Its opposite must fail loudly, never win by ordering."""
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["validate_release.py", "--strict-index-facts", "--ignore-index-facts"],
+    )
+
+    try:
+        validate_release.main()
+    except SystemExit as exc:
+        assert "--strict-index-facts cannot be combined with --ignore-index-facts" in str(exc)
+    else:
+        raise AssertionError("expected SystemExit")
+
+
 def test_ignore_index_facts_never_contradicts_require_indexes(monkeypatch):
     """``--ignore-index-facts`` must win, not be appended alongside its opposite."""
     commands = _recorded_commands(
