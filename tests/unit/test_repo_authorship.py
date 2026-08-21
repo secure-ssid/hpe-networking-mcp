@@ -50,11 +50,19 @@ _AGENT_MARKERS = (
     "noreply@github.com",
 )
 
-_COAUTHOR = re.compile(rb"(?im)^[ \t]*co-authored-by:[ \t]*(?P<identity>.+?)[ \t]*$")
+#: GitHub only credits a co-author when the trailer carries an address it can
+#: resolve to an account -- ``Co-authored-by: Name <name@example.com>``. Both
+#: patterns therefore require the angle-bracketed address, so prose that merely
+#: names the trailer (this repository documents its own authorship policy)
+#: cannot be mistaken for one. Verified against commit 4a91c4d, whose body
+#: line-wrapped the token to the start of a line: GitHub added no co-author.
+_IDENTITY = rb"(?P<identity>[^\r\n]*?<[^>@\s]+@[^>\s]+>)"
+
+_COAUTHOR = re.compile(rb"(?im)^[ \t]*co-authored-by:[ \t]*" + _IDENTITY + rb"[ \t]*$")
 
 #: Some commits store escaped ``\n`` literals instead of real newlines, so a
 #: trailer can hide mid-line where the anchored pattern above cannot see it.
-_ESCAPED_COAUTHOR = re.compile(rb"(?i)\\n[ \t]*co-authored-by:[ \t]*(?P<identity>[^\\\r\n]+)")
+_ESCAPED_COAUTHOR = re.compile(rb"(?i)\\n[ \t]*co-authored-by:[ \t]*" + _IDENTITY)
 
 
 def _git_bytes(*args: str) -> bytes:
@@ -152,3 +160,47 @@ def test_no_commit_message_co_credits_an_agent():
         "Co-authored-by trailers name an automated identity, which GitHub "
         f"counts as a contributor: {offenders}"
     )
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
+        b"work\n\nCo-authored-by: Claude <noreply@anthropic.com>\n",
+        b"escaped\\nCo-authored-by: some-bot[bot] <bot@github.com>\\n",
+    ],
+)
+def test_a_real_agent_trailer_is_caught(body):
+    """A trailer GitHub can resolve to an agent account must still fail the guard."""
+    matches = [
+        match.group("identity").decode()
+        for pattern in (_COAUTHOR, _ESCAPED_COAUTHOR)
+        for match in pattern.finditer(body)
+    ]
+
+    assert matches, f"no trailer detected in {body!r}"
+    assert any(_is_agent(identity) for identity in matches)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"Commits carry no\nCo-authored-by: Copilot trailer, and the API lists one user.\n",
+        b"Document the Co-authored-by: Copilot policy in CONTRIBUTING.md",
+    ],
+)
+def test_prose_naming_the_trailer_is_not_an_offender(body):
+    """Prose about authorship must not fail the repository that documents it.
+
+    GitHub needs an address it can resolve before it credits anyone, so a
+    sentence that merely names the trailer creates no contributor. Commit
+    4a91c4d proves it: its body wraps the token onto the start of a line and
+    GitHub still lists a single contributor.
+    """
+    matches = [
+        match.group("identity").decode()
+        for pattern in (_COAUTHOR, _ESCAPED_COAUTHOR)
+        for match in pattern.finditer(body)
+    ]
+
+    assert matches == []
