@@ -124,7 +124,7 @@ uv run hpe-mcp-doctor
 uv run pytest tests/unit -q
 
 # Run the full local release gate
-uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6708
+uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6708
 ```
 
 The wizard can run `uv sync`, choose common Central API gateways, fill secrets
