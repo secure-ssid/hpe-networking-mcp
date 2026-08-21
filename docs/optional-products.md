@@ -243,7 +243,7 @@ to just that optional backend.
 </div>
 
 Combined with the Central/GLP/RAG surfaces, the REST/OpenAPI platform API
-backend catalog contains 3,156 read-only-annotated tools and 6,711 registered
+backend catalog contains 3,159 read-only-annotated tools and 6,711 registered
 tools, plus the one protocol-only Central Streaming tool --
 matching [`docs/capability-gap-matrix.md`](capability-gap-matrix.md)'s Total
 row, and excluding the two credential-free local backends (`design-core`,
