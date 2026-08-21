@@ -34,6 +34,10 @@ PRODUCT_SPECS_DIR = ROOT / "ingestion" / "sources" / "product_specs"
 DB_PATH = ROOT / "data" / "specs.sqlite"
 OPENAPI_MANIFEST_PATH = ROOT / "ingestion" / "openapi_registry_manifest.json"
 PRODUCT_SPECS_MANIFEST_PATH = ROOT / "ingestion" / "product_specs_manifest.json"
+# The committed offline corpus. ``ingestion/sources/`` is git-ignored scrape
+# output, so a fresh clone has no OpenAPI documents to index at all; this
+# directory ships them. See ``default_source_dirs``.
+VENDOR_OPENAPI_DIR = ROOT / "vendor" / "openapi"
 _FULL_REBUILD_COMMAND = (
     "uv run python -m hpe_networking_mcp.pipeline.clients.specs_index --rebuild-shared"
 )
@@ -302,6 +306,30 @@ def _schema_identity(
     )
 
 
+def _holds_specs(directory: Path) -> bool:
+    return directory.is_dir() and any(directory.glob("*.json"))
+
+
+def default_source_dirs() -> dict[str, Path]:
+    """The directories a default build reads, vendored corpus included.
+
+    ``ingestion/sources/openapi_specs`` is git-ignored scrape output. Absent
+    it there is nothing to index and ``lookup_api`` answers nothing on a
+    fresh clone, so the committed ``vendor/openapi`` corpus stands in. A
+    directory holding specs always wins, so a developer who has just
+    refreshed the scrape keeps reading their own output.
+
+    Both directories map to the ``openapi_specs`` source family --
+    ``_source_family_for_dir`` falls back to it for any directory not named
+    after a family, and ``openapi`` is not one -- so rows, identities and the
+    ``idx_*_source_platform_version`` indexes are identical either way.
+    """
+    dirs = dict(_DEFAULT_SOURCE_DIRS)
+    if not _holds_specs(dirs["openapi_specs"]) and _holds_specs(VENDOR_OPENAPI_DIR):
+        dirs["openapi_specs"] = VENDOR_OPENAPI_DIR
+    return dirs
+
+
 def _coerce_source_dirs(
     specs_dir: Path | None,
     source_dirs: dict[str, Path] | None,
@@ -310,7 +338,7 @@ def _coerce_source_dirs(
         return dict(source_dirs)
     if specs_dir is not None:
         return {_source_family_for_dir(specs_dir): specs_dir}
-    return dict(_DEFAULT_SOURCE_DIRS)
+    return default_source_dirs()
 
 
 def connect(db_path: Path = DB_PATH, *, create: bool = False) -> sqlite3.Connection:
