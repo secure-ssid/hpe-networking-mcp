@@ -484,7 +484,7 @@ check [troubleshooting.md](troubleshooting.md) for the matching fix.
 python3 scripts/setup_wizard.py --yes --skip-credentials --skip-catalog
 uv run hpe-mcp-doctor
 uv run pytest tests/unit -q
-uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6708
+uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6708
 ```
 
 `--min-tools 6708` is the platform API compatibility floor (the
@@ -493,6 +493,11 @@ total of 6,722, which also includes the protocol-only Central Streaming tool,
 the local GLP preflight diagnostic, and credential-free local tools —
 validation passes at or above the floor. See
 [tool-catalog.md](tool-catalog.md) for both totals.
+
+Add `--strict-rag` only if you have built the local prose corpus with
+`ingestion/ingest_docs.py`. That corpus is scraped vendor documentation, is
+never a release asset, and is absent from a clean checkout, so CI does not
+assert it either. See [release-indexes.md](release-indexes.md).
 
 `scripts/doctor.py` is a non-mutating local setup diagnostic. It checks Python
 modules, credentials/config paths, local stdio/HTTP MCP config copies, local

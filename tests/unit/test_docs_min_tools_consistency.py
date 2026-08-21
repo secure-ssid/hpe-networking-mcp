@@ -1,7 +1,7 @@
 """Guard against the documented ``--min-tools`` floor value drifting.
 
-``scripts/validate_release.py --catalog-products all --strict-rag
---strict-tool-index --min-tools <N>`` is the release gate every current doc
+``scripts/validate_release.py --catalog-products all --strict-tool-index
+--min-tools <N>`` is the release gate every current doc
 (README, CONTRIBUTING, docs/README, getting-started) copy/pastes as the
 "validate the complete backend catalog" example. ``<N>`` is a platform API
 backend *compatibility floor* -- the minimum acceptable tool count, checked
@@ -45,7 +45,7 @@ EXPECTED_MIN_TOOLS_FLOOR = TRACKED["tools"]["platform_backend_total"]
 COMPLETE_BACKEND_TOTAL = TRACKED["tools"]["registered_total"]
 
 _COMMAND_PATTERN = re.compile(
-    r"--catalog-products all --strict-rag --strict-tool-index --min-tools (\d+)"
+    r"--catalog-products all --strict-tool-index --min-tools (\d+)"
 )
 
 #: The required disambiguating label, as committed in every doc that ships
@@ -143,7 +143,7 @@ def test_current_docs_referencing_min_tools_use_the_complete_catalog_form():
     """Any current doc mentioning --min-tools uses the command or the label.
 
     Catches a doc that adds a bare ``--min-tools N`` example without the
-    accompanying ``--catalog-products all --strict-rag --strict-tool-index``
+    accompanying ``--catalog-products all --strict-tool-index``
     flags, which would otherwise silently skip the check above. The inline
     floor label checked above is the only other permitted form.
     """
@@ -155,8 +155,8 @@ def test_current_docs_referencing_min_tools_use_the_complete_catalog_form():
         label_matches = _LABEL_PATTERN.findall(text)
         assert len(bare_matches) == len(full_matches) + len(label_matches), (
             f"{path.relative_to(REPO_ROOT)} has a --min-tools mention that is "
-            "neither the full --catalog-products all --strict-rag "
-            "--strict-tool-index command nor the documented platform API "
+            "neither the full --catalog-products all --strict-tool-index "
+            "command nor the documented platform API "
             "compatibility floor label; add one of those forms or update "
             "this test."
         )

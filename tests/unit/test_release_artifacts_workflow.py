@@ -107,18 +107,28 @@ class TestActionPinning:
 
 
 class TestReleaseBehavior:
-    def test_restores_repository_pinned_indexes_and_runs_strict_validation(self):
+    def test_rebuilds_the_tool_index_and_runs_strict_validation(self):
         runs = _run_steps(_load(RELEASE_WORKFLOW))
 
-        assert any(
-            "scripts/download_indexes.py" in run
-            and "--manifest .github/index-bundle.json" in run
-            for run in runs
-        )
+        # The tool index and API-spec database are rebuilt from OpenAPI specs
+        # committed here, so the release gate needs no downloaded bundle.
+        assert any("scripts/ingest_tools.py" in run for run in runs)
         strict = next(run for run in runs if "scripts/validate_release.py" in run)
-        assert "--strict-rag" in strict
         assert "--strict-tool-index" in strict
         assert "--skip-tests" not in strict
+
+    def test_release_never_ships_the_scraped_prose_corpus(self):
+        """data/docs.lance is scraped vendor documentation, not ours to publish.
+
+        The release must neither restore an index bundle nor assert
+        ``--strict-rag`` against a corpus that is deliberately absent.
+        """
+        runs = _run_steps(_load(RELEASE_WORKFLOW))
+
+        for run in runs:
+            assert "python scripts/download_indexes.py" not in run
+            assert "--strict-rag" not in run
+            assert "rag-index" not in run
 
     def test_builds_python_and_evidence_artifacts_and_smoke_restores(self):
         runs = _run_steps(_load(RELEASE_WORKFLOW))
@@ -142,13 +152,7 @@ class TestReleaseBehavior:
         assert any("gh release upload" in run for run in runs)
         publish = next(run for run in runs if "gh release upload" in run)
         assert "dist/*.whl" in publish
-        assert "INDEX_ARCHIVE" in publish
-        assert "INDEX_LATEST" in publish
         assert "sbom.json" in publish
-
-        subjects = next(run for run in runs if "release-subject-checksums.txt" in run)
-        assert "INDEX_ARCHIVE" not in subjects
-        assert "INDEX_LATEST" not in subjects
 
     def test_existing_draft_is_retargeted_to_validated_commit(self):
         publish = next(

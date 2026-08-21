@@ -44,7 +44,7 @@ For a complete release/index change, use:
 uv run python scripts/ingest_tools.py --complete-catalog
 uv run python scripts/package_indexes.py --write-local-manifests
 uv run python scripts/project_facts.py --write
-uv run python scripts/validate_release.py --catalog-products all --strict-rag --strict-tool-index --min-tools 6708
+uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6708
 uv run python scripts/check_openapi_drift.py
 uv run python scripts/check_mist_openapi_drift.py
 ```
