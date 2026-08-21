@@ -305,3 +305,58 @@ def test_find_tool_hint_names_the_install_not_a_rebuild() -> None:
     assert "'hint'" in line, line
     assert "pip install 'hpe-networking-mcp[ingestion]'" in line, line
     assert "scripts/ingest_tools.py" not in line, line
+
+
+#: Import names carried by an extra *other* than `ingestion`, derived from the
+#: same table the rest of this module uses so a package moving between extras
+#: moves this gate with it.
+_OUTSIDE_INGESTION = tuple(
+    sorted(mod for mod, extra in MOVED_TO_EXTRA.items() if extra != "ingestion")
+)
+
+
+def _ingest_docs(argv: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run the documented corpus build with every non-`ingestion` extra absent."""
+    return _run(
+        _blinded(*_OUTSIDE_INGESTION)
+        + "import runpy, sys;"
+        + f"sys.argv = ['ingest_docs.py', *{argv!r}];"
+        + "runpy.run_path('ingestion/ingest_docs.py', run_name='__main__')"
+    )
+
+
+@pytest.mark.slow
+def test_documented_corpus_build_runs_on_the_ingestion_extra_alone() -> None:
+    """The `ingestion` extra alone must be enough for the documented command.
+
+    README, docs/README, docs/getting-started and docs/production-deployment
+    all point an operator at
+    `uv run --extra ingestion python ingestion/ingest_docs.py`.
+    `ingest_docs` used to import
+    `pipeline.clients.redis_client` -- and through it `redis`, which lives in
+    a *different* extra -- at module scope, so that documented command died
+    with a bare `ModuleNotFoundError` before argparse ran.
+
+    Blinding every non-`ingestion` extra rather than `redis` alone makes this
+    a gate on the whole class: any future module-scope import from `redis`,
+    `tui` or a later extra fails here.
+    """
+    proc = _ingest_docs(["--dry-run"])
+
+    assert proc.returncode == 0, proc.stderr
+    assert "Dry run" in proc.stdout, proc.stdout
+
+
+@pytest.mark.slow
+def test_ingest_docs_redis_backend_names_the_extra_it_needs() -> None:
+    """The opt-in redis path fails with its install command, not a traceback.
+
+    `--backend redis` genuinely needs the `redis` extra. Deferring the import
+    is only half the fix: the refusal has to name what to install, the same
+    way an unbuilt index names how to build it.
+    """
+    proc = _ingest_docs(["--backend", "redis"])
+
+    assert proc.returncode != 0
+    assert "Traceback" not in proc.stderr, proc.stderr
+    assert "pip install 'hpe-networking-mcp[redis]'" in proc.stderr, proc.stderr

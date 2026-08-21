@@ -81,7 +81,7 @@ documentation, and republishing it is not ours to do — see
 content". Build it yourself, under your own acceptance of each vendor's terms:
 
 ```bash
-uv run python ingestion/ingest_docs.py
+uv run --extra ingestion python ingestion/ingest_docs.py
 ```
 
 Budget for it. The crawl is measured in hours, and the first RAG query

@@ -265,7 +265,7 @@ script runs (explicitly, never automatically).
   a one-command `docker run`. `lookup_api` works out of the box because the
   image ships `data/specs.sqlite`; `ask_docs` and `search_docs` need
   `data/docs.lance`, which you build yourself
-  (`uv run python ingestion/ingest_docs.py`) and mount, plus an image built
+  (`uv run --extra ingestion python ingestion/ingest_docs.py`) and mount, plus an image built
   with `--build-arg INSTALL_EXTRAS=ingestion`. Setting
   `HPE_MCP_RAG_BACKEND=redis` and starting the `redis` service is not an
   alternative route: that client is in the `redis` extra and is likewise
