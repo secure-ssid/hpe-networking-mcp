@@ -426,6 +426,32 @@ def _build_smoke_server(name: str):
     return server
 
 
+@pytest.fixture(autouse=True)
+def _reset_sse_global_shutdown_latch(monkeypatch):
+    """Neutralize sse_starlette's process-global shutdown latch.
+
+    ``sse_starlette`` arms a per-loop watcher that polls every 0.5s and, the
+    moment ANY uvicorn server's ``should_exit`` is observed, latches the
+    class-global ``AppStatus.should_exit = True`` -- and never resets it.
+    Every ``EventSourceResponse`` created afterwards then tears itself down
+    right after its response headers ("ASGI callable returned without
+    completing response"), which made any in-process server restart
+    deterministically kill its follow-up SSE responses.
+
+    These tests manage server lifecycles explicitly via ``should_exit`` and
+    task cancellation, never process signals -- exactly the condition
+    AppStatus' own docstring demands before disabling automatic drain --
+    so disable the drain for each test and clear any latch an earlier test
+    left behind. ``monkeypatch`` restores both class attributes afterward.
+    """
+    import sse_starlette.sse as sse_module
+
+    monkeypatch.setattr(sse_module.AppStatus, "should_exit", False)
+    monkeypatch.setattr(
+        sse_module.AppStatus, "enable_automatic_graceful_drain", False
+    )
+
+
 class TestRealStreamableHttpTransport:
     def test_health_and_real_mcp_round_trip_over_streamable_http(self):
         import httpx
