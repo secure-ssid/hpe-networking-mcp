@@ -61,7 +61,7 @@ def _fake_httpx(monkeypatch, captured, *, payload=None, resp_cls=None):
             return payload if payload is not None else {"ok": True}
 
     class FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -173,7 +173,7 @@ def test_read_retries_after_forced_token_refresh(monkeypatch):
             return {"ok": self.status_code == 200}
 
     class FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):

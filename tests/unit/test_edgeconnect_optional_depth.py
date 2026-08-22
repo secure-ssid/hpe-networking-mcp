@@ -28,7 +28,7 @@ class _Response:
 
 def _fake_http(monkeypatch, captured, response):
     class Client:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             captured["timeout"] = timeout
 
         async def __aenter__(self):
@@ -40,6 +40,9 @@ def _fake_http(monkeypatch, captured, response):
         async def request(self, method, url, **kwargs):
             captured.update(method=method, url=url, kwargs=kwargs)
             return response
+
+        async def get(self, url, **kwargs):
+            return await self.request("GET", url, **kwargs)
 
     monkeypatch.setattr(edgeconnect.httpx, "AsyncClient", Client)
 

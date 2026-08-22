@@ -58,6 +58,8 @@ from hpe_networking_mcp.mcp_servers.shared import (
 from hpe_networking_mcp.mcp_servers.shared import (
     platform_writes_allowed as _platform_writes_allowed,
 )
+from hpe_networking_mcp.pipeline.clients.http_retry import get_with_retry, request_read_retried
+from hpe_networking_mcp.pipeline.clients.pooled_clients import pooled_client
 
 mcp = MCPServer("uxi-core")
 
@@ -200,16 +202,16 @@ async def _uxi_access_token(client_id: str, client_secret: str, token_url: str) 
         return str(_TOKEN_CACHE["token"])
 
     await _uxi_throttle()
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.post(
-            token_url,
-            data={
-                "grant_type": "client_credentials",
-                "client_id": client_id,
-                "client_secret": client_secret,
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
+    client = pooled_client("uxi", timeout=10.0)
+    resp = await client.post(
+        token_url,
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
     payload = response_payload(resp)
     if resp.status_code >= 400:
         raise RuntimeError(
@@ -251,12 +253,13 @@ async def _uxi_get_request(
         url = f"{base_url}{safe_path}"
         clean_params = {key: value for key, value in (params or {}).items() if value is not None}
         await _uxi_throttle()
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(
-                url,
-                headers={"Authorization": "Bearer " + token, "Accept": "application/json"},
-                params=clean_params,
-            )
+        client = pooled_client("uxi")
+        resp = await get_with_retry(
+            client,
+            url,
+            headers={"Authorization": "Bearer " + token, "Accept": "application/json"},
+            params=clean_params,
+        )
         payload = response_payload(resp)
         payload = _compact_items(payload, fields)
         if bound:
@@ -327,14 +330,15 @@ async def _uxi_write_request(
         }
         if method == "PATCH":
             request_headers["Content-Type"] = "application/merge-patch+json"
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(
-                method,
-                url,
-                headers=request_headers,
-                params=params or {},
-                json=body,
-            )
+        client = pooled_client("uxi")
+        resp = await request_read_retried(
+            client,
+            method,
+            url,
+            headers=request_headers,
+            params=params or {},
+            json=body,
+        )
         return {
             "status_code": resp.status_code,
             "data": redact_sensitive(bounded_response_payload(resp)),
@@ -874,8 +878,8 @@ async def _uxi_generated_read(
         if body_error is not None:
             return body_error
         await _uxi_throttle()
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(method, url, **request_kwargs)
+        client = pooled_client("uxi")
+        resp = await request_read_retried(client, method, url, **request_kwargs)
         payload = redact_sensitive(bound_collection_response(
             bounded_response_payload(resp), limit=clamp_limit(None), offset=0
         ))
@@ -942,8 +946,8 @@ async def _uxi_generated_write(
             else:
                 kwargs["json"] = body
         await _uxi_throttle()
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(method, url, **kwargs)
+        client = pooled_client("uxi")
+        resp = await request_read_retried(client, method, url, **kwargs)
         return {
             "status_code": resp.status_code,
             "data": redact_sensitive(bounded_response_payload(resp)),
@@ -974,6 +978,7 @@ if __name__ == "__main__":
     from hpe_networking_mcp.mcp_servers._cache_hygiene import stable_list_tools
     from hpe_networking_mcp.mcp_servers._middleware import (
         NullStripMiddleware,
+        ResponseEnvelopeMiddleware,
         SecretTokenizeMiddleware,
         install_middleware,
     )
@@ -987,6 +992,7 @@ if __name__ == "__main__":
         [
             NullStripMiddleware(),
             RateLimitMiddleware(rate=5.0),
+            ResponseEnvelopeMiddleware(),
             SecretTokenizeMiddleware(),
         ],
     )

@@ -177,19 +177,24 @@ class TestFailurePathNoLeak:
             ],
         )
 
-        with pytest.raises(Exception) as excinfo:
-            _call(srv, "raiser", {"password": "hunter2-super-secret-password"})
-        # MCPServer wraps tool exceptions as ToolError(f"... {original}"), so
-        # the *wrapped* exception's message still embeds the secret --
-        # proving this regression only holds because on_error never reads
-        # str(exc), only type(exc).__name__.
-        assert "hunter2-super-secret-password" in str(excinfo.value)
+        result = _call(srv, "raiser", {"password": "hunter2-super-secret-password"})
+        # ResponseEnvelopeMiddleware.on_error substitutes the raised exception
+        # with the router-surface envelope shape (the router catches backend
+        # exceptions into the same {ok: false, ...} form). The wrapped
+        # ToolError message -- which embeds the secret -- reaches only the
+        # result payload; audit/metrics still see only type(exc).__name__.
+        assert result["ok"] is False
+        assert result["status"] == 500
 
         _assert_no_secrets(json.dumps(registry.snapshot()))
         _assert_no_secrets(audit_file.read_text())
-        record = json.loads(audit_file.read_text())
-        assert record["error_type"] == "ToolError"
-        assert record["outcome"] == "exception"
+        # Two records: the on_error "exception" record, then the substitute
+        # envelope's after_call outcome record (the same pattern unknown-tool
+        # substitutes already produce). The first carries the failure
+        # classification; neither may carry the secret.
+        records = [json.loads(line) for line in audit_file.read_text().splitlines()]
+        assert records[0]["error_type"] == "ToolError"
+        assert records[0]["outcome"] == "exception"
 
     def test_retry_exhausted_style_error_never_leaks_url_or_token(self, tmp_path, monkeypatch):
         """Simulates the shape of an error central_client would raise after
@@ -222,14 +227,15 @@ class TestFailurePathNoLeak:
             ],
         )
 
-        with pytest.raises(Exception) as excinfo:
-            _call(srv, "flaky_tool", {})
-        assert "cmcp-api-token-abcdef0123456789" in str(excinfo.value)
+        result = _call(srv, "flaky_tool", {})
+        # The envelope substitutes the exception (see above); the URL-bearing
+        # message reaches only the result payload, never audit/metrics.
+        assert result["ok"] is False
 
         _assert_no_secrets(json.dumps(registry.snapshot()))
         _assert_no_secrets(audit_file.read_text())
-        record = json.loads(audit_file.read_text())
-        assert record["error_type"] == "ToolError"
+        records = [json.loads(line) for line in audit_file.read_text().splitlines()]
+        assert records[0]["error_type"] == "ToolError"
 
     def test_cancellation_never_leaks_and_is_classified_cancelled(self, tmp_path, monkeypatch):
         monkeypatch.setenv("HPE_MCP_METRICS", "1")
@@ -254,7 +260,7 @@ class TestFailurePathNoLeak:
                 await task
             except asyncio.CancelledError as exc:
                 metrics_mw.on_error("slow_secret_tool", args, exc)
-                audit_mw.on_error("slow_secret_tool", args, exc)
+                await audit_mw.on_error("slow_secret_tool", args, exc)
 
         asyncio.run(_run())
 
@@ -285,7 +291,7 @@ class TestFailurePathNoLeak:
                 await asyncio.wait_for(slow_secret_tool(**args), timeout=0.01)
             except asyncio.TimeoutError as exc:
                 metrics_mw.on_error("slow_secret_tool", args, exc)
-                audit_mw.on_error("slow_secret_tool", args, exc)
+                await audit_mw.on_error("slow_secret_tool", args, exc)
 
         asyncio.run(_run())
 

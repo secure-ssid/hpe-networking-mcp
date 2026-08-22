@@ -53,6 +53,8 @@ from hpe_networking_mcp.mcp_servers.shared import (
 from hpe_networking_mcp.mcp_servers.shared import (
     platform_writes_allowed as _platform_writes_allowed,
 )
+from hpe_networking_mcp.pipeline.clients.http_retry import get_with_retry
+from hpe_networking_mcp.pipeline.clients.pooled_clients import pooled_client
 
 mcp = MCPServer("apstra-core")
 
@@ -318,8 +320,8 @@ async def _get_apstra_token(
             "legacy_fallback": cached["legacy_fallback"],
             "cached": True,
         }
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        result = await _apstra_login(client, base_url, username, password)
+    client = pooled_client("apstra")
+    result = await _apstra_login(client, base_url, username, password)
     if "error" in result:
         return result
     _TOKEN_CACHE[base_url] = {
@@ -365,17 +367,19 @@ async def _apstra_authenticated_request(
         return {"error": meta.get("error", "Apstra login failed"), "url": url}
 
     async def _do_request(auth_token: str) -> httpx.Response:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            request_kwargs = {
-                "headers": {"AuthToken": auth_token, "Accept": "application/json"},
-                "params": params or {},
-            }
-            if json_body is not None:
-                request_kwargs["json"] = json_body
-            method_handler = getattr(client, method.lower(), None)
-            if method_handler is not None:
-                return await method_handler(url, **request_kwargs)
-            return await client.request(method, url, **request_kwargs)
+        client = pooled_client("apstra")
+        request_kwargs = {
+            "headers": {"AuthToken": auth_token, "Accept": "application/json"},
+            "params": params or {},
+        }
+        if json_body is not None:
+            request_kwargs["json"] = json_body
+        if method.upper() == "GET" and json_body is None:
+            return await get_with_retry(client, url, **request_kwargs)
+        method_handler = getattr(client, method.lower(), None)
+        if method_handler is not None:
+            return await method_handler(url, **request_kwargs)
+        return await client.request(method, url, **request_kwargs)
 
     try:
         resp = await _do_request(token)
@@ -1100,6 +1104,7 @@ if __name__ == "__main__":
     from hpe_networking_mcp.mcp_servers._middleware import (
         NullStripMiddleware,
         RateLimitMiddleware,
+        ResponseEnvelopeMiddleware,
         SecretTokenizeMiddleware,
         install_middleware,
     )
@@ -1111,6 +1116,7 @@ if __name__ == "__main__":
         [
             NullStripMiddleware(),
             RateLimitMiddleware(rate=8.0),
+            ResponseEnvelopeMiddleware(),
             SecretTokenizeMiddleware(),
         ],
     )

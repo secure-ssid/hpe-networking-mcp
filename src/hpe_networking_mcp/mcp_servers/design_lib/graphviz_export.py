@@ -205,6 +205,28 @@ def build_flow_dot(model: DiagramModel, *, rankdir: str = "LR") -> str:
     return "\n".join(lines) + "\n"
 
 
+def _resolve_dot() -> str | None:
+    """Resolve Graphviz ``dot`` to a validated absolute path, or ``None``.
+
+    The resolved path -- never the bare program name -- is what gets spawned:
+    re-resolving through PATH at exec time (on Windows the working directory
+    is searched first) is how a writable CWD could substitute a different
+    binary between the availability check and the render.
+    """
+    resolved = shutil.which("dot")
+    if not resolved:
+        return None
+    path = Path(resolved)
+    if not path.is_absolute():
+        try:
+            path = path.resolve()
+        except OSError:
+            return None
+    if not path.is_file():
+        return None
+    return str(path)
+
+
 def export_graphviz(
     model: DiagramModel,
     *,
@@ -223,6 +245,7 @@ def export_graphviz(
     if rankdir not in {"TB", "LR", "BT", "RL"}:
         rankdir = "TB"
     dot = build_flow_dot(model, rankdir=rankdir) if flow else build_dot(model, rankdir=rankdir)
+    dot_path = _resolve_dot()
     result: dict[str, Any] = {
         "format": "graphviz",
         "filename_ext": ".dot",
@@ -231,7 +254,7 @@ def export_graphviz(
         "title": model.title,
         "node_count": len(model.nodes),
         "link_count": len(model.links),
-        "dot_available": bool(shutil.which("dot")),
+        "dot_available": dot_path is not None,
         "rendered": None,
     }
 
@@ -256,7 +279,7 @@ def export_graphviz(
         src.write_text(dot, encoding="utf-8")
         try:
             subprocess.run(
-                ["dot", f"-T{fmt}", str(src), "-o", str(out)],
+                [dot_path, f"-T{fmt}", str(src), "-o", str(out)],
                 check=True,
                 capture_output=True,
                 timeout=30,

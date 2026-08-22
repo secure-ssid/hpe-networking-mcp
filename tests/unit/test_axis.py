@@ -23,7 +23,7 @@ class _Response:
 
 def _fake_http(monkeypatch, captured, response):
     class Client:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             captured["timeout"] = timeout
 
         async def __aenter__(self):
@@ -35,6 +35,9 @@ def _fake_http(monkeypatch, captured, response):
         async def request(self, method, url, **kwargs):
             captured.update(method=method, url=url, kwargs=kwargs)
             return response
+
+        async def get(self, url, **kwargs):
+            return await self.request("GET", url, **kwargs)
 
     monkeypatch.setattr(axis.httpx, "AsyncClient", Client)
 
@@ -252,4 +255,6 @@ def test_axis_401_is_bounded_and_action_writes_require_confirmation(monkeypatch)
     out = asyncio.run(axis.axis_commit_changes(dry_run=False, confirm=True))
     assert out["status_code"] == 401
     assert "expired" in out["error"]
-    assert captured["timeout"] == 120.0
+    # Pooled clients carry a structured Timeout: the per-call value becomes the
+    # read/write/pool budget, with a separate 10s connect bound.
+    assert captured["timeout"].read == 120.0
