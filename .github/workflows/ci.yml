@@ -51,7 +51,7 @@ jobs:
       # the document parsers and the LanceDB client, and dropping them would
       # quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev --extra ingestion --extra redis
+        run: uv sync --group dev --extra ingestion --extra redis --frozen
 
       # Whole-tree, not a file list. The previous form named ~20 paths
       # explicitly, so every module added after it was written -- and every
@@ -98,7 +98,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --group dev --frozen
 
       # Scoped on purpose. `[tool.mypy]` in pyproject.toml names the exact
       # modules this covers -- the write gate and HTTP transport, the
@@ -180,7 +180,7 @@ jobs:
       # the document parsers and the LanceDB client, and dropping them would
       # quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev --extra ingestion --extra redis
+        run: uv sync --group dev --extra ingestion --extra redis --frozen
 
       # The RAG prose corpus is deliberately not published (it is scraped vendor
       # documentation), so CI cannot restore it and does not assert --strict-rag.
@@ -277,7 +277,7 @@ jobs:
       # the document parsers and the LanceDB client, and dropping them would
       # quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev --extra ingestion --extra redis
+        run: uv sync --group dev --extra ingestion --extra redis --frozen
 
       - name: Resolve RAG source inventory (offline)
         run: >-
@@ -409,7 +409,7 @@ jobs:
       # the document parsers and the LanceDB client, and dropping them would
       # quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev --extra ingestion --extra redis
+        run: uv sync --group dev --extra ingestion --extra redis --frozen
 
       - name: Check official security and lifecycle sources
         run: >-
