@@ -1,3 +1,9 @@
+---
+title: "RAG coverage matrix"
+nav_order: 4
+parent: "Reference"
+---
+
 # RAG coverage matrix
 
 This page records what the local RAG and exact-lookup indexes can answer, what

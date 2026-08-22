@@ -1,45 +1,76 @@
+---
+title: "Documentation index"
+nav_exclude: true
+---
+
 # hpe-networking-mcp documentation
 
-The GitHub Pages site is published from `main/docs` with Jekyll and the Cayman
-theme. User journeys are written in Markdown; diagrams are drawn by this
+The GitHub Pages site is published from `main/docs` with Jekyll and the
+[just-the-docs](https://just-the-docs.com/) remote theme (tag-pinned in
+`_config.yml`, so the stock `jekyll-build-pages` CI builds it unchanged).
+Sidebar navigation, search, and heading anchors come from the theme; each page
+declares its nav position with `title` / `nav_order` / `parent` frontmatter.
+User journeys are written in Markdown; diagrams are drawn by this
 project's own `design` MCP server and committed as accessible SVG files so they
 render without browser-side JavaScript.
 
 ## Start here
 
+### Guides
+
 | Doc | Use it for |
 |---|---|
 | [index.md](index.md) | Task-based front door for new users, network operators, and contributors |
 | [getting-started.md](getting-started.md) | Wizard install, credentials, optional products, MCP client setup, and indexes |
-| [production-deployment.md](production-deployment.md) | Containerized router packaging: Dockerfile, Compose overlay, secrets, and explicit prebuilt-index provisioning |
 | [mcp-client-recipes.md](mcp-client-recipes.md) | Host-first MCP setup recipes for stdio and streamable HTTP |
-| [../examples/README.md](../examples/README.md) | Tested, non-secret example configs: minimal/full stdio, local/bearer HTTP, Copilot CLI, and prompt/runbook examples |
-| [../MIGRATION.md](../MIGRATION.md) | Local migration path from the legacy `secure-ssid/centralmcp` repository |
-| [../CHANGELOG.md](../CHANGELOG.md) | Version history index into per-release notes |
+| [production-deployment.md](production-deployment.md) | Containerized router packaging: Dockerfile, Compose overlay, secrets, and explicit prebuilt-index provisioning |
 | [tool-router.md](tool-router.md) | Low-token discovery, dispatch, and write-safety behavior |
 | [example-prompts.md](example-prompts.md) | Complete scenarios with calls, expected shapes, and safety labels |
-| [troubleshooting.md](troubleshooting.md) | Outcome-driven setup, authentication, transport, catalog, and RAG fixes |
 | [optional-products.md](optional-products.md) | Optional product matrix, wizard behavior, env vars, and safety surface |
+| [troubleshooting.md](troubleshooting.md) | Outcome-driven setup, authentication, transport, catalog, and RAG fixes |
+| [../examples/README.md](../examples/README.md) | Tested, non-secret example configs: minimal/full stdio, local/bearer HTTP, Copilot CLI, and prompt/runbook examples |
+| [../MIGRATION.md](../MIGRATION.md) | Local migration path from the legacy `secure-ssid/centralmcp` repository |
+
+### Architecture
+
+| Doc | Use it for |
+|---|---|
 | [architecture/how-it-works.md](architecture/how-it-works.md) | Canonical MCP + RAG mental model: router tools, indexes vs live APIs, dry-run/gates |
 | [architecture/system-overview.md](architecture/system-overview.md) | Runtime, data, transport, and safety architecture |
+| [architecture/RAG-ARCHITECTURE.md](architecture/RAG-ARCHITECTURE.md) | Embedded RAG design, eval results, and migration rationale |
+
+### Reference
+
+| Doc | Use it for |
+|---|---|
+| [tool-catalog.md](tool-catalog.md) | Per-backend counts, capability families, build modes, and safety notes |
 | [product-workflows.md](product-workflows.md) | Typed ClearPass/Mist/Apstra/AOS8/EdgeConnect/UXI workflow roadmap |
-| [aos8-migration-contract-matrix.md](aos8-migration-contract-matrix.md) | Authoritative AOS8-to-Classic/New Central migration contract matrix gating 0.5.0 implementation |
-| [aos8-live-dryrun-evaluation.md](aos8-live-dryrun-evaluation.md) | Read-only live/fixture-backed evaluation record of the AOS8 migration pipeline against the contract matrix |
-| [release-indexes.md](release-indexes.md) | Build the tool/API indexes from committed specs, build the RAG corpus locally, and why the corpus is never released |
-| [release-notes-0.9.0.md](release-notes-0.9.0.md) | RAG corpus expansion (28 scraped sources, 262,104 chunks), ANN+metadata indexes, content-hash dedup, Docker packaging, and operator runbooks |
-| [release-notes-0.8.0.md](release-notes-0.8.0.md) | Clean repository/package rename, MCP 2 transport repair, PII protection, interop tools, GLP inventory completion, strict RAG/catalog facts, and classified drift gates |
-| [release-notes-0.7.0.md](release-notes-0.7.0.md) | Artifact/live-test gates, source lifecycle provenance, structured RAG intelligence, Central/GLP/AOS8/optional-product depth, observability/security, router automation, and release artifact automation |
 | [central-v07-workflows.md](central-v07-workflows.md) | Central v0.7 depth workflows: VSF template lifecycle, bulk site/site-collection delete, firmware-compliance campaigns, config-health remediation, troubleshooting orchestration |
+| [rag-coverage-matrix.md](rag-coverage-matrix.md) | Vendor, product, version, and document-class RAG coverage |
+| [release-indexes.md](release-indexes.md) | Build the tool/API indexes from committed specs, build the RAG corpus locally, and why the corpus is never released |
+| [capability-gap-matrix.md](capability-gap-matrix.md) | Reproducible executable-tool, generated-operation, and pinned-benchmark comparison plus ranked practical gaps |
+| [source-lifecycle-coverage.md](source-lifecycle-coverage.md) | Security/lifecycle source coverage, freshness states, and provenance pins |
+| [source-drift-gates.md](source-drift-gates.md) | Classified drift gates for vendored sources, OpenAPI registries, and RAG indexes |
 | [artifact-contracts.md](artifact-contracts.md) | Versioned/redacted artifact schemas and credential-gated live-test configuration shared by every v0.7 evaluator |
 | [release-artifact-automation.md](release-artifact-automation.md) | Validation matrix, release bundle packaging, and restore/smoke-test tooling |
-| [source-lifecycle-coverage.md](source-lifecycle-coverage.md) | Security/lifecycle source coverage, freshness states, and provenance pins |
+| [aos8-migration-contract-matrix.md](aos8-migration-contract-matrix.md) | Authoritative AOS8-to-Classic/New Central migration contract matrix gating 0.5.0 implementation |
+| [aos8-live-dryrun-evaluation.md](aos8-live-dryrun-evaluation.md) | Read-only live/fixture-backed evaluation record of the AOS8 migration pipeline against the contract matrix |
+
+### Releases and archive
+
+| Doc | Use it for |
+|---|---|
+| [release-notes-0.9.0.md](release-notes-0.9.0.md) | Current release: RAG corpus expansion (28 scraped sources, 262,104 chunks), ANN+metadata indexes, content-hash dedup, Docker packaging, and operator runbooks |
+| [release-notes-0.8.0.md](release-notes-0.8.0.md) | Clean repository/package rename, MCP 2 transport repair, PII protection, interop tools, GLP inventory completion, strict RAG/catalog facts, and classified drift gates |
+| [release-notes-0.7.0.md](release-notes-0.7.0.md) | Artifact/live-test gates, source lifecycle provenance, structured RAG intelligence, Central/GLP/AOS8/optional-product depth, observability/security, router automation, and release artifact automation |
 | [release-notes-0.6.0.md](release-notes-0.6.0.md) | Security/lifecycle RAG, expanded Central/GLP/AOS8/Axis/Mist coverage, provenance, audit logging, and migration reports |
 | [release-notes-0.5.0.md](release-notes-0.5.0.md) | Verified AOS8 migration expansion: source hardening, bounded Classic Central write lifecycle, expanded fail-closed New Central mappings, verification taxonomy, and read-only live/dry-run evaluation |
-| [release-notes-0.4.0.md](release-notes-0.4.0.md) | Complete 0.4.0 migration execution, Mist diagnostics, EdgeConnect compatibility, GLP, and Axis changes |
+| [release-notes-0.4.0.md](release-notes-0.4.0.md) | Complete 0.4.0 migration execution, Mist diagnostics, EdgeConnect compatibility, GLP, and Axis changes (historical) |
 | [release-notes-0.3.0.md](release-notes-0.3.0.md) | Prior 0.3.0 platform, migration, safety, and API-source changes (historical) |
-| [capability-gap-matrix.md](capability-gap-matrix.md) | Reproducible executable-tool, generated-operation, and pinned-benchmark comparison plus ranked practical gaps |
-| [tool-catalog.md](tool-catalog.md) | Per-backend counts, capability families, build modes, and safety notes |
-| [architecture/RAG-ARCHITECTURE.md](architecture/RAG-ARCHITECTURE.md) | Embedded RAG design, eval results, and migration rationale |
+| [../CHANGELOG.md](../CHANGELOG.md) | Version history index into per-release notes |
+| [aos8-live-lab-evaluation-0.6.md](aos8-live-lab-evaluation-0.6.md) | In-progress 0.6-era live-lab evaluation (archive) |
+| [milvus-lite-pilot.md](milvus-lite-pilot.md) | Opt-in Milvus Lite pilot, not wired into the router (archive) |
+| [session-handoff.md](session-handoff.md) | Working-session handoff notes (archive) |
 
 ## Visual asset workflow
 
@@ -76,7 +107,8 @@ identifiers and credentials; do not put customer data or secrets in diagrams,
 alt text, or metadata.
 
 Shared responsive cards, callouts, figures, badges, checkpoints, and next-step
-panels are defined in `assets/css/style.scss`.
+panels are defined in `assets/css/style.scss`, loaded after the theme via
+`_includes/head_custom.html`.
 
 ## Repo map
 

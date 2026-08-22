@@ -1,3 +1,9 @@
+---
+title: "Milvus Lite pilot"
+nav_order: 2
+parent: "Archive"
+---
+
 # Milvus Lite pilot
 
 Milvus Lite is an **opt-in pilot** and is not wired into `rag.py`, the router,

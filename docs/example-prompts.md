@@ -1,3 +1,8 @@
+---
+title: "Example prompts"
+nav_order: 5
+---
+
 # Example prompts
 
 These scenarios are written for the default low-token router profile:

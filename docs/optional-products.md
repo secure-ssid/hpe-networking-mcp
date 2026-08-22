@@ -1,3 +1,8 @@
+---
+title: "Optional products"
+nav_order: 6
+---
+
 # Optional product starters
 
 hpe-networking-mcp keeps optional products disabled by default so normal MCP sessions

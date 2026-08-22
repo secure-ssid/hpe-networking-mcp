@@ -1,3 +1,9 @@
+---
+title: "0.6.0"
+nav_order: 4
+parent: "Releases"
+---
+
 # hpe-networking-mcp 0.6.0
 
 Version 0.6.0 expands verified platform coverage, adds exact security and

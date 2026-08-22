@@ -1,3 +1,9 @@
+---
+title: "0.5.0"
+nav_order: 5
+parent: "Releases"
+---
+
 # hpe-networking-mcp 0.5.0 - verified ArubaOS 8 migration expansion
 
 Version 0.5.0 focuses entirely on ArubaOS 8 (AOS8) migration correctness: a

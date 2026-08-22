@@ -1,3 +1,8 @@
+---
+title: "Getting started"
+nav_order: 2
+---
+
 # Getting started
 
 By the end of this guide you will have a local hpe-networking-mcp clone, a verified

@@ -1,3 +1,8 @@
+---
+title: "MCP client recipes"
+nav_order: 3
+---
+
 # MCP client recipes
 
 This page assumes the low-token router profile from

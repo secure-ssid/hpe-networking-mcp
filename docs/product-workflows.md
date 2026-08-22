@@ -1,3 +1,9 @@
+---
+title: "Product workflows"
+nav_order: 2
+parent: "Reference"
+---
+
 # Typed product workflow roadmap
 
 The optional product backends remain opt-in and lab-friendly, but now cover the
