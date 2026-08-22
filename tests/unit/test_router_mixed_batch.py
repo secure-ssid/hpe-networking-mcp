@@ -142,6 +142,27 @@ class TestMixedBatchRegistration:
         for field in ("name", "arguments", "id"):
             assert f'"{field}"' in text
 
+    def test_model_bounds_name_and_id_lengths(self):
+        model = router.MixedBatchCall
+
+        with pytest.raises(Exception):
+            model(name="x" * (router.MAX_BATCH_TOOL_NAME_CHARS + 1))
+        with pytest.raises(Exception):
+            model(name="echo", id="i" * (router.MAX_BATCH_CALL_ID_CHARS + 1))
+
+    def test_model_rejects_unknown_fields(self):
+        with pytest.raises(Exception):
+            router.MixedBatchCall(name="echo", surprise=1)
+
+    def test_model_has_no_cursor_field(self):
+        assert "cursor" not in router.MixedBatchCall.model_fields
+
+    def test_model_instances_are_accepted_at_runtime(self, wired):
+        out = _mixed([router.MixedBatchCall(name="echo", arguments={"value": "hi"}, id="a")])
+
+        assert out["ok"] is True
+        assert out["results"][0]["result"]["value"] == "hi"
+
     def test_invalid_on_error_is_rejected(self, wired):
         out = _mixed([{"name": "echo"}], on_error="ignore")
 
