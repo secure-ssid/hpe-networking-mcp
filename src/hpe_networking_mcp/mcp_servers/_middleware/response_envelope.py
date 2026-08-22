@@ -7,8 +7,11 @@ small models get a reliable `ok=false` signal when something did not happen.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import Any, Callable
+
+from mcp.shared.exceptions import MCPError
 
 _BLOCKED_STATUS_HTTP = {
     "blocked": 403,
@@ -182,5 +185,20 @@ class ResponseEnvelopeMiddleware:
 
         return envelope
 
-    def on_error(self, name: str, arguments: dict[str, Any], exc: BaseException) -> None:
-        return None
+    def on_error(
+        self, name: str, arguments: dict[str, Any], exc: BaseException
+    ) -> dict[str, Any] | None:
+        """Envelope raised exceptions the same way as returned error dicts.
+
+        The router surface catches backend exceptions into ``{"error": ...}``
+        dicts which ``after_call`` then envelopes; a standalone backend needs
+        this hook for the same shape. Protocol-level errors (``MCPError``
+        subclasses such as elicitation requests) and control-flow exceptions
+        (cancellation, interpreter exit) must reach the wire untouched, so
+        they return ``None`` and keep propagating.
+        """
+        if isinstance(exc, (MCPError, asyncio.CancelledError, KeyboardInterrupt, SystemExit)):
+            return None
+        return self.after_call(
+            name, arguments, {"error": f"{type(exc).__name__}: {exc}"}
+        )

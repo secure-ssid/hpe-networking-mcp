@@ -23,7 +23,7 @@ def _make_fake_client(called: dict, response_payload):
             return response_payload
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):

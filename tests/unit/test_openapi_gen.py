@@ -798,7 +798,7 @@ def test_http_read_executor_applies_json_body(monkeypatch):
             return {"ok": True}
 
     class FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -806,6 +806,9 @@ def test_http_read_executor_applies_json_body(monkeypatch):
 
         async def __aexit__(self, *args):
             return None
+
+        async def get(self, url, **kwargs):
+            return await self.request("GET", url, **kwargs)
 
         async def request(self, method, url, **kwargs):
             captured.update(method=method, url=url, kwargs=kwargs)
@@ -885,7 +888,7 @@ def _fake_httpx(monkeypatch, captured, payload=None):
             return payload if payload is not None else {"ok": True}
 
     class FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -893,6 +896,9 @@ def _fake_httpx(monkeypatch, captured, payload=None):
 
         async def __aexit__(self, *a):
             return None
+
+        async def get(self, url, **kwargs):
+            return await self.request("GET", url, **kwargs)
 
         async def request(self, method, url, headers=None, params=None, **kw):
             captured.update(
@@ -1061,7 +1067,7 @@ def test_mist_generated_binary_download_is_bounded(monkeypatch):
             raise ValueError("not json")
 
     class FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1069,6 +1075,9 @@ def test_mist_generated_binary_download_is_bounded(monkeypatch):
 
         async def __aexit__(self, *args):
             return None
+
+        async def get(self, url, **kwargs):
+            return await self.request("GET", url, **kwargs)
 
         async def request(self, method, url, headers=None, params=None, **kwargs):
             return Resp()
@@ -1185,7 +1194,7 @@ def test_generated_write_retry_does_not_replay_post(monkeypatch):
             return {"error": "unavailable"}
 
     class Client:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1193,6 +1202,9 @@ def test_generated_write_retry_does_not_replay_post(monkeypatch):
 
         async def __aexit__(self, *args):
             return None
+
+        async def get(self, url, **kwargs):
+            return await self.request("GET", url, **kwargs)
 
         async def request(self, method, url, **kwargs):
             calls.append(method)
@@ -1242,7 +1254,7 @@ def test_generated_write_auth_refresh_does_not_replay_post(monkeypatch):
             return {"error": "unauthorized"}
 
     class Client:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1250,6 +1262,9 @@ def test_generated_write_auth_refresh_does_not_replay_post(monkeypatch):
 
         async def __aexit__(self, *args):
             return None
+
+        async def get(self, url, **kwargs):
+            return await self.request("GET", url, **kwargs)
 
         async def request(self, method, url, **kwargs):
             calls.append(method)
@@ -1311,7 +1326,7 @@ def test_generated_read_retry_honors_short_retry_after(monkeypatch):
     ]
 
     class Client:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1319,6 +1334,9 @@ def test_generated_read_retry_honors_short_retry_after(monkeypatch):
 
         async def __aexit__(self, *args):
             return None
+
+        async def get(self, url, **kwargs):
+            return await self.request("GET", url, **kwargs)
 
         async def request(self, method, url, **kwargs):
             calls.append(method)
@@ -1360,7 +1378,7 @@ def test_generated_read_does_not_retry_before_long_retry_after(monkeypatch):
             return {"error": "rate limited"}
 
     class Client:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1368,6 +1386,9 @@ def test_generated_read_does_not_retry_before_long_retry_after(monkeypatch):
 
         async def __aexit__(self, *args):
             return None
+
+        async def get(self, url, **kwargs):
+            return await self.request("GET", url, **kwargs)
 
         async def request(self, method, url, **kwargs):
             calls.append(method)

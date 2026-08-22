@@ -51,6 +51,8 @@ from hpe_networking_mcp.mcp_servers.shared import (
 from hpe_networking_mcp.mcp_servers.shared import (
     platform_writes_allowed as _platform_writes_allowed,
 )
+from hpe_networking_mcp.pipeline.clients.http_retry import get_with_retry, request_read_retried
+from hpe_networking_mcp.pipeline.clients.pooled_clients import pooled_client
 
 mcp = MCPServer("edgeconnect-core")
 
@@ -1280,8 +1282,8 @@ async def _edgeconnect_probe_path(base_url: str, token: str, header: str, path: 
     auth_value = "Bearer " + token if header.lower() == "authorization" else token
     headers = {header: auth_value, "Accept": "application/json"}
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(f"{base_url}{path}", headers=headers)
+        client = pooled_client("edgeconnect", timeout=10.0)
+        resp = await get_with_retry(client, f"{base_url}{path}", headers=headers)
         return resp.status_code
     except httpx.HTTPError as exc:
         return f"error: {type(exc).__name__}"
@@ -1367,8 +1369,8 @@ async def _edgeconnect_get(
     auth_value = "Bearer " + token if header.lower() == "authorization" else token
     headers = {header: auth_value, "Accept": "application/json"}
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(url, headers=headers, params=params or {})
+        client = pooled_client("edgeconnect")
+        resp = await get_with_retry(client, url, headers=headers, params=params or {})
         payload = response_payload(resp)
         if paginate:
             payload = bound_collection_response(payload, limit=limit, offset=offset)
@@ -2494,14 +2496,15 @@ async def edgeconnect_write(
     auth_value = "Bearer " + token if header.lower() == "authorization" else token
     headers = {header: auth_value, "Accept": "application/json"}
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(
-                method,
-                url,
-                headers=headers,
-                params=params or {},
-                json=body,
-            )
+        client = pooled_client("edgeconnect")
+        resp = await request_read_retried(
+            client,
+            method,
+            url,
+            headers=headers,
+            params=params or {},
+            json=body,
+        )
         return {
             "status_code": resp.status_code,
             "data": redact_sensitive(response_payload(resp)),
@@ -2779,8 +2782,8 @@ async def _edgeconnect_generated_request(
             kwargs["content"] = body if isinstance(body, (bytes, str)) else str(body)
             req_headers["Content-Type"] = content_type
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(method, url, **kwargs)
+        client = pooled_client("edgeconnect")
+        resp = await request_read_retried(client, method, url, **kwargs)
         return {
             "status_code": resp.status_code,
             "data": redact_sensitive(_edgeconnect_bounded_payload(resp)),
@@ -2912,6 +2915,7 @@ if __name__ == "__main__":
     from hpe_networking_mcp.mcp_servers._middleware import (
         NullStripMiddleware,
         RateLimitMiddleware,
+        ResponseEnvelopeMiddleware,
         SecretTokenizeMiddleware,
         install_middleware,
     )
@@ -2923,6 +2927,7 @@ if __name__ == "__main__":
         [
             NullStripMiddleware(),
             RateLimitMiddleware(rate=8.0),
+            ResponseEnvelopeMiddleware(),
             SecretTokenizeMiddleware(),
         ],
     )
