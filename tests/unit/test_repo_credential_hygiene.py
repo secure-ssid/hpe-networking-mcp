@@ -123,14 +123,21 @@ def test_gitignore_covers_env_backup_variants() -> None:
         ".env.local",
         ".env.production",
     ]
+    # stdin must be bytes: text=True newline-translates the input on
+    # Windows (\n -> \r\n), so git received names like ".env.local\r" and
+    # matched none of them -- a false alarm about a .gitignore that handles
+    # clean input correctly.
     result = subprocess.run(
         ["git", "check-ignore", "--stdin"],
         cwd=ROOT,
-        input="\n".join(must_be_ignored),
+        input="\n".join(must_be_ignored).encode("utf-8"),
         capture_output=True,
-        text=True,
     )
-    ignored = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+    ignored = {
+        line.strip()
+        for line in result.stdout.decode("utf-8", "replace").splitlines()
+        if line.strip()
+    }
     missing = [name for name in must_be_ignored if name not in ignored]
     assert missing == [], f".gitignore must ignore these credential paths: {missing}"
 
