@@ -1,3 +1,9 @@
+---
+title: "AOS8 0.6 live-lab evaluation"
+nav_order: 1
+parent: "Archive"
+---
+
 # AOS8 0.6 live-lab evaluation
 
 **Status:** in progress

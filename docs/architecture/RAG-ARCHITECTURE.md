@@ -1,3 +1,9 @@
+---
+title: "RAG architecture"
+nav_order: 3
+parent: "Architecture"
+---
+
 # hpe-networking-mcp — RAG Architecture & Source Provenance (updated 2026-08-20)
 
 **Repo:** https://github.com/secure-ssid/hpe-networking-mcp

@@ -1,23 +1,20 @@
+---
+title: "Home"
+nav_order: 1
+---
+
 # hpe-networking-mcp — HPE Networking MCP toolkit
 
 Low-token Model Context Protocol tooling for HPE Aruba Central, HPE GreenLake
 Platform, embedded docs/API lookup, and optional ClearPass, Mist, Apstra,
-ArubaOS 8, EdgeConnect, UXI, and Axis backends. This page is a task-based
-front door for three audiences: people trying MCP for the first time, Aruba
-network operators, and hpe-networking-mcp developers.
+ArubaOS 8, EdgeConnect, UXI, and Axis backends.
 
 ![hpe-networking-mcp banner showing 6,144 generated operations, 6,728 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
 
 Whatever backend does the work, an MCP client sees only three router tools
 under the recommended `minimal` profile — the banner's "3 minimal router
-tools" figure is the number that matters most for context budget.
-
-<figure class="docs-figure">
-  <img src="assets/diagrams/how-mcp-rag-works.svg" alt="MCP client using find_tool, invoke_read_tool, and invoke_tool to reach RAG indexes or live vendor APIs">
-  <figcaption>Three router tools. RAG answers docs/API questions locally. Live Central/GLP calls happen only after find_tool selects them.</figcaption>
-</figure>
-
-See [How MCP and RAG work](architecture/how-it-works.md) for the full path.
+tools" figure is the number that matters most for context budget. See
+[How MCP and RAG work](architecture/how-it-works.md) for the full path.
 
 ## Who it's for
 
@@ -60,10 +57,10 @@ with [How MCP and RAG work](architecture/how-it-works.md),
 
 ## Five-minute credential-free quickstart
 
-You can verify the install, build the router catalog, and start the MCP HTTP
-server before adding any Aruba Central or GreenLake Platform credentials.
-API-backed tools need credentials later, but this path is safe to try first
-with fake or no account details at all.
+Verify the install, build the router catalog, and start the MCP HTTP server
+before adding any Aruba Central or GreenLake Platform credentials. API-backed
+tools need credentials later, but this path is safe to try first with fake or
+no account details at all.
 
 <figure class="docs-figure">
   <img src="assets/diagrams/quickstart-journey.svg" alt="Six steps from cloning hpe-networking-mcp through setup, doctor checks, MCP connection, tool discovery, and a safe read-only call">
@@ -97,11 +94,6 @@ python3 scripts/setup_wizard.py --yes --skip-credentials
 ```
 
 Expected outcome: dependencies install, local git-ignored config files are created, and the wizard reports each completed phase without contacting Central or GLP.
-
-<figure class="docs-figure">
-  <img src="assets/diagrams/setup-wizard-flow.svg" alt="Six compact setup wizard phases: install, credentials, products, MCP configs, catalog, and doctor">
-  <figcaption>The wizard stays local. Skip any phase with flags such as <code>--skip-credentials</code>.</figcaption>
-</figure>
 
   </div>
 </div>
@@ -250,57 +242,11 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 
 </div>
 
-<figure class="docs-figure">
-  <img src="assets/platform-coverage.svg" alt="The low-token router searches 6,728 backend tools and 6,144 generated operations across nine HPE Networking, Juniper, and Axis platforms">
-  <figcaption>Every platform is opt-in except Central, GLP, and RAG, which load by default under the minimal router profile.</figcaption>
-</figure>
-
-Read the [0.9.0 release notes](release-notes-0.9.0.md) for corpus expansion,
-RAG modernization, Docker packaging, deduplication, and all post-0.8.0 changes,
-and the [0.8.0 release notes](release-notes-0.8.0.md) for the repository
-and package rename, MCP 2 transport repair, PII protection, interop tools, GLP
-inventory completion, strict catalog/RAG facts, and classified drift gates.
-See the
-[capability gap matrix](capability-gap-matrix.md) for reproducible
-executable-tool, generated-operation, benchmark, and practical-gap
-comparisons.
-
-## Task-oriented guides
-
-### Set up and connect
-
-| Goal | Guide |
-|---|---|
-| Install, configure credentials, and connect an MCP client | [Getting started](getting-started.md) |
-| Copy/paste stdio or streamable HTTP client config | [MCP client recipes](mcp-client-recipes.md) |
-| Understand the low-token router's modes and safety model | [Tool router](tool-router.md) |
-| Try realistic prompts with expected call shapes | [Example prompts](example-prompts.md) |
-| Enable ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, or Axis | [Optional product starters](optional-products.md) |
-| Plan typed product-specific workflows | [Typed product workflow roadmap](product-workflows.md) |
-| Fix setup, credentials, HTTP, or catalog issues | [Troubleshooting](troubleshooting.md) |
-| Build the tool/API indexes and the local RAG corpus | [Local RAG/OpenAPI indexes](release-indexes.md) |
-| Check vendor, product, version, and document-class coverage | [RAG coverage matrix](rag-coverage-matrix.md) |
-| Browse all backend counts and coverage | [Tool catalog](tool-catalog.md) |
-| See how MCP and RAG work | [How MCP and RAG work](architecture/how-it-works.md) |
-| See architecture, data, and safety diagrams | [System overview](architecture/system-overview.md) |
-| Review RAG/OpenAPI lookup design | [RAG architecture](architecture/RAG-ARCHITECTURE.md) |
-
-### Releases, provenance, and migration depth
-
-| Goal | Guide |
-|---|---|
-| Review the 0.9.0 RAG/corpus/Docker expansion | [0.9.0 release notes](release-notes-0.9.0.md) |
-| Review the 0.8.0 repository launch | [0.8.0 release notes](release-notes-0.8.0.md) |
-| Review the complete 0.7.0 expansion | [0.7.0 release notes](release-notes-0.7.0.md) |
-| Review Central v0.7 depth workflows (templates, bulk delete, firmware campaigns, config-health remediation, troubleshooting bundles) | [Central v0.7 workflows](central-v07-workflows.md) |
-| Reuse v0.7 artifact schemas and credential-gated live-test config | [Artifact contracts and live-test configuration](artifact-contracts.md) |
-| Build, restore, and smoke-test release artifact bundles (SBOM, checksums, provenance) | [Release artifact automation](release-artifact-automation.md) |
-| Understand security/lifecycle source freshness, provenance, and coverage boundaries | [Source lifecycle coverage](source-lifecycle-coverage.md) |
-| Review the AOS8 migration contract matrix and live evaluation | [Contract matrix](aos8-migration-contract-matrix.md), [live/dry-run evaluation](aos8-live-dryrun-evaluation.md) |
-| Review the prior 0.6.0 expansion (historical) | [0.6.0 release notes](release-notes-0.6.0.md) |
-| Review the prior 0.5.0 AOS8 migration expansion (historical) | [0.5.0 release notes](release-notes-0.5.0.md) |
-| Review the prior 0.4.0 expansion (historical) | [0.4.0 release notes](release-notes-0.4.0.md) |
-| Review the prior 0.3.0 expansion (historical) | [0.3.0 release notes](release-notes-0.3.0.md) |
+Per-backend counts and coverage live in the [tool catalog](tool-catalog.md);
+reproducible comparisons against other HPE Networking MCP servers are in the
+[capability gap matrix](capability-gap-matrix.md). What changed in the current
+release is in the [0.9.0 release notes](release-notes-0.9.0.md) — older notes
+are under **Releases** in the sidebar.
 
 <div class="docs-next" markdown="1">
 
@@ -309,31 +255,13 @@ comparisons.
 - New to hpe-networking-mcp: [Getting started](getting-started.md)
 - Running Aruba/GLP tasks today: [Example prompts](example-prompts.md)
 - Building or reviewing a backend: [Tool router](tool-router.md)
+- Every other guide and reference page: the sidebar navigation
 
 </div>
-
-## Search keywords
-
-HPE Networking MCP server, HPE Aruba Networking MCP server, HPE Aruba Central
-MCP server, HPE Aruba Networking Central MCP server, Aruba Central AI tools,
-AI network automation, HPE GreenLake Platform MCP, GreenLake
-Platform automation, GreenLake Platform MCP, GreenLake service catalog MCP,
-GreenLake reporting status MCP, MCPServer network automation, Model Context
-Protocol networking, network configuration MCP, Aruba API RAG, Aruba Central
-OpenAPI lookup, ClearPass MCP, Juniper Mist MCP, Apstra MCP, ArubaOS 8 MCP,
-ArubaOS 8 migration MCP, ArubaOS 8 migration automation, AOS8 automation,
-Classic Central migration, New Central migration, guarded dry-run migration,
-HPE Aruba EdgeConnect MCP,
-EdgeConnect SD-WAN MCP, HPE Aruba UXI MCP, UXI sensor status MCP, Axis Atmos
-Cloud MCP, guarded read/write lab automation, EdgeConnect zones, EdgeConnect
-interface labels, zone-based firewall MCP, Python `httpx` network automation,
-EdgeConnect ACL object groups, EdgeConnect services, EdgeConnect bypass mode,
-EdgeConnect link integrity diagnostics, low-token MCP router.
 
 ## Project links
 
 - [GitHub repository](https://github.com/secure-ssid/hpe-networking-mcp)
-- [README](https://github.com/secure-ssid/hpe-networking-mcp#readme)
 - [Setup wizard source](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/scripts/setup_wizard.py)
 - [Local setup doctor](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/scripts/doctor.py)
 

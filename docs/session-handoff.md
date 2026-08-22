@@ -1,3 +1,9 @@
+---
+title: "Session handoff"
+nav_order: 3
+parent: "Archive"
+---
+
 # Session handoff
 
 **Updated:** 2026-08-16

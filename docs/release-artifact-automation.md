@@ -1,3 +1,9 @@
+---
+title: "Release artifact automation"
+nav_order: 10
+parent: "Reference"
+---
+
 # Release artifact automation
 
 This page documents the credential-gated validation matrix, the release

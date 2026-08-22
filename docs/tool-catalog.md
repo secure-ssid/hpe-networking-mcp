@@ -1,3 +1,9 @@
+---
+title: "Tool catalog"
+nav_order: 1
+parent: "Reference"
+---
+
 # Tool catalog
 
 hpe-networking-mcp registers **6,728 backend tools** when every generated surface and

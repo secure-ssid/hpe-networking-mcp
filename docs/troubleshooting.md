@@ -1,3 +1,8 @@
+---
+title: "Troubleshooting"
+nav_order: 8
+---
+
 # Troubleshooting
 
 Start with the local doctor. It never calls Central, GLP, or optional product

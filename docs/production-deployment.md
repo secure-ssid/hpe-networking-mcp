@@ -1,3 +1,8 @@
+---
+title: "Production deployment"
+nav_order: 7
+---
+
 # Production deployment (Docker)
 
 This is a packaging guide for running the hpe-networking-mcp streamable-HTTP

@@ -1,3 +1,9 @@
+---
+title: "RAG/OpenAPI indexes"
+nav_order: 5
+parent: "Reference"
+---
+
 # Building the RAG/OpenAPI indexes
 
 The router tool catalog and the exact-API database are derived from OpenAPI

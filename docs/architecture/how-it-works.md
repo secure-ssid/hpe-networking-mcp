@@ -1,3 +1,9 @@
+---
+title: "How MCP and RAG work"
+nav_order: 1
+parent: "Architecture"
+---
+
 # How MCP and RAG work
 
 This is the current mental model for hpe-networking-mcp. Counts come from

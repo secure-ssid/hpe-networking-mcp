@@ -1,10 +1,27 @@
 title: hpe-networking-mcp
 description: "Low-token HPE Aruba Networking Central MCP server for Aruba Central, GreenLake Platform, verified ArubaOS 8 migration automation (Classic Central and New Central), ClearPass, Juniper Mist, Apstra, EdgeConnect, UXI, RAG, and exact OpenAPI lookup."
-theme: jekyll-theme-cayman
+remote_theme: just-the-docs/just-the-docs@v0.12.0
 repository: secure-ssid/hpe-networking-mcp
 url: https://secure-ssid.github.io
 baseurl: /hpe-networking-mcp
-show_downloads: true
-logo: /hpe-networking-mcp/assets/hpe-networking-mcp-hero.svg
+
+search_enabled: true
+heading_anchors: true
+back_to_top: true
+
+aux_links:
+  "GitHub repository": "https://github.com/secure-ssid/hpe-networking-mcp"
+  "GitHub releases": "https://github.com/secure-ssid/hpe-networking-mcp/releases"
+
+footer_content: 'hpe-networking-mcp is an independent community project, not an official HPE product. MIT licensed.'
+
 plugins:
+  - jekyll-remote-theme
+  - jekyll-include-cache
   - jekyll-seo-tag
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default

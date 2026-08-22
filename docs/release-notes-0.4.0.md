@@ -1,3 +1,9 @@
+---
+title: "0.4.0"
+nav_order: 6
+parent: "Releases"
+---
+
 # hpe-networking-mcp 0.4.0 - resumable migration execution, typed GLP, and verified benchmarks
 
 Version 0.4.0 turns the largest 0.3.0 planning/diagnostic surfaces into

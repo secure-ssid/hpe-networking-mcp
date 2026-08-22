@@ -1,3 +1,10 @@
+---
+title: "Architecture"
+nav_order: 9
+has_children: true
+permalink: /architecture/
+---
+
 # Architecture
 
 Design notes for core system behavior, data stores, and retrieval strategy.

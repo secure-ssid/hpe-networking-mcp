@@ -26,6 +26,16 @@ diagrams, and write-safety flow — see the
 [hpe-networking-mcp GitHub Pages site](https://secure-ssid.github.io/hpe-networking-mcp/).
 This README stays intentionally short; canonical guides live under `docs/`.
 
+## Why the router matters
+
+Point your MCP client at **one** server: `src/hpe_networking_mcp/mcp_servers/tool_router.py`. The
+recommended `minimal` profile keeps the client-visible tool list at three
+entries while still reaching the full backend catalog:
+
+1. `find_tool` — discover the right backend tool.
+2. `invoke_read_tool` — dispatch read-only calls.
+3. `invoke_tool` — dispatch intentional write/destructive calls only.
+
 ## Who it's for
 
 | You are... | Start with |
@@ -55,11 +65,8 @@ Expected outcomes:
 
 <figure>
   <img src="docs/assets/diagrams/quickstart-journey.svg" alt="Six steps from cloning hpe-networking-mcp through setup, doctor checks, MCP connection, tool discovery, and a safe read-only call">
+  <figcaption>The six steps in this diagram — clone, run the wizard, check the doctor, connect, discover, and call safely — are exactly what the commands above walk through.</figcaption>
 </figure>
-
-The same six steps this diagram shows — clone, run the wizard, check the
-doctor, connect, discover, and call safely — are exactly what the commands
-above walk through.
 
 Connect any MCP-capable client to `http://127.0.0.1:8010/mcp`, then try a
 credential-free discovery call:
@@ -123,16 +130,6 @@ Full per-backend counts live in [Tool catalog](docs/tool-catalog.md). See the
 [0.9.0 release notes](docs/release-notes-0.9.0.md) for everything added in the
 current release, and the [capability gap matrix](docs/capability-gap-matrix.md)
 for reproducible tool/benchmark comparisons.
-
-## Why the router matters
-
-Point your MCP client at **one** server: `src/hpe_networking_mcp/mcp_servers/tool_router.py`. The
-recommended `minimal` profile keeps the client-visible tool list at three
-entries while still reaching the full backend catalog:
-
-1. `find_tool` — discover the right backend tool.
-2. `invoke_read_tool` — dispatch read-only calls.
-3. `invoke_tool` — dispatch intentional write/destructive calls only.
 
 ## Task-oriented guides
 

@@ -1,3 +1,9 @@
+---
+title: "0.7.0"
+nav_order: 3
+parent: "Releases"
+---
+
 # hpe-networking-mcp 0.7.0
 
 Version 0.7.0 adds versioned/redacted artifact contracts and credential-gated

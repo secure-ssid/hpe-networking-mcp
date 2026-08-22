@@ -1,3 +1,9 @@
+---
+title: "AOS8 migration contract matrix"
+nav_order: 11
+parent: "Reference"
+---
+
 # ArubaOS 8 → Central migration contract matrix
 
 **Status: gating document for hpe-networking-mcp 0.5.0.** No parser, schema, or adapter

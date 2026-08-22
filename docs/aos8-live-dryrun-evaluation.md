@@ -1,3 +1,9 @@
+---
+title: "AOS8 live/dry-run evaluation"
+nav_order: 12
+parent: "Reference"
+---
+
 # AOS8 0.5 live/read-only dry-run evaluation
 
 **Date:** 2026-07-25 (UTC)
