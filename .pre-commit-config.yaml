@@ -1,0 +1,41 @@
+# Local pre-commit gate mirroring what CI enforces: ruff lint, gitleaks
+# secret scanning, and bandit SAST.
+#
+# One-time setup:
+#   uv tool install pre-commit
+#   pre-commit install
+# Run everything without committing:
+#   pre-commit run --all-files
+#
+# Deliberate scope notes (Wave-1 Slice B):
+#   * No ruff-format hook yet: the tree is not formatter-clean (a 2026-08-22
+#     `ruff format --check` run reports 312 of 556 files would change), so an
+#     enforcing hook would rewrite hundreds of unrelated files on first run.
+#     That repo-wide reformat is a separate, explicit change -- flip this
+#     comment into a `ruff-format` hook entry when it lands.
+#   * bandit runs the same strict src/ scan security.yml runs. The widened
+#     scripts/+ingestion/ scan with audited rule skips lives in CI only, so
+#     local commits stay fast.
+#   * gitleaks reads the repo-root .gitleaks.toml (tuned allowlists; see the
+#     policy comment at the top of that file).
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Same minor as pyproject's dev ruff floor (ruff>=0.15.6).
+    rev: v0.15.22
+    hooks:
+      - id: ruff
+        args: [--exit-non-zero-on-fix]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: bandit-src
+        name: bandit (src/, medium+ severity gate)
+        entry: uv run bandit -r src/ -ll
+        language: system
+        pass_filenames: false
+        always_run: true
