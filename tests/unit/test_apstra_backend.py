@@ -30,7 +30,7 @@ class _FakeAsyncClient:
     calls: list[tuple[str, str, dict]] = []
     responder = None
 
-    def __init__(self, timeout=None):
+    def __init__(self, timeout=None, **_ignored):
         pass
 
     async def __aenter__(self):
@@ -48,6 +48,9 @@ class _FakeAsyncClient:
             (method, url, {"headers": headers, "params": params, "json": json})
         )
         return _FakeAsyncClient.responder(method, url, json, headers, params)
+
+    async def get(self, url, headers=None, params=None):
+        return await self.request("GET", url, headers=headers, params=params)
 
 
 def _install_fake_client(monkeypatch, responder):

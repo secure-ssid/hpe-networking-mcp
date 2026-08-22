@@ -38,7 +38,7 @@ MANIFEST = json.loads(
     (
         Path(__file__).resolve().parents[2]
         / "src/hpe_networking_mcp/mcp_servers/openapi_gen/manifests/glp.json"
-    ).read_text()
+    ).read_text(encoding="utf-8")
 )
 MANIFEST_KEYS = {op["key"] for op in MANIFEST["operations"]}
 

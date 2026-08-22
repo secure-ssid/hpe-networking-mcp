@@ -57,6 +57,8 @@ from hpe_networking_mcp.mcp_servers.shared import (
 from hpe_networking_mcp.mcp_servers.shared import (
     platform_writes_allowed as _platform_writes_allowed,
 )
+from hpe_networking_mcp.pipeline.clients.http_retry import get_with_retry
+from hpe_networking_mcp.pipeline.clients.pooled_clients import pooled_client
 
 mcp = MCPServer("aos8-core")
 
@@ -593,8 +595,8 @@ async def _aos8_session_login(base_url: str) -> dict[str, Any]:
         login_form["client_ip"] = session_env["client_ip"]
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(f"{base_url}/v1/api/login", data=login_form)
+        client = pooled_client("aos8")
+        resp = await client.post(f"{base_url}/v1/api/login", data=login_form)
     except httpx.HTTPError as exc:
         return {"error": f"AOS8 login request failed: {exc}"}
 
@@ -659,7 +661,7 @@ async def _aos8_dispatch(
     read-only tools keep working unchanged.
     """
     if method == "GET":
-        return await client.get(url, headers=headers, params=params)
+        return await get_with_retry(client, url, headers=headers, params=params)
     return await client.request(method, url, headers=headers, params=params, json=body)
 
 
@@ -705,10 +707,10 @@ async def _aos8_send(
         headers["Authorization"] = "Bearer " + (token or "")
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await _aos8_dispatch(
-                client, method, f"{base_url}{path}", headers, req_params, body
-            )
+        client = pooled_client("aos8")
+        resp = await _aos8_dispatch(
+            client, method, f"{base_url}{path}", headers, req_params, body
+        )
     except httpx.HTTPError as exc:
         return {"error": str(exc)}
 
@@ -724,10 +726,10 @@ async def _aos8_send(
         if entry.get("session_cookie"):
             headers["Cookie"] = entry["session_cookie"]
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await _aos8_dispatch(
-                    client, method, f"{base_url}{path}", headers, req_params, body
-                )
+            client = pooled_client("aos8")
+            resp = await _aos8_dispatch(
+                client, method, f"{base_url}{path}", headers, req_params, body
+            )
         except httpx.HTTPError as exc:
             return {"error": str(exc)}
 
@@ -1024,12 +1026,12 @@ async def aos8_logout() -> dict[str, Any]:
         if entry.get("session_cookie"):
             headers["Cookie"] = entry["session_cookie"]
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                await client.post(
-                    f"{base_url}/v1/api/logout",
-                    headers=headers,
-                    params={"UIDARUBA": entry["uidaruba"]},
-                )
+            client = pooled_client("aos8", timeout=15.0)
+            await client.post(
+                f"{base_url}/v1/api/logout",
+                headers=headers,
+                params={"UIDARUBA": entry["uidaruba"]},
+            )
         except httpx.HTTPError as exc:
             result = _aos8_logout_session(base_url)
             return {**result, "warning": f"AOS8 logout request failed: {exc}"}
@@ -3191,6 +3193,7 @@ if __name__ == "__main__":
     from hpe_networking_mcp.mcp_servers._middleware import (
         NullStripMiddleware,
         RateLimitMiddleware,
+        ResponseEnvelopeMiddleware,
         SecretTokenizeMiddleware,
         install_middleware,
     )
@@ -3202,6 +3205,7 @@ if __name__ == "__main__":
         [
             NullStripMiddleware(),
             RateLimitMiddleware(rate=8.0),
+            ResponseEnvelopeMiddleware(),
             SecretTokenizeMiddleware(),
         ],
     )

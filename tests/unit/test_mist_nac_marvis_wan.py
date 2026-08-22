@@ -17,7 +17,7 @@ class _FakeResp:
 
 def _fake_get_client(payload, calls=None):
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -36,7 +36,7 @@ def _fake_get_client(payload, calls=None):
 
 def _fake_write_client(calls):
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):

@@ -64,7 +64,7 @@ def test_edgeconnect_doctor_probes_swagger_paths_and_reports_status_codes(monkey
     calls = []
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -94,7 +94,7 @@ def test_edgeconnect_doctor_probes_swagger_paths_and_reports_status_codes(monkey
 
 def test_edgeconnect_doctor_probe_failure_reports_error_string_not_raise(monkeypatch):
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
