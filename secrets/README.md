@@ -44,6 +44,13 @@ points at a readable file, the container's own environment gets `<VAR>` set
 to that file's contents before `scripts/run_http_router.sh` starts. An
 already-set `<VAR>` always wins over `<VAR>_FILE`.
 
+The full set of families the bridge recognizes (keep this list in lockstep
+with `_BRIDGE_RE` in `docker/entrypoint.sh`): `MCP_HTTP_BEARER_TOKEN`, and
+the `<PREFIX>_API_TOKEN`, `<PREFIX>_CLIENT_SECRET`, `<PREFIX>_PASSWORD`,
+`<PREFIX>_SESSION_COOKIE`, and `<PREFIX>_CSRF_TOKEN` suffixes. Anything else
+ending in `_FILE` is deliberately NOT exported; the entrypoint logs a loud
+skip instead.
+
 Setup (the streamable-HTTP bearer token is the one enabled by default in
 `docker-compose.router.yml`; skip this if you don't want to require a bearer
 token):
