@@ -151,7 +151,14 @@ The main CI workflow has two release-related tiers:
   on macOS.
 - `Strict tool index` rebuilds the tool catalog from committed OpenAPI specs
   and runs `--strict-tool-index`. It needs no published artifact and no opt-in
-  variable, so it runs on every push and pull request as a required check.
+  variable. The rebuild is path-gated: `Detect strict-index input changes`
+  diffs the push or pull request against the paths that feed the index (the
+  MCP server modules, the pipeline, `vendor/openapi`, the
+  ingest/build/package/validate scripts, `docs/project-facts.json`, and the
+  dependency manifests), and the rebuild runs only when those inputs changed.
+  The always-run `Strict tool index (gate)` job is the stable required check:
+  it passes outright when no input changed, and otherwise mirrors the
+  rebuild's result.
 
 The package job also builds wheel/sdist, installs the wheel into a fresh
 environment, and smoke-runs the four supported `hpe-mcp-*` console scripts:
