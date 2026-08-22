@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from collections import deque
@@ -243,6 +244,47 @@ def orchestrator(tmp_path, backend: FakeBackend, *, writes: bool = True):
 
     store = MigrationRunStore(tmp_path / "state")
     return AOS8MigrationOrchestrator(store, factory), store
+
+
+def test_state_save_retries_transient_replace_lock(tmp_path, monkeypatch):
+    """Transient PermissionError on the atomic rename retries instead of
+    failing the save (AV/indexer scanners briefly hold freshly-written temp
+    files open on Windows); the write still lands atomically."""
+    store = MigrationRunStore(tmp_path / "state")
+    run = {"schema_version": 1, "run_id": "replace-retry", "candidates": []}
+    real_replace = os.replace
+    attempts = {"count": 0}
+
+    def flaky_replace(src, dst):
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise PermissionError(5, "Access is denied")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", flaky_replace)
+
+    store.save(run)
+
+    assert attempts["count"] == 3
+    assert store.load("replace-retry")["run_id"] == "replace-retry"
+
+
+def test_state_save_gives_up_after_bounded_replace_retries(tmp_path, monkeypatch):
+    """A PermissionError that never clears is re-raised after the bounded
+    attempts rather than retried forever."""
+    store = MigrationRunStore(tmp_path / "state")
+    run = {"schema_version": 1, "run_id": "replace-stuck", "candidates": []}
+    attempts = {"count": 0}
+
+    def stuck_replace(src, dst):
+        attempts["count"] += 1
+        raise PermissionError(5, "Access is denied")
+
+    monkeypatch.setattr(os, "replace", stuck_replace)
+
+    with pytest.raises(PermissionError):
+        store.save(run)
+    assert attempts["count"] == 3
 
 
 def test_preview_and_create_are_dependency_ordered_and_bounded(tmp_path):

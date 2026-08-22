@@ -8,6 +8,7 @@ import math
 import os
 import re
 import threading
+import time
 import uuid
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
@@ -909,6 +910,28 @@ def _sanitize_legacy_operator_context(
         }
     return sanitized, changed
 
+#: Windows AV/indexer scanners can briefly hold a freshly-written temp file
+#: open, so ``os.replace`` intermittently fails with PermissionError
+#: (WinError 5 sharing violation) even though every handle we own is closed
+#: by then and the rename runs under the store lock. The payload is already
+#: fsynced at that point, so a short bounded retry resolves the transient
+#: external lock without weakening the atomic-replacement contract; the
+#: final attempt re-raises genuine failures.
+_REPLACE_ATTEMPTS = 3
+_REPLACE_RETRY_DELAY_SECONDS = 0.05
+
+
+def _os_replace_with_retry(source: Path, destination: Path) -> None:
+    """``os.replace`` with a bounded retry for transient Windows locks."""
+    for attempt in range(_REPLACE_ATTEMPTS):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError:
+            if attempt == _REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(_REPLACE_RETRY_DELAY_SECONDS)
+
 
 class MigrationRunStore:
     """Per-run JSON state under ``state/``, persisted by atomic replacement."""
@@ -1023,7 +1046,7 @@ class MigrationRunStore:
                     handle.write(payload)
                     handle.flush()
                     os.fsync(handle.fileno())
-                os.replace(temporary, destination)
+                _os_replace_with_retry(temporary, destination)
                 try:
                     directory_fd = os.open(self.state_dir, os.O_RDONLY)
                     try:
