@@ -153,13 +153,45 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  strict-index-inputs:
+    name: Detect strict-index input changes
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    outputs:
+      affected: ${{ steps.detect.outputs.affected }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Compare against base
+        id: detect
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="$(git merge-base HEAD "origin/${{ github.base_ref }}")"
+          elif [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            base="${{ github.event.before }}"
+          else
+            # workflow_dispatch / unknown shape: always run the real job.
+            echo "affected=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if git diff --name-only "$base" HEAD -- \
+              src/hpe_networking_mcp/mcp_servers \
+              src/hpe_networking_mcp/pipeline \
+              vendor/openapi \
+              scripts/ingest_tools.py scripts/build_spec_index.py \
+              scripts/package_indexes.py scripts/validate_release.py \
+              docs/project-facts.json pyproject.toml uv.lock \
+              | grep -q .; then
+            echo "affected=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "affected=false" >> "$GITHUB_OUTPUT"
+          fi
+
   strict-index:
     name: Strict tool index
-    needs: test
-    # No opt-in variable: this job rebuilds the tool index from OpenAPI specs
-    # committed to this repository, so it needs no published artifact and can
-    # be a required status check on every commit.
-    if: github.event_name != 'schedule'
+    needs: [test, strict-index-inputs]
+    if: github.event_name != 'schedule' && needs.strict-index-inputs.outputs.affected == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -216,6 +248,21 @@ jobs:
           --strict-tool-index
           --strict-index-facts
           --catalog-products all
+
+  strict-index-gate:
+    name: Strict tool index (gate)
+    if: github.event_name != 'schedule' && always()
+    needs: [strict-index-inputs, strict-index]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate
+        run: |
+          if [ "${{ needs.strict-index-inputs.outputs.affected }}" = "false" ]; then
+            echo "Inputs unchanged — strict index not required."; exit 0
+          fi
+          if [ "${{ needs.strict-index.result }}" != "success" ]; then
+            echo "strict-index result: ${{ needs.strict-index.result }}"; exit 1
+          fi
 
   # --- Source/API/RAG drift gates -----------------------------------------
   # One job per check, deliberately never combined into a single shell block:
