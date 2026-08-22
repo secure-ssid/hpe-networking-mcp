@@ -51,7 +51,7 @@ jobs:
       # the document parsers, the LanceDB client and the Textual widgets, and
       # dropping them would quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev --extra ingestion --extra redis --extra tui
+        run: uv sync --group dev --extra ingestion --extra redis --extra tui --frozen
 
       # Whole-tree, not a file list. The previous form named ~20 paths
       # explicitly, so every module added after it was written -- and every
@@ -98,7 +98,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --group dev --frozen
 
       # Scoped on purpose. `[tool.mypy]` in pyproject.toml names the exact
       # modules this covers -- the write gate and HTTP transport, the
@@ -180,7 +180,7 @@ jobs:
       # the document parsers, the LanceDB client and the Textual widgets, and
       # dropping them would quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev --extra ingestion --extra redis --extra tui
+        run: uv sync --group dev --extra ingestion --extra redis --extra tui --frozen
 
       # The RAG prose corpus is deliberately not published (it is scraped vendor
       # documentation), so CI cannot restore it and does not assert --strict-rag.
@@ -277,7 +277,7 @@ jobs:
       # the document parsers, the LanceDB client and the Textual widgets, and
       # dropping them would quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev --extra ingestion --extra redis --extra tui
+        run: uv sync --group dev --extra ingestion --extra redis --extra tui --frozen
 
       - name: Resolve RAG source inventory (offline)
         run: >-
@@ -409,7 +409,7 @@ jobs:
       # the document parsers, the LanceDB client and the Textual widgets, and
       # dropping them would quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev --extra ingestion --extra redis --extra tui
+        run: uv sync --group dev --extra ingestion --extra redis --extra tui --frozen
 
       - name: Check official security and lifecycle sources
         run: >-

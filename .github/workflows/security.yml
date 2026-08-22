@@ -62,7 +62,7 @@ jobs:
       # split -- an extra that silently drops out of the resolve is an extra
       # nobody is auditing.
       - name: Install security tooling
-        run: uv sync --group security --extra ingestion --extra redis --extra tui
+        run: uv sync --group security --extra ingestion --extra redis --extra tui --frozen
 
       # Gate on medium+ severity only; see [tool.bandit] in pyproject.toml
       # for the rationale and the inline `# nosec` policy for confirmed
@@ -71,8 +71,23 @@ jobs:
       - name: Run bandit (fails on medium+ severity)
         run: |
           mkdir -p outputs/security
+          # Strict gate on shipped runtime code -- no rule skips beyond the
+          # [tool.bandit] policy in pyproject.toml.
           uv run bandit -r src/ -ll -f json -o outputs/security/bandit-report.json
           uv run bandit -r src/ -ll
+          # Widened gate over offline tooling (scripts/, ingestion/) that
+          # never runs in the serving path. Four audited rule skips, each
+          # reviewed against every current finding (baseline 2026-08-22):
+          #   B310 urlopen scheme audit -- fetchers target fixed vendor hosts
+          #     and validate schemes at their call sites;
+          #   B108 shared temp-dir constants -- single-operator scrapers stage
+          #     downloads under the system temp dir by design;
+          #   B314 xml.etree parse -- parses vendor-published docs; etree does
+          #     not resolve external entities by default;
+          #   B324 md5 -- ingest_docs.py derives stable chunk UUIDs from MD5
+          #     digests (UUIDv3 pattern); content integrity uses sha256.
+          # Any finding outside these four IDs still fails this job.
+          uv run bandit -r scripts/ ingestion/ -ll -s B108,B310,B314,B324
 
       - name: Upload bandit report
         if: always()
