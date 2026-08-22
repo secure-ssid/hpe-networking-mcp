@@ -86,13 +86,13 @@ jobs:
           enable-cache: true
           prune-cache: true
 
-      # The ingestion/redis/tui packages became optional extras, so a bare
+      # The ingestion/redis packages became optional extras, so a bare
       # `uv sync` no longer installs them. Named explicitly to keep this
       # environment exactly what it was before the split -- the suite covers
-      # the document parsers, the LanceDB client and the Textual widgets, and
-      # dropping them would quietly stop testing them.
+      # the document parsers and the LanceDB client, and dropping them would
+      # quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev --extra ingestion --extra redis --extra tui
+        run: uv sync --group dev --extra ingestion --extra redis
 
       - name: Docker/Compose unit tests
         run: |
