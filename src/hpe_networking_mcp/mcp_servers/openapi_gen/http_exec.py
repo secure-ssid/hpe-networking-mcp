@@ -35,6 +35,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
     redact_sensitive,
 )
 from hpe_networking_mcp.pipeline.clients.http_retry import parse_retry_after
+from hpe_networking_mcp.pipeline.clients.pooled_clients import pooled_client
 
 # resolve(path, extra_headers) -> (base_url, headers-with-auth-last). May raise on
 # missing configuration; the executor converts that into an {"error": ...} dict.
@@ -172,38 +173,38 @@ def make_read_executor(
             return {"error": f"Generated path must begin with one of {prefixes}."}
         params = _clean_params(query)
         try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-                for attempt in range(_MAX_RETRIES + 1):
-                    base_url, req_headers = await resolve(path, headers)
-                    url = f"{base_url}{path}"
-                    request_kwargs: dict[str, Any] = {
-                        "headers": req_headers,
-                        "params": params,
-                    }
-                    body_error = apply_request_body(
-                        request_kwargs, req_headers, body, content_type
-                    )
-                    if body_error is not None:
-                        return body_error
-                    resp = await client.request(method, url, **request_kwargs)
-                    if (
-                        resp.status_code == 401
-                        and refresh_auth is not None
-                        and attempt < _MAX_RETRIES
-                    ):
-                        await refresh_auth()
-                        continue
-                    if (
-                        method in {"GET", "HEAD", "OPTIONS"}
-                        and resp.status_code in _RETRYABLE_STATUS
-                        and attempt < _MAX_RETRIES
-                    ):
-                        delay = _retry_delay(resp, attempt)
-                        if delay is None:
-                            break
-                        await asyncio.sleep(delay)
-                        continue
-                    break
+            client = pooled_client("openapi_gen", timeout=_TIMEOUT)
+            for attempt in range(_MAX_RETRIES + 1):
+                base_url, req_headers = await resolve(path, headers)
+                url = f"{base_url}{path}"
+                request_kwargs: dict[str, Any] = {
+                    "headers": req_headers,
+                    "params": params,
+                }
+                body_error = apply_request_body(
+                    request_kwargs, req_headers, body, content_type
+                )
+                if body_error is not None:
+                    return body_error
+                resp = await client.request(method, url, **request_kwargs)
+                if (
+                    resp.status_code == 401
+                    and refresh_auth is not None
+                    and attempt < _MAX_RETRIES
+                ):
+                    await refresh_auth()
+                    continue
+                if (
+                    method in {"GET", "HEAD", "OPTIONS"}
+                    and resp.status_code in _RETRYABLE_STATUS
+                    and attempt < _MAX_RETRIES
+                ):
+                    delay = _retry_delay(resp, attempt)
+                    if delay is None:
+                        break
+                    await asyncio.sleep(delay)
+                    continue
+                break
             payload = redact_sensitive(bound_collection_response(
                 bounded_response_payload(resp), limit=clamp_limit(None), offset=0
             ))
@@ -267,36 +268,36 @@ def make_write_executor(
                 **preview,
             }
         try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-                for attempt in range(_MAX_RETRIES + 1):
-                    base_url, req_headers = await resolve(path, headers)
-                    url = f"{base_url}{path}"
-                    kwargs: dict[str, Any] = {"headers": req_headers, "params": params}
-                    body_error = apply_request_body(
-                        kwargs, req_headers, body, content_type
-                    )
-                    if body_error is not None:
-                        return body_error
-                    resp = await client.request(method, url, **kwargs)
-                    if (
-                        method == "PUT"
-                        and resp.status_code == 401
-                        and refresh_auth is not None
-                        and attempt < _MAX_RETRIES
-                    ):
-                        await refresh_auth()
-                        continue
-                    if (
-                        method == "PUT"
-                        and resp.status_code in _RETRYABLE_STATUS
-                        and attempt < _MAX_RETRIES
-                    ):
-                        delay = _retry_delay(resp, attempt)
-                        if delay is None:
-                            break
-                        await asyncio.sleep(delay)
-                        continue
-                    break
+            client = pooled_client("openapi_gen", timeout=_TIMEOUT)
+            for attempt in range(_MAX_RETRIES + 1):
+                base_url, req_headers = await resolve(path, headers)
+                url = f"{base_url}{path}"
+                kwargs: dict[str, Any] = {"headers": req_headers, "params": params}
+                body_error = apply_request_body(
+                    kwargs, req_headers, body, content_type
+                )
+                if body_error is not None:
+                    return body_error
+                resp = await client.request(method, url, **kwargs)
+                if (
+                    method == "PUT"
+                    and resp.status_code == 401
+                    and refresh_auth is not None
+                    and attempt < _MAX_RETRIES
+                ):
+                    await refresh_auth()
+                    continue
+                if (
+                    method == "PUT"
+                    and resp.status_code in _RETRYABLE_STATUS
+                    and attempt < _MAX_RETRIES
+                ):
+                    delay = _retry_delay(resp, attempt)
+                    if delay is None:
+                        break
+                    await asyncio.sleep(delay)
+                    continue
+                break
             return {
                 "status_code": resp.status_code,
                 "data": redact_sensitive(bounded_response_payload(resp)),

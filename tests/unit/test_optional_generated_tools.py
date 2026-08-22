@@ -39,7 +39,7 @@ class _Resp:
 
 def _fake_httpx(monkeypatch, module, captured, payload=None):
     class FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):

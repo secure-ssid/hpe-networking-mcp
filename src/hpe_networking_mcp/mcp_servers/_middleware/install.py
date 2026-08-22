@@ -21,10 +21,35 @@ from typing import Any, Protocol
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.utilities.func_metadata import _convert_to_content
+from mcp.types import CallToolResult
 
 from hpe_networking_mcp.mcp_servers import _sdk_compat
 
 logger = logging.getLogger(__name__)
+
+
+def _wire_result(server: MCPServer, name: str, value: Any) -> Any:
+    """Convert a tool result for the wire, never returning a bare content list.
+
+    ``fn_metadata.convert_result`` raises when the value no longer matches the
+    tool's output schema -- exactly what an enveloped error does to a
+    wrap-output tool (``-> list[...]``). Falling back to ``_convert_to_content``
+    alone returns ``list[ContentBlock]``, which the SDK's wire sieve rejects
+    with INTERNAL_ERROR "Handler returned an invalid result". The fallback
+    therefore wraps the content in a real ``CallToolResult`` so every error
+    path reachable through tool dispatch stays schema-valid. ``is_error`` is
+    set: the value by definition does not conform to the tool's advertised
+    output schema, and the flag is what exempts the result from client-side
+    structured-content validation (mcp.client.session only revalidates
+    non-error results).
+    """
+    tool = _sdk_compat.get_tool(server, name)
+    if tool is not None:
+        try:
+            return tool.fn_metadata.convert_result(value)
+        except Exception:
+            pass
+    return CallToolResult(content=_convert_to_content(value), is_error=True)
 
 
 class Middleware(Protocol):
@@ -121,20 +146,24 @@ async def _run_on_error(
     exc: BaseException,
     context: Any = None,
 ) -> Any:
+    substitute = None
     for mw in middlewares:
         try:
             handler = getattr(mw, "on_error", None)
             if handler is None:
                 continue
             kwargs = {"context": context} if _accepts_context(handler) else {}
-            substitute = await _maybe_await(handler(name, args, exc, **kwargs))
-            if substitute is not None:
-                return substitute
+            # Every hook runs even after an earlier one substituted a result:
+            # side-effect hooks (audit log, metrics) must still observe the
+            # exception. The FIRST non-None substitute wins.
+            offered = await _maybe_await(handler(name, args, exc, **kwargs))
+            if substitute is None and offered is not None:
+                substitute = offered
         except Exception as handler_exc:
             logger.warning(
                 "middleware %s.on_error failed: %s", type(mw).__name__, handler_exc
             )
-    return None
+    return substitute
 
 
 def install_middleware(server: MCPServer, middlewares: list[Middleware]) -> None:
@@ -172,25 +201,26 @@ def install_middleware(server: MCPServer, middlewares: list[Middleware]) -> None
                     middlewares, name, args, substitute, context=context
                 )
                 if convert_result:
-                    tool = _sdk_compat.get_tool(server, name)
-                    if tool is not None:
-                        try:
-                            return tool.fn_metadata.convert_result(substitute)
-                        except Exception:
-                            return _convert_to_content(substitute)
+                    converted = _wire_result(server, name, substitute)
+                    # A substitute always replaces a raised exception, so the
+                    # wire result is an error by definition -- keep the
+                    # protocol-level isError contract intact.
+                    if isinstance(converted, CallToolResult):
+                        converted.is_error = True
+                    return converted
                 return substitute
             raise
 
         result = await _run_after(middlewares, name, args, raw_result, context=context)
         if convert_result:
-            tool = _sdk_compat.get_tool(server, name)
-            if tool is not None:
-                try:
+            if result is raw_result:
+                # Middleware left the result untouched: convert exactly as the
+                # SDK would, so a conversion failure surfaces through the SDK's
+                # own error path rather than being masked here.
+                tool = _sdk_compat.get_tool(server, name)
+                if tool is not None:
                     return tool.fn_metadata.convert_result(result)
-                except Exception:
-                    if result is not raw_result:
-                        return _convert_to_content(result)
-                    raise
+            return _wire_result(server, name, result)
         return result
 
     _sdk_compat.set_dispatcher(server, wrapped_call_tool, _INSTALLED_ATTR)

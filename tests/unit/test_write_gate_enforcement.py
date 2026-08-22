@@ -1283,9 +1283,15 @@ class TestGuardedGetToolsAreLocked:
         _configure_products(monkeypatch)
         module = importlib.import_module(f"hpe_networking_mcp.mcp_servers.{module_stem}")
         source = inspect.getsource(module)
-        # The read helper each of these tools funnels into calls client.get()
-        # (or request("GET", ...)) -- never a caller-supplied verb.
-        assert "client.get(" in source or 'request("GET"' in source
+        # The read helper each of these tools funnels into issues GETs only:
+        # directly via client.get(), via request("GET", ...), or through
+        # get_with_retry(...) -- which is GET-only by construction (it has no
+        # method parameter). Never a caller-supplied verb.
+        assert (
+            "client.get(" in source
+            or 'request("GET"' in source
+            or "get_with_retry(" in source
+        )
 
     def test_guarded_get_tools_are_annotated_read_only(self):
         for module_stem, tool_name in ASYNC_GUARDED_GETS:
