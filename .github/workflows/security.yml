@@ -118,7 +118,7 @@ jobs:
       # still sees playwright/lancedb/fastembed/redis and their transitive
       # trees, which are the largest CVE surface this project pulls in.
       - name: Install project and security tooling
-        run: uv sync --group dev --group security --extra ingestion --extra redis --extra tui
+        run: uv sync --group dev --group security --extra ingestion --extra redis --extra tui --frozen
 
       # Audits the resolved, synced environment directly (no separate
       # requirements.txt export) so results always match what CI actually
