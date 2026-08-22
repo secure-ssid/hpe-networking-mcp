@@ -71,9 +71,42 @@ def _git_bytes(*args: str) -> bytes:
     ).stdout
 
 
+#: The single committer identity that is exempt on its own: every merge the
+#: GitHub web UI creates (merge, squash, or rebase button) is stamped
+#: ``GitHub <noreply@github.com>`` while the *author* stays the human who
+#: clicked. GitHub builds the contributor list from authors, so this
+#: committer renders nobody — provided the author side is clean, which the
+#: author guard (and the check below) still enforces. Any other automated
+#: committer, and this one paired with an agent-flagged author, still fails.
+_GITHUB_WEB_COMMITTER = "github <noreply@github.com>"
+
+
 def _is_agent(identity: str) -> bool:
     lowered = identity.lower()
     return any(marker in lowered for marker in _AGENT_MARKERS)
+
+
+def _offenders(history: list[str], index: int) -> list[str]:
+    """Sorted unique automated identities at ``index`` (0=author, 1=committer).
+
+    ``history`` rows are ``author\\tcommitter`` identities. The committer leg
+    exempts the canonical GitHub web-UI committer (case-insensitive) only
+    when the same commit's author is not itself agent-flagged — attribution
+    authority stays with the author field.
+    """
+    found = set()
+    for row in history:
+        author, _, committer = row.partition("\t")
+        identity = (author, committer)[index]
+        if (
+            index == 1
+            and identity.lower() == _GITHUB_WEB_COMMITTER
+            and not _is_agent(author)
+        ):
+            continue
+        if _is_agent(identity):
+            found.add(identity)
+    return sorted(found)
 
 
 def _synthetic_pr_merge_sha() -> str | None:
@@ -123,7 +156,7 @@ def history() -> list[str]:
 
 
 def test_no_commit_is_authored_by_an_agent(history):
-    offenders = sorted({row.split("\t")[0] for row in history if _is_agent(row.split("\t")[0])})
+    offenders = _offenders(history, 0)
 
     assert offenders == [], (
         "commits reachable from HEAD are authored by an automated identity, "
@@ -133,11 +166,36 @@ def test_no_commit_is_authored_by_an_agent(history):
 
 
 def test_no_commit_is_committed_by_an_agent(history):
-    offenders = sorted({row.split("\t")[1] for row in history if _is_agent(row.split("\t")[1])})
+    offenders = _offenders(history, 1)
 
     assert offenders == [], (
         f"commits reachable from HEAD carry an automated committer: {offenders}"
     )
+
+
+@pytest.mark.parametrize(
+    "author, committer, expected",
+    [
+        # A human's web-UI merge: the canonical GitHub committer is exempt,
+        # and case-insensitively so.
+        ("Ada Lovelace <ada@example.com>", "GitHub <Noreply@GitHub.com>", []),
+        # An agent merging through the web UI is caught on the author side,
+        # so its committer exemption does not apply.
+        (
+            "some-bot[bot] <bot@github.com>",
+            "GitHub <noreply@github.com>",
+            ["GitHub <noreply@github.com>"],
+        ),
+        # Any other automated committer still fails, human author or not.
+        (
+            "Ada Lovelace <ada@example.com>",
+            "dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+            ["dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>"],
+        ),
+    ],
+)
+def test_committer_exemption_keeps_attribution_with_author(author, committer, expected):
+    assert _offenders([f"{author}\t{committer}"], 1) == expected
 
 
 def test_no_commit_message_co_credits_an_agent():
