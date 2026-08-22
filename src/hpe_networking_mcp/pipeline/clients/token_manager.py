@@ -77,15 +77,17 @@ class TokenManager:
         try:
             cache_dir.mkdir(parents=True, exist_ok=True)
             self.cache_file = cache_dir / cache_filename
-        except Exception as exc:
-            # Fall back to CWD only if the preferred dir is unwritable, and
-            # shout about it so the operator notices.
-            logger.warning(
-                "Could not create token cache dir %s (%s); falling back to CWD",
-                cache_dir,
-                exc,
-            )
-            self.cache_file = Path(cache_filename)
+        except OSError as exc:
+            # Fail closed: never fall back to CWD -- the working directory is
+            # frequently a repo checkout or container layer, and an OAuth
+            # token written there can leak into archives, images, or git.
+            # Operators should point TOKEN_CACHE_DIR at a writable directory.
+            raise RuntimeError(
+                f"Token cache directory {cache_dir} is not writable ({exc}); "
+                "refusing to fall back to the current working directory where "
+                "OAuth tokens could leak. Set TOKEN_CACHE_DIR to a writable "
+                "location."
+            ) from exc
 
         self.access_token: Optional[str] = None
         self.token_expires_at: Optional[float] = None

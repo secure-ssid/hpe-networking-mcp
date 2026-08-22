@@ -582,7 +582,7 @@ def collect_openapi_points(source_dir: Path, doc_type: str = "openapi") -> list[
         spec_name = spec.get("info", {}).get("title", path.stem)
         spec_version = spec.get("info", {}).get("version")
         try:
-            rel_path = str(path.resolve().relative_to(SOURCES_DIR.resolve()))
+            rel_path = path.resolve().relative_to(SOURCES_DIR.resolve()).as_posix()
         except ValueError:
             # A symlink/mount that resolves outside the sources tree — skip
             # the one file rather than aborting the whole run.
@@ -667,8 +667,11 @@ def collect_points(source_dir: Path, doc_type: str) -> list[dict]:
         # identical whether ingest_docs.py was invoked with a relative or an
         # absolute path (argv/PYTHONPATH differences otherwise change
         # Path(__file__) and thus SOURCES_DIR's string form).
+        # as_posix() keeps the ids and persisted file_path values
+        # byte-identical across operating systems (backslashes would other-
+        # wise make Windows-built vector rows and manifests unreproducible).
         try:
-            rel_path = str(path.resolve().relative_to(SOURCES_DIR.resolve()))
+            rel_path = path.resolve().relative_to(SOURCES_DIR.resolve()).as_posix()
         except ValueError:
             # A symlink/mount that resolves outside the sources tree — skip
             # the one file rather than aborting the whole run.
