@@ -139,7 +139,7 @@ def test_uxi_list_sensors_fetches_token_and_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             calls.append(("init", timeout))
 
         async def __aenter__(self):
@@ -189,7 +189,7 @@ def test_uxi_list_sensors_fetches_token_and_compacts(monkeypatch):
 
 def test_uxi_rejects_unsafe_token_url_before_sending_secret(monkeypatch):
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             raise AssertionError("token request should not be attempted")
 
     monkeypatch.setenv("UXI_CLIENT_ID", "client")
@@ -244,7 +244,7 @@ def test_apstra_get_calls_httpx(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             called["timeout"] = timeout
 
         async def __aenter__(self):
@@ -274,7 +274,7 @@ def test_apstra_get_calls_httpx(monkeypatch):
 
 def test_apstra_get_bounds_list_payloads(monkeypatch):
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -321,7 +321,7 @@ def test_apstra_list_blueprints_compacts(monkeypatch):
             ]
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -374,7 +374,7 @@ def test_apstra_list_templates_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -420,7 +420,7 @@ def test_apstra_list_anomalies_quotes_blueprint_id_and_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -476,7 +476,7 @@ def test_apstra_list_racks_quotes_blueprint_id_and_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -530,7 +530,7 @@ def test_apstra_list_routing_zones_quotes_blueprint_id_and_compacts(monkeypatch)
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -592,7 +592,7 @@ def test_apstra_list_virtual_networks_quotes_blueprint_id_and_compacts(monkeypat
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -652,7 +652,7 @@ def test_apstra_list_remote_gateways_quotes_blueprint_id_and_compacts(monkeypatc
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -717,7 +717,7 @@ def test_apstra_list_connectivity_templates_quotes_blueprint_id_and_compacts(mon
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -784,7 +784,7 @@ def test_apstra_list_application_endpoints_uses_read_only_post_and_compacts(monk
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -840,7 +840,7 @@ def test_apstra_get_diff_status_quotes_blueprint_id_and_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -891,7 +891,7 @@ def test_apstra_list_protocol_sessions_quotes_blueprint_id_and_compacts(monkeypa
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -955,7 +955,7 @@ def test_apstra_get_system_info_quotes_blueprint_id_and_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1024,7 +1024,7 @@ def test_aos8_get_calls_httpx(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             called["timeout"] = timeout
 
         async def __aenter__(self):
@@ -1074,7 +1074,7 @@ def test_aos8_show_command_calls_showcommand_and_strips_envelope(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1135,7 +1135,7 @@ def test_aos8_list_aps_runs_show_ap_database_and_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1277,7 +1277,7 @@ def test_aos8_visibility_show_tools_compact_outputs(
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1428,7 +1428,7 @@ def test_aos8_conductor_show_tools_do_not_send_config_path_and_compact(
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1491,7 +1491,7 @@ def test_aos8_list_clients_runs_show_user_table_and_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1681,7 +1681,7 @@ def test_aos8_client_troubleshooting_tools_map_commands_and_compact(
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1742,7 +1742,7 @@ def test_aos8_get_system_logs_caps_count_and_does_not_send_config_path(monkeypat
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -1906,7 +1906,7 @@ def test_aos8_events_audit_show_tools_map_commands_and_compact(
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -2149,7 +2149,7 @@ def test_aos8_differentiator_show_tools_map_commands_and_compact(
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -2295,7 +2295,7 @@ def test_aos8_ap_debug_show_tools_map_commands_and_compact(
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -2341,7 +2341,7 @@ def test_aos8_list_ssid_profiles_uses_config_object(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -2452,7 +2452,7 @@ def test_aos8_wlan_object_reads_compact(
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -2510,7 +2510,7 @@ def test_aos8_wlan_object_reads_unwrap_data_envelope(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -2572,7 +2572,7 @@ def test_edgeconnect_get_calls_httpx_with_custom_auth_header(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             called["timeout"] = timeout
 
         async def __aenter__(self):
@@ -2619,7 +2619,7 @@ def test_edgeconnect_list_appliances_compacts(monkeypatch):
             ]
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -2662,7 +2662,7 @@ def test_edgeconnect_get_system_info_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -2723,7 +2723,7 @@ def test_edgeconnect_get_interface_state_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -2937,7 +2937,7 @@ def test_edgeconnect_get_disk_report_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -3284,7 +3284,7 @@ def test_edgeconnect_list_alarms_compacts_outstanding(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -3328,7 +3328,7 @@ def test_edgeconnect_get_topology_link_info_compacts_links(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -3398,7 +3398,7 @@ def test_edgeconnect_get_route_maps_compacts_maps(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -3769,7 +3769,7 @@ def test_edgeconnect_empty_topology_and_route_maps_return_paginated_items(monkey
             return responses.pop(0)
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -3827,7 +3827,7 @@ def test_edgeconnect_list_overlays_filters_keyed_map_and_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -3877,7 +3877,7 @@ def test_edgeconnect_list_overlays_compacts_single_overlay_response(monkeypatch)
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -3935,7 +3935,7 @@ def test_edgeconnect_list_overlays_filters_list_shape_before_paging(monkeypatch)
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -3992,7 +3992,7 @@ def test_edgeconnect_get_overlay_priority_preserves_pagination(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4052,7 +4052,7 @@ def test_edgeconnect_list_tunnels_filters_and_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4115,7 +4115,7 @@ def test_edgeconnect_get_tunnel_metadata_sets_metadata_param(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4171,7 +4171,7 @@ def test_edgeconnect_list_vrf_segments_filters_and_compacts(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4234,7 +4234,7 @@ def test_edgeconnect_list_vrf_segments_filters_list_shape(monkeypatch):
             }
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4424,7 +4424,7 @@ def test_aos8_typed_config_writes_dry_run_preview(
 
 def test_aos8_typed_config_write_rejects_invalid_action_and_missing_identifier(monkeypatch):
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4464,7 +4464,7 @@ def test_aos8_typed_config_write_executes_and_returns_write_memory_hint(monkeypa
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4535,7 +4535,7 @@ def test_aos8_typed_config_write_does_not_hint_write_memory_on_failure(
     response,
 ):
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4569,7 +4569,7 @@ def test_aos8_write_memory_uses_dedicated_endpoint(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4670,7 +4670,7 @@ def test_optional_product_write_requires_confirm_when_not_dry_run(
     monkeypatch,
 ):
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4697,7 +4697,7 @@ def test_optional_product_write_requires_confirm_when_not_dry_run(
 
 def test_aos8_write_requires_confirm_when_not_dry_run(monkeypatch):
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4765,7 +4765,7 @@ def test_optional_product_write_executes_with_default_bearer_auth(
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4809,7 +4809,7 @@ def test_aos8_write_executes_post_with_default_bearer_auth(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4852,7 +4852,7 @@ def test_edgeconnect_write_executes_with_custom_auth_header(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4922,7 +4922,7 @@ def test_edgeconnect_save_changes_executes_with_confirm(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -4992,7 +4992,7 @@ def test_edgeconnect_set_maintenance_mode_executes_with_confirm(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -5067,7 +5067,7 @@ def test_edgeconnect_set_appliance_network_role_site_executes_with_confirm(monke
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -5137,7 +5137,7 @@ def test_edgeconnect_set_route_labels_executes_with_confirm(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -5274,7 +5274,7 @@ def test_edgeconnect_interface_label_writes_execute_with_confirm(
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -5342,7 +5342,7 @@ def test_edgeconnect_set_bypass_mode_executes_with_confirm(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -5439,7 +5439,7 @@ def test_edgeconnect_run_link_integrity_test_executes_with_confirm(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -5640,7 +5640,7 @@ def test_edgeconnect_ip_object_group_writes_execute_with_confirm(
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -5701,7 +5701,7 @@ def test_edgeconnect_set_services_executes_with_confirm(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -5847,7 +5847,7 @@ def test_edgeconnect_zone_writes_execute_with_confirm(
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):

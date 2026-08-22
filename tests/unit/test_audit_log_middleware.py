@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import threading
 
 from hpe_networking_mcp.mcp_servers._middleware.audit_log import AuditLogMiddleware, audit_path
 
@@ -27,7 +29,7 @@ def test_audit_records_router_target_without_raw_arguments(tmp_path):
     }
 
     middleware.before_call("invoke_tool", arguments)
-    middleware.after_call("invoke_tool", arguments, {"status": "blocked"})
+    asyncio.run(middleware.after_call("invoke_tool", arguments, {"status": "blocked"}))
 
     text = path.read_text()
     record = json.loads(text)
@@ -49,7 +51,7 @@ def test_audit_never_records_unresolved_raw_target_name(tmp_path):
     arguments = {"name": raw_target, "arguments": {}}
 
     middleware.before_call("invoke_tool", arguments)
-    middleware.after_call("invoke_tool", arguments, {"status": "blocked"})
+    asyncio.run(middleware.after_call("invoke_tool", arguments, {"status": "blocked"}))
 
     text = path.read_text()
     record = json.loads(text)
@@ -63,10 +65,12 @@ def test_audit_records_exception_type_without_message(tmp_path):
     arguments = {"name": "delete_vlan", "arguments": {"password": "do-not-log"}}
 
     middleware.before_call("invoke_tool", arguments)
-    middleware.on_error(
-        "invoke_tool",
-        arguments,
-        RuntimeError("failure contains do-not-log"),
+    asyncio.run(
+        middleware.on_error(
+            "invoke_tool",
+            arguments,
+            RuntimeError("failure contains do-not-log"),
+        )
     )
 
     text = path.read_text()
@@ -87,9 +91,9 @@ def test_audit_records_include_stable_process_run_id(tmp_path):
     arguments = {"name": "list_devices", "arguments": {}}
 
     middleware.before_call("invoke_read_tool", arguments)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []})
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}))
     middleware.before_call("invoke_read_tool", arguments)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []})
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}))
 
     records = [json.loads(line) for line in path.read_text().splitlines()]
     assert records[0]["run_id"] == records[1]["run_id"]
@@ -110,11 +114,11 @@ def test_audit_records_stable_session_id_per_session_object(tmp_path):
     ctx_b = SimpleNamespace(session=_FakeSession())
 
     middleware.before_call("invoke_read_tool", arguments, context=ctx_a)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []}, context=ctx_a)
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}, context=ctx_a))
     middleware.before_call("invoke_read_tool", arguments, context=ctx_a)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []}, context=ctx_a)
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}, context=ctx_a))
     middleware.before_call("invoke_read_tool", arguments, context=ctx_b)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []}, context=ctx_b)
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}, context=ctx_b))
 
     records = [json.loads(line) for line in path.read_text().splitlines()]
     assert records[0]["session_id"] == records[1]["session_id"]
@@ -128,7 +132,7 @@ def test_audit_records_session_none_without_context(tmp_path):
     arguments = {"name": "list_devices", "arguments": {}}
 
     middleware.before_call("invoke_read_tool", arguments)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []})
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}))
 
     record = json.loads(path.read_text())
     assert record["session_id"] == "sess_none"
@@ -143,7 +147,7 @@ def test_audit_classification_uses_injected_classifier(tmp_path):
     arguments = {"name": "reboot_device", "arguments": {"serial": "SG12345678"}}
 
     middleware.before_call("invoke_tool", arguments)
-    middleware.after_call("invoke_tool", arguments, {"status": "ok"})
+    asyncio.run(middleware.after_call("invoke_tool", arguments, {"status": "ok"}))
 
     record = json.loads(path.read_text())
     assert record["classification"] == "destructive"
@@ -155,7 +159,7 @@ def test_audit_classification_defaults_to_unknown_without_classifier(tmp_path):
     arguments = {"name": "list_devices", "arguments": {}}
 
     middleware.before_call("invoke_read_tool", arguments)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []})
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}))
 
     record = json.loads(path.read_text())
     assert record["classification"] == "unknown"
@@ -170,7 +174,7 @@ def test_audit_classification_falls_back_when_classifier_raises(tmp_path):
     arguments = {"name": "list_devices", "arguments": {}}
 
     middleware.before_call("invoke_read_tool", arguments)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []})
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}))
 
     record = json.loads(path.read_text())
     assert record["classification"] == "unknown"
@@ -185,7 +189,7 @@ def test_audit_classification_rejects_unknown_values(tmp_path):
     arguments = {"name": "list_devices", "arguments": {}}
 
     middleware.before_call("invoke_read_tool", arguments)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []})
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}))
 
     record = json.loads(path.read_text())
     assert record["classification"] == "unknown"
@@ -199,7 +203,7 @@ def test_audit_records_cancelled_outcome_for_cancelled_error(tmp_path):
     arguments = {"name": "reboot_device", "arguments": {}}
 
     middleware.before_call("invoke_tool", arguments)
-    middleware.on_error("invoke_tool", arguments, asyncio.CancelledError())
+    asyncio.run(middleware.on_error("invoke_tool", arguments, asyncio.CancelledError()))
 
     record = json.loads(path.read_text())
     assert record["outcome"] == "cancelled"
@@ -212,7 +216,7 @@ def test_audit_records_timeout_outcome_for_timeout_error(tmp_path):
     arguments = {"name": "reboot_device", "arguments": {}}
 
     middleware.before_call("invoke_tool", arguments)
-    middleware.on_error("invoke_tool", arguments, TimeoutError("deadline exceeded"))
+    asyncio.run(middleware.on_error("invoke_tool", arguments, TimeoutError("deadline exceeded")))
 
     record = json.loads(path.read_text())
     assert record["outcome"] == "timeout"
@@ -235,10 +239,42 @@ def test_audit_session_ids_bounded_for_non_weakly_referenceable_sessions(tmp_pat
     arguments = {"name": "list_devices", "arguments": {}}
 
     middleware.before_call("invoke_read_tool", arguments, context=ctx)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []}, context=ctx)
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}, context=ctx))
     middleware.before_call("invoke_read_tool", arguments, context=ctx)
-    middleware.after_call("invoke_read_tool", arguments, {"items": []}, context=ctx)
+    asyncio.run(middleware.after_call("invoke_read_tool", arguments, {"items": []}, context=ctx))
 
     records = [json.loads(line) for line in path.read_text().splitlines()]
     assert records[0]["session_id"] == records[1]["session_id"]
     assert records[0]["session_id"].startswith("sess_")
+
+
+def test_audit_file_io_runs_off_the_event_loop_thread(tmp_path, monkeypatch):
+    """The mkdir/append must not execute on the dispatcher's event-loop thread.
+
+    The middleware hooks run inside the async tool dispatcher; blocking file
+    I/O there stalls every concurrent tool call on the loop. The write must
+    be offloaded (``asyncio.to_thread``) while the record content stays
+    identical.
+    """
+    path = tmp_path / "audit.jsonl"
+    middleware = AuditLogMiddleware(path)
+    threads: dict[str, int] = {}
+
+    original = AuditLogMiddleware._append_record
+
+    def spy(self, target, line):
+        threads["writer"] = threading.get_ident()
+        return original(self, target, line)
+
+    monkeypatch.setattr(AuditLogMiddleware, "_append_record", spy)
+
+    async def invoke():
+        threads["loop"] = threading.get_ident()
+        await middleware.after_call("invoke_read_tool", {"a": 1}, {"items": []})
+
+    asyncio.run(invoke())
+
+    assert threads["writer"] != threads["loop"]
+    record = json.loads(path.read_text(encoding="utf-8"))
+    assert record["tool"] == "invoke_read_tool"
+    assert record["outcome"] == "success"

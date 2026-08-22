@@ -44,6 +44,8 @@ from hpe_networking_mcp.mcp_servers.shared import (
 from hpe_networking_mcp.mcp_servers.shared import (
     platform_writes_allowed as _platform_writes_allowed,
 )
+from hpe_networking_mcp.pipeline.clients.http_retry import get_with_retry, request_read_retried
+from hpe_networking_mcp.pipeline.clients.pooled_clients import pooled_client
 
 mcp = MCPServer("clearpass-core")
 
@@ -111,8 +113,8 @@ async def _clearpass_get_request(
     url = f"{base_url}{path}"
     headers = {"Authorization": _auth_header(token), "Accept": "application/json"}
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(url, headers=headers, params=params or {})
+        client = pooled_client("clearpass")
+        resp = await get_with_retry(client, url, headers=headers, params=params or {})
         payload = response_payload(resp)
         if bound:
             payload = bound_collection_response(payload, limit=limit, offset=offset)
@@ -175,14 +177,15 @@ async def _clearpass_write_request(
 
     headers = {"Authorization": _auth_header(token), "Accept": "application/json"}
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(
-                method,
-                url,
-                headers=headers,
-                params=params or {},
-                json=body,
-            )
+        client = pooled_client("clearpass")
+        resp = await request_read_retried(
+            client,
+            method,
+            url,
+            headers=headers,
+            params=params or {},
+            json=body,
+        )
         return {
             "status_code": resp.status_code,
             "data": redact_sensitive(response_payload(resp)),
@@ -1202,8 +1205,8 @@ async def _clearpass_generated_read(
     if body_error is not None:
         return body_error
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(method, url, **request_kwargs)
+        client = pooled_client("clearpass")
+        resp = await request_read_retried(client, method, url, **request_kwargs)
         payload = redact_sensitive(bound_collection_response(
             bounded_response_payload(resp), limit=clamp_limit(None), offset=0
         ))
@@ -1263,8 +1266,8 @@ async def _clearpass_generated_write(
             kwargs["content"] = body if isinstance(body, (bytes, str)) else str(body)
             req_headers.setdefault("Content-Type", content_type)
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(method, url, **kwargs)
+        client = pooled_client("clearpass")
+        resp = await request_read_retried(client, method, url, **kwargs)
         return {
             "status_code": resp.status_code,
             "data": redact_sensitive(bounded_response_payload(resp)),
@@ -1306,6 +1309,7 @@ if __name__ == "__main__":
         NullStripMiddleware,
         PIITokenizeMiddleware,
         RateLimitMiddleware,
+        ResponseEnvelopeMiddleware,
         SecretTokenizeMiddleware,
         install_middleware,
     )
@@ -1317,6 +1321,7 @@ if __name__ == "__main__":
         [
             NullStripMiddleware(),
             RateLimitMiddleware(rate=8.0),
+            ResponseEnvelopeMiddleware(),
             SecretTokenizeMiddleware(),
             # PII tokenization: this backend's visitor/guest tools carry
             # email/phone/company_name -- see pii_tokenizer.py docstring.

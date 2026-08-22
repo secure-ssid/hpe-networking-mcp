@@ -82,7 +82,7 @@ def _fake_httpx(monkeypatch, captured, *, payload=None, status_code=200, resp_cl
             return payload if payload is not None else {"items": []}
 
     class FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):

@@ -26,6 +26,7 @@ input verbatim:
 
 from __future__ import annotations
 
+import asyncio
 import contextvars
 import hashlib
 import json
@@ -195,7 +196,20 @@ class AuditLogMiddleware:
         self._starts.set(starts)
         return round((time.monotonic() - started) * 1000, 3)
 
-    def _write(
+    def _append_record(self, path: Path, line: str) -> None:
+        """Blocking file I/O for one record — runs on a worker thread.
+
+        Called exclusively via :func:`asyncio.to_thread` from :meth:`_write`
+        so the dispatcher's event loop never performs ``mkdir``/``open``/
+        ``write`` itself. The lock stays: ``to_thread`` dispatches onto the
+        default executor, so concurrent records can arrive here in parallel.
+        """
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with self._write_lock:
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(line)
+
+    async def _write(
         self,
         name: str,
         arguments: dict[str, Any],
@@ -220,29 +234,27 @@ class AuditLogMiddleware:
             "duration_ms": self._duration_ms(),
             "error_type": error_type,
         }
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with self._write_lock:
-            with path.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(record, sort_keys=True) + "\n")
+        line = json.dumps(record, sort_keys=True) + "\n"
+        await asyncio.to_thread(self._append_record, path, line)
 
-    def after_call(
+    async def after_call(
         self,
         name: str,
         arguments: dict[str, Any],
         result: Any,
         context: Any = None,
     ) -> None:
-        self._write(name, arguments, outcome=classify_outcome(result), context=context)
+        await self._write(name, arguments, outcome=classify_outcome(result), context=context)
         return None
 
-    def on_error(
+    async def on_error(
         self,
         name: str,
         arguments: dict[str, Any],
         exc: BaseException,
         context: Any = None,
     ) -> None:
-        self._write(
+        await self._write(
             name,
             arguments,
             outcome=classify_error_outcome(exc),
