@@ -139,9 +139,9 @@ def test_dockerignore_excludes_secrets_env_and_state():
         assert pattern in text, f".dockerignore must exclude {pattern!r}"
 
 
-def test_entrypoint_script_is_syntactically_valid_bash():
+def test_entrypoint_script_is_syntactically_valid_bash(functional_bash):
     result = subprocess.run(
-        ["bash", "-n", str(ENTRYPOINT)],
+        [functional_bash, "-n", str(ENTRYPOINT)],
         capture_output=True,
         text=True,
     )
