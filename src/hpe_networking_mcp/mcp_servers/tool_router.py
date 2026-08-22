@@ -652,8 +652,11 @@ def _generated_records() -> dict[str, dict[str, Any]]:
     records: dict[str, dict[str, Any]] = {}
     for path in sorted(MANIFEST_DIR.glob("*.json")):
         try:
-            manifest = json.loads(path.read_text())
-        except (OSError, json.JSONDecodeError):
+            # Manifest files are UTF-8 repo artifacts: decode explicitly so a
+            # legacy locale (e.g. cp1252) skips a file instead of killing
+            # discovery with UnicodeDecodeError.
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             continue
         for operation in manifest.get("operations") or []:
             if not isinstance(operation, dict) or not operation.get("name"):

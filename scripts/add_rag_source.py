@@ -297,6 +297,13 @@ OUT_PATH = Path(__file__).parent / "{key}_urls.json"
 def main():
     # TODO: replace with a real sitemap/search-index fetch + parse.
     urls: list[str] = []
+    if not urls:
+        print(
+            "No URLs discovered - this discover scaffold has not been adapted"
+            " yet; edit it to fetch/parse the real sitemap or search index"
+            " (see this file's docstring), then re-run."
+        )
+        raise SystemExit(1)
     OUT_PATH.write_text(json.dumps(sorted(set(urls)), indent=2))
     print(f"Discovered {{len(urls)}} URLs -> {{OUT_PATH}}")
 

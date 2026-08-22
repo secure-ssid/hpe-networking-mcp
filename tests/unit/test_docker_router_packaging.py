@@ -139,9 +139,9 @@ def test_dockerignore_excludes_secrets_env_and_state():
         assert pattern in text, f".dockerignore must exclude {pattern!r}"
 
 
-def test_entrypoint_script_is_syntactically_valid_bash():
+def test_entrypoint_script_is_syntactically_valid_bash(functional_bash):
     result = subprocess.run(
-        ["bash", "-n", str(ENTRYPOINT)],
+        [functional_bash, "-n", str(ENTRYPOINT)],
         capture_output=True,
         text=True,
     )
@@ -224,13 +224,37 @@ def test_router_overlay_uses_file_backed_secrets_not_inline_values():
 
 
 def test_router_overlay_requires_explicit_allowed_hosts_and_origins():
+    """MCP_HOST=0.0.0.0 demands an explicit, SDK-supported allow-list.
+
+    shared.py refuses non-loopback binds unless MCP_ALLOWED_HOSTS/ORIGINS are
+    both set, and the installed MCP SDK only recognizes an exact '<host>:*'
+    port wildcard (plus literal host:port values). A bare hostname entry
+    never matches the port-qualified Host header, so every real /mcp request
+    fails with 421 while /livez keeps passing -- the failure mode observed in
+    the 2026-08-22 streamable-HTTP container probe.
+    """
     config = _load_yaml(ROUTER_OVERLAY)
     environment = config["services"]["mcp-router"]["environment"]
     assert environment["MCP_HOST"] == "0.0.0.0"
+    host_entry = re.compile(r"^[A-Za-z0-9._-]+:(\*|[0-9]+)$")
+    origin_entry = re.compile(r"^[a-z][a-z0-9+.-]*://[A-Za-z0-9._-]+:(\*|[0-9]+)$")
     for key in ("MCP_ALLOWED_HOSTS", "MCP_ALLOWED_ORIGINS"):
         value = environment[key]
         assert value, f"{key} must be set explicitly alongside MCP_HOST=0.0.0.0"
-        assert "*" not in value, f"{key} must not use a wildcard"
+        entries = [entry.strip() for entry in value.split(",") if entry.strip()]
+        assert entries, f"{key} must list at least one non-empty entry"
+        shape = origin_entry if key == "MCP_ALLOWED_ORIGINS" else host_entry
+        expected = (
+            'a scheme-qualified origin like "http://127.0.0.1:*"'
+            if key == "MCP_ALLOWED_ORIGINS"
+            else "an exact '<host>:*' port wildcard or a literal '<host>:port'"
+        )
+        for entry in entries:
+            assert shape.fullmatch(entry), (
+                f"{key} entry '{entry}' is not accepted by shared.py; use {expected}. "
+                "A blanket '*' or a bare hostname silently matches nothing and "
+                "rejects every real request with 421."
+            )
 
 
 def _router_volumes() -> list[str]:

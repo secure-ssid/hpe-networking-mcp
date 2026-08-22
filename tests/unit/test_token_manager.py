@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import concurrent.futures
+import os
 import threading
 import time
+
+import pytest
 
 from hpe_networking_mcp.pipeline.clients.token_manager import TokenManager
 
@@ -181,6 +184,7 @@ def test_token_manager_does_not_collapse_when_generation_already_advanced(tmp_pa
     assert manager.generation == 2
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits only")
 def test_token_cache_write_is_atomic_and_0600(tmp_path, monkeypatch):
     """The token cache is written owner-only (0600) via a temp file that is
     atomically renamed into place, leaving no world-readable window and no
@@ -268,3 +272,22 @@ def test_token_metadata_excludes_secret_and_reports_expiry(tmp_path, monkeypatch
     assert metadata["expires_in_seconds"] is not None
     assert "secret-token" not in str(metadata)
     assert "secret" not in str(metadata)
+
+
+def test_token_manager_fails_closed_when_cache_dir_unwritable(tmp_path, monkeypatch):
+    """An unwritable cache dir must raise -- never fall back to CWD.
+
+    A silent fallback writes OAuth tokens into whatever directory the process
+    runs from, which is frequently a repo checkout or a container layer.
+    """
+    import pathlib
+
+    locked = tmp_path / "locked"
+    monkeypatch.setenv("TOKEN_CACHE_DIR", str(locked))
+
+    def _deny_mkdir(self, *args, **kwargs):
+        raise PermissionError(f"permission denied creating {self}")
+
+    monkeypatch.setattr(pathlib.Path, "mkdir", _deny_mkdir)
+    with pytest.raises(RuntimeError, match="TOKEN_CACHE_DIR"):
+        TokenManager(client_id="id", client_secret="secret")
