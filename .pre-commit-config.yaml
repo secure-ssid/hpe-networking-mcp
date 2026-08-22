@@ -35,7 +35,7 @@ repos:
     hooks:
       - id: bandit-src
         name: bandit (src/, medium+ severity gate)
-        entry: uv run bandit -r src/ -ll
+        entry: uv run --group security bandit -r src/ -ll
         language: system
         pass_filenames: false
         always_run: true
