@@ -10,8 +10,9 @@ HPE_MCP_TOOLSETS=central,glp,rag
 
 This exposes only `find_tool`, `invoke_read_tool`, and `invoke_tool` in
 minimal mode while still letting the router reach the backend catalog on
-9: demand. The complete index can contain 6,728 backend tools, while minimal
-10: The remaining profiles in that file are direct debug servers
+demand. The complete index can contain 6,728 backend tools, while minimal
+mode keeps only three discovery/dispatch tools in client context.
+The remaining profiles in that file are direct debug servers
 (`central-monitoring`, `central-config`, `central-ops`, `central-nac`,
 `central-streaming`, `glp-core`)
 plus two CLI launch entries for the migration pipeline and SSID builder.
@@ -59,7 +60,6 @@ and tool approvals; an MCP JSON file cannot select or upgrade the model. See
 the [GitHub Copilot CLI MCP
 documentation](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers)
 for current registry, trust, and configuration precedence.
-mode keeps only three discovery/dispatch tools in client context.
 The shipped canonical host router examples also set the aggregate
 `safe-read-only` profile; model choice, agent mode, tool approval, and
 workspace trust remain owned by the host application.
@@ -86,94 +86,6 @@ run one MCP call to confirm the connection works.
 The repository stays focused on the router, setup/doctor workflow, portable
 configs, safety gates, and documentation. Model selection remains a host
 responsibility.
-
-## Native CLI (`hpe-mcp`)
-
-This repo also ships a standalone client that does **not** require Copilot
-CLI. It speaks MCP over stdio (launches the local router) or streamable HTTP
-(connects to an already-running router), defaults to read-only dispatch, and
-prints a project banner on interactive starts.
-
-```bash
-# easiest: activate once, then just `hpe-mcp`
-source .venv/bin/activate
-hpe-mcp                 # no args → plain streaming chat + boot banner
-
-# or from repo root without activating
-./hpe-mcp
-./hpe-mcp version
-./hpe-mcp tools list
-
-# offline helpers
-hpe-mcp version
-hpe-mcp profiles
-hpe-mcp skills list
-hpe-mcp docs add ./notes.md --collection personal
-hpe-mcp docs remove <id>              # or --keep-file to keep the file on disk
-
-# connected one-shots (stdio → local-router profile)
-hpe-mcp tools list
-hpe-mcp tools find "wireless client health"
-hpe-mcp rag ask "How do I configure WPA3?" --source mist_docs
-hpe-mcp api lookup "create WLAN on Mist"
-hpe-mcp invoke-read ask_docs --args '{"question":"Mist site config","source":"mist_docs"}'
-```
-
-The standalone chat defaults to the offline `heuristic` backend. For
-model-backed reasoning, select a provider and model explicitly or set them in
-the environment:
-
-```bash
-HPE_MCP_AI_PROVIDER=ollama HPE_MCP_AI_MODEL=llama3.2 hpe-mcp
-hpe-mcp --provider openai --model gpt-4o
-hpe-mcp ai "investigate client authentication failures"
-```
-
-Use the provider's normal credentials (`OPENAI_API_KEY`,
-`ANTHROPIC_API_KEY`, or a running Ollama server). When using VS Code, Copilot,
-Claude, Crush, MCPJam, LibreChat, or Open WebUI instead, configure the model
-in that host; the MCP router does not select or require a model.
-
-In plain chat, enter a networking question directly. In the legacy Textual
-TUI, plain text is also a networking question and `/` commands provide expert
-controls:
-
-```text
-How do I configure WPA3?
-/api create WLAN
-/find wireless client
-/tools
-/help
-/quit
-```
-
-Interactive mode defaults to a **plain streaming AI chat** that keeps the
-terminal readable and lets the selected host-side/provider adapter stream
-answers and observable MCP tool activity. Legacy commands such as
-`ask ...`, `api ...`, and `find ...` remain compatible. Use the gum-enhanced
-command shell or the legacy full-screen Textual UI only when you want their
-explicit controls:
-
-```bash
-hpe-mcp                 # plain streaming chat
-hpe-mcp --repl          # gum/readline command shell
-hpe-mcp --tui           # legacy Textual TUI
-```
-
-Useful flags:
-
-- `--json` — stable machine-readable envelope for scripts/CI
-- `--profile local-http` — attach to `http://127.0.0.1:8010/mcp` (or
-  `HPE_MCP_HTTP_URL`)
-- `--allow-writes --yes` — required together before any write/destructive tool
-- `--quiet` / `-q` — suppress the boot banner
-
-Config discovery order: built-in profiles → `~/.config/hpe-mcp/config.json`
-(or `$XDG_CONFIG_HOME/hpe-mcp/`) → repo `.hpe-mcp/config.json` /
-`.mcp.json` → `HPE_MCP_CLIENT_CONFIG`. Personal document collections live
-under `~/.config/hpe-mcp/collections/` and stay outside the git tree.
-
-`hpe-mcp-client` is an alias of the same entry point.
 
 ## Guided network diagrams
 

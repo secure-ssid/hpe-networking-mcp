@@ -1770,7 +1770,7 @@ def search_internal_docs(
     """Search your local personal/internal document collection.
 
     Hybrid (vector + keyword) search over documents you ingested yourself
-    with `hpe-mcp docs ingest <folder>` — e.g. internal sales/technical
+    with `python scripts/ingest_personal_docs.py <folder>` — e.g. internal sales/technical
     enablement decks, transcripts, or notes. This is a separate, local-only
     index stored under ~/.config/hpe-mcp/personal/ — never the shared,
     repository-distributed RAG corpus, and never uploaded anywhere. If you
@@ -1782,7 +1782,7 @@ def search_internal_docs(
         top_k:      Results to return (default 5, range 1-20).
         collection: Which personal collection to search (default "internal").
     """
-    from hpe_networking_mcp.cli_client import personal_ingest
+    from hpe_networking_mcp.pipeline import personal_ingest
 
     top_k = _clamp_top_k(top_k, 20)
     # The personal index is LanceDB + fastembed, both in the `ingestion`
@@ -1800,7 +1800,7 @@ def search_internal_docs(
                 {
                     "error": (
                         "No personal documents have been ingested yet. Run "
-                        "`hpe-mcp docs ingest <folder>` (or "
+                        "`python scripts/ingest_personal_docs.py <folder>` (or "
                         "personal_ingest.ingest_folder(...) directly) first."
                     )
                 }

@@ -102,9 +102,7 @@ VS Code with GitHub Copilot is the primary supported host path. Copilot CLI is
 also supported when you already have a subscription; Crush, Claude, Cursor,
 or any client that supports stdio or streamable HTTP MCP servers can be used
 as alternatives. See [mcp-client-recipes.md](mcp-client-recipes.md) for the
-host decision guide and safe-read-only configs. `hpe-mcp` is also available
-as an optional local plain-streaming chat client; it is not a replacement for
-an MCP host.
+host decision guide and safe-read-only configs.
 
   </div>
   <div class="step-card" markdown="1">
@@ -131,13 +129,12 @@ files, replace MCP path placeholders, choose a Central API gateway region, fill
 credentials without echoing secrets, enable optional products, build the router
 tool catalog, and run the local doctor.
 
-Installing the project also puts five console commands on your `PATH`:
+Installing the project also puts four console commands on your `PATH`:
 
 | Command | What it does |
 |---|---|
 | `hpe-mcp-router` | Run the unified `hpe-networking-mcp` MCP router (transport from `MCP_TRANSPORT`) |
 | `hpe-mcp-doctor` | Local setup diagnostic; no Central/GLP API calls |
-| `hpe-mcp` | Optional local plain-streaming chat client; use `--repl` or `--tui` only for the legacy interfaces |
 | `hpe-mcp-run-pipeline` | Switch migration pipeline CLI |
 | `hpe-mcp-run-ssid` | Underlay/overlay SSID builder CLI |
 
@@ -384,14 +381,10 @@ Your client can either launch the router itself (stdio) or connect to one
 already running (streamable HTTP, from [Step 2](#2-try-it-credential-free)).
 [mcp-client-recipes.md](mcp-client-recipes.md) has the full decision guide and
 copy/paste blocks for VS Code + GitHub Copilot first, then Copilot CLI,
-generic clients, Cursor, Claude, and the optional existing frontends —
-including the accessible
-transport-choice diagram used to make that call. The first profile in
-`.claude/launch.json` is the same `minimal` `hpe-networking-mcp` setup shown
-above; the rest are direct debug servers. For an optional local fallback,
-`hpe-mcp` starts plain streaming chat with the safe-read-only local-router
-profile; select `--provider`/`--model` only when using its model adapters, and
-use `--repl` or `--tui` for the explicit legacy interfaces.
+generic clients, Cursor, Claude, and optional external frontends —
+including the accessible transport-choice diagram used to make that call. The
+first profile in `.claude/launch.json` is the same `minimal`
+`hpe-networking-mcp` setup shown above; the rest are direct debug servers.
 
 ## 5. Build the tool catalog
 
@@ -542,6 +535,19 @@ Built indexes live under `data/` and are git-ignored.
 The current rebuilt snapshot contains 392,471 prose chunks and a structured
 index with 2,734 endpoints, 6,363 schemas, 31,432 fields,
 104 security advisories, and 345 lifecycle records.
+
+## Optional: ingest private personal documents
+
+Personal documents are indexed locally and are never added to the repository
+or the shared release corpus. Install the ingestion extra, then run:
+
+```bash
+uv run --extra ingestion python scripts/ingest_personal_docs.py ~/Documents/network-notes
+```
+
+The default `internal` collection is stored under
+`~/.config/hpe-mcp/personal/lancedb` (or `$XDG_CONFIG_HOME/hpe-mcp/personal/lancedb`)
+and is searched by the router's `search_internal_docs` tool.
 
 ## Optional product starters
 

@@ -12,7 +12,7 @@ render without browser-side JavaScript.
 | [index.md](index.md) | Task-based front door for new users, network operators, and contributors |
 | [getting-started.md](getting-started.md) | Wizard install, credentials, optional products, MCP client setup, and indexes |
 | [production-deployment.md](production-deployment.md) | Containerized router packaging: Dockerfile, Compose overlay, secrets, and explicit prebuilt-index provisioning |
-| [mcp-client-recipes.md](mcp-client-recipes.md) | Host-first MCP setup recipes plus optional local `hpe-mcp` chat |
+| [mcp-client-recipes.md](mcp-client-recipes.md) | Host-first MCP setup recipes for stdio and streamable HTTP |
 | [../examples/README.md](../examples/README.md) | Tested, non-secret example configs: minimal/full stdio, local/bearer HTTP, Copilot CLI, and prompt/runbook examples |
 | [../MIGRATION.md](../MIGRATION.md) | Local migration path from the legacy `secure-ssid/centralmcp` repository |
 | [../CHANGELOG.md](../CHANGELOG.md) | Version history index into per-release notes |
@@ -83,7 +83,7 @@ panels are defined in `assets/css/style.scss`.
 | Path | Purpose |
 |---|---|
 | `src/hpe_networking_mcp/mcp_servers/` | MCPServer backends, low-token router, prompts, middleware, optional product starters, and the always-loaded credential-free `interop-core` backend |
-| `src/hpe_networking_mcp/cli/` | `hpe-mcp` local client plus doctor and pipeline/SSID console-script implementations |
+| `src/hpe_networking_mcp/cli/` | Doctor and pipeline/SSID console-script implementations |
 | `src/hpe_networking_mcp/pipeline/` | Migration pipeline, typed clients, credentials loading, state store, SSID helpers |
 | `ingestion/` | Docs/API ingestion into LanceDB and SQLite |
 | `ingestion/source_manifest.json` | RAG source seeds for product docs, OpenAPI, security advisories, and end-of-sale/end-of-life lifecycle notices |

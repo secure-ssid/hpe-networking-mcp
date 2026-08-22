@@ -1,4 +1,4 @@
-"""Unit tests for cli_client.personal_ingest — local-only personal document
+"""Unit tests for pipeline.personal_ingest — local-only personal document
 ingestion (PPTX/DOCX/PDF/VTT/text/HTML extraction, content-hash dedup,
 chunk/embed/store, hybrid search).
 
@@ -32,7 +32,7 @@ from pathlib import Path
 
 import pytest
 
-from hpe_networking_mcp.cli_client import personal_ingest as pi
+from hpe_networking_mcp.pipeline import personal_ingest as pi
 
 # ── chunking ──────────────────────────────────────────────────────────────
 

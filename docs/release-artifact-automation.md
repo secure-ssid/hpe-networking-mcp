@@ -148,7 +148,8 @@ The main CI workflow has two release-related tiers:
   variable, so it runs on every push and pull request as a required check.
 
 The package job also builds wheel/sdist, installs the wheel into a fresh
-environment, and smoke-runs all four `hpe-mcp-*` console scripts.
+environment, and smoke-runs the four supported `hpe-mcp-*` console scripts:
+the router, doctor, migration, and SSID commands.
 
 Strict index validation stays reproducible because every input it needs is
 committed. A package-version bump or a change to

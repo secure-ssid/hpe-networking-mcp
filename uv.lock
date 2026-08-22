@@ -907,7 +907,6 @@ all = [
     { name = "python-docx" },
     { name = "python-pptx" },
     { name = "redis" },
-    { name = "textual" },
 ]
 ingestion = [
     { name = "beautifulsoup4" },
@@ -928,9 +927,6 @@ redis = [
     { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "redis" },
 ]
-tui = [
-    { name = "textual" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -947,7 +943,7 @@ security = [
 requires-dist = [
     { name = "beautifulsoup4", marker = "extra == 'ingestion'", specifier = ">=4.15.0" },
     { name = "fastembed", marker = "extra == 'ingestion'", specifier = ">=0.8.0" },
-    { name = "hpe-networking-mcp", extras = ["ingestion", "redis", "tui", "milvus-lite"], marker = "extra == 'all'" },
+    { name = "hpe-networking-mcp", extras = ["ingestion", "redis", "milvus-lite"], marker = "extra == 'all'" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "lancedb", marker = "extra == 'ingestion'", specifier = ">=0.33.0" },
     { name = "langchain-text-splitters", marker = "extra == 'ingestion'", specifier = ">=0.2.0" },
@@ -962,10 +958,9 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "redis", marker = "extra == 'redis'", specifier = ">=8.0.1" },
     { name = "rich", specifier = ">=13.0.0" },
-    { name = "textual", marker = "extra == 'tui'", specifier = ">=8.2.8" },
     { name = "websockets", specifier = ">=14.0" },
 ]
-provides-extras = ["ingestion", "redis", "tui", "milvus-lite", "all"]
+provides-extras = ["ingestion", "redis", "milvus-lite", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1407,18 +1402,6 @@ wheels = [
 ]
 
 [[package]]
-name = "linkify-it-py"
-version = "2.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "uc-micro-py" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2e/c9/06ea13676ef354f0af6169587ae292d3e2406e212876a413bf9eece4eb23/linkify_it_py-2.1.0.tar.gz", hash = "sha256:43360231720999c10e9328dc3691160e27a718e280673d444c38d7d3aaa3b98b", size = 29158, upload-time = "2026-03-01T07:48:47.683Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/de/88b3be5c31b22333b3ca2f6ff1de4e863d8fe45aaea7485f591970ec1d3e/linkify_it_py-2.1.0-py3-none-any.whl", hash = "sha256:0d252c1594ecba2ecedc444053db5d3a9b7ec1b0dd929c8f1d74dce89f86c05e", size = 19878, upload-time = "2026-03-01T07:48:46.098Z" },
-]
-
-[[package]]
 name = "loguru"
 version = "0.7.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1561,11 +1544,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl", hash = "sha256:9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a", size = 91687, upload-time = "2026-05-07T12:08:27.182Z" },
 ]
 
-[package.optional-dependencies]
-linkify = [
-    { name = "linkify-it-py" },
-]
-
 [[package]]
 name = "mcp"
 version = "2.0.0"
@@ -1608,18 +1586,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/bb/56/9b8e1c152f61f6c6b07c4b5896c88c7d0ae90bac6ee6306f852fcc5c1eb0/mcp_types-2.0.0.tar.gz", hash = "sha256:d7d939b9285c9961ae8866ba75ef85da34d12bafe276efbf4eb6a131786d8379", size = 66632, upload-time = "2026-07-28T13:45:33.804Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f5/4c/c78d78c3d52b0ac594ad7cc8ef5972adfe070e3597a8a4c6ce0cd39196ea/mcp_types-2.0.0-py3-none-any.whl", hash = "sha256:6b2de797ca2797f568b79529e1b25948e34de511bcc0bd82fef1039a6d1b8eb0", size = 69649, upload-time = "2026-07-28T13:45:30.713Z" },
-]
-
-[[package]]
-name = "mdit-py-plugins"
-version = "0.6.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "markdown-it-py" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/59/fc/f8d0863f8862f25602c0404d75568e89fb6b4109804645e5cdfb1be5cf56/mdit_py_plugins-0.6.1.tar.gz", hash = "sha256:a2bca0f039f39dbd35fb74ae1b5f998608c437463371f0ff7f49a19a17a114d0", size = 56114, upload-time = "2026-05-13T09:03:38.91Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a5/69/6da5581c6a7fede7dc261bf4e67d6adca4196f176b43288b55b3db395b6e/mdit_py_plugins-0.6.1-py3-none-any.whl", hash = "sha256:214c82fb2ac524472ab6a5bcab1de80f73b50443e187f401bfd77efbc7c6481d", size = 66663, upload-time = "2026-05-13T09:03:37.76Z" },
 ]
 
 [[package]]
@@ -3736,23 +3702,6 @@ wheels = [
 ]
 
 [[package]]
-name = "textual"
-version = "8.2.8"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "markdown-it-py", extra = ["linkify"] },
-    { name = "mdit-py-plugins" },
-    { name = "platformdirs" },
-    { name = "pygments" },
-    { name = "rich" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/00/21/39a76b01bd5eea82a04baaca7580e105d8c59450df03998345bb2cfb307b/textual-8.2.8.tar.gz", hash = "sha256:3f106a9fbc73e39dd266c9712432087de78a6d644084c7c241d6a25c3169115b", size = 1860502, upload-time = "2026-06-30T06:51:24.495Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fb/be/35261223d9416a0751cdff1c7b4a6f881387218a12d439fe22fefebc8c04/textual-8.2.8-py3-none-any.whl", hash = "sha256:267375fd402dc8d981457212efa71f0e3365fd17bba144ba9bb3ed7563cb374a", size = 731418, upload-time = "2026-06-30T06:51:26.364Z" },
-]
-
-[[package]]
 name = "tokenizers"
 version = "0.23.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3906,15 +3855,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/92/ff/5a28bdfd8c3ebec42564ac7d0e54ca3db65044a9314a97f9564fa7a1e926/tzdata-2026.3.tar.gz", hash = "sha256:4a1518b8993086a7982523e071643f3c0e5f213e75b21318e78bcabfff9d1415", size = 198674, upload-time = "2026-07-10T08:50:37.887Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/6d/b53b99a9f2766d095985947a5782f1702cabb129a34f7a802d7197af832f/tzdata-2026.3-py2.py3-none-any.whl", hash = "sha256:dc096730c87af6cab1b171c9d532be840741ff5d459015e7f6947bd7d7e54931", size = 348168, upload-time = "2026-07-10T08:50:36.46Z" },
-]
-
-[[package]]
-name = "uc-micro-py"
-version = "2.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/78/67/9a363818028526e2d4579334460df777115bdec1bb77c08f9db88f6389f2/uc_micro_py-2.0.0.tar.gz", hash = "sha256:c53691e495c8db60e16ffc4861a35469b0ba0821fe409a8a7a0a71864d33a811", size = 6611, upload-time = "2026-03-01T06:31:27.526Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/73/d21edf5b204d1467e06500080a50f79d49ef2b997c79123a536d4a17d97c/uc_micro_py-2.0.0-py3-none-any.whl", hash = "sha256:3603a3859af53e5a39bc7677713c78ea6589ff188d70f4fee165db88e22b242c", size = 6383, upload-time = "2026-03-01T06:31:26.257Z" },
 ]
 
 [[package]]
