@@ -14,7 +14,7 @@
 
 services:
   redis:
-    image: redis/redis-stack:latest
+    image: redis/redis-stack@sha256:5d5154123426693540ea6c1d9e638eae2bf2024879c839db6fcfdd7717e817c7  # digest-pinned 2026-08-22
     ports:
       - "127.0.0.1:6379:6379"
       - "127.0.0.1:8001:8001"  # RedisInsight local web UI
@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
 
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama@sha256:57d60e686821ea81a7748a3ec8141308c8b8f95b27105713954abf7a6529e700  # digest-pinned 2026-08-22
     ports:
       - "127.0.0.1:11434:11434"
     volumes:
