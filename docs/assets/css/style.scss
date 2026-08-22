@@ -1,7 +1,7 @@
 ---
 ---
 
-@import "{{ site.theme }}";
+// Custom component styles, loaded after the theme via `_includes/head_custom.html`.
 
 :root {
   --docs-navy: #071020;

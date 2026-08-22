@@ -1,3 +1,9 @@
+---
+title: "Central v0.7 workflows"
+nav_order: 3
+parent: "Reference"
+---
+
 # Central v0.7 depth workflows (`v07-central-depth`)
 
 Scope: Central-only. Adds schema-backed template/bulk/firmware-campaign/

@@ -1,3 +1,9 @@
+---
+title: "0.8.0"
+nav_order: 2
+parent: "Releases"
+---
+
 # hpe-networking-mcp 0.8.0
 
 Released 2026-08-12.

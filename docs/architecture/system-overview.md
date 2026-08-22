@@ -1,3 +1,9 @@
+---
+title: "System overview"
+nav_order: 2
+parent: "Architecture"
+---
+
 # hpe-networking-mcp system overview
 
 For the current mental model — three router tools, RAG vs live APIs, dry-run

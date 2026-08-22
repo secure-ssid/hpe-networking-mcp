@@ -101,3 +101,7 @@ personal_data/
 personal_docs/
 *.personal.lancedb/
 cli_client/personal/
+
+# Jekyll build artifacts from local docs builds
+docs/.sass-cache/
+docs/_site/

@@ -1,3 +1,9 @@
+---
+title: "0.3.0"
+nav_order: 7
+parent: "Releases"
+---
+
 # hpe-networking-mcp 0.3.0 - platform parity, migrations, and safety
 
 Version 0.3.0 is the largest hpe-networking-mcp expansion so far. It updates the core

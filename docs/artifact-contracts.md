@@ -1,3 +1,9 @@
+---
+title: "Artifact contracts"
+nav_order: 9
+parent: "Reference"
+---
+
 # v0.7 artifact contracts and live-test configuration
 
 This page documents the shared, versioned artifact schemas and the

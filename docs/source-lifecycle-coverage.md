@@ -1,3 +1,9 @@
+---
+title: "Source lifecycle coverage"
+nav_order: 7
+parent: "Reference"
+---
+
 # Security/lifecycle source coverage, freshness, and provenance
 
 This page defines exactly what hpe-networking-mcp's security-advisory and

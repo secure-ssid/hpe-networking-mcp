@@ -1,3 +1,9 @@
+---
+title: "Source drift gates"
+nav_order: 8
+parent: "Reference"
+---
+
 # Source, API, and RAG drift gates
 
 Every upstream input this project depends on -- Aruba developer-portal

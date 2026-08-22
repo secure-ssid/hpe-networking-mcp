@@ -1,3 +1,8 @@
+---
+title: "Tool router"
+nav_order: 4
+---
+
 # Low-token tool router
 
 For the MCP + RAG mental model, start with
