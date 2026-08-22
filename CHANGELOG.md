@@ -24,6 +24,15 @@ time. This file is the compact index into those pages. See
   server willing to dispatch `reboot_device` and `disconnect_client`.
   Deployments relying on the implicit default must set the variable explicitly.
 
+### Changed
+
+- **Raised tool exceptions now return the response-envelope shape.** A tool
+  that raises produces the same `{ok: false, status, data, message, tool,
+  platform}` payload a returned error dict gets — on standalone backends and
+  through the router alike — delivered as an `isError=true` result, instead
+  of bare `ToolError` text. Elicitation/protocol errors and cancellation
+  still propagate untouched.
+
 ### Added
 
 - **`corpus_provenance`** — one read-only `rag-core` tool reporting what backs
