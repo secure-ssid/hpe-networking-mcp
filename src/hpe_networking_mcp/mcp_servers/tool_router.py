@@ -1980,14 +1980,48 @@ if _ROUTER_MODE != "minimal":
             description="Optional next_cursor from a previous truncated read.",
         )
 
-    def _as_call_mapping(raw_call: Any) -> Any:
-        """Normalize a validated ``BatchCall`` back to a plain mapping.
+    class MixedBatchCall(BaseModel):
+        """One entry in an invoke_tools_batch request.
 
-        MCPServer coerces incoming JSON into ``BatchCall`` instances, while a
-        direct in-process caller (and every unit test) passes plain dicts.
-        Both are accepted; validation below only ever sees a mapping.
+        Identical fields and bounds to ``BatchCall`` -- required ``name``,
+        optional ``arguments`` and caller correlation ``id`` -- but with NO
+        ``cursor`` field: cursor resume stays read-only, so a mixed batch
+        that can dispatch writes must not silently carry a read continuation
+        into a write-capable path. A plain-dict caller that passes a
+        ``cursor`` key anyway gets that entry rejected as ``invalid_call``
+        (see ``_validate_mixed_batch_call``) rather than having the key
+        quietly ignored.
         """
-        if isinstance(raw_call, BatchCall):
+
+        model_config = ConfigDict(extra="forbid")
+
+        name: str = Field(
+            min_length=1,
+            max_length=MAX_BATCH_TOOL_NAME_CHARS,
+            description="Exact backend tool name from find_tool.",
+        )
+        arguments: dict[str, Any] = Field(
+            default_factory=dict,
+            description="Tool arguments object (default {}).",
+        )
+        id: str | None = Field(
+            default=None,
+            max_length=MAX_BATCH_CALL_ID_CHARS,
+            description=(
+                "Optional caller correlation id, unique within the batch. "
+                "Defaults to the call's list index as a string."
+            ),
+        )
+
+    def _as_call_mapping(raw_call: Any) -> Any:
+        """Normalize a validated batch-call model back to a plain mapping.
+
+        MCPServer coerces incoming JSON into ``BatchCall`` /
+        ``MixedBatchCall`` instances, while a direct in-process caller (and
+        every unit test) passes plain dicts. Both are accepted; validation
+        below only ever sees a mapping.
+        """
+        if isinstance(raw_call, (BatchCall, MixedBatchCall)):
             return raw_call.model_dump()
         return raw_call
 
@@ -2351,6 +2385,291 @@ if _ROUTER_MODE != "minimal":
             "counts": counts,
             "failed_ids": failed_ids,
             "failed_indexes": failed_indexes,
+            "truncated": truncated,
+        }
+
+
+    # ── invoke_tools_batch: the write-capable sibling ───────────────────────
+    #
+    # Same bounded, ordered, sequential fan-out as invoke_read_tool_batch,
+    # but each step dispatches through ``_dispatch_tool`` -- the exact
+    # single-call path ``invoke_tool`` itself uses -- so the global read-only
+    # gate, the per-platform deny-by-default write gates, dispatch-level
+    # rate-gate charging, and per-call response bounding all apply per step
+    # with zero duplicated enforcement logic here. Because ``_dispatch_tool``
+    # forwards the router's own ``ctx`` via ``call_tool_raw``, destructive
+    # steps keep their per-step confirmation elicitation, exactly as a direct
+    # ``invoke_tool`` call would.
+    #
+    # The one behavioral addition over the read batch is fail-fast dispatch:
+    # writes make "keep going after a failure" a much riskier default, so
+    # ``on_error="stop"`` (the default) halts the batch at the first step
+    # whose normalized status is not "ok" -- including a gate-"blocked"
+    # write, which is deliberately not an "error" -- and reports how many
+    # steps were never dispatched. ``on_error="continue"`` reproduces the
+    # read batch's collect-all semantics verbatim.
+
+    def _validate_mixed_batch_call(
+        raw_call: Any, index: int
+    ) -> tuple[dict[str, Any] | None, str | None, str, str | None]:
+        """Validate/normalize one mixed-batch entry.
+
+        Sibling of ``_validate_batch_call`` with identical bounds -- it
+        delegates to that helper for everything except the one mixed-batch
+        rule: a ``cursor`` key is rejected, because cursor resume is a
+        read-only-continuation concept and must never ride along into a
+        write-capable dispatch. Like the read-batch validator, this never
+        raises and never echoes a raw argument *value* in an error message.
+        """
+        mapping = _as_call_mapping(raw_call)
+        if isinstance(mapping, dict) and mapping.get("cursor") is not None:
+            raw_id = mapping.get("id")
+            resolved_id = (
+                raw_id if isinstance(raw_id, str) and raw_id.strip() else str(index)
+            )
+            raw_name = mapping.get("name")
+            return (
+                None,
+                "cursor is not supported by invoke_tools_batch; resume a "
+                "truncated read with invoke_read_tool or "
+                "invoke_read_tool_batch instead",
+                resolved_id,
+                raw_name,
+            )
+        return _validate_batch_call(mapping, index)
+
+    async def _dispatch_one_mixed_batch_call(
+        ctx: Context,
+        index: int,
+        raw_call: Any,
+        *,
+        item_max_bytes: int | None = None,
+    ) -> dict[str, Any]:
+        """Validate and dispatch exactly one mixed-batch entry through
+        ``_dispatch_tool`` -- the same helper ``invoke_tool`` uses -- and
+        normalize the outcome into the same bounded result-item shape the
+        read batch produces (``index``/``id``/``tool``/``server``/``status``
+        plus either ``result`` or ``error``, never both).
+
+        Every failure mode is contained: a validation rejection, a
+        gate-blocked write, an error-shaped backend response, and an
+        exception escaping dispatch all become an ordinary result item, so
+        one bad call can never raise out of the tool. Whether it *halts* the
+        batch is the caller's decision (``on_error``), not this helper's.
+        """
+        normalized, error, resolved_id, raw_name = _validate_mixed_batch_call(
+            raw_call, index
+        )
+        if error is not None:
+            return {
+                "index": index,
+                "id": resolved_id,
+                "tool": raw_name if isinstance(raw_name, str) else None,
+                "server": None,
+                "status": "invalid_call",
+                "error": _truncate_batch_error(error),
+            }
+        name = normalized["name"]
+        server = _tool_backend_names.get(name)
+        base = {"index": index, "id": resolved_id, "tool": name, "server": server}
+        try:
+            result = await _dispatch_tool(
+                ctx,
+                name,
+                normalized["arguments"],
+                max_bytes=item_max_bytes,
+            )
+        except Exception as exc:
+            # Defense in depth: _dispatch_tool already converts backend
+            # exceptions into an error dict, so reaching here means the
+            # router itself failed. Report it as this item's failure rather
+            # than losing every other call's result.
+            logger.warning("mixed batch item %d (%s) raised", index, name, exc_info=True)
+            return {
+                **base,
+                "status": "error",
+                "error": _truncate_batch_error(f"{type(exc).__name__}: {exc}"),
+            }
+        base["server"] = _tool_backend_names.get(name, server)
+        if isinstance(result, dict) and result.get("status") in (
+            "blocked",
+            "unknown_tool",
+        ):
+            item = {
+                **base,
+                "status": result["status"],
+                "error": _truncate_batch_error(str(result.get("error", ""))),
+            }
+            if result["status"] == "blocked":
+                # A gate-blocked write keeps the full refusal payload
+                # (platform, execution_contract, enable instruction) so the
+                # caller sees exactly what a single invoke_tool call would
+                # have returned -- "blocked" must not be a lossy shape.
+                item["detail"] = result
+            return item
+        if isinstance(result, dict) and result.get("status") == "CANCELLED":
+            # Declined per-step confirmation (the refusal shape the
+            # eliciting ops/monitoring tools return: a "CANCELLED" status
+            # with no "error" key). This is a step *failure*, not a
+            # success: under on_error="stop" it must halt the batch so a
+            # declined write can never fall through to later dependent
+            # steps.
+            return {
+                **base,
+                "status": "cancelled",
+                "error": _truncate_batch_error(
+                    str(result.get("detail") or "confirmation declined")
+                ),
+            }
+        if isinstance(result, dict) and "error" in result:
+            return {
+                **base,
+                "status": "error",
+                "error": _truncate_batch_error(str(result["error"])),
+            }
+        return {**base, "status": "ok", "result": result}
+
+    @mcp.tool(annotations=DESTRUCTIVE)
+    async def invoke_tools_batch(
+        ctx: Context,
+        calls: list[MixedBatchCall],
+        on_error: str = "stop",
+    ) -> dict[str, Any]:
+        """Dispatch a bounded, ordered batch of tool calls -- reads AND writes -- in one round trip.
+
+        The write-capable sibling of invoke_read_tool_batch: each entry in
+        ``calls`` is dispatched sequentially (no concurrency -- deterministic
+        ordering and rate-limit safety over throughput) through the identical
+        dispatch path ``invoke_tool`` itself uses, so every per-step
+        enforcement (the aggregate read-only gate, per-platform
+        deny-by-default write gates, per-backend-call rate charging, and
+        response bounding) applies exactly as it would for N separate
+        invoke_tool calls, and destructive steps keep their per-step
+        confirmation elicitation via the forwarded router ``ctx``. A
+        write/destructive tool named in any entry whose gate is shut is
+        blocked for that entry with the same payload invoke_tool would
+        return, and never reaches the backend. Cursor resume is NOT
+        supported here (it stays read-only): an entry carrying a "cursor"
+        key is rejected with status "invalid_call".
+
+        Args:
+            calls: bounded (max 25) ordered list of call objects, each with
+                required "name" (exact backend tool name from find_tool),
+                optional "arguments" (object, default {}, bounded to 20,000
+                serialized bytes and 8 levels of nesting -- an oversized/
+                malformed entry is rejected with status "invalid_call"
+                before any dispatch is attempted for it, and its values are
+                never echoed in an error message), and optional "id"
+                (caller-supplied correlation string, max 100 chars, unique
+                within the batch -- defaults to the call's list index as a
+                string; duplicate ids reject the whole batch before any
+                dispatch, because correlating results by id is the point of
+                supplying one).
+            on_error: "stop" (default) halts dispatch at the first step
+                whose status is not "ok" -- including a gate-"blocked" write
+                -- so later steps never reach the backend; "continue"
+                collects every step's result like invoke_read_tool_batch.
+                Any other value rejects the whole call before dispatch.
+
+        Rate limiting is charged per dispatched *backend* call, not per
+        batch, and only after every cheap local rejection -- a blocked,
+        unknown, invalid, or never-dispatched (post-halt) step draws no
+        token.
+
+        Returns "ok" (True only when every step succeeded), "results"
+        (ordered list of the steps attempted, each with "index", "id",
+        "tool", "server", "status" -- one of "ok", "error", "blocked",
+        "unknown_tool", "invalid_call", "cancelled" -- and either "result"
+        (on "ok") or "error" (bounded to 500 characters, otherwise); a
+        "blocked" step additionally carries "detail" with the full
+        refusal payload a single invoke_tool call would have returned),
+        "counts" ("total"/"succeeded"/"failed" over the steps attempted),
+        "failed_ids" and "failed_indexes" (both ordered), "halted" (True
+        when on_error="stop" stopped the batch early), "remaining" (how
+        many steps were never dispatched -- 0 unless halted), and
+        "truncated" (True when the response had to be shrunk to fit the
+        configured byte budget -- HPE_MCP_ROUTER_BATCH_RESPONSE_MAX_BYTES,
+        default 300000). Each item additionally gets its own share of that
+        budget while dispatching, so no single call can consume the whole
+        batch's budget. The returned response is strictly within budget.
+        """
+        if not isinstance(calls, list):
+            return {"ok": False, "error": "calls must be a list"}
+        if not calls:
+            return {"ok": False, "error": "calls must contain at least one entry"}
+        if len(calls) > MAX_BATCH_CALLS:
+            return {
+                "ok": False,
+                "error": (
+                    f"calls has {len(calls)} entries, exceeding the {MAX_BATCH_CALLS}-entry bound"
+                ),
+            }
+        if on_error not in ("stop", "continue"):
+            return {
+                "ok": False,
+                "error": (
+                    f"on_error must be 'stop' or 'continue', got {on_error!r}"
+                ),
+            }
+
+        duplicate_id = _first_duplicate_batch_id(calls)
+        if duplicate_id is not None:
+            return {
+                "ok": False,
+                "error": (
+                    f"duplicate call id {duplicate_id!r}: ids must be unique "
+                    "within a batch so results can be correlated"
+                ),
+            }
+
+        byte_budget = _batch_response_budget_bytes()
+        # Split the whole-response budget across the batch so one large
+        # result cannot crowd out every other call's result. Each item still
+        # gets at least the router's per-response floor.
+        item_budget = max(_RESPONSE_BUDGET_MIN_BYTES, byte_budget // max(1, len(calls)))
+
+        items: list[dict[str, Any]] = []
+        halted = False
+        for index, raw_call in enumerate(calls):
+            item = await _dispatch_one_mixed_batch_call(
+                ctx, index, raw_call, item_max_bytes=item_budget
+            )
+            items.append(item)
+            if on_error == "stop" and item["status"] != "ok":
+                # Fail fast: later steps are never dispatched (and therefore
+                # never charged), but the steps already attempted keep their
+                # results so the caller can see exactly how far the batch got.
+                halted = True
+                break
+        remaining = len(calls) - len(items)
+
+        succeeded = sum(1 for item in items if item["status"] == "ok")
+        failed_items = [item for item in items if item["status"] != "ok"]
+        counts = {
+            "total": len(items),
+            "succeeded": succeeded,
+            "failed": len(failed_items),
+        }
+        failed_ids = [item["id"] for item in failed_items]
+        failed_indexes = [item["index"] for item in failed_items]
+
+        shrunk, truncated = _shrink_batch_items_for_budget(items, byte_budget=byte_budget)
+        if _batch_items_byte_size(shrunk) > byte_budget:
+            envelope = _batch_overflow_envelope(
+                items, counts, failed_ids, failed_indexes, byte_budget
+            )
+            envelope["halted"] = halted
+            envelope["remaining"] = remaining
+            return envelope
+
+        return {
+            "ok": not failed_items,
+            "results": shrunk,
+            "counts": counts,
+            "failed_ids": failed_ids,
+            "failed_indexes": failed_indexes,
+            "halted": halted,
+            "remaining": remaining,
             "truncated": truncated,
         }
 
