@@ -417,6 +417,7 @@ class TestRateLimiterPublicAcquire:
             "invoke_tool",
             "invoke_read_tool",
             "invoke_read_tool_batch",
+            "invoke_tools_batch",
         }
 
 

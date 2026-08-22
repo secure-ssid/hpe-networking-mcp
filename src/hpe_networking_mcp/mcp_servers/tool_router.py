@@ -1912,8 +1912,11 @@ if _ROUTER_MODE != "minimal":
     MAX_BATCH_ERROR_CHARS = 500
     _BATCH_RESPONSE_BUDGET_BYTES_ENV = "HPE_MCP_ROUTER_BATCH_RESPONSE_MAX_BYTES"
     _BATCH_RESPONSE_BUDGET_DEFAULT_BYTES = 300_000
-    # Every result item's "status" is exactly one of: "ok", "error",
-    # "blocked", "unknown_tool", "invalid_cursor", "invalid_call".
+    # Every read-batch result item's "status" is exactly one of: "ok",
+    # "error", "blocked", "unknown_tool", "invalid_cursor", "invalid_call".
+    # Mixed-batch (invoke_tools_batch) items use the same set minus
+    # "invalid_cursor" (cursors are read-only) plus "cancelled" (a declined
+    # per-step confirmation).
 
     def _batch_response_budget_bytes() -> int:
         return _env_positive_int(
@@ -3302,7 +3305,9 @@ BATCH_MULTI_LABEL = "batch_multi"
 
 #: Router tools whose real dispatch target lives in their arguments. Kept in
 #: sync with ``hpe_networking_mcp.mcp_servers._middleware.audit_log._DISPATCHING_TOOL_NAMES``.
-_DISPATCHING_ROUTER_TOOLS = frozenset({"invoke_tool", "invoke_read_tool", "invoke_read_tool_batch"})
+_DISPATCHING_ROUTER_TOOLS = frozenset(
+    {"invoke_tool", "invoke_read_tool", "invoke_read_tool_batch", "invoke_tools_batch"}
+)
 
 #: Hard cap on how many batch entries label resolution will inspect. Matches
 #: the batch bound in default mode, and stays defined in minimal mode (where
@@ -3357,6 +3362,28 @@ def _router_call_labels(name: str, arguments: dict[str, Any]) -> tuple[str, str,
             # Every dispatched entry is annotation-gated read-only.
             return (tool_label, backend_label, "read")
         return (name, "router", "read")
+    if name == "invoke_tools_batch" and isinstance(arguments, dict):
+        # Same bounded resolution as the read batch, but a mixed batch can
+        # dispatch writes: the capability label is the most severe capability
+        # among the resolved targets, so a batch containing a write step is
+        # never labelled "read" in metrics or audit.
+        targets = _batch_call_targets(arguments)
+        if targets:
+            distinct = sorted(set(targets))
+            backends = sorted({_tool_backend_names.get(target, "router") for target in targets})
+            tool_label = distinct[0] if len(distinct) == 1 else BATCH_MULTI_LABEL
+            backend_label = backends[0] if len(backends) == 1 else BATCH_MULTI_LABEL
+            capabilities = {_tool_capability(_tool_index[target]) for target in targets}
+            capability = next(
+                (
+                    severity
+                    for severity in ("destructive", "write", "diagnostic", "read")
+                    if severity in capabilities
+                ),
+                "unknown",
+            )
+            return (tool_label, backend_label, capability)
+        return (name, "router", "unknown")
     tool = _sdk_compat.get_tool(mcp, name)
     capability = _tool_capability(tool) if tool is not None else "unknown"
     return (name, "router", capability)

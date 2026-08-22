@@ -57,12 +57,13 @@ _MAX_FALLBACK_SESSIONS = 256
 _SAFE_TARGET_RE = re.compile(r"^[a-zA-Z0-9_.-]{1,64}$")
 
 #: Router tools that dispatch into a *different* backend tool, and therefore
-#: have a meaningful audit "target". ``invoke_read_tool_batch`` dispatches
-#: several; its resolver collapses them to a single bounded label (see
+#: have a meaningful audit "target". ``invoke_read_tool_batch`` /
+#: ``invoke_tools_batch`` dispatch several; their resolver collapses them to a
+#: single bounded label (see
 #: ``hpe_networking_mcp.mcp_servers.tool_router._router_call_target``) rather than leaving the
 #: record's target ``None``/``unknown``.
 _DISPATCHING_TOOL_NAMES = frozenset(
-    {"invoke_tool", "invoke_read_tool", "invoke_read_tool_batch"}
+    {"invoke_tool", "invoke_read_tool", "invoke_read_tool_batch", "invoke_tools_batch"}
 )
 
 # One correlation id per *process* -- generated once at import time, never
