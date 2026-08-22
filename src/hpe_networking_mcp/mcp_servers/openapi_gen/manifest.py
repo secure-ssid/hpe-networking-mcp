@@ -46,7 +46,7 @@ def load_overrides(platform: str) -> dict[str, str]:
     path = override_path(platform)
     if not path.exists():
         return {}
-    doc = json.loads(path.read_text())
+    doc = json.loads(path.read_text(encoding="utf-8"))
     overrides = doc.get("capabilities", doc) if isinstance(doc, dict) else {}
     return {str(k): str(v) for k, v in overrides.items()}
 
@@ -296,7 +296,7 @@ def dumps(manifest: dict[str, Any]) -> str:
 def write_manifest(platform: str, manifest: dict[str, Any]) -> Path:
     MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
     path = manifest_path(platform)
-    path.write_text(dumps(manifest))
+    path.write_text(dumps(manifest), encoding="utf-8")
     return path
 
 
@@ -304,7 +304,7 @@ def load_manifest(platform: str) -> dict[str, Any]:
     path = manifest_path(platform)
     if not path.exists():
         raise FileNotFoundError(f"no generated manifest for platform {platform!r}: {path}")
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def manifest_exists(platform: str) -> bool:
