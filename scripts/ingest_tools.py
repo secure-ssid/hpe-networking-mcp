@@ -15,6 +15,11 @@ Reconcile data/INDEX-MANIFEST.json and docs/project-facts.json afterwards
 `scripts/project_facts.py --write`), or the manifest/facts gates will flag the
 rebuilt index.
 
+Embedding runs on a pool of data-parallel ONNX sessions. Pool size defaults
+to ``min(cpu_count, 8)`` — capped because each session loads its own model
+copy and an uncapped default exhausts memory on many-core hosts. Set
+``HPE_MCP_INGEST_PARALLEL`` to override in either direction.
+
 Reads the servers by direct module import (no subprocess) and walks the
 `mcp._tool_manager._tools` registry. Each tool becomes one indexed row with:
   payload: {server, name, description, schema_json}
@@ -152,7 +157,21 @@ def main_lancedb(products: str | None = None) -> int:
 
     pairs = _collect(products)
     embedder = EmbedClient()
-    vectors = embedder.embed_document([_embed_text(t) for _, t in pairs])
+    # Data-parallel ONNX sessions in one pool, spawned once (see
+    # iter_embed_documents). fastembed's ordered_map re-keys results by
+    # input index, so output order is preserved and the zip below stays
+    # correct. Worker spawning needs this script's __main__ guard (present).
+    # Default is capped at 8: each session loads its own model copy, and an
+    # uncapped cpu_count default OOMs many-core hosts (onnxruntime
+    # bad_alloc). HPE_MCP_INGEST_PARALLEL overrides in both directions.
+    parallel = int(
+        os.getenv("HPE_MCP_INGEST_PARALLEL") or min(os.cpu_count() or 1, 8)
+    )
+    vectors = list(
+        embedder.iter_embed_documents(
+            [_embed_text(t) for _, t in pairs], parallel=parallel
+        )
+    )
     rows = [
         {
             "id": _stable_id(server, t["name"]),
