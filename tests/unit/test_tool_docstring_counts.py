@@ -86,9 +86,14 @@ def test_public_tool_count_claims_match_registered_catalog(monkeypatch):
             match = PUBLIC_TOOL_COUNT_RE.search(line)
             if not match:
                 continue
-            claim_paths.append(str(path.relative_to(REPO_ROOT)))
+            claim_paths.append(path.relative_to(REPO_ROOT).as_posix())
             assert int(match.group("core")) == core_count
             assert int(match.group("read_only")) == read_only_count
             assert int(match.group("read_write")) == read_write_count
 
-    assert claim_paths == ["README.md", "docs/architecture/RAG-ARCHITECTURE.md"]
+    # sorted(): Path iteration order is case-folded on case-insensitive
+    # filesystems, so a positional comparison would be OS-dependent.
+    assert sorted(claim_paths) == [
+        "README.md",
+        "docs/architecture/RAG-ARCHITECTURE.md",
+    ]
