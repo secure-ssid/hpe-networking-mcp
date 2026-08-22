@@ -87,7 +87,7 @@ def _sqlite_counts(path: Path) -> dict[str, int]:
 
 def _display_path(path: Path) -> str:
     try:
-        return str(path.relative_to(ROOT))
+        return path.relative_to(ROOT).as_posix()
     except ValueError:
         return str(path)
 
@@ -143,7 +143,7 @@ def _tree_sha256(root: Path) -> str:
     """
     digest = hashlib.sha256()
     for path in sorted(item for item in root.rglob("*") if item.is_file()):
-        digest.update(str(path.relative_to(root)).encode())
+        digest.update(path.relative_to(root).as_posix().encode())
         digest.update(str(path.stat().st_size).encode())
         with path.open("rb") as handle:
             for chunk in iter(lambda: handle.read(1024 * 1024), b""):

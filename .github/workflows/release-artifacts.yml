@@ -71,7 +71,7 @@ jobs:
       # the document parsers and the LanceDB client, and dropping them would
       # quietly stop testing them.
       - name: Install dependencies
-        run: uv sync --group dev --extra ingestion --extra redis
+        run: uv sync --group dev --extra ingestion --extra redis --frozen
 
       - name: Validate tag and release-notes version
         id: release_meta

@@ -40,5 +40,5 @@ issues, discussions, logs, screenshots, or pull requests.
 ## Supported versions
 
 Security fixes target the `main` branch and the latest published release.
-Version 0.3.x is the current development line. Older pre-1.0 releases do not
+Version 0.10.x is the current development line. Older pre-1.0 releases do not
 have guaranteed backports unless a maintainer explicitly notes otherwise.
