@@ -34,6 +34,8 @@ Two layers are required, because the knobs are read at two different times:
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 
 import pytest
 
@@ -101,3 +103,85 @@ def _neutralize_ambient_hpe_mcp_env(monkeypatch):
     for name in ambient_hpe_mcp_env_names():
         monkeypatch.delenv(name, raising=False)
     yield
+
+
+# ---------------------------------------------------------------------------
+# Functional POSIX bash discovery (Windows WSL-stub guard)
+# ---------------------------------------------------------------------------
+
+
+def _bash_runs_multiline_scripts(bash: str) -> bool:
+    """True when *bash* executes a multi-line ``-c`` script to completion.
+
+    The System32 ``bash.EXE`` WSL launcher is not trustworthy here: it
+    answers trivial scripts but has been observed silently swallowing
+    richer multi-line payloads (function definition + call -> rc 0 with
+    empty stdout/stderr), so even this behavioral check alone cannot
+    identify it.
+    """
+    try:
+        probe = subprocess.run(
+            [bash, "-c", "printf one\nprintf two\n"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return probe.returncode == 0 and probe.stdout == "onetwo"
+
+
+def _bash_accepts_windows_paths(bash: str) -> bool:
+    """True when *bash* converts a backslash Windows path argument.
+
+    The decisive discriminator on Windows: MSYS2-based bashes (Git for
+    Windows) rewrite ``C:\\...`` arguments to POSIX form, while the WSL
+    launcher passes them through verbatim and every lookup then misses
+    (observed: ``bash -n C:\\...\\entrypoint.sh`` -> rc 127 with the path
+    mangled to ``C:Userschoat...``). On POSIX the path is already
+    POSIX-shaped and the check is trivially true, so Linux CI behavior is
+    unchanged.
+    """
+    probe_file = os.path.abspath(__file__)
+    try:
+        result = subprocess.run(
+            [bash, "-c", 'test -f "$1"', "--", probe_file],
+            capture_output=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def _find_functional_bash() -> str | None:
+    """Resolve a POSIX bash fit for the shell-behavior tests, or ``None``.
+
+    Checks ``PATH`` first, then the standard Git-for-Windows install
+    location, because Windows puts the non-functional WSL launcher on PATH
+    ahead of any real bash. A candidate must pass both behavioral probes;
+    location checks alone are not enough.
+    """
+    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+    candidates = [
+        shutil.which("bash"),
+        os.path.join(program_files, "Git", "bin", "bash.exe"),
+    ]
+    for candidate in candidates:
+        if candidate and _bash_runs_multiline_scripts(candidate):
+            if _bash_accepts_windows_paths(candidate):
+                return candidate
+    return None
+
+
+@pytest.fixture(scope="session")
+def functional_bash():
+    """Path to a working POSIX bash; skips the requesting test otherwise."""
+    bash = _find_functional_bash()
+    if bash is None:
+        pytest.skip(
+            "no functional POSIX bash available (System32 bash.EXE is the "
+            "WSL launcher stub: it swallows multi-line -c payloads and "
+            "never converts backslash paths)"
+        )
+    return bash

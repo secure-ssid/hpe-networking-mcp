@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import os
 import threading
 import time
 
@@ -183,6 +184,7 @@ def test_token_manager_does_not_collapse_when_generation_already_advanced(tmp_pa
     assert manager.generation == 2
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits only")
 def test_token_cache_write_is_atomic_and_0600(tmp_path, monkeypatch):
     """The token cache is written owner-only (0600) via a temp file that is
     atomically renamed into place, leaving no world-readable window and no
