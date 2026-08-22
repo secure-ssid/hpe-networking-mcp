@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 
@@ -562,6 +563,7 @@ def test_default_custom_profile_updates_an_existing_env(monkeypatch, tmp_path):
     ]
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits only")
 def test_write_secret_file_is_owner_only(tmp_path):
     """Secret files (credentials.yaml / .env) are created 0600, not
     world-readable under the default umask."""
@@ -574,6 +576,7 @@ def test_write_secret_file_is_owner_only(tmp_path):
     assert stat.S_IMODE(target.stat().st_mode) == 0o600
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits only")
 def test_write_secret_file_tightens_preexisting_world_readable_file(tmp_path):
     """A pre-existing 0644 file is tightened to 0600 before the secret bytes
     land in it (O_CREAT's mode only applies to newly-created files)."""
