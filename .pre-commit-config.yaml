@@ -20,7 +20,8 @@
 #     policy comment at the top of that file).
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Same minor as pyproject's dev ruff floor (ruff>=0.15.6).
+    # Pinned to a current ruff release; pyproject's dev floor is a minimum
+    # (ruff>=0.8.0), not a pin, so this rev is what fixes hook behavior.
     rev: v0.15.22
     hooks:
       - id: ruff
