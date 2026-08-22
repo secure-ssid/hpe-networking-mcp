@@ -1,9 +1,9 @@
 """The server must import, start and serve on a base install.
 
 `pyproject.toml` splits the document pipeline (scraping, office/PDF parsing,
-chunking, embedding, the LanceDB store), the legacy Redis vector backend and
-the Textual TUI into optional extras. That split is only real if the package
-keeps working without them, so these tests run the entry points a
+chunking, embedding, and the LanceDB store) and the legacy Redis vector backend
+into optional extras. That split is only real if the package keeps working
+without them, so these tests run the entry points that a
 ``pip install hpe-networking-mcp`` user actually runs -- the console-script
 targets and an in-process MCP ``list_tools`` -- with the optional packages
 made unimportable.
@@ -51,7 +51,6 @@ MOVED_TO_EXTRA = {
     "fastembed": "ingestion",
     "redis": "redis",
     "numpy": "redis",
-    "textual": "tui",
 }
 
 #: Distribution names as they appear in `[project].dependencies`.
@@ -66,7 +65,6 @@ _MOVED_DISTRIBUTIONS = {
     "fastembed",
     "redis",
     "numpy",
-    "textual",
 }
 
 
@@ -143,9 +141,8 @@ def test_shared_imports_without_optional_packages() -> None:
     [
         "hpe_networking_mcp.mcp_servers.tool_router",
         "hpe_networking_mcp.mcp_servers.rag",
-        "hpe_networking_mcp.cli.mcp_cli",
         "hpe_networking_mcp.cli.doctor",
-        "hpe_networking_mcp.cli_client.personal_ingest",
+        "hpe_networking_mcp.pipeline.personal_ingest",
     ],
 )
 def test_entry_point_modules_import_without_optional_packages(module: str) -> None:
@@ -153,8 +150,8 @@ def test_entry_point_modules_import_without_optional_packages(module: str) -> No
 
     ``mcp_servers.shared`` importing proves very little on its own -- it is a
     settings module. These are the modules `pyproject`'s `[project.scripts]`
-    entries resolve through, plus the two that reach the moved packages
-    (`rag` for LanceDB/Redis, `personal_ingest` for the parsers).
+    entries resolve through, plus the personal-ingestion module reached by
+    ``rag``.
     """
     proc = _run(_blinded(*MOVED_TO_EXTRA) + f"import {module}; print('ok')")
     assert proc.returncode == 0, proc.stderr

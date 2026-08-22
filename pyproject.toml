@@ -102,22 +102,15 @@ redis = [
     "redis>=8.0.1",
     "numpy>=2.2.6",
 ]
-# `hpe-mcp --tui` only. The default CLI, the REPL and every server path run
-# without it.
-tui = [
-    "textual>=8.2.8",
-]
 milvus-lite = [
     "pymilvus[milvus-lite]>=2.5.0,<3",
 ]
 # Everything, for a checkout that wants the full feature set in one command.
 all = [
-    "hpe-networking-mcp[ingestion,redis,tui,milvus-lite]",
+    "hpe-networking-mcp[ingestion,redis,milvus-lite]",
 ]
 
 [project.scripts]
-hpe-mcp = "hpe_networking_mcp.cli.mcp_cli:main"
-hpe-mcp-client = "hpe_networking_mcp.cli.mcp_cli:main"
 hpe-mcp-router = "hpe_networking_mcp.mcp_servers.tool_router:main"
 hpe-mcp-doctor = "hpe_networking_mcp.cli.doctor:main"
 hpe-mcp-run-pipeline = "hpe_networking_mcp.cli.run_pipeline:main"

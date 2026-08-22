@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import re
 import uuid
 import zipfile
@@ -42,7 +43,6 @@ from typing import Any, Callable
 # ``search_personal``/``personal_collection_counts`` must stay importable on a
 # base install (``rag.search_internal_docs`` reaches them), and only the
 # ingest path actually chunks.
-from hpe_networking_mcp.cli_client.config import default_user_data_dir
 from hpe_networking_mcp.optional_deps import require
 
 _CHUNK_SIZE = 800
@@ -56,6 +56,14 @@ _CHUNK_OVERLAP = 100
 #: queries).
 _MIN_CHUNK_SIZE = 200
 _splitter = None
+
+
+def default_user_data_dir() -> Path:
+    """Primary personal data root, outside the repository."""
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    if xdg:
+        return Path(xdg) / "hpe-mcp"
+    return Path.home() / ".config" / "hpe-mcp"
 
 
 def _get_splitter():

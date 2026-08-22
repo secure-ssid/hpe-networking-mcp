@@ -23,6 +23,10 @@ time. This file is the compact index into those pages. See
   which meant `import hpe_networking_mcp` with no configuration produced a
   server willing to dispatch `reboot_device` and `disconnect_client`.
   Deployments relying on the implicit default must set the variable explicitly.
+- **Removed the standalone `hpe-mcp` and `hpe-mcp-client` frontends.** Use an
+  MCP host such as VS Code/Copilot, Copilot CLI, Claude, or another stdio or
+  streamable-HTTP client with `hpe-mcp-router`. Personal document ingestion is
+  still available through `scripts/ingest_personal_docs.py`.
 
 ### Added
 

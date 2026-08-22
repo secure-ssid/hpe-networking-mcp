@@ -30,10 +30,8 @@ path.
 
 The router is model-agnostic: VS Code/Copilot, Copilot CLI, Claude, Crush,
 MCPJam, LibreChat, and Open WebUI own model selection, chat memory, and host
-approval UX. The standalone `hpe-mcp` client is an optional local fallback
-with heuristic, OpenAI-compatible, Anthropic, and Ollama adapters; it exposes
-bounded activity and tool results rather than hidden chain-of-thought. Keep
-the router focused on discovery, dispatch, safety, and transport.
+approval UX. Keep the router focused on discovery, dispatch, safety, and
+transport.
 
 The normal MCP profile keeps the client-visible surface small:
 
@@ -129,7 +127,7 @@ inputs/                  Example migration input templates
 src/hpe_networking_mcp/mcp_servers/             MCPServer backends and low-token router
 src/hpe_networking_mcp/pipeline/                Clients, migration stages, SSID helpers
 resources/               API/Postman reference notes and resources
-scripts/                 Local doctor, HTTP router helper, catalog ingest, release validation
+scripts/                 Local doctor, HTTP router helper, catalog/personal ingest, release validation
 tests/                   Unit, integration, and eval coverage
 
 .mcp.json.example        Generic stdio MCP client example

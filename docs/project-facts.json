@@ -6,8 +6,6 @@
     "name": "hpe-networking-mcp",
     "version": "0.10.0",
     "console_scripts": {
-      "hpe-mcp": "hpe_networking_mcp.cli.mcp_cli:main",
-      "hpe-mcp-client": "hpe_networking_mcp.cli.mcp_cli:main",
       "hpe-mcp-doctor": "hpe_networking_mcp.cli.doctor:main",
       "hpe-mcp-router": "hpe_networking_mcp.mcp_servers.tool_router:main",
       "hpe-mcp-run-pipeline": "hpe_networking_mcp.cli.run_pipeline:main",
