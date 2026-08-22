@@ -123,12 +123,12 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 |---|---|
 | Tool catalog | Non-additive profiles: 380 core tools / 2842 read-only optional starters / 5822 read-write optional starters; REST/OpenAPI platform API backend total: 6,711; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,728; direct-all: 6,735 |
 | RAG | 392,471 prose chunks; 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |
-| Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud |
+| Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud, plus the credential-free `design` diagram tools |
 | Safety | Per-platform write gates, dry-run + confirmation, HTTP host/origin and bearer controls, credential-gated live-test config |
 
 Full per-backend counts live in [Tool catalog](docs/tool-catalog.md). See the
 [0.9.0 release notes](docs/release-notes-0.9.0.md) for everything added in the
-current release, and the [capability gap matrix](docs/capability-gap-matrix.md)
+latest tagged release, and the [capability gap matrix](docs/capability-gap-matrix.md)
 for reproducible tool/benchmark comparisons.
 
 ## Task-oriented guides

@@ -232,21 +232,21 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | 6,144 generated operations (6,127 active) / 599 curated / 6,728 backend tools / 6,735 direct-all |
+| Tool catalog | 6,144 generated operations (6,127 active) / 584 curated / 6,728 backend tools / 6,735 direct-all |
 | Capability totals (platform APIs) | 3,159 read, 165 diagnostic, 2,545 write, 842 destructive |
 | RAG | 392,471 prose chunks in LanceDB across 30 scraped sources |
 | Structured lookup | 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |
 | API provenance | Aruba ReadMe registries, official Mist/Apstra sources, pinned GLP and EdgeConnect snapshots, SHA-pinned Axis generator |
-| Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud |
+| Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud, plus the credential-free `design` diagram tools |
 | Safety | Per-platform gates, dry-run writes, confirmation, HTTP host/origin and bearer controls, credential-gated live-test config, versioned/redacted artifact contracts |
 
 </div>
 
 Per-backend counts and coverage live in the [tool catalog](tool-catalog.md);
 reproducible comparisons against other HPE Networking MCP servers are in the
-[capability gap matrix](capability-gap-matrix.md). What changed in the current
-release is in the [0.9.0 release notes](release-notes-0.9.0.md) — older notes
-are under **Releases** in the sidebar.
+[capability gap matrix](capability-gap-matrix.md). What changed in the latest
+tagged release is in the [0.9.0 release notes](release-notes-0.9.0.md) — older
+notes are under **Releases** in the sidebar.
 
 <div class="docs-next" markdown="1">
 
