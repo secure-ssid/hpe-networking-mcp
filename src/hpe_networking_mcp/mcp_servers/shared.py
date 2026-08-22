@@ -9,9 +9,10 @@ import json
 import logging
 import os
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, unquote, urlsplit
 
 from dotenv import load_dotenv

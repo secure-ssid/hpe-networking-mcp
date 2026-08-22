@@ -49,9 +49,10 @@ every other `src/hpe_networking_mcp/pipeline/aos8_*.py` module).
 from __future__ import annotations
 
 import os
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 
 from hpe_networking_mcp.pipeline.aos8_target_adapters import (
     AdapterError,

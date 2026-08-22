@@ -29,6 +29,7 @@ from typing import Any
 
 import pytest
 from mcp.server.mcpserver import MCPServer
+from pydantic import ValidationError
 
 import hpe_networking_mcp.mcp_servers.tool_router as router
 from hpe_networking_mcp.mcp_servers._middleware.rate_limit import RateLimitMiddleware
@@ -101,13 +102,13 @@ class TestBatchInputSchema:
         model = router.BatchCall
 
         assert model.model_fields["name"].metadata
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             model(name="x" * (router.MAX_BATCH_TOOL_NAME_CHARS + 1))
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             model(name="echo", id="i" * (router.MAX_BATCH_CALL_ID_CHARS + 1))
 
     def test_model_rejects_unknown_fields(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             router.BatchCall(name="echo", surprise=1)
 
     def test_model_instances_are_accepted_at_runtime(self, wired):

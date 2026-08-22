@@ -13,7 +13,7 @@ serial loop. The ONNX model (~250 MB) downloads to the HF cache on first use.
 from __future__ import annotations
 
 import os
-from typing import Iterable
+from collections.abc import Iterable
 
 from hpe_networking_mcp.optional_deps import require
 

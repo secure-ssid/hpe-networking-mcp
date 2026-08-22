@@ -14,7 +14,11 @@ import hpe_networking_mcp.mcp_servers.openapi_gen.http_exec as http_exec
 from hpe_networking_mcp.mcp_servers.openapi_gen import manifest_operation_count
 from hpe_networking_mcp.mcp_servers.openapi_gen.classify import classify
 from hpe_networking_mcp.mcp_servers.openapi_gen.http_exec import make_read_executor
-from hpe_networking_mcp.mcp_servers.openapi_gen.ir import SpecParser, UnresolvedRefError
+from hpe_networking_mcp.mcp_servers.openapi_gen.ir import (
+    OpenApiError,
+    SpecParser,
+    UnresolvedRefError,
+)
 from hpe_networking_mcp.mcp_servers.openapi_gen.manifest import (
     build_manifest,
     build_merged_manifest,
@@ -216,7 +220,7 @@ def test_parser_raises_on_unresolved_ref():
 
 
 def test_parser_rejects_unsupported_version():
-    with pytest.raises(Exception):
+    with pytest.raises(OpenApiError):
         SpecParser({"swagger": "1.2", "paths": {}})
 
 

@@ -25,6 +25,7 @@ from typing import Any
 
 import pytest
 from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 from hpe_networking_mcp.mcp_servers._middleware import (
     MetricsMiddleware,
@@ -258,7 +259,7 @@ class TestMetricsMiddlewareEndToEnd:
 
         srv = _make_server_with_tool(raiser)
         install_middleware(srv, [MetricsMiddleware(registry)])
-        with pytest.raises(Exception):
+        with pytest.raises(ToolError, match="boom"):
             _call(srv, "raiser", {})
 
         bucket = registry.snapshot()["series"][0]

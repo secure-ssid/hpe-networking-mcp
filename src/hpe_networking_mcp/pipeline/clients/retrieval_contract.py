@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Protocol, Sequence, TypeAlias
+from typing import Protocol, TypeAlias
 
 MAX_TOP_K = 200
 DEFAULT_TOP_K = 10

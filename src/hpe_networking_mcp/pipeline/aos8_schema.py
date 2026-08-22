@@ -96,8 +96,8 @@ class AOS8Policy:
 
     name: str
     rule_count: int | None = None
-    ipv4_rules: list["AOS8PolicyRule"] = field(default_factory=list)
-    ipv6_rules: list["AOS8PolicyRule"] = field(default_factory=list)
+    ipv4_rules: list[AOS8PolicyRule] = field(default_factory=list)
+    ipv6_rules: list[AOS8PolicyRule] = field(default_factory=list)
     raw: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -180,7 +180,7 @@ class AOS8EthernetACL:
 
     name: str
     rule_count: int | None = None
-    rules: list["AOS8EthernetACLRule"] = field(default_factory=list)
+    rules: list[AOS8EthernetACLRule] = field(default_factory=list)
     raw: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:

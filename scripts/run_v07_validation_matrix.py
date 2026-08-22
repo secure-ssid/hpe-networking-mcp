@@ -49,9 +49,10 @@ import argparse
 import json
 import sys
 from collections import Counter
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:

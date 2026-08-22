@@ -14,7 +14,7 @@ import re
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
@@ -156,7 +156,7 @@ _EPOCH_SECONDS_THRESHOLD = 1_000_000_000.0
 _EPOCH_MILLIS_THRESHOLD = 1_000_000_000_000.0
 
 
-def _parse_rate_limit_reset(value: Optional[str]) -> Optional[float]:
+def _parse_rate_limit_reset(value: str | None) -> float | None:
     """Parse a ``RateLimit-Reset`` / ``X-RateLimit-Reset`` header into the
     number of seconds until the quota window resets.
 
@@ -183,22 +183,22 @@ def _parse_rate_limit_reset(value: Optional[str]) -> Optional[float]:
 class RateLimitStatus:
     """Parsed rate-limit response metadata (RateLimit-* / X-RateLimit-*)."""
 
-    limit: Optional[int]
-    remaining: Optional[int]
-    reset_seconds: Optional[float]
-    raw_reset: Optional[str]
+    limit: int | None
+    remaining: int | None
+    reset_seconds: float | None
+    raw_reset: str | None
 
 
 @dataclass(frozen=True)
 class DeprecationStatus:
     """Parsed API-deprecation response metadata (Deprecation / Sunset / Link)."""
 
-    deprecation: Optional[str]
-    sunset: Optional[str]
-    link: Optional[str]
+    deprecation: str | None
+    sunset: str | None
+    link: str | None
 
 
-def _parse_int_header(value: Optional[str]) -> Optional[int]:
+def _parse_int_header(value: str | None) -> int | None:
     if value is None:
         return None
     try:
@@ -207,7 +207,7 @@ def _parse_int_header(value: Optional[str]) -> Optional[int]:
         return None
 
 
-def _extract_rate_limit(headers: Any) -> Optional[RateLimitStatus]:
+def _extract_rate_limit(headers: Any) -> RateLimitStatus | None:
     """Parse rate-limit headers, preferring the IETF draft names with a
     fallback to the older ``X-RateLimit-*`` convention some gateways use."""
     limit = headers.get("RateLimit-Limit") or headers.get("X-RateLimit-Limit")
@@ -223,7 +223,7 @@ def _extract_rate_limit(headers: Any) -> Optional[RateLimitStatus]:
     )
 
 
-def _extract_deprecation(headers: Any) -> Optional[DeprecationStatus]:
+def _extract_deprecation(headers: Any) -> DeprecationStatus | None:
     """Parse RFC 8594 ``Deprecation``/``Sunset`` headers plus a ``Link``
     header carrying a deprecation-notice URL, if Central sends one."""
     deprecation = headers.get("Deprecation")
@@ -269,8 +269,8 @@ class CentralClient:
         # every response (success or failure). Side-channel only — never
         # merged into a tool's returned JSON, so existing callers' response
         # shapes are unaffected. Domain tools may read these opportunistically.
-        self.last_rate_limit: Optional[RateLimitStatus] = None
-        self.last_deprecation: Optional[DeprecationStatus] = None
+        self.last_rate_limit: RateLimitStatus | None = None
+        self.last_deprecation: DeprecationStatus | None = None
         self._refresh_auth_header()
 
     def _enforce_write_gate(
@@ -352,7 +352,7 @@ class CentralClient:
                     deprecation.link,
                 )
 
-    def rate_limit_status(self) -> Optional[dict[str, Any]]:
+    def rate_limit_status(self) -> dict[str, Any] | None:
         """Most recent rate-limit metadata as a plain dict, or ``None`` if
         no response has carried rate-limit headers yet."""
         if self.last_rate_limit is None:
@@ -364,7 +364,7 @@ class CentralClient:
             "raw_reset": self.last_rate_limit.raw_reset,
         }
 
-    def deprecation_status(self) -> Optional[dict[str, Any]]:
+    def deprecation_status(self) -> dict[str, Any] | None:
         """Most recent API-deprecation metadata as a plain dict, or ``None``
         if no response has carried deprecation headers yet."""
         if self.last_deprecation is None:
@@ -571,7 +571,7 @@ class CentralClient:
 
         return response
 
-    def get(self, endpoint: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def get(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         logger.debug(
             "GET %s%s params_keys=%s",
             self.base_url,
@@ -582,7 +582,7 @@ class CentralClient:
         response.raise_for_status()
         return _parse_json(response)
 
-    async def aget(self, endpoint: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    async def aget(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         logger.debug(
             "GET(async) %s%s params_keys=%s",
             self.base_url,
@@ -596,8 +596,8 @@ class CentralClient:
     def post(
         self,
         endpoint: str,
-        data: Optional[dict[str, Any] | list[Any]] = None,
-        params: Optional[dict[str, Any]] = None,
+        data: dict[str, Any] | list[Any] | None = None,
+        params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         logger.debug(
             "POST %s%s body_type=%s body_keys=%s",
@@ -614,8 +614,8 @@ class CentralClient:
     def post_async(
         self,
         endpoint: str,
-        data: Optional[dict[str, Any] | list[Any]] = None,
-        params: Optional[dict[str, Any]] = None,
+        data: dict[str, Any] | list[Any] | None = None,
+        params: dict[str, Any] | None = None,
     ) -> str:
         """POST to an async endpoint; returns the Location header value (task URI)."""
         logger.debug("POST(async) %s%s", self.base_url, endpoint)
@@ -629,8 +629,8 @@ class CentralClient:
     def patch(
         self,
         endpoint: str,
-        data: Optional[dict[str, Any]] = None,
-        params: Optional[dict[str, Any]] = None,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         logger.debug("PATCH %s%s", self.base_url, endpoint)
         response = self._request("PATCH", endpoint, json=data, params=params)
@@ -640,8 +640,8 @@ class CentralClient:
     def put(
         self,
         endpoint: str,
-        data: Optional[dict[str, Any]] = None,
-        params: Optional[dict[str, Any]] = None,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         logger.debug("PUT %s%s", self.base_url, endpoint)
         response = self._request("PUT", endpoint, json=data, params=params)
@@ -651,7 +651,7 @@ class CentralClient:
     def delete(
         self,
         endpoint: str,
-        params: Optional[dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         logger.debug("DELETE %s%s", self.base_url, endpoint)
         response = self._request("DELETE", endpoint, params=params)

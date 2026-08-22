@@ -26,7 +26,6 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ def parse_vlan_interfaces(text: str) -> list[dict]:
         helper_address (str|None), dhcp (bool). Sorted by VLAN ID.
     """
     results: dict[int, dict] = {}
-    current_vlan: Optional[int] = None
+    current_vlan: int | None = None
 
     for line in text.splitlines():
         m = _INTF_VLAN_RE.match(line)
@@ -111,7 +110,7 @@ def parse_vlan_interfaces_from_file(path: str) -> list[dict]:
     return result
 
 
-def load_vlan_interface_config_file(path: Optional[str]) -> list[dict]:
+def load_vlan_interface_config_file(path: str | None) -> list[dict]:
     """Wrapper that returns an empty list if path is None or blank."""
     if not path:
         return []

@@ -20,10 +20,11 @@ import hashlib
 import json
 import os
 import stat
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 from hpe_networking_mcp.mcp_servers import aos8 as aos8_tools
 from hpe_networking_mcp.mcp_servers import shared as shared_tools

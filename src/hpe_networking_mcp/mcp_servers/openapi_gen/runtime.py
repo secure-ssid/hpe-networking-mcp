@@ -26,7 +26,7 @@ import keyword
 import os
 import re
 from collections.abc import Awaitable, Callable
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 from urllib.parse import quote
 
 from hpe_networking_mcp.mcp_servers import _sdk_compat
@@ -351,7 +351,7 @@ def _build_signature(
             annotation = param_type
             default = inspect.Parameter.empty
         else:
-            annotation = Optional[param_type] if param_type is not Any else Any
+            annotation = param_type | None if param_type is not Any else Any
             default = None
         annotations[spec.arg] = annotation
         parameters.append(
@@ -371,7 +371,7 @@ def _build_signature(
                 )
             )
         else:
-            annotations["body"] = Optional[body_type] if body_type is not Any else Any
+            annotations["body"] = body_type | None if body_type is not Any else Any
             parameters.append(
                 inspect.Parameter(
                     "body",

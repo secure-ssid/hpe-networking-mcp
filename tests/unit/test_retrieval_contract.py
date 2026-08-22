@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import FrozenInstanceError
-from typing import Sequence
 
 import pytest
 

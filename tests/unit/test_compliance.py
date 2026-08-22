@@ -1170,7 +1170,7 @@ class TestAmplificationBounds:
         # might not shrink enough must still fall back to the deterministic
         # truncation marker rather than exceed the artifact contract's own
         # ceiling (see hpe_networking_mcp.pipeline.artifact_contracts.MAX_COMPLIANCE_VALUE_CHARS).
-        huge = [{"field_%d" % i: "v" * 50 for i in range(20)} for _ in range(50)]
+        huge = [{f"field_{i}": "v" * 50 for i in range(20)} for _ in range(50)]
         bounded = c._bound_actual(huge)
         serialized_size = len(json.dumps(bounded, default=str))
         assert serialized_size <= contracts.MAX_COMPLIANCE_VALUE_CHARS * 4

@@ -29,6 +29,7 @@ from typing import Any
 
 import pytest
 from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 from hpe_networking_mcp.mcp_servers._middleware import (
     MacNormalizeMiddleware,
@@ -186,7 +187,8 @@ class TestRateLimit:
         install_middleware(srv, [RateLimitMiddleware(rate=100.0, burst=5)])
 
         # First call raises; that must not leave the rate-limit lock held.
-        with pytest.raises(Exception):
+        # The SDK's ToolManager wraps tool exceptions in ToolError.
+        with pytest.raises(ToolError, match="boom"):
             _call(srv, "raiser", {})
 
         # If the lock were stuck, this call would hang forever. Cap at 2s.

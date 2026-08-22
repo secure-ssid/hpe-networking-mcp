@@ -10,7 +10,7 @@ import logging
 import os
 import time
 import uuid
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import quote
 
 from hpe_networking_mcp.pipeline.clients.central_client import CentralClient
@@ -118,7 +118,7 @@ _IN_PROGRESS_STATES = frozenset(
 )
 
 
-def _extract_task_status(result: Any) -> Optional[str]:
+def _extract_task_status(result: Any) -> str | None:
     """Normalize an async-operation status/state token to lowercase.
 
     Reads ``status`` first, then ``state`` (used by some GLP services).
@@ -190,7 +190,7 @@ def _pagination_fields(result: Any, items: list) -> dict[str, Any]:
     return meta
 
 
-def _audit_log_filter(category: str | None, filter: str | None) -> Optional[str]:
+def _audit_log_filter(category: str | None, filter: str | None) -> str | None:
     """Combine a legacy ``category`` argument and a caller filter expression.
 
     ``category`` becomes ``category eq '<value>'`` per the getAuditLogs filter
@@ -247,7 +247,7 @@ class GLPClient:
     # Device management
     # ------------------------------------------------------------------
 
-    def get_device(self, serial_number: str) -> Optional[dict[str, Any]]:
+    def get_device(self, serial_number: str) -> dict[str, Any] | None:
         """Look up a device in GLP by serial number.
 
         Returns None only when GLP confirms no match (the API returns 200 +
@@ -269,7 +269,7 @@ class GLPClient:
         items = result.get("items", result.get("devices", []))
         return items[0] if items else None
 
-    def add_device(self, serial_number: str, mac_address: Optional[str] = None) -> str:
+    def add_device(self, serial_number: str, mac_address: str | None = None) -> str:
         """Add a single device to the GLP workspace. Returns async-operation ID."""
         return self.add_devices([{"serialNumber": serial_number, "macAddress": mac_address}])
 
@@ -396,7 +396,7 @@ class GLPClient:
     def _is_safe_serial(cls, serial_number: str) -> bool:
         return bool(serial_number) and all(c in cls._SERIAL_SAFE_CHARS for c in serial_number)
 
-    def resolve_device_id(self, serial_number: str) -> Optional[str]:
+    def resolve_device_id(self, serial_number: str) -> str | None:
         """Return the GLP device UUID for ``serial_number``, or None if not found.
 
         Looks up via ``GET /devices/v1/devices?filter=serialNumber eq '<s>'``.
@@ -708,7 +708,7 @@ class GLPClient:
         """List subscriptions (items only; back-compat shape)."""
         return self.list_subscriptions_page(limit=limit, offset=offset)["items"]
 
-    def get_subscription(self, subscription_id: str) -> Optional[dict[str, Any]]:
+    def get_subscription(self, subscription_id: str) -> dict[str, Any] | None:
         """Fetch a single subscription by ID."""
         try:
             return self._client.get(f"/subscriptions/v1/subscriptions/{subscription_id}")
@@ -741,7 +741,7 @@ class GLPClient:
         """List users (items only; back-compat shape)."""
         return self.list_users_page(limit=limit, offset=offset)["items"]
 
-    def get_user(self, user_id: str) -> Optional[dict[str, Any]]:
+    def get_user(self, user_id: str) -> dict[str, Any] | None:
         """Fetch a single user by ID."""
         try:
             return self._client.get(f"/identity/v1/users/{user_id}")
@@ -801,11 +801,11 @@ class GLPClient:
             sort=sort,
         )["items"]
 
-    def get_audit_log(self, audit_log_id: str) -> Optional[dict[str, Any]]:
+    def get_audit_log(self, audit_log_id: str) -> dict[str, Any] | None:
         """Fetch a single audit-log entry (``GET /audit-log/v2beta1/logs/{id}``)."""
         return self.get_audit_log_v2beta1(audit_log_id)
 
-    def get_audit_log_detail(self, audit_log_id: str) -> Optional[dict[str, Any]]:
+    def get_audit_log_detail(self, audit_log_id: str) -> dict[str, Any] | None:
         """Fetch audit-log entry details (``.../logs/{id}/details``).
 
         The manifest documents the path segment as plural ``details``; the
@@ -844,7 +844,7 @@ class GLPClient:
             logger.warning("GLP list_devices_v2beta1 failed: %s", msg)
             raise RuntimeError(f"GLP list_devices_v2beta1 failed: {msg}") from exc
 
-    def get_device_v2beta1(self, device_id: str) -> Optional[dict[str, Any]]:
+    def get_device_v2beta1(self, device_id: str) -> dict[str, Any] | None:
         """Fetch a single device via the v2beta1 Devices collection by GLP device ID."""
         try:
             return self._client.get(f"/devices/v2beta1/devices/{device_id}")
@@ -907,7 +907,7 @@ class GLPClient:
             logger.warning("GLP list_audit_logs_v2beta1 failed: %s", msg)
             raise RuntimeError(f"GLP list_audit_logs_v2beta1 failed: {msg}") from exc
 
-    def get_audit_log_v2beta1(self, audit_log_id: str) -> Optional[dict[str, Any]]:
+    def get_audit_log_v2beta1(self, audit_log_id: str) -> dict[str, Any] | None:
         """Fetch a single audit-log entry by ID via the v2beta1 Audit Log service."""
         try:
             return self._client.get(f"{AUDIT_LOG_BASE_PATH}/{quote(str(audit_log_id), safe='')}")
@@ -915,7 +915,7 @@ class GLPClient:
             logger.warning("GLP get_audit_log_v2beta1 failed for %s: %s", audit_log_id, exc)
             return None
 
-    def get_audit_log_v2beta1_detail(self, audit_log_id: str) -> Optional[dict[str, Any]]:
+    def get_audit_log_v2beta1_detail(self, audit_log_id: str) -> dict[str, Any] | None:
         """Fetch full detail for a v2beta1 audit-log entry (entries with details enabled)."""
         try:
             audit_id = quote(str(audit_log_id), safe="")
@@ -1327,7 +1327,7 @@ class GLPClient:
                 f"GLP list_auto_subscription_settings failed: {exc}"
             ) from exc
 
-    def get_auto_subscription_setting(self, setting_id: str) -> Optional[dict[str, Any]]:
+    def get_auto_subscription_setting(self, setting_id: str) -> dict[str, Any] | None:
         """GET /subscriptions/v1/auto-subscription-settings/{id}."""
         try:
             return self._client.get(

@@ -78,10 +78,11 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 SCHEMA_VERSION = 1
 

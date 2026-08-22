@@ -259,7 +259,7 @@ class TestBearerAuthBytes:
         "header",
         [
             b"Bearer s3cr\xe9t",
-            "Bearer sécret".encode("utf-8"),
+            "Bearer sécret".encode(),
             "Bearer ünïcödé".encode("latin-1"),
             b"Bearer \xff\xfe\x00",
         ],
@@ -274,7 +274,7 @@ class TestBearerAuthBytes:
 
     def test_non_ascii_configured_token_still_matches_itself(self):
         token = "sécret-ünïcödé"
-        status, downstream = _run_bearer(f"Bearer {token}".encode("utf-8"), token=token)
+        status, downstream = _run_bearer(f"Bearer {token}".encode(), token=token)
 
         assert status == 200
         assert downstream is True

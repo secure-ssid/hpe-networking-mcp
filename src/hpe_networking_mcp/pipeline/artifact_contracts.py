@@ -99,11 +99,11 @@ import json
 import os
 import re
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from hpe_networking_mcp.mcp_servers.shared import redact_sensitive
 

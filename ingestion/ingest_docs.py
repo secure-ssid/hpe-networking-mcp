@@ -704,7 +704,7 @@ def _existing_ids(client, ids: list[str]) -> set[str]:
     for doc_id in ids:
         pipe.exists(f"doc:{doc_id}")
     results = pipe.execute()
-    return {doc_id for doc_id, exists in zip(ids, results) if exists}
+    return {doc_id for doc_id, exists in zip(ids, results, strict=True) if exists}
 
 
 def upload(records: list[dict], ollama: OllamaClient, client):
@@ -720,7 +720,7 @@ def upload(records: list[dict], ollama: OllamaClient, client):
             continue
         texts = [r["text"] for r in new]
         vectors = ollama.embed_document(texts)
-        docs = [{**r, "embedding": vec} for r, vec in zip(new, vectors)]
+        docs = [{**r, "embedding": vec} for r, vec in zip(new, vectors, strict=True)]
         upsert_docs(client, docs)
         uploaded += len(new)
         print(f"    uploaded {uploaded} new / {skipped} skipped / {len(records)} total")
@@ -776,7 +776,7 @@ def upload_lancedb(
     table = None
     buf: list[dict] = []
     done = 0
-    for record, vec in zip(records, vectors):
+    for record, vec in zip(records, vectors, strict=True):
         buf.append({**record, "vector": vec})
         if len(buf) >= WRITE_BATCH_LANCE:
             if table is None:
@@ -923,7 +923,7 @@ def upload_lancedb_incremental(
         )
         batch: list[dict] = []
         completed = 0
-        for record, vector in zip(changed, vectors):
+        for record, vector in zip(changed, vectors, strict=True):
             batch.append({**record, "vector": vector})
             if len(batch) >= WRITE_BATCH_LANCE:
                 lance_client.merge_docs_rows(db, batch)

@@ -184,7 +184,7 @@ def main_lancedb(products: str | None = None) -> int:
                          f"{t['description']} {' '.join(t['params'])}"),
             "vector": vec,
         }
-        for (server, t), vec in zip(pairs, vectors)
+        for (server, t), vec in zip(pairs, vectors, strict=True)
     ]
     db = lance_client.connect()
     lance_client.create_tools_table(db, rows)

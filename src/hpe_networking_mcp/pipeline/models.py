@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -78,20 +78,20 @@ class DeviceRecord:
     firmware_target: str
 
     # Optional
-    mac_address: Optional[str] = None
-    notes: Optional[str] = None
+    mac_address: str | None = None
+    notes: str | None = None
 
     # Populated during pipeline execution (not from CSV)
     firmware_action: FirmwareAction = FirmwareAction.UPGRADE
     needs_site_create: bool = False
-    site_id: Optional[str] = None
-    controller_serial: Optional[str] = None  # AOS 8 only
-    glp_device_id: Optional[str] = None
-    current_firmware: Optional[str] = None
-    model: Optional[str] = None
-    scope_id: Optional[str] = None
-    vlan_config_file: Optional[str] = None
-    vlan_interface_config_file: Optional[str] = None
+    site_id: str | None = None
+    controller_serial: str | None = None  # AOS 8 only
+    glp_device_id: str | None = None
+    current_firmware: str | None = None
+    model: str | None = None
+    scope_id: str | None = None
+    vlan_config_file: str | None = None
+    vlan_interface_config_file: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +103,7 @@ class DeviceRecord:
 class StageResult:
     status: StageStatus
     data: dict[str, Any] = field(default_factory=dict)
-    error: Optional[str] = None
+    error: str | None = None
 
     @classmethod
     def success(cls, **data: Any) -> StageResult:
@@ -137,7 +137,7 @@ class AccountContext:
     central_client: Any = field(default=None, repr=False)
     glp_client: Any = field(default=None, repr=False)
     mcp_client: Any = field(default=None, repr=False)
-    global_scope_id: Optional[str] = None
+    global_scope_id: str | None = None
     device_profiles_created: bool = False
 
 

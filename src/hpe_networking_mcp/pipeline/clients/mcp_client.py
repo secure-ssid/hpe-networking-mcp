@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any
 
 from hpe_networking_mcp.pipeline.clients.central_client import CentralClient
 
@@ -91,7 +91,7 @@ class MCPClient:
         result = self._client.get(self._INVENTORY_V1ALPHA1, params=params)
         return result, self._INVENTORY_V1ALPHA1
 
-    def get_device_by_serial(self, serial_number: str) -> Optional[dict[str, Any]]:
+    def get_device_by_serial(self, serial_number: str) -> dict[str, Any] | None:
         """Return the device inventory record for a given serial, or None.
 
         Tries a server-side ``serialNumber eq '...'`` filter first (supported
@@ -118,7 +118,7 @@ class MCPClient:
 
         try:
             limit = 100
-            cursor: Optional[str] = None
+            cursor: str | None = None
             for _ in range(_MAX_SEARCH_PAGES):
                 params: dict[str, Any] = {"limit": limit}
                 if cursor:
@@ -147,10 +147,10 @@ class MCPClient:
 
     def get_devices_page(
         self,
-        filters: Optional[dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         limit: int = _DEFAULT_LIST_LIMIT,
-        next_cursor: Optional[str] = None,
-    ) -> tuple[list[dict[str, Any]], Optional[str]]:
+        next_cursor: str | None = None,
+    ) -> tuple[list[dict[str, Any]], str | None]:
         """Return one cursor-paginated page of device-inventory records.
 
         Returns ``(items, next_cursor)`` — pass the returned cursor back in as
@@ -171,10 +171,10 @@ class MCPClient:
 
     def get_devices(
         self,
-        filters: Optional[dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         limit: int = _DEFAULT_LIST_LIMIT,
         offset: int = 0,
-        next_cursor: Optional[str] = None,
+        next_cursor: str | None = None,
     ) -> list[dict[str, Any]]:
         """Return a single bounded page of device-inventory records.
 
@@ -213,7 +213,7 @@ class MCPClient:
         lim = _bounded_limit(limit)
         return self._all_sites()[off : off + lim]
 
-    def get_device_scope_id(self, serial_number: str) -> Optional[str]:
+    def get_device_scope_id(self, serial_number: str) -> str | None:
         """Return the New Central config-layer scope-id for a device by serial.
 
         Uses the monitoring device-inventory API (see developer docs
@@ -233,7 +233,7 @@ class MCPClient:
             logger.warning("MCPClient.get_device_scope_id(%s) failed: %s", serial_number, exc)
             return None
 
-    def get_site_by_name(self, name: str) -> Optional[dict[str, Any]]:
+    def get_site_by_name(self, name: str) -> dict[str, Any] | None:
         """Return a site record by name, or None if not found.
 
         New Central sites use 'scopeName' as the human-readable name field.
@@ -253,11 +253,11 @@ class MCPClient:
 
     def get_alerts(
         self,
-        site_id: Optional[str] = None,
-        severity: Optional[str] = None,
+        site_id: str | None = None,
+        severity: str | None = None,
         limit: int = _DEFAULT_LIST_LIMIT,
         offset: int = 0,
-        next_cursor: Optional[str] = None,
+        next_cursor: str | None = None,
     ) -> list[dict[str, Any]]:
         """Return active alerts, optionally filtered by site or severity.
 
@@ -294,8 +294,8 @@ class MCPClient:
         self,
         serial_number: str,
         hours: int = 24,
-        site_id: Optional[str] = None,
-        context_type: Optional[str] = None,
+        site_id: str | None = None,
+        context_type: str | None = None,
         api_limit: int = 1000,
     ) -> list[dict[str, Any]]:
         """Return events for a device within the last N hours.
@@ -309,7 +309,7 @@ class MCPClient:
         span_h = min(max(1, hours), 24 * 30)
         start = end - timedelta(hours=span_h)
 
-        device: Optional[dict[str, Any]] = None
+        device: dict[str, Any] | None = None
         if site_id is None or context_type is None:
             device = self.get_device_by_serial(serial_number)
         if site_id is None:
@@ -342,13 +342,13 @@ class MCPClient:
 
     def get_clients_page(
         self,
-        site_id: Optional[str] = None,
-        serial_number: Optional[str] = None,
-        ssid: Optional[str] = None,
-        connection_type: Optional[str] = None,
+        site_id: str | None = None,
+        serial_number: str | None = None,
+        ssid: str | None = None,
+        connection_type: str | None = None,
         limit: int = 100,
-        next_cursor: Optional[str] = None,
-    ) -> tuple[list[dict[str, Any]], Optional[str]]:
+        next_cursor: str | None = None,
+    ) -> tuple[list[dict[str, Any]], str | None]:
         """Return one cursor-paginated page of connected clients.
 
         /network-monitoring/v1/clients paginates with a `next` cursor, not
@@ -378,13 +378,13 @@ class MCPClient:
 
     def get_clients(
         self,
-        site_id: Optional[str] = None,
-        serial_number: Optional[str] = None,
-        ssid: Optional[str] = None,
-        connection_type: Optional[str] = None,
+        site_id: str | None = None,
+        serial_number: str | None = None,
+        ssid: str | None = None,
+        connection_type: str | None = None,
         limit: int = 100,
         offset: int = 0,
-        next_cursor: Optional[str] = None,
+        next_cursor: str | None = None,
     ) -> list[dict[str, Any]]:
         """Return one bounded page of connected clients.
 
@@ -404,7 +404,7 @@ class MCPClient:
         )
         return items
 
-    def find_client(self, mac_or_ip: str) -> Optional[dict[str, Any]]:
+    def find_client(self, mac_or_ip: str) -> dict[str, Any] | None:
         """Find a single client by MAC address or IP address, or None if not found.
 
         Note: the clients API does not filter server-side by macAddress or
@@ -414,7 +414,7 @@ class MCPClient:
         """
         try:
             limit = 100
-            cursor: Optional[str] = None
+            cursor: str | None = None
             normalized = mac_or_ip.lower()
             for _ in range(_MAX_SEARCH_PAGES):
                 items, cursor_next = self.get_clients_page(limit=limit, next_cursor=cursor)
