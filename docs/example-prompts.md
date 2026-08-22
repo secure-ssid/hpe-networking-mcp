@@ -192,7 +192,10 @@ invoke_tool("invite_glp_user", {"email": "jane@example.com"})
 ```
 
 <p><strong>Expected shape (default install):</strong> GLP writes default to
-disabled, so this returns a blocked response before any backend call --
+disabled, so this returns a blocked response before any backend call. The
+client-visible result is the <a href="tool-router.md#error-responses-the-response-envelope">response
+envelope</a> with top-level <code>status: 403</code>; its <code>data</code>
+payload is
 <code>{"error": "... glp writes are not enabled ...", "tool": "invite_glp_user", "status": "blocked", "platform": "glp", "execution_contract": {...}}</code>.
 See <a href="tool-router.md#safety-gates">the router safety-gates section</a>
 for the full shape.</p>

@@ -47,6 +47,48 @@ invoke_read_tool("list_active_alerts", {"severity": "CRITICAL"})
 See [example-prompts.md](example-prompts.md) for complete scenario cards with
 router calls, expected result shapes, and safety classifications.
 
+## Error responses: the response envelope
+
+Successful results pass through unchanged. Every **failed or blocked**
+result -- a write-gate refusal, an unknown tool name, an invalid cursor, or
+a backend error, whether returned as a dict or raised as an exception -- is
+wrapped in a deterministic envelope before it reaches the client:
+
+```json
+{
+  "ok": false,
+  "status": 403,
+  "data": {
+    "error": "Tool 'set_site' is not read-only. Use invoke_tool only after explicit user intent for write/destructive actions.",
+    "tool": "set_site",
+    "status": "blocked"
+  },
+  "message": "Tool 'set_site' is not read-only. Use invoke_tool only after explicit user intent for write/destructive actions.",
+  "tool": "invoke_read_tool",
+  "platform": "central"
+}
+```
+
+- Branch on **`ok`**, always `false` for an envelope. Successful payloads
+  never carry it.
+- `status` is an **integer** HTTP-style code: `403` for write-gate
+  `blocked`/`forbidden` refusals, `409` for confirmation or cancellation
+  conflicts, `404` for unknown tools, `400` for caller errors such as a
+  stale cursor or malformed batch entry, `500` for unpinned failures, and
+  the upstream vendor API code whenever one is recoverable.
+- `data` is the tool's own error payload, unchanged -- fields such as the
+  string `"status": "blocked"` or an `execution_contract` live **inside
+  `data`**, not at the top level.
+- `message` is a short human-readable summary; `tool` names the router tool
+  the client called (the failed backend tool is named inside `data`);
+  `platform` is the owning backend's platform. A `hint` key with a
+  spec-grounded or generic explanation of the status may also be present.
+
+The JSON error examples on this page show the envelope's **`data` payload**
+unless the full envelope is displayed, as above. Standalone backends
+(`python -m hpe_networking_mcp.mcp_servers.<x>`) wrap failures in the same
+envelope.
+
 ## Router tools
 
 <p>
@@ -158,6 +200,8 @@ loaded reports that distinctly from an ordinary typo:
 
 <div class="docs-callout docs-callout--info" markdown="1">
 
+*Shown as the envelope's `data` payload (top level is `{ok: false, status: 404, ...}`) -- see [Error responses](#error-responses-the-response-envelope).*
+
 ```json
 {
   "error": "Unknown tool: mist_get_site_stats",
@@ -170,7 +214,7 @@ loaded reports that distinctly from an ordinary typo:
 
 Any other unresolved name -- including a typo of a tool on an
 **already-enabled** platform -- instead gets the ordinary fuzzy "did you
-mean" fallback:
+mean" fallback (also the envelope's `data` payload):
 
 ```json
 {
@@ -209,7 +253,8 @@ explicit failed result rather than an empty success.
 <div class="docs-callout docs-callout--danger" markdown="1">
 
 Calling a write tool through `invoke_read_tool` is refused, not silently
-downgraded:
+downgraded (`data` payload shown; the envelope's top-level `status` is
+`403` -- see [Error responses](#error-responses-the-response-envelope)):
 
 ```json
 {
@@ -272,9 +317,9 @@ invoke_read_tool("list_devices", {"site_id": "SITE_ID"}, cursor="eyJ2IjoxLCJl...
   raw arguments, identifiers, or result data.
 - A server restart invalidates every outstanding cursor. A malformed,
   tampered, expired (`HPE_MCP_ROUTER_CURSOR_TTL_SECONDS`, default 900s,
-  clamped to 30-3600s), or mismatched cursor returns
-  `{"error": ..., "tool": ..., "status": "invalid_cursor"}` **without**
-  calling the backend.
+  clamped to 30-3600s), or mismatched cursor returns an envelope whose
+  `data` payload is `{"error": ..., "tool": ..., "status": "invalid_cursor"}`
+  (top-level `status` is `400`) **without** calling the backend.
 - If a single item can never fit the byte budget, the response is marked
   `"resumable": false` with a `resumable_reason` instead of emitting a cursor
   that would just re-fetch the same oversized item forever.
@@ -340,7 +385,8 @@ Set `HPE_MCP_READONLY=1` for a server-wide write kill switch under `custom`
 or `safe-read-only` (`full-read-write` rejects that contradictory setting).
 Every `write`/`destructive` tool on **every**
 backend is hidden from `find_tool`, skipped in `direct`-mode registration,
-and refused at dispatch -- before the backend is ever reached:
+and refused at dispatch -- before the backend is ever reached (`data`
+payload shown; the envelope's top-level `status` is `403`):
 
 ```json
 {
@@ -361,8 +407,8 @@ fully read-only while `HPE_MCP_READONLY` is set.
 
 Under `custom`, Central defaults to writes **disabled**
 (`HPE_MCP_CENTRAL_WRITES=1` opts in), as does GLP
-(`HPE_MCP_GLP_V2BETA1_WRITES=1` opts in). A blocked GLP write
-looks like this:
+(`HPE_MCP_GLP_V2BETA1_WRITES=1` opts in). A blocked GLP write's
+envelope `data` payload looks like this (top-level `status` is `403`):
 
 ```json
 {
