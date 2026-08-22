@@ -43,6 +43,8 @@ from hpe_networking_mcp.mcp_servers.shared import (
 from hpe_networking_mcp.mcp_servers.shared import (
     platform_writes_allowed as _platform_writes_allowed,
 )
+from hpe_networking_mcp.pipeline.clients.http_retry import request_read_retried
+from hpe_networking_mcp.pipeline.clients.pooled_clients import pooled_client
 
 mcp = MCPServer("axis-core")
 
@@ -150,8 +152,8 @@ async def _axis_request(
     if body is not None:
         kwargs["json"] = body
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            resp = await client.request(method, url, **kwargs)
+        client = pooled_client("axis", timeout=timeout)
+        resp = await request_read_retried(client, method, url, **kwargs)
         if resp.status_code == 401:
             return {
                 "error": (
@@ -412,6 +414,7 @@ if __name__ == "__main__":
     from hpe_networking_mcp.mcp_servers._middleware import (
         NullStripMiddleware,
         RateLimitMiddleware,
+        ResponseEnvelopeMiddleware,
         SecretTokenizeMiddleware,
         install_middleware,
     )
@@ -424,6 +427,7 @@ if __name__ == "__main__":
             NullStripMiddleware(),
             SecretTokenizeMiddleware(),
             RateLimitMiddleware(),
+            ResponseEnvelopeMiddleware(),
         ],
     )
     run_server(mcp)

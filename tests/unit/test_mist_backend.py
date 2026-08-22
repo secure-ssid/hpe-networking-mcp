@@ -49,7 +49,7 @@ def test_mist_get_calls_httpx(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             called["timeout"] = timeout
 
         async def __aenter__(self):
@@ -84,7 +84,7 @@ def test_mist_get_bounds_nested_list_payloads(monkeypatch):
             return {"results": [1, 2, 3], "ok": True}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -134,7 +134,7 @@ def test_mist_list_sites_compacts_and_pages(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -186,7 +186,7 @@ def test_mist_get_client_uses_stats_endpoint_and_compacts(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -237,7 +237,7 @@ def test_mist_list_wlans_compacts(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -292,7 +292,7 @@ def test_mist_list_alarms_strips_none_params_and_compacts(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -414,7 +414,7 @@ def test_mist_write_executes_with_confirm(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):

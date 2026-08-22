@@ -1070,6 +1070,7 @@ if __name__ == "__main__":
         NullStripMiddleware,
         PIITokenizeMiddleware,
         RateLimitMiddleware,
+        ResponseEnvelopeMiddleware,
         SecretTokenizeMiddleware,
         install_middleware,
     )
@@ -1079,6 +1080,7 @@ if __name__ == "__main__":
         [
             NullStripMiddleware(),
             RateLimitMiddleware(rate=8.0),
+            ResponseEnvelopeMiddleware(),
             SecretTokenizeMiddleware(),
             # PII tokenization: this backend's visitor/guest tools carry
             # email/phone/company_name -- see pii_tokenizer.py docstring.

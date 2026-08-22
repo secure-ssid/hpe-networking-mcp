@@ -49,7 +49,7 @@ def test_clearpass_get_calls_httpx(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             called["timeout"] = timeout
 
         async def __aenter__(self):
@@ -84,7 +84,7 @@ def test_clearpass_get_bounds_list_payloads(monkeypatch):
             return [{"id": 1}, {"id": 2}, {"id": 3}]
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -128,7 +128,7 @@ def test_clearpass_get_endpoint_by_mac_normalizes_and_compacts(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -177,7 +177,7 @@ def test_clearpass_list_auth_failures_filters_and_compacts(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -229,7 +229,7 @@ def test_clearpass_get_network_device_by_name_compacts(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -277,7 +277,7 @@ def test_clearpass_find_guest_by_email_uses_filter(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -390,7 +390,7 @@ def test_clearpass_write_executes_with_confirm(monkeypatch):
     called = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -488,7 +488,7 @@ def test_clearpass_documented_insight_and_onguard_paths(monkeypatch):
     calls = []
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):

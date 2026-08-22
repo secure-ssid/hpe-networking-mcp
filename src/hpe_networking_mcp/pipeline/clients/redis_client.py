@@ -4,6 +4,7 @@ This is the optional server backend. The default download-and-run path uses
 LanceDB + SQLite + fastembed.
 """
 
+import logging
 import os
 import re
 
@@ -12,6 +13,8 @@ import redis
 from redis.commands.search.field import NumericField, TagField, TextField, VectorField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 from redis.commands.search.query import Query
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_REDIS_URL = "redis://localhost:6379"
 REDIS_URL = os.getenv("REDIS_URL", DEFAULT_REDIS_URL)
@@ -58,7 +61,7 @@ def ensure_index(
     """Create the vector search index if it doesn't exist."""
     try:
         client.ft(index_name).info()
-        print(f"Index '{index_name}' already exists")
+        logger.info("Index '%s' already exists", index_name)
         return
     except Exception:
         pass
@@ -86,7 +89,7 @@ def ensure_index(
         schema,
         definition=IndexDefinition(prefix=["doc:"], index_type=IndexType.JSON),
     )
-    print(f"Created index '{index_name}'")
+    logger.info("Created index '%s'", index_name)
 
 
 def upsert_docs(
@@ -197,7 +200,7 @@ def ensure_tools_index(
     """Create the tools vector search index if it doesn't exist."""
     try:
         client.ft(index_name).info()
-        print(f"Index '{index_name}' already exists")
+        logger.info("Index '%s' already exists", index_name)
         return
     except Exception:
         pass
@@ -224,7 +227,7 @@ def ensure_tools_index(
         schema,
         definition=IndexDefinition(prefix=["tool:"], index_type=IndexType.JSON),
     )
-    print(f"Created index '{index_name}'")
+    logger.info("Created index '%s'", index_name)
 
 
 def upsert_tools(

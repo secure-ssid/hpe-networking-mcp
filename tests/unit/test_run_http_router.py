@@ -131,11 +131,15 @@ def test_http_router_env_loader_uses_exported_values_for_interpolation(tmp_path)
     assert "stale.example" not in result.stdout
 
 
-def test_http_router_normalizes_access_profile_like_runtime():
+def test_http_router_normalizes_access_profile_like_runtime(functional_bash):
     source = _shell_function_source("normalize_access_profile")
 
     result = subprocess.run(
-        ["bash", "-c", f"{source}\nnormalize_access_profile '  FULL-READ-WRITE  '"],
+        [
+            functional_bash,
+            "-c",
+            f"{source}\nnormalize_access_profile '  FULL-READ-WRITE  '",
+        ],
         capture_output=True,
         text=True,
         check=True,

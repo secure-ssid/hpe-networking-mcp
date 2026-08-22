@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -115,6 +116,7 @@ def test_vlan_requires_explicit_lab_owned_allowlist():
     )
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits only")
 def test_secret_input_file_requires_private_permissions(tmp_path: Path):
     path = tmp_path / "secrets.json"
     path.write_text(json.dumps({"wlan:x": {"wpa_passphrase": "secret"}}))

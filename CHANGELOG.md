@@ -28,6 +28,15 @@ time. This file is the compact index into those pages. See
   streamable-HTTP client with `hpe-mcp-router`. Personal document ingestion is
   still available through `scripts/ingest_personal_docs.py`.
 
+### Changed
+
+- **Raised tool exceptions now return the response-envelope shape.** A tool
+  that raises produces the same `{ok: false, status, data, message, tool,
+  platform}` payload a returned error dict gets — on standalone backends and
+  through the router alike — delivered as an `isError=true` result, instead
+  of bare `ToolError` text. Elicitation/protocol errors and cancellation
+  still propagate untouched.
+
 ### Added
 
 - **`corpus_provenance`** — one read-only `rag-core` tool reporting what backs

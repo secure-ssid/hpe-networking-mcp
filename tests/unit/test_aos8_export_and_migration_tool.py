@@ -23,7 +23,7 @@ class _Resp:
 
 def _fake_client_for_paths(path_to_payload: dict[str, object]):
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):

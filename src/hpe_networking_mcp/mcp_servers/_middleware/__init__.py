@@ -24,7 +24,10 @@ See individual modules for details:
 - :mod:`hpe_networking_mcp.mcp_servers._middleware.unknown_tool_suggest` — structured
   "did you mean" hints for guessed tool names.
 - :mod:`hpe_networking_mcp.mcp_servers._middleware.response_envelope` — failure-only
-  `{ok, status, data, message, tool}` wrapping.
+  `{ok, status, data, message, tool}` wrapping. Raised exceptions are
+  enveloped the same way (substituted via ``on_error``) and reach the wire
+  as ``isError=true`` results, matching the router surface; protocol errors
+  (elicitation) and cancellation still propagate untouched.
 - :mod:`hpe_networking_mcp.mcp_servers._middleware.mac_normalizer` — optional outbound MAC
   normalization for model consistency.
 - :mod:`hpe_networking_mcp.mcp_servers._middleware.secret_tokenizer` — opt-in, reversible

@@ -6,6 +6,7 @@
 [![CI](https://github.com/secure-ssid/hpe-networking-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/secure-ssid/hpe-networking-mcp/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-0969da)](https://secure-ssid.github.io/hpe-networking-mcp/)
 [![Release](https://img.shields.io/github/v/release/secure-ssid/hpe-networking-mcp?display_name=tag)](https://github.com/secure-ssid/hpe-networking-mcp/releases)
+[![Image](https://img.shields.io/badge/image-ghcr.io-2088FF)](https://github.com/secure-ssid/hpe-networking-mcp/pkgs/container/hpe-networking-mcp)
 
 ![hpe-networking-mcp banner showing 6,144 generated operations, 6,728 backend tools, 3 minimal router tools, and nine platform surfaces with optional local RAG](docs/assets/hpe-networking-mcp-hero.svg)
 
@@ -46,8 +47,30 @@ entries while still reaching the full backend catalog:
 
 ## Five-minute credential-free quickstart
 
-Verify the install, build the router catalog, and start the MCP HTTP server
-before adding any Aruba Central or GreenLake Platform credentials:
+Verify the install and start the MCP HTTP server before adding any Aruba
+Central or GreenLake Platform credentials.
+
+**Option A — pull the published image (no checkout):**
+
+```bash
+docker run -d --name hpe-networking-mcp \
+  -p 127.0.0.1:8010:8010 \
+  -e MCP_HOST=0.0.0.0 \
+  -e MCP_ALLOWED_HOSTS='127.0.0.1:*,localhost:*' \
+  -e MCP_ALLOWED_ORIGINS='http://127.0.0.1:*,http://localhost:*' \
+  ghcr.io/secure-ssid/hpe-networking-mcp:latest
+```
+
+Once startup finishes (seconds), `curl http://127.0.0.1:8010/livez` answers
+`{"status":"ok"}`. The loopback-only publish keeps the server off your LAN;
+the `host:*` allowlist form is required whenever `MCP_HOST` is not loopback.
+The image ships the OpenAPI spec index baked at build time; semantic search
+ranking additionally wants an ingestion-extra rebuild
+(`--build-arg INSTALL_EXTRAS=ingestion`, see
+[Production deployment](docs/production-deployment.md)).
+
+**Option B — build from source** (adds the setup wizard, doctor diagnostics,
+and local index tooling):
 
 ```bash
 git clone https://github.com/secure-ssid/hpe-networking-mcp.git
@@ -59,7 +82,7 @@ MCP_PORT=8010 bash scripts/run_http_router.sh
 
 Expected outcomes:
 
-- The wizard prints each completed phase and ends with a setup-complete summary; no Central/GLP calls are made.
+- The wizard prints each completed phase and ends with a setup-complete summary; no Central/GLP calls are made. On Windows hosts, build and run from a shell with LF line endings (WSL2 or a configured checkout) — CRLF checkouts break the entry scripts inside Docker builds.
 - `doctor.py` reports local dependency, config-path, and index checks — everything reads `OK` or lists what to fix, without calling any vendor API.
 - The HTTP router prints a `Uvicorn running on http://127.0.0.1:8010` line and keeps running in the foreground.
 

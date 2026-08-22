@@ -56,7 +56,7 @@ def _fake_client(login_resp=None, get_resp=None, request_resp=None, calls=None):
     calls = calls if calls is not None else {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):
@@ -314,7 +314,7 @@ def test_aos8_get_retries_once_after_401_with_fresh_login(monkeypatch):
     calls = {}
 
     class _FakeAsyncClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **_ignored):
             pass
 
         async def __aenter__(self):

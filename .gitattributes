@@ -1,0 +1,3 @@
+# Entry scripts are executed by the container's shell; a CRLF checkout breaks
+# them with `bash\r`. Force LF on checkout for shell scripts.
+*.sh text eol=lf

@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from hpe_networking_mcp.pipeline.clients.http_retry import parse_retry_after as _parse_retry_after
+from hpe_networking_mcp.pipeline.clients.pooled_clients import pooled_client
 from hpe_networking_mcp.pipeline.clients.token_manager import TokenManager
 
 logger = logging.getLogger(__name__)
@@ -499,74 +500,74 @@ class CentralClient:
         retry_5xx_delay = _SERVER_ERROR_INITIAL_DELAY
         extra_headers = kwargs.pop("headers", None)
 
-        async with httpx.AsyncClient(timeout=self.timeout) as session:
-            for attempt in range(max_retries + 1):
-                token, generation = await asyncio.to_thread(
-                    self.token_manager.get_access_token_with_generation
+        session = pooled_client("central", timeout=self.timeout)
+        for attempt in range(max_retries + 1):
+            token, generation = await asyncio.to_thread(
+                self.token_manager.get_access_token_with_generation
+            )
+            headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+            if extra_headers:
+                headers.update(extra_headers)
+
+            response = await session.request(method, url, headers=headers, **kwargs)
+            self._record_response_metadata(response, endpoint)
+
+            if response.status_code == 401 and attempt < max_retries:
+                logger.warning(
+                    "Unauthorized (401) on %s %s — forcing token refresh (attempt %d/%d)",
+                    method,
+                    url,
+                    attempt + 1,
+                    max_retries,
                 )
-                headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
-                if extra_headers:
-                    headers.update(extra_headers)
+                # Same generation-aware collapse as the sync path — see
+                # TokenManager.get_access_token()'s observed_generation.
+                await asyncio.to_thread(
+                    self.token_manager.get_access_token,
+                    True,
+                    observed_generation=generation,
+                )
+                continue
 
-                response = await session.request(method, url, headers=headers, **kwargs)
-                self._record_response_metadata(response, endpoint)
+            if response.status_code == 429 and attempt < max_retries:
+                hint = _parse_retry_after(response.headers.get("Retry-After", ""))
+                wait = hint if hint is not None else retry_429_delay
+                wait = min(wait, _MAX_RETRY_DELAY)
+                logger.warning(
+                    "Rate limit (429) on %s %s — waiting %.1fs (attempt %d/%d, Retry-After=%r)",
+                    method,
+                    url,
+                    wait,
+                    attempt + 1,
+                    max_retries,
+                    response.headers.get("Retry-After"),
+                )
+                await asyncio.sleep(wait)
+                retry_429_delay = min(int(retry_429_delay * 1.5), _MAX_RETRY_DELAY)
+                continue
 
-                if response.status_code == 401 and attempt < max_retries:
-                    logger.warning(
-                        "Unauthorized (401) on %s %s — forcing token refresh (attempt %d/%d)",
-                        method,
-                        url,
-                        attempt + 1,
-                        max_retries,
-                    )
-                    # Same generation-aware collapse as the sync path — see
-                    # TokenManager.get_access_token()'s observed_generation.
-                    await asyncio.to_thread(
-                        self.token_manager.get_access_token,
-                        True,
-                        observed_generation=generation,
-                    )
-                    continue
+            if (
+                retry_5xx
+                and response.status_code in (502, 503, 504)
+                and attempt < max_retries
+            ):
+                jitter = 1.0 + random.uniform(-0.2, 0.2)
+                wait = min(retry_5xx_delay * jitter, _SERVER_ERROR_MAX_DELAY)
+                logger.warning(
+                    "Transient server error %d on %s %s — waiting %.2fs "
+                    "(attempt %d/%d)",
+                    response.status_code,
+                    method,
+                    url,
+                    wait,
+                    attempt + 1,
+                    max_retries,
+                )
+                await asyncio.sleep(wait)
+                retry_5xx_delay = min(retry_5xx_delay * 2, _SERVER_ERROR_MAX_DELAY)
+                continue
 
-                if response.status_code == 429 and attempt < max_retries:
-                    hint = _parse_retry_after(response.headers.get("Retry-After", ""))
-                    wait = hint if hint is not None else retry_429_delay
-                    wait = min(wait, _MAX_RETRY_DELAY)
-                    logger.warning(
-                        "Rate limit (429) on %s %s — waiting %.1fs (attempt %d/%d, Retry-After=%r)",
-                        method,
-                        url,
-                        wait,
-                        attempt + 1,
-                        max_retries,
-                        response.headers.get("Retry-After"),
-                    )
-                    await asyncio.sleep(wait)
-                    retry_429_delay = min(int(retry_429_delay * 1.5), _MAX_RETRY_DELAY)
-                    continue
-
-                if (
-                    retry_5xx
-                    and response.status_code in (502, 503, 504)
-                    and attempt < max_retries
-                ):
-                    jitter = 1.0 + random.uniform(-0.2, 0.2)
-                    wait = min(retry_5xx_delay * jitter, _SERVER_ERROR_MAX_DELAY)
-                    logger.warning(
-                        "Transient server error %d on %s %s — waiting %.2fs "
-                        "(attempt %d/%d)",
-                        response.status_code,
-                        method,
-                        url,
-                        wait,
-                        attempt + 1,
-                        max_retries,
-                    )
-                    await asyncio.sleep(wait)
-                    retry_5xx_delay = min(retry_5xx_delay * 2, _SERVER_ERROR_MAX_DELAY)
-                    continue
-
-                return response
+            return response
 
         return response
 
