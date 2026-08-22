@@ -106,7 +106,7 @@ dedicated destructive safeguards remain in force.
 |---|---|---|
 | stdio | Client launches `src/hpe_networking_mcp/mcp_servers/tool_router.py` | Local child process |
 | Local HTTP | `MCP_TRANSPORT=streamable-http`, loopback listener | Same-host clients |
-| Non-loopback HTTP | Streamable HTTP plus allowed hosts and bearer token | Explicit network and authentication controls |
+| Non-loopback HTTP | Streamable HTTP plus allowed hosts/origins; optional bearer token | Explicit network and authentication controls |
 
 See [MCP client recipes](../mcp-client-recipes.md) for copy/paste
 configurations.

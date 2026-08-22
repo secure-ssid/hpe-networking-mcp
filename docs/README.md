@@ -133,7 +133,7 @@ panels are defined in `assets/css/style.scss`, loaded after the theme via
 | `scripts/run_http_router.sh` | Start the minimal router over streamable HTTP |
 | `docker-compose.yml` | Optional localhost-only Redis/Ollama server backend for power users |
 | `docker-compose.router.yml` | Optional overlay: containerized MCP router service, behind an opt-in `router` Compose profile -- see [production-deployment.md](production-deployment.md) |
-| `Dockerfile` | Production image for the streamable-HTTP router -- non-root, frozen dependencies, no baked-in secrets or indexes |
+| `Dockerfile` | Production image for the streamable-HTTP router -- non-root, frozen dependencies, no baked-in secrets (the OpenAPI spec index is baked in at build time) |
 | `secrets/` | `*.example` templates for the Docker secrets `docker-compose.router.yml` mounts (real files are git-ignored) |
 | `scripts/doctor.py` | Check local setup without making API calls |
 | `scripts/` | Tool-catalog ingestion, release validation, local sync helpers |
