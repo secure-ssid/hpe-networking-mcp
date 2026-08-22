@@ -59,3 +59,55 @@ def test_aggregate_reports_optional_duplicate_and_latency_guards():
     assert summary["duplicate_guard"] == 0.5
     assert summary["latency_n"] == 2
     assert summary["latency_guard"] == 0.5
+
+
+def test_ndcg_perfect_and_imperfect_rankings():
+    run_eval = _load_run_eval()
+    graded = [
+        {"match": "primary-source", "gain": 3},
+        {"match": "secondary-source", "gain": 2},
+    ]
+    perfect = [
+        {"source": "a", "text": "from primary-source"},
+        {"source": "b", "text": "from secondary-source"},
+    ]
+    inverted = list(reversed(perfect))
+
+    assert run_eval._ndcg_at_k(perfect, graded, k=5) == 1.0
+    assert 0.0 < run_eval._ndcg_at_k(inverted, graded, k=5) < 1.0
+
+
+def test_ndcg_zero_when_no_graded_source_retrieved():
+    run_eval = _load_run_eval()
+    graded = [{"match": "primary-source", "gain": 3}]
+    hits = [{"source": "unrelated", "text": "nothing relevant"}]
+
+    assert run_eval._ndcg_at_k(hits, graded, k=5) == 0.0
+
+
+def test_aggregate_reports_ndcg_mean_and_graded_count():
+    run_eval = _load_run_eval()
+    base = {
+        "id": "x", "type": "howto", "source_hit": True, "rank": 1,
+        "keyword_hit": True, "mrr": 1.0, "latency_ms": None,
+        "latency_hit": None, "duplicate_ratio": None,
+        "duplicate_hit": None, "ndcg": None,
+    }
+    rows = [
+        {**base, "id": "g1", "ndcg": 1.0},
+        {**base, "id": "g2", "ndcg": 0.5},
+        {**base, "id": "plain", "ndcg": None},
+    ]
+
+    summary = run_eval._aggregate(rows)
+
+    assert summary["graded_n"] == 2
+    assert summary["ndcg@k"] == 0.75
+
+
+def test_graded_sources_declare_positive_gains_and_matches():
+    run_eval = _load_run_eval()
+    for question in run_eval.load_questions():
+        for entry in question.get("graded_sources", []):
+            assert int(entry["gain"]) > 0, question["id"]
+            assert str(entry["match"]).strip(), question["id"]

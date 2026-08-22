@@ -19,11 +19,14 @@ Metrics:
                     (ideally served by a future lookup_api tool; falls back to search_docs)
     duplicate_guard - optional per-row duplicate-rate bound over returned hits
     latency_guard   - optional per-row latency bound for the tool call
+    ndcg@k          - graded relevance (nDCG) mean over rows declaring
+                      optional ``graded_sources`` ({match, gain}) entries
 """
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -93,6 +96,31 @@ def _duplicate_ratio(hits: list[dict], k: int) -> float:
         return 0.0
     signatures = [_hit_signature(hit) for hit in sample]
     return round((len(signatures) - len(set(signatures))) / len(signatures), 3)
+
+
+def _graded_gain(hit: dict, graded_sources: list[dict]) -> int:
+    """Highest declared gain whose ``match`` substring occurs in the hit."""
+    dump = json.dumps(hit, sort_keys=True, default=str).lower()
+    gains = [
+        int(g.get("gain", 0))
+        for g in graded_sources
+        if str(g.get("match", "")).lower() in dump
+    ]
+    return max(gains, default=0)
+
+
+def _ndcg_at_k(hits: list[dict], graded_sources: list[dict], k: int) -> float:
+    """nDCG@k over graded hits against the ideal gain ordering.
+
+    Matching follows the same whole-JSON-dump convention as
+    ``_source_rank``/``_keyword_hit`` so structured list/correlate results
+    can carry graded relevance too.
+    """
+    gains = [_graded_gain(hit, graded_sources) for hit in hits[:k]]
+    dcg = sum(g / math.log2(i + 2) for i, g in enumerate(gains))
+    ideal = sorted((int(g.get("gain", 0)) for g in graded_sources), reverse=True)[:k]
+    idcg = sum(g / math.log2(i + 2) for i, g in enumerate(ideal))
+    return round(dcg / idcg, 3) if idcg else 0.0
 
 
 def run(k: int, verbose: bool) -> dict:
@@ -195,6 +223,7 @@ def run(k: int, verbose: bool) -> dict:
                     if q.get("max_duplicate_ratio") is not None
                     else None
                 ),
+                "ndcg": None,
             })
             if verbose:
                 print(
@@ -218,6 +247,7 @@ def run(k: int, verbose: bool) -> dict:
         latency_hit = (
             latency_ms <= q["max_latency_ms"] if q.get("max_latency_ms") is not None else None
         )
+        ndcg = _ndcg_at_k(hits, q["graded_sources"], k) if q.get("graded_sources") else None
 
         rows.append({
             "id": q["id"], "type": q["type"],
@@ -228,6 +258,7 @@ def run(k: int, verbose: bool) -> dict:
             "latency_hit": latency_hit,
             "duplicate_ratio": duplicate_ratio,
             "duplicate_hit": duplicate_hit,
+            "ndcg": ndcg,
         })
         if verbose:
             extras = []
@@ -248,7 +279,7 @@ def _blank(q):
     return {"id": q["id"], "type": q["type"], "source_hit": False,
             "rank": 0, "keyword_hit": False, "mrr": 0.0,
             "latency_ms": None, "latency_hit": None,
-            "duplicate_ratio": None, "duplicate_hit": None}
+            "duplicate_ratio": None, "duplicate_hit": None, "ndcg": None}
 
 
 # New v0.7 structured tool types (bounded list/correlate/diagnostics) — kept
@@ -279,6 +310,7 @@ def _aggregate(rows: list[dict]) -> dict:
     )
     duplicate_guard, duplicate_n = opt_frac("duplicate_hit")
     latency_guard, latency_n = opt_frac("latency_hit")
+    ndcg_values = [r["ndcg"] for r in rows if r.get("ndcg") is not None]
 
     summary = {
         "n": len(rows),
@@ -304,7 +336,9 @@ def _aggregate(rows: list[dict]) -> dict:
         "duplicate_n": duplicate_n,
         "latency_guard": round(latency_guard, 3),
         "latency_n": latency_n,
-        "deferred_n": len(load_deferred_questions()),
+        "ndcg@k": round(sum(ndcg_values) / len(ndcg_values), 3) if ndcg_values else None,
+        "graded_n": len(ndcg_values),
+        "latency_n": latency_n,
         "rows": rows,
     }
     return summary
@@ -319,8 +353,8 @@ _DEFAULT_THRESHOLDS = {
     "structured_list_exact": 1.0,
 }
 # NOTE: the bars sit just under the current measured scores on the expanded
-# multi-vendor eval set (currently 36 active scored questions) so a retrieval regression
-# fails the gate while normal run-to-run jitter does not. They were raised to
+# multi-vendor eval set so a retrieval regression fails the gate while normal
+# run-to-run jitter does not. They were raised to
 # 0.85 once tech_docs/vsg_docs/nac_docs were fully scraped and indexed; the
 # earlier lower bars existed only while those sources were unavailable.
 # See docs/architecture/RAG-ARCHITECTURE.md and
@@ -348,6 +382,7 @@ def main():
     ap.add_argument("--min-api-exact", type=float, default=None)
     ap.add_argument("--min-structured-exact", type=float, default=None)
     ap.add_argument("--min-structured-list-exact", type=float, default=None)
+    ap.add_argument("--min-ndcg", type=float, default=None)
     args = ap.parse_args()
 
     print(f"Running RAG eval (top_k={args.k})...")
@@ -368,6 +403,8 @@ def main():
         print(f"  {'duplicate_guard':<16} {summary['duplicate_guard']}")
     if summary["latency_n"]:
         print(f"  {'latency_guard':<16} {summary['latency_guard']}")
+    if summary["graded_n"]:
+        print(f"  {'ndcg@k':<16} {summary['ndcg@k']} (graded n={summary['graded_n']})")
     if args.json:
         Path(args.json).write_text(json.dumps(summary, indent=2))
         print(f"\nWrote {args.json}")
@@ -390,6 +427,7 @@ def main():
         "api_exact": args.min_api_exact,
         "structured_exact": args.min_structured_exact,
         "structured_list_exact": args.min_structured_list_exact,
+        "ndcg@k": args.min_ndcg,
     }
     thresholds.update({metric: value for metric, value in explicit.items() if value is not None})
     if thresholds:

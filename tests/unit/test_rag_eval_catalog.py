@@ -36,7 +36,7 @@ def test_rag_eval_catalog_tracks_expanded_vendor_coverage_and_deferred_blockers(
     active = {question["id"]: question for question in run_eval.load_questions()}
     deferred = {question["id"]: question for question in run_eval.load_deferred_questions()}
 
-    assert len(active) == 36
+    assert len(active) == 42
     assert {
         "glp-company-workspace",
         "passpoint-list-key",
@@ -49,9 +49,19 @@ def test_rag_eval_catalog_tracks_expanded_vendor_coverage_and_deferred_blockers(
         "mist-edge-part-numbers",
         "hardware-ex4100f-specs",
     } <= active.keys()
+    assert {
+        "mist-wlan-create-api",
+        "howto-mist-templates",
+        "ex4400-hardware-specs",
+        "qfx5120-hardware-specs",
+        "srx4600-hardware-specs",
+        "list-advisories-juniper-family",
+    } <= active.keys()
     assert active["aoscx-9300s-negative-10-13"]["expect_keywords"] == ["10.14.1061"]
     assert active["hardware-ex4100f-specs"]["max_duplicate_ratio"] == 0.0
     assert active["howto-proxy-profile"]["max_latency_ms"] == 4000
+    assert active["hardware-ex4100f-specs"]["graded_sources"][0]["gain"] == 3
+    assert active["ex4400-hardware-specs"]["graded_sources"][1]["match"] == "product_datasheets"
     assert {
         "deferred-glp-subscriptions-endpoint",
         "deferred-ap635-hardware-specs",
@@ -60,3 +70,5 @@ def test_rag_eval_catalog_tracks_expanded_vendor_coverage_and_deferred_blockers(
     assert "GLP OpenAPI document" in deferred["deferred-glp-subscriptions-endpoint"]["blocker"]
     assert "AP-635 datasheet" in deferred["deferred-ap635-hardware-specs"]["blocker"]
     assert "release-note chunks" in deferred["deferred-aoscx-10-13-release-notes-delta"]["blocker"]
+    assert "deferred-apstra-prose-howto" in deferred
+    assert "docs/rag-coverage-matrix.md" in deferred["deferred-apstra-prose-howto"]["blocker"]
