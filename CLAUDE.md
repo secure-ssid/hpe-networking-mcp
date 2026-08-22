@@ -1,6 +1,6 @@
 # hpe-networking-mcp — HPE Networking MCP automation
 
-HPE Aruba Central API tooling for network device migration, SSID config, switch provisioning, and GreenLake Platform management.
+Low-token MCP router for HPE Networking: one discovery/dispatch entry over a multi-platform tool catalog — Aruba Central, GreenLake Platform, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, and AOS8 migration tooling — plus RAG over vendor docs and exact-API OpenAPI lookup.
 
 ## Project layout
 
