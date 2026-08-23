@@ -1,10 +1,13 @@
 """HTTP transport startup/hardening tests for ``shared.run_server``.
 
 Installed MCP SDK 2.x's ``MCPServer.Settings`` carries no
-``host``/``port``/``transport_security`` fields any more -- those are now
-explicit keyword arguments to ``MCPServer.run(...)`` /
-``MCPServer.streamable_http_app(...)`` (see
-``mcp.server.mcpserver.server.MCPServer`` in the installed SDK). The bulk of
+``host``/``port``/``transport_security`` fields any more -- those are now explicit keyword
+arguments to the SDK's per-transport async runners
+(``MCPServer.run_streamable_http_async(...)`` /
+``MCPServer.streamable_http_app(...)`` -- see
+``mcp.server.mcpserver.server.MCPServer`` in the installed SDK), which
+``shared.run_server`` drives under its own ``anyio.run`` so pooled HTTP
+clients are drained on the serving loop at exit. The bulk of
 this file exercises ``shared._configure_http_transport`` (now a pure
 host/port -> ``TransportSecuritySettings | None`` builder) and
 ``shared.run_server``'s dispatch with a lightweight ``_DummyMCP`` double.
@@ -13,9 +16,10 @@ host/port -> ``TransportSecuritySettings | None`` builder) and
 drives an actual ``uvicorn``-served ``MCPServer`` over a real loopback TCP
 socket -- health endpoints, a real MCP ``initialize``/``tools/list``/
 ``tools/call`` round trip, and the bearer-auth-gated variant -- so a
-regression in the real ``run()``/``streamable_http_app()`` plumbing (wrong
-kwarg name, wrong host threaded through, etc.) fails a test instead of only
-surfacing at manual startup. No Central/GLP credentials or network access
+regression in the real ``run_streamable_http_async()``/
+``streamable_http_app()`` plumbing (wrong kwarg name, wrong host threaded
+through, etc.) fails a test instead of only surfacing at manual startup.
+No Central/GLP credentials or network access
 required: everything binds to 127.0.0.1 on an OS-assigned ephemeral port.
 """
 
@@ -38,8 +42,10 @@ from hpe_networking_mcp.mcp_servers.shared import (
     _is_loopback_host,
     _register_health_routes,
     _serve_streamable_http_with_bearer,
+    _serve_with_pool_cleanup,
     run_server,
 )
+from hpe_networking_mcp.pipeline.clients.pooled_clients import _POOL, pooled_client
 
 
 class _DummyMCP:
@@ -65,8 +71,17 @@ class _DummyMCP:
     async def _call_tool(self, name, arguments, context=None, convert_result=False):
         raise AssertionError(f"transport tests never dispatch tools (got {name!r})")
 
-    def run(self, **kwargs):
-        self.run_calls.append(kwargs)
+    # ``run_server`` drives the SDK's per-transport async entry points under
+    # its own ``anyio.run`` (so pooled HTTP clients can be drained on the
+    # serving loop at exit) instead of calling the synchronous ``run()``.
+    async def run_stdio_async(self):
+        self.run_calls.append({"transport": "stdio"})
+
+    async def run_sse_async(self, **kwargs):
+        self.run_calls.append({"transport": "sse", **kwargs})
+
+    async def run_streamable_http_async(self, **kwargs):
+        self.run_calls.append({"transport": "streamable-http", **kwargs})
 
     def custom_route(self, path, methods, name=None, include_in_schema=True):
         def decorator(fn):
@@ -131,13 +146,13 @@ def test_register_health_routes_is_idempotent():
     assert len(server.custom_routes) == 3
 
 
-def test_run_server_stdio_keeps_default_run(monkeypatch):
+def test_run_server_stdio_dispatches_stdio_runner(monkeypatch):
     server = _DummyMCP()
     monkeypatch.setenv("MCP_TRANSPORT", "stdio")
 
     run_server(server)
 
-    assert server.run_calls == [{}]
+    assert server.run_calls == [{"transport": "stdio"}]
 
 
 @pytest.mark.parametrize("transport", ["stdio", "streamable-http"])
@@ -151,6 +166,136 @@ def test_run_server_rejects_contradictory_access_profile(monkeypatch, transport)
         run_server(server)
 
     assert server.run_calls == []
+
+
+# ---------------------------------------------------------------------------
+# Pool cleanup -- pooled HTTP clients must be drained on the serving loop
+# when the server exits, on every transport, success or failure.
+# ---------------------------------------------------------------------------
+
+
+def test_serve_with_pool_cleanup_drains_pool_on_clean_exit():
+    created = {}
+
+    async def serve():
+        created["client"] = pooled_client("test-clean-exit")
+
+    asyncio.run(_serve_with_pool_cleanup(serve))
+
+    assert created["client"].is_closed
+    assert "test-clean-exit" not in _POOL
+
+
+def test_serve_with_pool_cleanup_drains_pool_when_serve_raises():
+    created = {}
+
+    async def serve():
+        created["client"] = pooled_client("test-error-exit")
+        raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        asyncio.run(_serve_with_pool_cleanup(serve))
+
+    assert created["client"].is_closed
+    assert "test-error-exit" not in _POOL
+
+
+def test_run_server_stdio_drains_pooled_clients_on_exit(monkeypatch):
+    server = _DummyMCP()
+    monkeypatch.setenv("MCP_TRANSPORT", "stdio")
+    created = {}
+
+    async def run_stdio_with_pool():
+        created["client"] = pooled_client("test-stdio-drain")
+
+    server.run_stdio_async = run_stdio_with_pool
+
+    run_server(server)
+
+    assert created["client"].is_closed
+    assert "test-stdio-drain" not in _POOL
+
+
+def test_run_server_streamable_http_drains_pooled_clients_on_exit(monkeypatch):
+    server = _DummyMCP()
+    monkeypatch.setenv("MCP_TRANSPORT", "streamable-http")
+    monkeypatch.setenv("MCP_HOST", "127.0.0.1")
+    monkeypatch.setenv("MCP_PORT", "9011")
+    monkeypatch.delenv("MCP_HTTP_BEARER_TOKEN", raising=False)
+    created = {}
+
+    async def run_http_with_pool(**kwargs):
+        created["kwargs"] = kwargs
+        created["client"] = pooled_client("test-http-drain")
+
+    server.run_streamable_http_async = run_http_with_pool
+
+    run_server(server)
+
+    # Serving kwargs are threaded through unchanged...
+    assert created["kwargs"]["host"] == "127.0.0.1"
+    assert created["kwargs"]["port"] == 9011
+    # ...and the pool is drained once the serve loop exits.
+    assert created["client"].is_closed
+    assert "test-http-drain" not in _POOL
+
+
+def test_run_server_unknown_transport_rejected(monkeypatch):
+    server = _DummyMCP()
+    monkeypatch.setenv("MCP_TRANSPORT", "bogus")
+    monkeypatch.delenv("MCP_HTTP_BEARER_TOKEN", raising=False)
+
+    with pytest.raises(ValueError, match="Unknown transport: bogus"):
+        run_server(server)
+
+    assert server.run_calls == []
+
+
+def test_bearer_serve_drains_pooled_clients_on_exit(monkeypatch):
+    import uvicorn
+
+    server = _DummyMCP()
+    server.streamable_http_app = lambda **kwargs: SimpleNamespace(
+        add_middleware=lambda *a, **k: None
+    )
+    created = {}
+
+    class _FakeUvicornServer:
+        def __init__(self, config):
+            pass
+
+        async def serve(self):
+            created["client"] = pooled_client("test-bearer-drain")
+
+    monkeypatch.setattr(uvicorn, "Server", _FakeUvicornServer)
+
+    asyncio.run(
+        _serve_streamable_http_with_bearer(server, "tok", "127.0.0.1", 9021, None)
+    )
+
+    assert created["client"].is_closed
+    assert "test-bearer-drain" not in _POOL
+
+
+def test_in_process_restart_leaves_no_unclosable_clients(monkeypatch):
+    """The leak scenario: a supervisor re-entering ``run_server`` in one
+    process. Without draining, cycle 1's client -- bound to a now-dead loop --
+    would be dropped unclosed and its socket leaked until GC."""
+    server = _DummyMCP()
+    monkeypatch.setenv("MCP_TRANSPORT", "stdio")
+    clients = []
+
+    async def run_stdio_with_pool():
+        clients.append(pooled_client("test-restart"))
+
+    server.run_stdio_async = run_stdio_with_pool
+
+    run_server(server)
+    run_server(server)
+
+    assert len(clients) == 2
+    assert all(client.is_closed for client in clients)
+    assert "test-restart" not in _POOL
 
 
 # ---------------------------------------------------------------------------
@@ -289,7 +434,7 @@ class TestBearerToken:
         monkeypatch.setenv("MCP_HTTP_BEARER_TOKEN", "s3cr3t")
         assert _http_bearer_token() == "s3cr3t"
 
-    def test_run_server_without_bearer_token_uses_default_run(self, monkeypatch):
+    def test_run_server_without_bearer_token_dispatches_streamable_http(self, monkeypatch):
         server = _DummyMCP()
         monkeypatch.setenv("MCP_TRANSPORT", "streamable-http")
         monkeypatch.delenv("MCP_HTTP_BEARER_TOKEN", raising=False)

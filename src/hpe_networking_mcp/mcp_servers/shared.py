@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import re
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -22,6 +22,7 @@ from hpe_networking_mcp.mcp_servers import _sdk_compat
 from hpe_networking_mcp.pipeline.clients.central_client import CentralClient
 from hpe_networking_mcp.pipeline.clients.glp_client import GLPClient
 from hpe_networking_mcp.pipeline.clients.mcp_client import MCPClient
+from hpe_networking_mcp.pipeline.clients.pooled_clients import aclose_pooled_clients
 from hpe_networking_mcp.pipeline.clients.token_manager import TokenManager
 from hpe_networking_mcp.pipeline.config import build_account_contexts
 from hpe_networking_mcp.pipeline.url_validation import validate_infra_url
@@ -1270,6 +1271,22 @@ class BearerAuthASGIMiddleware:
         await self.app(scope, receive, send)
 
 
+async def _serve_with_pool_cleanup(serve: Callable[[], Awaitable[None]]) -> None:
+    """Run ``serve`` and always drain pooled HTTP clients when it returns.
+
+    Pooled ``httpx.AsyncClient`` objects are bound to the serving event loop
+    (see ``hpe_networking_mcp.pipeline.clients.pooled_clients``); once that
+    loop closes they can no longer be awaited and leak sockets until GC.
+    Draining them in ``finally`` here covers graceful shutdown *and* the
+    in-process restart case (a supervisor driving ``run_server`` again on a
+    fresh loop), where undrained clients would otherwise pile up unclosable.
+    """
+    try:
+        await serve()
+    finally:
+        await aclose_pooled_clients()
+
+
 async def _serve_streamable_http_with_bearer(
     mcp_instance: Any,
     token: str,
@@ -1301,7 +1318,7 @@ async def _serve_streamable_http_with_bearer(
         log_level=mcp_instance.settings.log_level.lower(),
     )
     server = uvicorn.Server(config)
-    await server.serve()
+    await _serve_with_pool_cleanup(server.serve)
 
 
 # ---------------------------------------------------------------------------
@@ -1512,12 +1529,22 @@ def run_server(mcp_instance: Any, default_port: int | None = None) -> None:
     ``install_platform_write_gate``) on every transport, so a backend run
     standalone fails write/destructive calls closed exactly like the router
     does. This is idempotent and a no-op for servers with no gated platform.
+
+    Every transport is served through ``_serve_with_pool_cleanup``, so pooled
+    per-platform HTTP clients (``pooled_clients``) are closed on the serving
+    loop when the server exits instead of leaking sockets until GC.
     """
     validate_access_profile_environment()
     install_platform_write_gate(mcp_instance)
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
     if transport == "stdio":
-        mcp_instance.run()
+        import anyio
+
+        # ``MCPServer.run()`` is a thin ``anyio.run(self.run_stdio_async)``;
+        # calling the async entry point through ``_serve_with_pool_cleanup``
+        # drains pooled HTTP clients on the serving loop at exit instead of
+        # leaking them to GC.
+        anyio.run(_serve_with_pool_cleanup, mcp_instance.run_stdio_async)
         return
 
     host = os.environ.get("MCP_HOST", "127.0.0.1")
@@ -1540,12 +1567,29 @@ def run_server(mcp_instance: Any, default_port: int | None = None) -> None:
             "that appears protected but is not."
         )
     if bearer_token is None:
-        mcp_instance.run(
-            transport=transport,
-            host=host,
-            port=port,
-            transport_security=transport_security,
-        )
+        import anyio
+
+        async def _serve_http() -> None:
+            # Mirror ``MCPServer.run(transport=...)``'s dispatch (it is just
+            # ``anyio.run(lambda: self.run_<transport>_async(**kwargs))``)
+            # with the same kwargs, so pool cleanup can run on the serving
+            # loop. Unknown transports fail exactly as the SDK's ``run``.
+            if transport == "streamable-http":
+                await mcp_instance.run_streamable_http_async(
+                    host=host,
+                    port=port,
+                    transport_security=transport_security,
+                )
+            elif transport == "sse":
+                await mcp_instance.run_sse_async(
+                    host=host,
+                    port=port,
+                    transport_security=transport_security,
+                )
+            else:
+                raise ValueError(f"Unknown transport: {transport}")
+
+        anyio.run(_serve_with_pool_cleanup, _serve_http)
         return
 
     import anyio
