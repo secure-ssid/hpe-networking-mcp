@@ -36,6 +36,11 @@ time. This file is the compact index into those pages. See
   through the router alike — delivered as an `isError=true` result, instead
   of bare `ToolError` text. Elicitation/protocol errors and cancellation
   still propagate untouched.
+- **An unwritable token-cache directory now fails closed.** The OAuth token
+  cache raises with a remedy message instead of silently falling back to the
+  current working directory, where a token file could leak into a repo
+  checkout, archive, or container layer. Point `TOKEN_CACHE_DIR` at a
+  writable location.
 
 ### Added
 
