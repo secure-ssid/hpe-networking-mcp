@@ -21,6 +21,10 @@
 #                        across the returned top-k sample (0.0 = no duplicates).
 # max_latency_ms      -> optional upper bound on query latency measured by the
 #                        eval harness for this case.
+# graded_sources    -> optional list of {match, gain} with gain > 0; adds
+#                       graded relevance so the runner can report nDCG@k.
+#                       A hit's gain is the highest gain whose `match`
+#                       substring occurs anywhere in the hit JSON.
 # See docs/architecture/RAG-ARCHITECTURE.md and docs/source-lifecycle-coverage.md.
 
 questions:
@@ -103,6 +107,9 @@ questions:
       - "https://www.juniper.net/us/en/products/switches/ex-series/ex4100-f-ethernet-switch/specs.html"
     expect_keywords: ["Fixed 1 U access", "Port density"]
     max_duplicate_ratio: 0.0
+    graded_sources:
+      - { match: "product_datasheets/switch-ex4100-f-ethernet-switch.md", gain: 3 }
+      - { match: "juniper.net/us/en/products/switches/ex-series/ex4100-f", gain: 2 }
 
   - id: central-msp-customer-firmware-upgrade-endpoint
     type: api-lookup
@@ -187,6 +194,9 @@ questions:
       - "product_datasheets/ap-juniper-edge.md"
       - "https://www.juniper.net/us/en/products/access-points/juniper-edge-datasheet.html"
     expect_keywords: ["ME-X1-M", "ME-X2-M", "ME-X6"]
+    graded_sources:
+      - { match: "product_datasheets/ap-juniper-edge.md", gain: 3 }
+      - { match: "juniper.net/us/en/products/access-points/juniper-edge-datasheet", gain: 2 }
 
   - id: advisory-hpesbnw04987
     type: advisory
@@ -281,6 +291,59 @@ questions:
     expect_sources: ["citation_completeness"]
     expect_keywords: ["security_advisories", "lifecycle_events"]
 
+  # --- Juniper Mist / Junos family expansion (Wave 2 D2) -------------------
+  # Grounded in ingestion/source_manifest.json families: mist_api_docs,
+  # mist_docs, junos_{ex,qfx,srx}_hardware seeds, and the
+  # juniper_security_advisories sidecar already proven by advisory-apstra-cve.
+
+  - id: mist-wlan-create-api
+    type: howto
+    query: "Which Mist API endpoint creates a WLAN on a site?"
+    expect_sources: ["mist_api_docs"]
+    expect_keywords: ["wlans"]
+
+  - id: howto-mist-templates
+    type: howto
+    query: "How do configuration templates work in Juniper Mist?"
+    expect_sources: ["mist_docs"]
+    expect_keywords: ["template"]
+
+  - id: ex4400-hardware-specs
+    type: howto
+    query: "What are the hardware specifications for EX4400 switches?"
+    expect_sources:
+      - "junos_ex_hardware"
+      - "product_datasheets"
+    expect_keywords: ["EX4400"]
+    graded_sources:
+      - { match: "junos_ex_hardware", gain: 3 }
+      - { match: "product_datasheets", gain: 2 }
+
+  - id: qfx5120-hardware-specs
+    type: howto
+    query: "What are the hardware specifications for QFX5120 switches?"
+    expect_sources:
+      - "junos_qfx_hardware"
+      - "product_datasheets"
+    expect_keywords: ["QFX5120"]
+
+  - id: srx4600-hardware-specs
+    type: howto
+    query: "What are the hardware specifications for the SRX4600 firewall?"
+    expect_sources:
+      - "junos_srx_hardware"
+      - "product_datasheets"
+    expect_keywords: ["SRX4600"]
+
+  - id: list-advisories-juniper-family
+    type: list-advisories
+    query: "List Juniper security advisories"
+    arguments:
+      source_family: "juniper_security_advisories"
+      limit: 10
+    expect_sources: ["juniper_security_advisories"]
+    expect_keywords: ["CVE-2025-13914", "total_matched"]
+
 deferred_questions:
   - id: deferred-dot1x-auth-type
     type: api-lookup
@@ -316,3 +379,8 @@ deferred_questions:
     type: howto
     query: "What changed in AOS-CX 10.13.1110 for 6300 or 6400 switches?"
     blocker: "Current retrieval prefers Central compatibility tables over AOS-CX 10.13 release-note chunks for broad 'what changed' questions. Revisit after release-note-centric retrieval or source refresh work lands."
+
+  - id: deferred-apstra-prose-howto
+    type: howto
+    query: "How do I stage a config template in Apstra?"
+    blocker: "Apstra prose coverage is a documented gap (docs/rag-coverage-matrix.md: 'add product-specific docs/evals' for the Apstra family); only structured advisory/lifecycle sidecars are indexed today, so a prose howto cannot be judged fairly yet."
