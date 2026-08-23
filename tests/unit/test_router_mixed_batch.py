@@ -32,7 +32,7 @@ from typing import Any
 
 import pytest
 from mcp.server.mcpserver import Context, MCPServer
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 import hpe_networking_mcp.mcp_servers.tool_router as router
 from hpe_networking_mcp.mcp_servers.shared import DESTRUCTIVE, READ_ONLY
@@ -145,13 +145,13 @@ class TestMixedBatchRegistration:
     def test_model_bounds_name_and_id_lengths(self):
         model = router.MixedBatchCall
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             model(name="x" * (router.MAX_BATCH_TOOL_NAME_CHARS + 1))
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             model(name="echo", id="i" * (router.MAX_BATCH_CALL_ID_CHARS + 1))
 
     def test_model_rejects_unknown_fields(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             router.MixedBatchCall(name="echo", surprise=1)
 
     def test_model_has_no_cursor_field(self):
