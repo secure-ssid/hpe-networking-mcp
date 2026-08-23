@@ -46,6 +46,12 @@ def _build_raising_backend() -> MCPServer:
         """Fixture tool raising an ordinary, non-secret exception."""
         raise ValueError("boom")
 
+    @backend.tool(annotations=READ_ONLY)
+    def bearer_prose_call() -> dict[str, Any]:
+        """Fixture tool raising a 401-style prose message containing the word
+        ``Bearer`` -- must survive the credential mask unchanged."""
+        raise RuntimeError("401 Unauthorized: Bearer token missing or expired")
+
     return backend
 
 
@@ -110,3 +116,28 @@ def test_ordinary_raise_text_passes_through_unchanged(raise_router):
     assert "boom" in text
     assert "******" not in text
     assert result["ok"] is False
+
+
+@pytest.mark.parametrize(
+    "prose",
+    [
+        "401 Unauthorized: Bearer token missing or expired",
+        'WWW-Authenticate: Bearer realm="api", error="invalid_token"',
+    ],
+)
+def test_bearer_prose_survives_unchanged(raise_router, prose):
+    """The credential mask must NOT over-mask ordinary 401 prose that merely
+    contains the word ``Bearer`` (Sentinel amendment, PR #39): real platform
+    credentials are >=16 chars, so an 8+ quantifier preserves masking while
+    letting prose like ``Bearer token missing or expired`` pass through."""
+    result = _call("invoke_read_tool", {"name": "bearer_prose_call", "arguments": {}})
+
+    # Probe the router's own mask helper directly (covering both rows of
+    # Sentinel's probe shape), independent of the fixture backend.
+    masked = router._redact_dispatch_error(prose)
+    assert masked == prose
+    assert "******" not in masked
+
+    text = _flatten_text(result)
+    assert "Bearer token missing or expired" in text
+    assert "******" not in text

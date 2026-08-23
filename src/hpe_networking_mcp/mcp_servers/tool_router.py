@@ -1643,7 +1643,7 @@ async def _await_dispatch_rate_gate() -> None:
 # ── invoke_read_tool / invoke_tool ───────────────────────────────────────────
 
 
-_ERROR_CREDENTIAL_RE = re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=\-]+")
+_ERROR_CREDENTIAL_RE = re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=\-]{8,}")
 
 
 def _redact_dispatch_error(text: str) -> str:
