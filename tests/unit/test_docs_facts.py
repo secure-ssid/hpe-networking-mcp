@@ -83,8 +83,13 @@ def _expected_snippets() -> list[tuple[Path, str]]:
     return [
         (
             REPO_ROOT / "README.md",
-            f"{chunks} prose chunks; {endpoints} endpoints, {schemas} schemas, "
-            f"{fields} fields, {advisories} advisories, {lifecycle} lifecycle records",
+            f"{chunks} prose chunks in LanceDB across "
+            f"{TRACKED['indexes']['locally_built']['docs_lance']['source_count']} scraped sources",
+        ),
+        (
+            REPO_ROOT / "README.md",
+            f"{endpoints} endpoints, {schemas} schemas, {fields} fields, "
+            f"{advisories} advisories, {lifecycle} lifecycle records",
         ),
         (REPO_ROOT / "docs" / "index.md", f"{chunks} prose chunks in LanceDB"),
         (

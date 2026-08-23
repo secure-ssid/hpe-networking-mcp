@@ -159,7 +159,10 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 | Area | Current snapshot |
 |---|---|
 | Tool catalog | Non-additive profiles: 380 core tools / 2842 read-only optional starters / 5822 read-write optional starters; REST/OpenAPI platform API backend total: 6,711; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,728; direct-all: 6,736 |
-| RAG | 392,471 prose chunks; 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |
+| Capability totals (platform APIs) | 3,159 read / 165 diagnostic / 2,545 write / 842 destructive |
+| RAG | 392,471 prose chunks in LanceDB across 30 scraped sources |
+| Structured lookup | 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |
+| API provenance | Aruba ReadMe registries, official Mist/Apstra sources, pinned GLP and EdgeConnect snapshots, SHA-pinned Axis generator |
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud, plus the credential-free `design` diagram tools |
 | Safety | Per-platform write gates, dry-run + confirmation, HTTP host/origin and bearer controls, credential-gated live-test config |
 
@@ -203,6 +206,20 @@ HPE_MCP_ACCESS_PROFILE=custom
 HPE_MCP_PRODUCTS=clearpass,mist,apstra,aos8,edgeconnect,uxi,axis,design
 HPE_MCP_PRODUCT_ACCESS=read-only
 ```
+
+| Product | Variables |
+|---|---|
+| ClearPass | `CLEARPASS_BASE_URL`, `CLEARPASS_API_TOKEN` |
+| Juniper Mist | `MIST_HOST`, `MIST_API_TOKEN` |
+| Apstra | `APSTRA_BASE_URL`, preferred `APSTRA_USERNAME`/`APSTRA_PASSWORD`, optional `APSTRA_API_TOKEN` |
+| ArubaOS 8 | `AOS8_BASE_URL`, preferred `AOS8_USERNAME`/`AOS8_PASSWORD`, optional `AOS8_API_TOKEN`, optional `AOS8_CLIENT_IP`, optional `AOS8_SESSION_TTL_SECONDS` |
+| EdgeConnect | `EDGECONNECT_BASE_URL`, `EDGECONNECT_API_TOKEN`, optional `EDGECONNECT_AUTH_HEADER`, endpoint-specific `EDGECONNECT_AI_SESSION_AUTHORIZATION` |
+| HPE Aruba UXI | `UXI_CLIENT_ID`, `UXI_CLIENT_SECRET`, optional `UXI_BASE_URL`, optional `UXI_TOKEN_URL` |
+| Axis Atmos Cloud | `AXIS_BASE_URL`, `AXIS_API_TOKEN` |
+| Network design diagrams (Draw.io / Graphviz / NeXt) | none required; optional `HPE_MCP_DIAGRAM_ICON_DIR` |
+
+See the [optional product matrix](docs/optional-products.md) for the full setup
+and safety model.
 
 For a trusted, fully write-capable session, use
 `python3 scripts/setup_wizard.py --access-profile full-read-write` so all
