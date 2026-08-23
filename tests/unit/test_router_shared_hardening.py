@@ -452,7 +452,12 @@ class TestStandaloneWriteGate:
         monkeypatch.setenv("MCP_TRANSPORT", "stdio")
         monkeypatch.delenv("HPE_MCP_GLP_V2BETA1_WRITES", raising=False)
         server = _gated_backend("glp-core")
-        monkeypatch.setattr(server, "run", lambda *a, **k: None)
+
+        async def _no_serve():
+            return None
+
+        # run_server drives the SDK's async stdio runner, not MCPServer.run.
+        monkeypatch.setattr(server, "run_stdio_async", _no_serve)
 
         from hpe_networking_mcp.mcp_servers.shared import run_server
 
