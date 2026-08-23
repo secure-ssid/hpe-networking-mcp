@@ -106,6 +106,7 @@ are the four normalized capabilities <code>find_tool</code> reports, used throug
 | `find_tool` | <span class="docs-badge docs-badge--read">read</span> | Search the enabled backend catalog |
 | `invoke_read_tool` | <span class="docs-badge docs-badge--read">read</span> | Dispatch only backend tools annotated read-only |
 | `invoke_read_tool_batch` | <span class="docs-badge docs-badge--read">read</span> | Bounded, ordered batch of read-only calls in one round trip (outside `minimal` mode) |
+| `invoke_tools_batch` | <span class="docs-badge docs-badge--destructive">destructive</span> | Bounded, ordered batch of read AND write calls in one round trip (outside `minimal` mode) |
 | `invoke_tool` | <span class="docs-badge docs-badge--destructive">destructive</span> | Generic dispatcher for diagnostic/write/destructive tools |
 | Convenience wrappers | mixed | Available only outside `minimal` mode |
 | `plan_tool_workflow` | <span class="docs-badge docs-badge--read">read</span> | Deterministic, catalog-backed dependency/order planner (outside `minimal` mode) |
@@ -468,17 +469,18 @@ MCP hop.
 | Profile | Client-visible / indexed tools |
 |---|---:|
 | Minimal router | 3 client-visible tools |
-| Default router | 18 client-visible tools[^compliance-tool] |
+| Default router | 19 client-visible tools[^compliance-tool] |
 | Platform API backend index | 6,711 tools |
 | Complete backend index (platform APIs + Central Streaming + `site-health` + local GLP preflight + `design-core` + `interop-core`) | 6,728 tools |
-| Direct-all router | 6,735 client-visible tools |
+| Direct-all router | 6,736 client-visible tools |
 
 </div>
 
 [^compliance-tool]: v0.7 added `plan_tool_workflow` and
     `plan_reconciliation_schedule`; the post-v0.7 compliance expansion adds
-    `evaluate_compliance_policy` and the batch dispatcher
-    `invoke_read_tool_batch`, raising the default-mode count to 18.
+    `evaluate_compliance_policy` paired with the batch dispatchers
+    `invoke_read_tool_batch` and `invoke_tools_batch`, raising the
+    default-mode count to 19.
     `minimal` mode remains the same three-tool surface. This count is
     identical whether every toolset/product is loaded or only the
     documented recommended profile (`HPE_MCP_TOOLSETS=central,glp,rag`) is

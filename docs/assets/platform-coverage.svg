@@ -82,7 +82,7 @@
 
     <rect x="550" y="330" width="525" height="140" rx="18" fill="#69e2d7"/>
     <text x="580" y="372" class="router">Catalog tiers</text>
-      <text x="580" y="408" class="router">6,144 generated | 6,728 backend | 6,735 direct-all</text>
+      <text x="580" y="408" class="router">6,144 generated | 6,728 backend | 6,736 direct-all</text>
     <text x="580" y="444" class="router">Writes remain dry-run and confirmation gated</text>
   </g>
 </svg>
