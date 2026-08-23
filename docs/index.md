@@ -9,6 +9,12 @@ Low-token Model Context Protocol tooling for HPE Aruba Central, HPE GreenLake
 Platform, embedded docs/API lookup, and optional ClearPass, Mist, Apstra,
 ArubaOS 8, EdgeConnect, UXI, and Axis backends.
 
+MCP lets an AI client — Claude Code, Copilot, Cursor, VS Code, or another
+MCP-capable host — call a common toolbox instead of a bespoke plugin per
+vendor. This project is one such server: point any MCP client at it and it
+exposes a searchable HPE networking tool catalog behind a small, low-token
+surface.
+
 ![hpe-networking-mcp banner showing 6,144 generated operations, 6,728 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
 
 Whatever backend does the work, an MCP client sees only three router tools
@@ -162,6 +168,13 @@ For the full guided path with credentials, region selection, and optional
 products, see [Getting started](getting-started.md) and
 [MCP client recipes](mcp-client-recipes.md).
 
+### Connect it in your client
+
+Point Claude, Copilot, VS Code, Cursor, or any other MCP-capable host at the
+running server and it sees only the three router tools — copy/paste stdio and
+HTTP configs for each client are in
+[MCP client recipes](mcp-client-recipes.md).
+
 ## Write safety at a glance
 
 <figure class="docs-figure">
@@ -232,7 +245,7 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | 6,144 generated operations (6,127 active) / 584 curated / 6,728 backend tools / 6,735 direct-all |
+| Tool catalog | 6,144 generated operations (6,127 active) / 584 curated / 6,728 backend tools / 6,736 direct-all |
 | Capability totals (platform APIs) | 3,159 read, 165 diagnostic, 2,545 write, 842 destructive |
 | RAG | 392,471 prose chunks in LanceDB across 30 scraped sources |
 | Structured lookup | 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |

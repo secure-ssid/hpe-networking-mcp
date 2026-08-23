@@ -359,6 +359,31 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
     assert missing == []
 
 
+HERO = REPO_ROOT / "docs" / "assets" / "hpe-networking-mcp-hero.svg"
+
+
+def test_hero_carries_canonical_version_and_catalog_counts():
+    """The README/Pages hero banner is hand-maintained. Its version and the
+    backend-tool count card are asserted against ``docs/project-facts.json``
+    the same way the platform-coverage asset is, so a stale ``v0.9.0`` title
+    or a catalog count that drifts no longer ships silently.
+    """
+    text = _normalize_whitespace(HERO.read_text(encoding="utf-8"))
+    tools = TRACKED["tools"]
+    package = TRACKED["package"]
+
+    missing = [
+        f"{HERO.relative_to(REPO_ROOT)}: missing {snippet!r}"
+        for snippet in (
+            f"hpe-networking-mcp {package['version']}",
+            f"{tools['registered_total']:,} backend tools",
+        )
+        if _normalize_whitespace(snippet) not in text
+    ]
+
+    assert missing == []
+
+
 RAG_ARCHITECTURE = REPO_ROOT / "docs" / "architecture" / "RAG-ARCHITECTURE.md"
 
 
