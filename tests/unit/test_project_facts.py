@@ -129,13 +129,13 @@ def test_tracked_default_recommended_profile_matches_documented_client_configs()
 
     Regression guard for a live probe that found the actually-documented
     ``HPE_MCP_ROUTER_MODE=default``/``HPE_MCP_TOOLSETS=central,glp,rag``
-    profile exposes 18 tools, matching (but independently measured from) the
+    profile exposes 19 tools, matching (but independently measured from) the
     "every toolset" ``default`` scenario -- docs previously claimed 16.
     """
     router_modes = TRACKED["router_modes"]
     tools = router_modes["tools"]
 
-    assert tools["default_recommended_profile"] == 18
+    assert tools["default_recommended_profile"] == 19
     assert tools["default_recommended_profile"] == tools["default"]
     assert router_modes["recommended_profile_env"] == {
         "HPE_MCP_ACCESS_PROFILE": "custom",
@@ -198,8 +198,8 @@ def test_published_canonical_counts_match_the_documented_contract():
     assert tools["registered_total"] == 6728  # complete registered backend identities
     assert tools["platform_backend_total"] == 6711  # platform API total / compatibility floor
     assert router_tools["minimal"] == 3
-    assert router_tools["default"] == 18
-    assert router_tools["direct_all"] == 6735
+    assert router_tools["default"] == 19
+    assert router_tools["direct_all"] == 6736
     assert tools["non_api_local"] == {"glp-core": 1, "rag-core": 1}
 
 

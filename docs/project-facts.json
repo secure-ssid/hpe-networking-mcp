@@ -207,11 +207,11 @@
     },
     "tools": {
       "minimal": 3,
-      "default": 18,
-      "direct_all": 6735,
-      "default_recommended_profile": 18
+      "default": 19,
+      "direct_all": 6736,
+      "default_recommended_profile": 19
     },
-    "direct_all_added_native_tools": 7
+    "direct_all_added_native_tools": 8
   },
   "generated_operations": {
     "manifest_count": 9,
