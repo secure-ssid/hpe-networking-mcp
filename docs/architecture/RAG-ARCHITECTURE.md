@@ -265,17 +265,18 @@ This sequence is complete for the default local path. Redis remains optional; Qd
 
 A small, labeled question set + runner so the backend swap is **proven**, not asserted. Lives at `tests/eval/`.
 
-- `tests/eval/rag_eval.yaml` — 36 questions, each tagged `api-lookup` (expects an exact field/enum/endpoint via `lookup_api`), `howto` (expects a prose chunk via `search_docs`), or one of the structured tags (`advisory`, `lifecycle`, `list-advisories`, `list-lifecycle`, `correlate`, `diagnostics`), with `expect_sources` (file_path substrings) and `expect_keywords`. A further 7 `deferred_questions` (version-conflict, duplicate-rate, latency, and citation-completeness cases) are tracked separately and excluded from the scored gate until their fixtures stabilize.
+- `tests/eval/rag_eval.yaml` — 42 questions, each tagged `api-lookup` (expects an exact field/enum/endpoint via `lookup_api`), `howto` (expects a prose chunk via `search_docs`), or one of the structured tags (`advisory`, `lifecycle`, `list-advisories`, `list-lifecycle`, `correlate`, `diagnostics`), with `expect_sources` (file_path substrings), `expect_keywords`, and optional `graded_sources` ({match, gain} pairs feeding nDCG@k). A further 8 `deferred_questions` (version-conflict, duplicate-rate, latency, citation-completeness, and Apstra-prose coverage-gap cases) are tracked separately and excluded from the scored gate until their fixtures stabilize.
 - `tests/eval/run_eval.py` — calls the RAG tools, computes **recall@k**, **source-hit@k**, and keyword presence; prints a per-question pass/fail table and an aggregate score. Run before and after migration; require no regression.
 
-Metrics: `recall@5` (did an expected source appear in top-5), `mrr` (rank of first correct), `api_exact` (did `lookup_api` return the exact enum/field). Target: api-lookup `api_exact` = 100% (it's structured), howto `recall@5` ≥ today's baseline.
+Metrics: `recall@5` (did an expected source appear in top-5), `mrr` (rank of first correct), `api_exact` (did `lookup_api` return the exact enum/field), and `ndcg@k` over rows that declare graded relevance. Target: api-lookup `api_exact` = 100% (it's structured), howto `recall@5` ≥ today's baseline.
 
 **Baseline measured 2026-06-03** (historical Redis, vector-only, no prefixes,
 specs missing from index), then re-measured after wiring `lookup_api` and the
-embedded LanceDB design. The current release gate is measured on the full
-36-question set with `uv run --with pyyaml python tests/eval/run_eval.py`:
+embedded LanceDB design. The release gate runs on the full question set with
+`uv run --with pyyaml python tests/eval/run_eval.py --ci`; its bars sit just
+under the measured scores below:
 
-| Metric | Baseline (Redis, vector-only) | After `lookup_api` (2026-06-03) | **Current: embedded LanceDB hybrid (36 questions)** | Target |
+| Metric | Baseline (Redis, vector-only) | After `lookup_api` (2026-06-03) | **Current: embedded LanceDB hybrid (42 questions)** | Target |
 |---|---|---|---|---|
 | `howto_recall@k` (prose) | 0.80 | 0.80 | **1.00** | ≥ 0.85 ✅ |
 | `api_exact` (API lookups) | **0.50** | 0.90 | **1.00** | ≥ 0.95 ✅ |
@@ -284,6 +285,12 @@ embedded LanceDB design. The current release gate is measured on the full
 | `mrr` | 0.339 | 0.679 | **1.00** | ≥ 0.85 ✅ |
 | `keyword_hit` | — | 0.80 | **1.00** | — |
 | `duplicate_guard` / `latency_guard` | — | — | **1.00** / **1.00** | — |
+
+Measurement note: the Current-column scores were measured on the prior
+36-question generation of the eval set at the June rebuild. The six
+Juniper Mist/Junos-family questions and the graded-relevance fields added in
+Wave 2 are measured by the next corpus-refresh eval run; the runner reports
+them (`--json`) so before/after reranker comparisons have a recorded baseline.
 
 **Current indexed corpus:** 392,471 prose chunks across the released
 documentation sources (see [`docs/project-facts.json`](../project-facts.json),
@@ -295,12 +302,13 @@ contains 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, and
 tools, including the protocol-only Central Streaming collector, the
 site-health cross-platform aggregator, and the local GLP preflight diagnostic. Minimal mode keeps this catalog behind the
 three-tool discovery/dispatch surface; direct-all mode exposes 6,735 tools
-including the router itself. The current 36-question eval
+including the router itself. The current 42-question eval
 set (expanded from 24 to add structured list/correlate/diagnostics and
 negative coverage-gap questions, then further expanded with version-conflict,
-duplicate-rate, latency, and citation-completeness cases) resolves all 36
-questions from an expected source, all at rank 1 (`source_hit@k` 1.00,
-`mrr` 1.00). Standard catalog
+duplicate-rate, latency, citation-completeness, and Juniper-family cases)
+extends the 36-question generation that resolved every question from an
+expected source at rank 1 (`source_hit@k` 1.00, `mrr` 1.00); re-measurement
+of the new rows lands with the next corpus refresh. Standard catalog
 profiles contain 380 core tools / 2842 read-only optional starters / 5822 read-write optional starters; those optional profiles now map to
 `safe-read-only` and `full-read-write`, respectively. The complete index also enables generated GLP.
 
