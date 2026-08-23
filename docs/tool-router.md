@@ -59,13 +59,13 @@ wrapped in a deterministic envelope before it reaches the client:
   "ok": false,
   "status": 403,
   "data": {
-    "error": "Tool 'set_site' is not read-only. Use invoke_tool only after explicit user intent for write/destructive actions.",
-    "tool": "set_site",
+    "error": "Tool 'mist_set_site' is not read-only. Use invoke_tool only after explicit user intent for write/destructive actions.",
+    "tool": "mist_set_site",
     "status": "blocked"
   },
-  "message": "Tool 'set_site' is not read-only. Use invoke_tool only after explicit user intent for write/destructive actions.",
+  "message": "Tool 'mist_set_site' is not read-only. Use invoke_tool only after explicit user intent for write/destructive actions.",
   "tool": "invoke_read_tool",
-  "platform": "central"
+  "platform": "mist"
 }
 ```
 
@@ -259,8 +259,8 @@ downgraded (`data` payload shown; the envelope's top-level `status` is
 
 ```json
 {
-  "error": "Tool 'set_site' is not read-only. Use invoke_tool only after explicit user intent for write/destructive actions.",
-  "tool": "set_site",
+  "error": "Tool 'mist_set_site' is not read-only. Use invoke_tool only after explicit user intent for write/destructive actions.",
+  "tool": "mist_set_site",
   "status": "blocked"
 }
 ```
