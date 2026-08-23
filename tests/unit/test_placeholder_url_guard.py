@@ -201,7 +201,7 @@ class _NetworkSpy:
             if name.lower() in {"authorization", "x-auth-token"}
         ]
 
-    def install(self, monkeypatch) -> "_NetworkSpy":
+    def install(self, monkeypatch) -> _NetworkSpy:
         spy = self
 
         class _SpyClient:

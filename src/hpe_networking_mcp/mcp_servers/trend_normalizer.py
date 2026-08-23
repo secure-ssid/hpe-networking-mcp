@@ -100,7 +100,7 @@ def _find_sample_list(raw: dict[str, Any]) -> list[Any] | None:
     if value_key is None:
         return None
     return [
-        {"timestamp": ts, "value": val} for ts, val in zip(timestamps, raw[value_key])
+        {"timestamp": ts, "value": val} for ts, val in zip(timestamps, raw[value_key], strict=True)
     ]
 
 

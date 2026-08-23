@@ -37,9 +37,10 @@ import threading
 import time
 import weakref
 from collections import OrderedDict
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from hpe_networking_mcp._paths import repo_root
 from hpe_networking_mcp.mcp_servers.shared import redact_sensitive
@@ -103,8 +104,8 @@ class _SessionCorrelation:
     """
 
     def __init__(self) -> None:
-        self._by_session: "weakref.WeakKeyDictionary[Any, str]" = weakref.WeakKeyDictionary()
-        self._fallback: "OrderedDict[int, tuple[Any, str]]" = OrderedDict()
+        self._by_session: weakref.WeakKeyDictionary[Any, str] = weakref.WeakKeyDictionary()
+        self._fallback: OrderedDict[int, tuple[Any, str]] = OrderedDict()
 
     def id_for(self, context: Any) -> str:
         try:
@@ -148,9 +149,9 @@ class AuditLogMiddleware:
         self.path = path
         self._classifier = classifier
         self._target_resolver = target_resolver
-        self._starts: contextvars.ContextVar[list[float]] = contextvars.ContextVar(
+        self._starts: contextvars.ContextVar[list[float] | None] = contextvars.ContextVar(
             f"hpe_mcp_audit_starts_{id(self)}",
-            default=[],
+            default=None,
         )
         self._write_lock = threading.Lock()
         self._sessions = _SessionCorrelation()
@@ -183,13 +184,13 @@ class AuditLogMiddleware:
     def before_call(self, name: str, arguments: dict[str, Any], context: Any = None) -> None:
         if self._configured_path() is None:
             return None
-        starts = list(self._starts.get())
+        starts = list(self._starts.get() or [])
         starts.append(time.monotonic())
         self._starts.set(starts)
         return None
 
     def _duration_ms(self) -> float | None:
-        starts = list(self._starts.get())
+        starts = list(self._starts.get() or [])
         if not starts:
             return None
         started = starts.pop()

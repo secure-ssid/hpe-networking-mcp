@@ -30,8 +30,9 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import pyarrow as pa
 

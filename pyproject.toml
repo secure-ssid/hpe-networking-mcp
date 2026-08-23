@@ -140,7 +140,7 @@ include = ["hpe_networking_mcp*"]
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "B", "UP", "ASYNC"]
 
 [tool.mypy]
 # A real gate on a deliberately small surface, not a tree-wide formality.

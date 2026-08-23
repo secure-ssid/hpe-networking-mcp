@@ -36,9 +36,10 @@ from __future__ import annotations
 import argparse
 import json
 import uuid
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from hpe_networking_mcp.pipeline import artifact_contracts as contracts
 from hpe_networking_mcp.pipeline import live_test_config

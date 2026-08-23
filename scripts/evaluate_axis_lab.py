@@ -113,7 +113,7 @@ async def _bounded_live_reads(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     """Call each split-CRUD entity's list query once, bounded, read-only."""
     families = _entity_families(manifest)
     steps: list[dict[str, Any]] = []
-    for path, verbs in sorted(families.items())[:_MAX_LIVE_READ_ENTITIES]:
+    for _path, verbs in sorted(families.items())[:_MAX_LIVE_READ_ENTITIES]:
         query_op = verbs.get("query")
         if query_op is None:
             continue

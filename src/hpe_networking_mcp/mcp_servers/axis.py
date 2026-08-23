@@ -20,7 +20,7 @@ from __future__ import annotations
 import hashlib
 import inspect
 import json
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import quote
 
 import httpx
@@ -223,7 +223,7 @@ def _axis_signature(operation: dict[str, Any]) -> tuple[inspect.Signature, dict[
         name = spec["name"]
         py_type = _AXIS_TYPES.get(spec.get("type", "object"), Any)
         required = bool(spec.get("required"))
-        annotation = py_type if required else Optional[py_type]
+        annotation = py_type if required else py_type | None
         default = inspect.Parameter.empty if required else spec.get("default")
         if not required and "default" not in spec:
             default = None

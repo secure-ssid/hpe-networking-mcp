@@ -42,7 +42,8 @@ import os
 import re
 import threading
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from ._outcome import KNOWN_OUTCOMES, classify_error_outcome, classify_outcome
 
@@ -268,9 +269,9 @@ class MetricsMiddleware:
     ) -> None:
         self.registry = registry if registry is not None else get_default_registry()
         self._label_resolver = label_resolver
-        self._starts: contextvars.ContextVar[list[float]] = contextvars.ContextVar(
+        self._starts: contextvars.ContextVar[list[float] | None] = contextvars.ContextVar(
             f"hpe_mcp_metrics_starts_{id(self)}",
-            default=[],
+            default=None,
         )
 
     def _labels(self, name: str, arguments: dict[str, Any]) -> tuple[str, str, str]:
@@ -285,13 +286,13 @@ class MetricsMiddleware:
 
     def before_call(self, name: str, arguments: dict[str, Any]) -> None:
         if metrics_enabled():
-            starts = list(self._starts.get())
+            starts = list(self._starts.get() or [])
             starts.append(time.monotonic())
             self._starts.set(starts)
         return None
 
     def _duration_ms(self) -> float | None:
-        starts = list(self._starts.get())
+        starts = list(self._starts.get() or [])
         if not starts:
             return None
         started = starts.pop()

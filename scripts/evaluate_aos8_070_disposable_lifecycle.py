@@ -49,8 +49,9 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 from hpe_networking_mcp.pipeline.aos8_target_adapters import (
     AdapterError,

@@ -18,9 +18,10 @@ import json
 import os
 import sys
 import time
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"

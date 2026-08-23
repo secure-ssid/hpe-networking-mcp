@@ -48,7 +48,6 @@ import sys  # noqa: E402
 from concurrent.futures import ThreadPoolExecutor, as_completed  # noqa: E402
 from pathlib import Path  # noqa: E402
 from threading import Lock  # noqa: E402
-from typing import Optional  # noqa: E402
 
 from ingestion.readme_registry import (  # noqa: E402
     OasPointer,
@@ -76,7 +75,7 @@ def _load_seed_urls(path: Path) -> list[str]:
     return [str(url) for url in data]
 
 
-def _resolve_pointer(url: str) -> tuple[str, Optional[OasPointer], Optional[str]]:
+def _resolve_pointer(url: str) -> tuple[str, OasPointer | None, str | None]:
     """Fetch ``url`` and parse its pointer. Returns (url, pointer_or_None, error_or_None)."""
     try:
         html = fetch_page_html(url)

@@ -45,7 +45,7 @@ def test_update_device_notes_dry_run():
 def test_update_device_notes_rejects_too_long():
     try:
         ops.update_device_notes("SERIAL1", "x" * 300)
-        assert False, "expected ValueError"
+        raise AssertionError("expected ValueError")
     except ValueError as exc:
         assert "256" in str(exc)
 
@@ -112,7 +112,7 @@ def test_gateway_ping_sweep_validates_packet_size_range():
 
     try:
         asyncio.run(_run())
-        assert False, "expected ValueError"
+        raise AssertionError("expected ValueError")
     except ValueError as exc:
         assert "end_packet_size" in str(exc)
 

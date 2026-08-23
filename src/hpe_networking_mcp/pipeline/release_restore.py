@@ -30,10 +30,10 @@ import hashlib
 import json
 import tarfile
 import tempfile
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
-from typing import Iterator
 
 from hpe_networking_mcp._paths import repo_root
 from hpe_networking_mcp.pipeline import artifact_contracts as contracts

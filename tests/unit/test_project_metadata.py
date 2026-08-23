@@ -252,7 +252,7 @@ def test_mcp_tool_limit_defaults_do_not_exceed_project_bound():
                 continue
             defaults = [None] * (len(node.args.args) - len(node.args.defaults))
             defaults.extend(node.args.defaults)
-            for arg, default in zip(node.args.args, defaults):
+            for arg, default in zip(node.args.args, defaults, strict=True):
                 if arg.arg != "limit" or not isinstance(default, ast.Constant):
                     continue
                 if isinstance(default.value, int) and default.value > MAX_MCP_LIST_DEFAULT:

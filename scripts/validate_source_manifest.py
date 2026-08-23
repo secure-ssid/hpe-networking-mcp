@@ -94,7 +94,7 @@ def _load_dict_literal(path: Path, dict_name: str) -> dict[str, str | tuple[str,
         if target_node is None or not isinstance(target_node.value, ast.Dict):
             continue
         result: dict[str, str | tuple[str, ...]] = {}
-        for k, v in zip(target_node.value.keys, target_node.value.values):
+        for k, v in zip(target_node.value.keys, target_node.value.values, strict=True):
             value = _literal_string_or_strings(v)
             if isinstance(k, ast.Constant) and isinstance(k.value, str) and value is not None:
                 result[k.value] = value

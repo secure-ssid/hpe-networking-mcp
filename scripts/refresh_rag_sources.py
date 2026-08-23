@@ -46,10 +46,11 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))

@@ -14,7 +14,6 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import httpx
 
@@ -89,9 +88,9 @@ class TokenManager:
                 "location."
             ) from exc
 
-        self.access_token: Optional[str] = None
-        self.token_expires_at: Optional[float] = None
-        self.token_cached_at: Optional[float] = None
+        self.access_token: str | None = None
+        self.token_expires_at: float | None = None
+        self.token_cached_at: float | None = None
         self._refresh_lock = threading.RLock()
         # Bumped on every successful refresh. Used to collapse concurrent
         # 401-triggered force_refresh calls into a single network round
@@ -221,7 +220,7 @@ class TokenManager:
         self,
         force_refresh: bool = False,
         *,
-        observed_generation: Optional[int] = None,
+        observed_generation: int | None = None,
     ) -> str:
         """Return a valid access token, refreshing if needed.
 
@@ -265,7 +264,7 @@ class TokenManager:
         self,
         force_refresh: bool = False,
         *,
-        observed_generation: Optional[int] = None,
+        observed_generation: int | None = None,
     ) -> tuple[str, int]:
         """Like ``get_access_token`` but also returns the generation in
         effect after the call -- convenient for callers (CentralClient's

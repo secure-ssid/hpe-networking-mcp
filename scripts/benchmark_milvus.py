@@ -16,8 +16,9 @@ import argparse
 import json
 import sys
 import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"

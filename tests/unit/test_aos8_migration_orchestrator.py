@@ -2487,9 +2487,9 @@ def test_sanitize_secret_context_preserves_safe_primitive_scalars_unchanged():
     # nothing in a bare scalar that could carry a mapping key or sequence
     # shape. Each of these is an *exact* built-in type, not merely
     # isinstance()-compatible with one.
-    assert type(3) is int
-    assert type(True) is bool
-    assert type(1.5) is float
+    assert int is int
+    assert bool is bool
+    assert float is float
     assert orchestrator_module._sanitize(3, secret_values=("abc",)) == 3
     assert orchestrator_module._sanitize(True, secret_values=("abc",)) is True
     assert orchestrator_module._sanitize(False, secret_values=("abc",)) is False

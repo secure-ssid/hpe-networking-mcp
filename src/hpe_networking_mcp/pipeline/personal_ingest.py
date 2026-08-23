@@ -24,9 +24,10 @@ import re
 import uuid
 import zipfile
 import zlib
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # NOTE: chunking is intentionally reimplemented here (matching
 # ``ingestion/chunking.py``'s CHUNK_SIZE/CHUNK_OVERLAP/separators exactly)
@@ -503,7 +504,7 @@ def ingest_folder(
     if all_records:
         embedder = EmbedClient()
         vectors = embedder.embed_document(all_texts)
-        for record, vector in zip(all_records, vectors):
+        for record, vector in zip(all_records, vectors, strict=True):
             record["vector"] = vector
         lance_client.merge_docs_rows(db, all_records, lance_client.DOCS_TABLE)
         table = lance_client.docs_table(db, lance_client.DOCS_TABLE)

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from enum import Enum
-from typing import Any, Callable, Iterable, Mapping, Protocol
+from typing import Any, Protocol
 from urllib.parse import quote
 
 

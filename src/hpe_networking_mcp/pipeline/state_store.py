@@ -9,10 +9,11 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Generator, Optional
+from typing import Any
 
 from hpe_networking_mcp.pipeline.models import StageStatus
 
@@ -106,8 +107,8 @@ class StateStore:
         run_id: str,
         stage: str,
         status: StageStatus,
-        error: Optional[str] = None,
-        data: Optional[dict[str, Any]] = None,
+        error: str | None = None,
+        data: dict[str, Any] | None = None,
     ) -> None:
         now = _now()
         data_json = json.dumps(data) if data else None

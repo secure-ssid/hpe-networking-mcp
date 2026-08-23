@@ -14,10 +14,10 @@ embedded indexes — rebuildable, never authoritative content itself).
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Generator, Optional
 
 from hpe_networking_mcp._paths import repo_root
 
@@ -67,7 +67,7 @@ class SourceStateStore:
         with self._conn() as conn:
             conn.executescript(_SCHEMA)
 
-    def get(self, url: str) -> Optional[sqlite3.Row]:
+    def get(self, url: str) -> sqlite3.Row | None:
         """Return the stored state row for a URL, or None if never checked."""
         with self._conn() as conn:
             return conn.execute(
@@ -86,9 +86,9 @@ class SourceStateStore:
         url: str,
         source: str,
         *,
-        etag: Optional[str] = None,
-        last_modified: Optional[str] = None,
-        content_hash: Optional[str] = None,
+        etag: str | None = None,
+        last_modified: str | None = None,
+        content_hash: str | None = None,
         changed: bool = False,
     ) -> None:
         """Upsert a URL's state after a check.

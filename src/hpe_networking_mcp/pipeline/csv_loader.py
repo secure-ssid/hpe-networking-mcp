@@ -94,7 +94,7 @@ def _parse_row(row_num: int, serial: str, row: dict[str, str]) -> DeviceRecord:
             valid = [e.value for e in enum_cls]
             raise CSVValidationError(
                 f"Row {row_num}: invalid {name}='{raw}'. Valid values: {valid}"
-            )
+            ) from None
 
     source_type = enum_field("source_type", SourceType)
     hardware_series = enum_field("hardware_series", HardwareSeries)

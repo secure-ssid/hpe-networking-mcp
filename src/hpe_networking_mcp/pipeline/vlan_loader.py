@@ -20,7 +20,6 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +84,7 @@ def parse_vlans_from_aos8_config(path: str) -> list[dict]:
     return vlans
 
 
-def load_vlan_config_file(path: Optional[str]) -> list[dict]:
+def load_vlan_config_file(path: str | None) -> list[dict]:
     """Wrapper that returns an empty list if path is None or blank."""
     if not path:
         return []
