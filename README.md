@@ -16,6 +16,12 @@ tools by default.
 
 **Low-token Model Context Protocol (MCP) server for HPE Networking automation: Aruba Central, HPE GreenLake Platform (GLP), ClearPass, Juniper Mist, Apstra, ArubaOS 8 migration automation, EdgeConnect, HPE Aruba UXI, and Axis Atmos Cloud.**
 
+MCP lets an AI client — Claude Code, Copilot, Cursor, VS Code, or any other
+MCP-capable host — call into a common toolbox instead of a bespoke plugin per
+vendor. `hpe-networking-mcp` is one such server: point any MCP client at it and
+it exposes a searchable catalog of HPE networking operations behind a small,
+low-token surface.
+
 hpe-networking-mcp gives MCP-capable AI clients a low-token way to search Aruba/HPE
 docs, look up exact OpenAPI details, inspect Central health, run
 troubleshooting workflows, manage configuration, execute guarded ArubaOS 8
@@ -102,6 +108,14 @@ Expected outcome: ranked matches read straight from the local tool index the
 wizard just built, each annotated with its capability and write-gate state.
 No vendor API is contacted.
 
+### Connect it in your client
+
+Point any MCP-capable client at `http://127.0.0.1:8010/mcp` (or a stdio
+`hpe-mcp-router` config) and it sees just the three router tools. Copy/paste
+configs for Claude, Copilot, VS Code, Cursor, and others live in
+[MCP client recipes](docs/mcp-client-recipes.md); the shipped examples are
+under [`examples/mcp-clients/`](examples/mcp-clients/).
+
 ### Documentation search is a separate, local build
 
 `ask_docs` and the rest of the RAG surface need a prose corpus that this
@@ -144,7 +158,7 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | Non-additive profiles: 380 core tools / 2842 read-only optional starters / 5822 read-write optional starters; REST/OpenAPI platform API backend total: 6,711; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,728; direct-all: 6,735 |
+| Tool catalog | Non-additive profiles: 380 core tools / 2842 read-only optional starters / 5822 read-write optional starters; REST/OpenAPI platform API backend total: 6,711; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,728; direct-all: 6,736 |
 | RAG | 392,471 prose chunks; 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud, plus the credential-free `design` diagram tools |
 | Safety | Per-platform write gates, dry-run + confirmation, HTTP host/origin and bearer controls, credential-gated live-test config |
