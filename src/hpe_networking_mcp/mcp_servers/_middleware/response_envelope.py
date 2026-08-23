@@ -14,6 +14,8 @@ from typing import Any
 
 from mcp.shared.exceptions import MCPError
 
+from hpe_networking_mcp.mcp_servers.shared import _REDACTED, redact_sensitive
+
 _BLOCKED_STATUS_HTTP = {
     "blocked": 403,
     "cancelled": 409,
@@ -54,6 +56,27 @@ def _status_code(value: Any) -> int | None:
 # is recoverable. Anchoring on the httpx prefix keeps unrelated digits in a
 # message (counts, IDs, ports) from being mistaken for a status.
 _HTTPX_STATUS_RE = re.compile(r"\b(?:Client|Server) error '(\d{3})\b")
+
+
+# Raised backend exceptions embed the SDK-framed error string
+# ``ToolError("Error executing tool <name>: <message>")``, which can carry a
+# bearer credential *mid-string* -- escaping ``redact_sensitive``'s
+# prefix-only value rule. Mask that form on the error path (HX-3).
+_ERROR_CREDENTIAL_RE = re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=\-]+")
+
+
+def _redact_envelope_error(text: str) -> str:
+    """Mask credentials in a client-visible standalone-backend error string.
+
+    ``on_error`` stringifies a raised backend exception for the first (and
+    only) time here, so any credential in the message must be masked before
+    the error dict reaches the wire. Reuses the shared walker
+    (``shared.redact_sensitive``) for sensitive-keyed/container text and the
+    exact ``bearer ``/``token ``/``basic `` prefix shapes, then masks the
+    mid-string bearer form the SDK framing can embed.
+    """
+    text = redact_sensitive(text)
+    return _ERROR_CREDENTIAL_RE.sub(_REDACTED, text)
 
 
 def _status_from_message(message: str | None) -> int | None:
@@ -200,6 +223,9 @@ class ResponseEnvelopeMiddleware:
         """
         if isinstance(exc, (MCPError, asyncio.CancelledError, KeyboardInterrupt, SystemExit)):
             return None
-        return self.after_call(
-            name, arguments, {"error": f"{type(exc).__name__}: {exc}"}
-        )
+        # Standalone backends have no router-side dispatch helper, so a raised
+        # backend exception is stringified here for the first (and only) time.
+        # Mask any credential in the message before the error dict reaches the
+        # wire -- single application point, reusing the shared walker (HX-3).
+        message = _redact_envelope_error(f"{type(exc).__name__}: {exc}")
+        return self.after_call(name, arguments, {"error": message})
