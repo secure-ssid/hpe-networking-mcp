@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
 from mcp.server.mcpserver import MCPServer
 
 from hpe_networking_mcp.mcp_servers._middleware import (
@@ -71,6 +72,26 @@ class TestEnvelopeOnError:
         )
 
         assert envelope["status"] == 503
+
+    @pytest.mark.parametrize(
+        "prose",
+        [
+            "401 Unauthorized: Bearer token missing or expired",
+            'WWW-Authenticate: Bearer realm="api", error="invalid_token"',
+        ],
+    )
+    def test_bearer_prose_survives_unchanged(self, prose):
+        """The credential mask must NOT over-mask ordinary 401 prose that
+        merely contains the word ``Bearer`` (Sentinel amendment, PR #41):
+        real platform credentials are >=16 chars, so an 8+ char minimum
+        preserves masking while letting short bearer prose pass through."""
+        from hpe_networking_mcp.mcp_servers._middleware.response_envelope import (
+            _redact_envelope_error,
+        )
+
+        masked = _redact_envelope_error(prose)
+        assert masked == prose
+        assert "******" not in masked
 
 
 class TestStandaloneBackendChain:

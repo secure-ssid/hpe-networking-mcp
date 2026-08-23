@@ -62,7 +62,7 @@ _HTTPX_STATUS_RE = re.compile(r"\b(?:Client|Server) error '(\d{3})\b")
 # ``ToolError("Error executing tool <name>: <message>")``, which can carry a
 # bearer credential *mid-string* -- escaping ``redact_sensitive``'s
 # prefix-only value rule. Mask that form on the error path (HX-3).
-_ERROR_CREDENTIAL_RE = re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=\-]+")
+_ERROR_CREDENTIAL_RE = re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=\-]{8,}")
 
 
 def _redact_envelope_error(text: str) -> str:
