@@ -252,6 +252,35 @@ def redact_sensitive(value: Any) -> Any:
     return value
 
 
+# Raised backend exceptions embed the SDK-framed error string
+# ``ToolError("Error executing tool <name>: <message>")``, which can carry a
+# bearer credential *mid-string* -- escaping ``redact_sensitive``'s
+# prefix-only value rule. Both error paths (the router's dispatch helper and
+# the envelope middleware's on_error) mask that form; homing the regex and the
+# two-step mask here keeps the credential shape in one place (HX-1/HX-3).
+#
+# The {8,} minimum (Sentinel review amendment) preserves masking of real
+# platform credentials (always >=16 chars) while letting short bearer PROSE
+# like "Bearer token missing or expired" pass through unchanged -- the
+# over-masking that would otherwise corrupt exactly the 401 messages most
+# likely to appear on an error path. A genuine sub-8-char credential would
+# slip past this mask; accepted tradeoff (the vault tokenizer still catches
+# known secrets).
+ERROR_CREDENTIAL_RE = re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=\-]{8,}")
+
+
+def redact_tool_error_text(text: str) -> str:
+    """Mask credentials in a client-visible backend-tool error string.
+
+    Reuses the shared walker (``redact_sensitive``) for sensitive-keyed/
+    container text and the exact ``bearer ``/``token ``/``basic `` prefix
+    shapes, then masks the mid-string bearer-credential form the SDK's
+    ``ToolError("Error executing tool <name>: <message>")`` framing can embed.
+    Single application point per error path; both callers delegate here.
+    """
+    text = redact_sensitive(text)
+    return ERROR_CREDENTIAL_RE.sub(_REDACTED, text)
+
 
 _READ_ONLY_ACCESS_VALUES = {"read-only", "readonly", "read_only", "ro"}
 _READ_WRITE_ACCESS_VALUES = {"read-write", "readwrite", "read_write", "rw"}

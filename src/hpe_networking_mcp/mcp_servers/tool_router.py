@@ -53,7 +53,6 @@ import importlib
 import json
 import logging
 import os
-import re
 import secrets
 import time
 from collections.abc import Awaitable, Callable
@@ -65,7 +64,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from hpe_networking_mcp.mcp_servers import _sdk_compat
 from hpe_networking_mcp.mcp_servers.prompts import register_router_prompts
 from hpe_networking_mcp.mcp_servers.shared import (
-    _REDACTED,
     ACCESS_PROFILE_ENV_VAR,
     DESTRUCTIVE,
     DIAGNOSTIC,
@@ -81,7 +79,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
     platform_write_blocked,
     platform_write_gate_state,
     platform_writes_allowed,
-    redact_sensitive,
+    redact_tool_error_text,
     reject_unknown_env_choices,
     resolve_rag_backend,
     ungated_backend_write_blocked,
@@ -1643,22 +1641,17 @@ async def _await_dispatch_rate_gate() -> None:
 # ── invoke_read_tool / invoke_tool ───────────────────────────────────────────
 
 
-_ERROR_CREDENTIAL_RE = re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=\-]{8,}")
-
-
 def _redact_dispatch_error(text: str) -> str:
     """Mask credentials in a client-visible backend exception string.
 
     The installed MCP SDK reframes a raised backend tool call as
     ``ToolError("Error executing tool <name>: <message>")``, so a bearer
     credential embedded mid-string escapes ``shared.redact_sensitive``'s
-    prefix-only value rule. ``redact_sensitive`` still runs first here to
-    reuse the shared walker (sensitive-keyed/container text and the exact
-    ``bearer ``/``token ``/``basic `` prefix shapes); this regex then catches
-    the SDK-framed mid-string form that HX-1's acceptance requires.
+    prefix-only value rule. Delegates to the shared
+    ``shared.redact_tool_error_text`` helper (single credential-shape
+    definition repo-wide, HX-1/HX-3 consolidation).
     """
-    text = redact_sensitive(text)
-    return _ERROR_CREDENTIAL_RE.sub(_REDACTED, text)
+    return redact_tool_error_text(text)
 
 
 def _unknown_tool_error(name: str) -> dict[str, Any]:
