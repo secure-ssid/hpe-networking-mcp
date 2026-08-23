@@ -105,6 +105,34 @@ def test_aggregate_reports_ndcg_mean_and_graded_count():
     assert summary["ndcg@k"] == 0.75
 
 
+def test_threshold_failures_treat_none_metric_as_zero():
+    """An opt-in metric that is legitimately ``None`` (e.g. ``ndcg@k`` with
+    zero graded rows) must fail the gate cleanly, not raise ``TypeError``."""
+    run_eval = _load_run_eval()
+
+    failures = run_eval._threshold_failures({"ndcg@k": None}, {"ndcg@k": 0.5})
+
+    assert failures == ["ndcg@k=0.000 < 0.500"]
+
+
+def test_aggregate_summary_keeps_deferred_n_key():
+    """Regression guard: a bad line-cut once dropped ``deferred_n`` from the
+    summary while leaving a duplicate ``latency_n`` key behind (ruff F601)."""
+    run_eval = _load_run_eval()
+    row = {
+        "id": "x", "type": "howto", "source_hit": True, "rank": 1,
+        "keyword_hit": True, "mrr": 1.0, "latency_ms": None,
+        "latency_hit": None, "duplicate_ratio": None,
+        "duplicate_hit": None, "ndcg": None,
+    }
+
+    summary = run_eval._aggregate([row])
+
+    assert "deferred_n" in summary
+    keys = [k for k in summary if k != "rows"]
+    assert len(keys) == len(set(keys))
+
+
 def test_graded_sources_declare_positive_gains_and_matches():
     run_eval = _load_run_eval()
     for question in run_eval.load_questions():

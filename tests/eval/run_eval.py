@@ -338,7 +338,7 @@ def _aggregate(rows: list[dict]) -> dict:
         "latency_n": latency_n,
         "ndcg@k": round(sum(ndcg_values) / len(ndcg_values), 3) if ndcg_values else None,
         "graded_n": len(ndcg_values),
-        "latency_n": latency_n,
+        "deferred_n": len(load_deferred_questions()),
         "rows": rows,
     }
     return summary
@@ -364,7 +364,7 @@ _DEFAULT_THRESHOLDS = {
 def _threshold_failures(summary: dict, thresholds: dict[str, float]) -> list[str]:
     failures = []
     for metric, minimum in thresholds.items():
-        actual = float(summary.get(metric, 0.0))
+        actual = float(summary.get(metric) or 0.0)
         if actual < minimum:
             failures.append(f"{metric}={actual:.3f} < {minimum:.3f}")
     return failures
