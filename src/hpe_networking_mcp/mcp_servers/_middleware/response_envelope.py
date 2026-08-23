@@ -14,7 +14,7 @@ from typing import Any
 
 from mcp.shared.exceptions import MCPError
 
-from hpe_networking_mcp.mcp_servers.shared import _REDACTED, redact_sensitive
+from hpe_networking_mcp.mcp_servers.shared import redact_tool_error_text
 
 _BLOCKED_STATUS_HTTP = {
     "blocked": 403,
@@ -58,25 +58,16 @@ def _status_code(value: Any) -> int | None:
 _HTTPX_STATUS_RE = re.compile(r"\b(?:Client|Server) error '(\d{3})\b")
 
 
-# Raised backend exceptions embed the SDK-framed error string
-# ``ToolError("Error executing tool <name>: <message>")``, which can carry a
-# bearer credential *mid-string* -- escaping ``redact_sensitive``'s
-# prefix-only value rule. Mask that form on the error path (HX-3).
-_ERROR_CREDENTIAL_RE = re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=\-]{8,}")
-
-
 def _redact_envelope_error(text: str) -> str:
     """Mask credentials in a client-visible standalone-backend error string.
 
     ``on_error`` stringifies a raised backend exception for the first (and
     only) time here, so any credential in the message must be masked before
-    the error dict reaches the wire. Reuses the shared walker
-    (``shared.redact_sensitive``) for sensitive-keyed/container text and the
-    exact ``bearer ``/``token ``/``basic `` prefix shapes, then masks the
-    mid-string bearer form the SDK framing can embed.
+    the error dict reaches the wire. Delegates to the shared
+    ``shared.redact_tool_error_text`` helper (single credential-shape
+    definition repo-wide, HX-1/HX-3 consolidation).
     """
-    text = redact_sensitive(text)
-    return _ERROR_CREDENTIAL_RE.sub(_REDACTED, text)
+    return redact_tool_error_text(text)
 
 
 def _status_from_message(message: str | None) -> int | None:
