@@ -32,6 +32,10 @@ class SolverTrace:
     api_calls: list[str] = field(default_factory=list)  # "METHOD /path"
     tools_called: list[str] = field(default_factory=list)
     latency_s: float = 0.0
+    # Calls that returned >=400, as "METHOD /path (status)". A failed call did
+    # not satisfy the wire contract, so the scenario scores as a miss rather
+    # than aborting the whole run.
+    failed_calls: list[str] = field(default_factory=list)
     # repo key -> gate outcome for write scenarios. "satisfied" | "bypass" |
     # "gated_wrong" (a write proceeded without its declared gate).
     gate_outcomes: dict[str, str] = field(default_factory=dict)
@@ -92,6 +96,17 @@ class DeterministicSolver:
 
         return re.sub(r"\{[a-z_]+\}", sub, template)
 
+    def prime(self) -> None:
+        """Obtain the access token outside any scored scenario.
+
+        The token is fetched once and reused, so without priming its ``POST
+        /oauth2/token`` would land in the first scenario's journal and inflate
+        that scenario's ``api_call_count`` alone.
+        """
+        if self._token is None:
+            with httpx.Client(timeout=self._timeout, follow_redirects=False) as client:
+                self._token = self._obtain_token(client)
+
     def run(self, scenario: Scenario) -> SolverTrace:
         started = time.monotonic()
         trace = SolverTrace(scenario_id=scenario.id)
@@ -104,9 +119,12 @@ class DeterministicSolver:
                 path = self._render(path_template, scenario.fixture_entities)
                 url = f"{self.base_url}{path}"
                 resp = client.request(method, url, headers=headers)
-                # Any non-2xx breaks the scenario: scoring sees it as a failed
-                # call and the journal already recorded it.
+                # A non-2xx does not abort the run: the journal already
+                # recorded it, and scoring counts only successful calls toward
+                # the wire contract. One broken scenario must not destroy the
+                # whole benchmark.
                 if resp.status_code >= 400:
-                    resp.raise_for_status()
+                    trace.failed_calls.append(f"{method} {path} ({resp.status_code})")
+                    continue
                 trace.api_calls.append(f"{method} {path}")
         return replace(trace, latency_s=time.monotonic() - started)

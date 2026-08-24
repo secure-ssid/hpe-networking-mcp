@@ -46,6 +46,14 @@ class RequestJournal:
         """Wire-shape strings, e.g. ``GET /network-monitoring/v1/clients``."""
         return [f"{e.method} {e.path}" for e in self.entries]
 
+    def successful_calls(self) -> list[str]:
+        """Wire-shape strings for calls the fake actually served (<400).
+
+        Scoring matches ``expect.api_calls`` against these: a request that
+        404'd or 401'd reached the wire but did not fulfill the contract.
+        """
+        return [f"{e.method} {e.path}" for e in self.entries if e.status < 400]
+
     def count(self) -> int:
         return len(self.entries)
 

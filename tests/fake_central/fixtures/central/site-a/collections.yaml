@@ -46,6 +46,34 @@ wlans:
 nac:
   - id: macreg-0001
     mac: aa:bb:cc:11:22:33
+mobility_trails:
+  # Keyed by client MAC: GET /network-monitoring/v1/clients/{mac}/mobility-trail
+  # is a by_id route. The trail is deliberately flappy — incident-response-001
+  # asks whether this client is roaming excessively.
+  - id: aa:bb:cc:11:22:33
+    mac: aa:bb:cc:11:22:33
+    site_id: site-0001
+    transitions:
+      - timestamp: "2026-08-22T09:01:11Z"
+        from_ap: CNAP0001
+        to_ap: CNAP0002
+        rssi: -74
+        reason: signal-degraded
+      - timestamp: "2026-08-22T09:03:48Z"
+        from_ap: CNAP0002
+        to_ap: CNAP0001
+        rssi: -71
+        reason: signal-degraded
+      - timestamp: "2026-08-22T09:06:02Z"
+        from_ap: CNAP0001
+        to_ap: CNAP0002
+        rssi: -76
+        reason: signal-degraded
+      - timestamp: "2026-08-22T09:08:39Z"
+        from_ap: CNAP0002
+        to_ap: CNAP0001
+        rssi: -73
+        reason: signal-degraded
 alerts:
   - id: ALRT-0001
     severity: critical

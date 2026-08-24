@@ -18,11 +18,12 @@ from __future__ import annotations
 import json
 import threading
 import uuid
+from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from .catalog import EndpointCatalog, Route
+from .catalog import EndpointCatalog, Route, is_write
 from .fixtures import FixtureBundle
 from .journal import RequestJournal, RequestRecord
 
@@ -30,6 +31,21 @@ DEFAULT_PAGE_SIZE = 25
 MAX_PAGE_SIZE = 100
 
 AUTH_SCHEME = "Bearer"
+
+
+def _json_default(value: Any) -> str:
+    """Serialize fixture values PyYAML produces that JSON has no type for.
+
+    ``collections.yaml`` timestamps like ``2026-08-22T09:13:02Z`` are parsed by
+    PyYAML into ``datetime`` objects. Central emits them as ISO-8601 with a
+    ``Z`` suffix, so render them that way rather than letting ``json.dumps``
+    raise inside the handler thread.
+    """
+    if isinstance(value, datetime):
+        return value.isoformat().replace("+00:00", "Z")
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value)
 
 
 class FakeApiError(Exception):  # noqa: N818 — deliberate: tiny internal surface
@@ -61,7 +77,7 @@ class _Handler(BaseHTTPRequestHandler):
             raise FakeApiError(400, "BAD_REQUEST", "request body is not valid JSON") from exc
 
     def _respond(self, status: int, payload: Any, extra_headers: dict[str, str] | None = None) -> None:
-        data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        data = json.dumps(payload, separators=(",", ":"), default=_json_default).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
@@ -134,6 +150,13 @@ class _Handler(BaseHTTPRequestHandler):
             payload = self._envelope(exc.status, exc.code, exc.message, exc.details)
             self._record(None, exc.status, payload)
             self._respond(exc.status, payload)
+        except Exception as exc:  # noqa: BLE001 — a fake that dies mid-response is undebuggable
+            # Without this the handler thread unwinds, the socket closes with no
+            # response, and the client sees only "Server disconnected" with no
+            # indication of which request or which bug caused it.
+            payload = self._envelope(500, "FAKE_INTERNAL_ERROR", f"{type(exc).__name__}: {exc}")
+            self._record(None, 500, payload)
+            self._respond(500, payload)
 
     def _path_params(self, route: Route, path: str) -> dict[str, str]:
         parts = [p for p in route.pattern.split("/") if p]
@@ -238,6 +261,8 @@ class FakeCentralServer:
     ) -> tuple[Any, int, dict[str, str]]:
         if route.method == "POST" and route.pattern == self.token_url:
             return self._handle_token(query), 200, {}
+        if is_write(route.kind):
+            return self._write(route, params, body)
         if route.by_id:
             return self._by_id(route, params)
         if route.paginated:
@@ -258,11 +283,56 @@ class FakeCentralServer:
             "expires_in": 3600,
         }
 
+    def _key(self, params: dict[str, str]) -> str:
+        return params.get("serial") or params.get("mac") or params.get("ssid") or params.get("id") or ""
+
+    @staticmethod
+    def _id_matches(item: Any, key: str) -> bool:
+        """Match a fixture item's ``id`` against a path segment.
+
+        Case-insensitive: fixtures carry Central's display casing (``Old-Guest``)
+        while request paths carry the lowercased slug (``old-guest``). The two
+        name the same entity, so matching on casing alone would 404.
+        """
+        if not isinstance(item, dict) or not key:
+            return False
+        return str(item.get("id", "")).casefold() == key.casefold()
+
+    def _write(
+        self, route: Route, params: dict[str, str], body: dict[str, Any]
+    ) -> tuple[Any, int, dict[str, str]]:
+        """Serve a mutating route.
+
+        Writes are acknowledged without mutating the fixture bundle: scoring
+        reads the journal (method/path/status/kind), never fixture state, and
+        keeping the bundle immutable is what makes scenarios independent of
+        execution order.
+
+        ``PATCH``/``POST`` are create-or-update — Central's wlan-ssids PATCH is
+        an upsert, so a write scenario targeting a not-yet-existing id must not
+        404. ``DELETE`` on a ``by_id`` route still requires the entity to exist,
+        because deleting an absent entity is a genuine client error.
+        """
+        key = self._key(params)
+        items = self.bundle.items(route.collection)
+        existing = next((item for item in items if self._id_matches(item, key)), None)
+        if route.method == "DELETE":
+            if route.by_id and existing is None:
+                raise FakeApiError(
+                    404, "NOT_FOUND", f"{route.collection} {key!r} not found in fixture"
+                )
+            return {"id": key, "status": "deleted"}, 200, {}
+        record: dict[str, Any] = {**(existing or {}), **(body or {})}
+        if key:
+            record["id"] = key
+        status = 200 if existing is not None else 201
+        return record, status, {}
+
     def _by_id(self, route: Route, params: dict[str, str]) -> tuple[Any, int, dict[str, str]]:
         items = self.bundle.items(route.collection)
-        key = params.get("serial") or params.get("mac") or params.get("ssid") or params.get("id") or ""
+        key = self._key(params)
         for item in items:
-            if isinstance(item, dict) and str(item.get("id", "")) == key:
+            if self._id_matches(item, key):
                 return item, 200, {}
         raise FakeApiError(404, "NOT_FOUND", f"{route.collection} {key!r} not found in fixture")
 

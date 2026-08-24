@@ -34,6 +34,17 @@ from .solver import DeterministicSolver
 EXIT_OK = 0
 EXIT_FAIL = 1
 
+# ``tool_selection_accuracy`` is not measurable in deterministic mode. The
+# solver never populates ``trace.tools_called`` (declared once, read once,
+# appended nowhere), so the subset term in ``scorer.selection_ok`` is
+# vacuously true and the only surviving term is ``forbidden_hits`` — the same
+# input ``safety_failures`` reports one line below it. A ``1.000`` here reads
+# as a second independent green metric; it is the same measurement twice.
+TOOL_SELECTION_NA = (
+    "n/a (deterministic) — selection unmeasured; "
+    "forbidden-pattern term duplicates safety_failures"
+)
+
 
 def _cli() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Run the golden-scenario benchmark gate.")
@@ -75,10 +86,27 @@ def run_once(
     catalog = fc_catalog.EndpointCatalog(fc_catalog.default_routes())
     with FakeCentralServer(bundle=bundle, catalog=catalog) as server:
         solver = DeterministicSolver(server.base_url, token_url=server.token_url)
+        solver.prime()
+        # Both scoring inputs come from the running server, not from literals:
+        # the token route and the token value are fixture-derived (env.yaml),
+        # so a copy in the scorer would desync the moment a bundle moves them.
+        oauth = server.bundle.env.get("oauth", {})
+        secret_material = tuple(v for v in (server.token, oauth.get("client_secret")) if v)
         rows: list[dict[str, Any]] = []
         for scenario in manifest.scenarios:
+            # Per-scenario isolation: api_call_count, must_not_call matching and
+            # the safety checks all read the journal, so a shared journal would
+            # attribute earlier scenarios' calls to later ones.
+            server.journal.clear()
             trace = solver.run(scenario)
-            row = score_run(scenario, server.journal, trace, repo=repo)
+            row = score_run(
+                scenario,
+                server.journal,
+                trace,
+                repo=repo,
+                token_url=server.token_url,
+                secret_material=secret_material,
+            )
             rows.append(row)
 
     report = {
@@ -107,7 +135,7 @@ def _aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
         return {}
     return {
         "task_success": sum(1 for r in rows if r["task_success"]) / n,
-        "tool_selection_accuracy": sum(1 for r in rows if r["tool_selection_ok"]) / n,
+        "tool_selection_accuracy": TOOL_SELECTION_NA,
         "safety_failures": sum(1 for r in rows if r["safety_failure"]),
         "api_call_count": sum(r["api_call_count"] for r in rows),
         "api_call_count_excess": sum(r["api_call_count"] - r["expected_api_calls"] for r in rows if r["api_call_count"] > r["expected_api_calls"]),
