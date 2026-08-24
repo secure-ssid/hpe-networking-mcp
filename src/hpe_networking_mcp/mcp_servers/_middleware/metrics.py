@@ -27,11 +27,14 @@ folded into a single fixed overflow bucket instead of growing the registry
 without bound. This is a deliberate defense-in-depth measure independent of
 whatever a caller's ``label_resolver`` returns.
 
-HTTP exposure of a snapshot (a compact JSON document, no new dependency) is
-a *separate* opt-in gated by ``HPE_MCP_METRICS_HTTP`` -- see
+HTTP exposure of a snapshot is a *separate* opt-in gated by
+``HPE_MCP_METRICS_HTTP`` -- see
 ``hpe_networking_mcp.mcp_servers.shared.run_server`` -- and is only ever registered alongside
 the existing ``/livez``/``/readyz``/``/healthz`` routes on the
-streamable-HTTP transport. Stdio transport never touches this at all, so
+streamable-HTTP transport. The route serves Prometheus text exposition
+(``render_prometheus``) by default and the bounded JSON snapshot
+(``schema_version: 1``, explicitly unstable) via format negotiation.
+Stdio transport never touches this at all, so
 enabling collection here never adds unsolicited stdio output.
 """
 
@@ -212,6 +215,110 @@ class MetricsRegistry:
             self._rate_limit_wait_sum_ms = 0.0
             self._rate_limit_wait_max_ms = 0.0
             self._started_monotonic = time.monotonic()
+
+
+def _escape_label_value(value: Any) -> str:
+    """Escape a label value for the Prometheus text format.
+
+    Registry labels are already sanitized to ``[a-z0-9_.-]`` by
+    ``_sanitize_label``; this is defense-in-depth against any snapshot
+    producer that did not pass through the registry.
+    """
+    return str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
+def _format_sample_value(value: Any) -> str:
+    if isinstance(value, bool):  # guard: bool is an int subclass
+        return "1" if value else "0"
+    if isinstance(value, int):
+        return str(value)
+    return repr(float(value))
+
+
+def render_prometheus(snapshot: dict[str, Any]) -> str:
+    """Render a ``MetricsRegistry.snapshot()`` as Prometheus text (0.0.4).
+
+    Pure function over the snapshot dict -- no registry access, no new
+    dependencies. The mapping is honest to what the registry stores:
+    outcomes and capabilities are *separate marginal* counts per series
+    (never a joint capability x outcome count), so they render as two
+    distinct counter families rather than one fabricated joint series.
+
+    The registry records per-bin (exclusive) latency bucket counts --
+    ``record_call`` stops at the first matching edge -- while Prometheus
+    histograms need cumulative ``le`` counts. This renderer accumulates
+    left-to-right and maps ``latency_over_max`` into ``le="+Inf"`` so that
+    ``sum(le counts) == latency_count`` always holds.
+    """
+    lines: list[str] = []
+
+    def emit_header(name: str, help_text: str, type_: str) -> None:
+        lines.append(f"# HELP {name} {help_text}")
+        lines.append(f"# TYPE {name} {type_}")
+
+    def emit(name: str, labels: dict[str, str], value: Any) -> None:
+        if labels:
+            inner = ",".join(f'{k}="{_escape_label_value(v)}"' for k, v in labels.items())
+            lines.append(f"{name}{{{inner}}} {_format_sample_value(value)}")
+        else:
+            lines.append(f"{name} {_format_sample_value(value)}")
+
+    emit_header(
+        "hpe_mcp_tool_calls_total",
+        "Tool calls by tool, backend, and outcome.",
+        "counter",
+    )
+    emit_header(
+        "hpe_mcp_tool_capability_calls_total",
+        "Tool calls by tool, backend, and capability.",
+        "counter",
+    )
+    emit_header(
+        "hpe_mcp_tool_call_latency_ms",
+        "Tool call latency in milliseconds (fixed buckets).",
+        "histogram",
+    )
+    emit_header(
+        "hpe_mcp_tool_call_truncated_total",
+        "Tool calls whose result carried a truncation marker.",
+        "counter",
+    )
+    for series in snapshot.get("series", []):
+        base = {"tool": series.get("tool", "unknown"), "backend": series.get("backend", "unknown")}
+        for outcome, count in sorted(series.get("outcomes", {}).items()):
+            emit("hpe_mcp_tool_calls_total", {**base, "outcome": outcome}, count)
+        for capability, count in sorted(series.get("capabilities", {}).items()):
+            emit("hpe_mcp_tool_capability_calls_total", {**base, "capability": capability}, count)
+        cumulative = 0
+        for edge in _LATENCY_BUCKETS_MS:
+            cumulative += int(series.get("latency_buckets", {}).get(str(edge), 0))
+            emit("hpe_mcp_tool_call_latency_ms_bucket", {**base, "le": str(edge)}, cumulative)
+        latency_count = int(series.get("latency_count", 0))
+        emit("hpe_mcp_tool_call_latency_ms_bucket", {**base, "le": "+Inf"}, latency_count)
+        emit("hpe_mcp_tool_call_latency_ms_sum", base, series.get("latency_sum_ms", 0.0))
+        emit("hpe_mcp_tool_call_latency_ms_count", base, latency_count)
+        emit("hpe_mcp_tool_call_truncated_total", base, series.get("truncated_events", 0))
+
+    rate_limit = snapshot.get("rate_limit", {})
+    emit_header("hpe_mcp_rate_limit_waits_total", "Observed rate-limit sleeps.", "counter")
+    emit("hpe_mcp_rate_limit_waits_total", {}, rate_limit.get("wait_count", 0))
+    emit_header(
+        "hpe_mcp_rate_limit_wait_ms_total",
+        "Cumulative milliseconds spent in rate-limit sleeps.",
+        "counter",
+    )
+    emit("hpe_mcp_rate_limit_wait_ms_total", {}, rate_limit.get("wait_sum_ms", 0.0))
+    emit_header("hpe_mcp_rate_limit_wait_max_ms", "Longest single rate-limit sleep.", "gauge")
+    emit("hpe_mcp_rate_limit_wait_max_ms", {}, rate_limit.get("wait_max_ms", 0.0))
+
+    emit_header("hpe_mcp_metrics_series", "Distinct (tool, backend) series tracked.", "gauge")
+    emit("hpe_mcp_metrics_series", {}, snapshot.get("series_count", 0))
+    emit_header("hpe_mcp_metrics_series_cap", "Maximum series before overflow folding.", "gauge")
+    emit("hpe_mcp_metrics_series_cap", {}, snapshot.get("series_cap", 0))
+    emit_header("hpe_mcp_metrics_uptime_seconds", "Seconds since registry start.", "gauge")
+    emit("hpe_mcp_metrics_uptime_seconds", {}, snapshot.get("uptime_seconds", 0.0))
+
+    return "\n".join(lines) + "\n"
 
 
 _default_registry: MetricsRegistry | None = None
