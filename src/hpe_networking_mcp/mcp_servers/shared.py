@@ -1208,17 +1208,35 @@ def _register_metrics_route(mcp_instance: Any) -> None:
     The snapshot itself (``MetricsRegistry.snapshot``) contains only
     bounded, allow-listed labels and numeric aggregates -- never arguments,
     results, identifiers, or exception messages.
+
+    Response format: Prometheus text (``text/plain; version=0.0.4``) by
+    default, so a Prometheus/Grafana scrape works out of the box; the
+    original bounded JSON snapshot is retained via ``?format=json`` or an
+    ``Accept: application/json`` request that does not also accept a text
+    format. The not-collecting response stays JSON regardless of format.
     """
     if getattr(mcp_instance, _METRICS_ROUTE_ATTR, False):
         return
 
     from starlette.requests import Request
-    from starlette.responses import JSONResponse
+    from starlette.responses import JSONResponse, PlainTextResponse
 
-    async def metrics(_request: Request) -> JSONResponse:
+    def _wants_json(request: Request) -> bool:
+        requested = request.query_params.get("format", "").strip().lower()
+        if requested:
+            return requested == "json"
+        accept = request.headers.get("accept", "")
+        if "application/json" not in accept:
+            return False
+        # A client that accepts both (e.g. a Prometheus scrape config with
+        # a broad Accept header) gets the scrapeable text format.
+        return "text/plain" not in accept and "openmetrics" not in accept and "*/*" not in accept
+
+    async def metrics(request: Request) -> JSONResponse | PlainTextResponse:
         from hpe_networking_mcp.mcp_servers._middleware.metrics import (
             get_default_registry,
             metrics_enabled,
+            render_prometheus,
         )
 
         if not metrics_enabled():
@@ -1232,8 +1250,13 @@ def _register_metrics_route(mcp_instance: Any) -> None:
             snapshot = get_default_registry().snapshot()
         except Exception:
             return JSONResponse({"error": "metrics snapshot unavailable"}, status_code=500)
-        snapshot["enabled"] = True
-        return JSONResponse(snapshot)
+        if _wants_json(request):
+            snapshot["enabled"] = True
+            return JSONResponse(snapshot)
+        return PlainTextResponse(
+            render_prometheus(snapshot),
+            media_type="text/plain; version=0.0.4",
+        )
 
     mcp_instance.custom_route("/metrics", methods=["GET"], include_in_schema=False)(metrics)
     setattr(mcp_instance, _METRICS_ROUTE_ATTR, True)
@@ -1545,7 +1568,8 @@ def run_server(mcp_instance: Any, default_port: int | None = None) -> None:
     MCP_HTTP_BEARER_TOKEN: optional shared secret; when set, every HTTP path
       except /livez, /readyz, /healthz requires ``Authorization: Bearer <token>``.
     HPE_MCP_METRICS_HTTP: optional; when explicitly truthy, also registers
-      ``GET /metrics`` (a bounded JSON snapshot of in-process metrics -- see
+      ``GET /metrics`` (Prometheus text exposition by default, or the bounded
+      JSON snapshot via ``?format=json``/Accept negotiation -- see
       ``hpe_networking_mcp.mcp_servers._middleware.metrics``) under the same auth/allow-list
       protections as every other HTTP route here. Collection itself is a
       separate opt-in (``HPE_MCP_METRICS=1``); with only the HTTP flag
