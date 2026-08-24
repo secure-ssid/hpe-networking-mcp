@@ -105,28 +105,37 @@ compatibility promise.
 
 ### Prometheus exposition (ratified design, implementation pending)
 
-Ratified 2026-08-24 (owner + engineering): `/metrics` will serve Prometheus
+Ratified 2026-08-24 (owner + engineering): `/metrics` serves Prometheus
 text exposition rendered from the same registry, with the JSON snapshot
-retained via `?format=json` (or `Accept` negotiation). The renderer PR is
-pending implementation; until it ships, the text format below is the
-design contract, not shipped behavior.
+retained via `?format=json` (or `Accept: application/json`). The renderer
+PR (#45) is pending merge at time of writing; the names below are verified
+against its diff and are the design contract.
 
-Mapping from the registry:
+Mapping from the registry (labels verified against the renderer):
 
-| Prometheus metric | Type | Source |
-|---|---|---|
-| `hpe_mcp_tool_calls_total{tool,backend,capability,outcome}` | counter | requests split by capability × outcome |
-| `hpe_mcp_tool_call_latency_ms{tool,backend}` | histogram | latency buckets, `le` cumulative |
-| `hpe_mcp_tool_call_truncated_total{tool,backend}` | counter | truncated_events |
-| `hpe_mcp_rate_limit_wait_ms` count/sum/max | counters/gauge | rate_limit aggregate |
-| `hpe_mcp_metrics_series` / `hpe_mcp_metrics_series_cap` | gauges | series_count / series_cap |
-| `hpe_mcp_metrics_uptime_seconds` | gauge | uptime_seconds |
+| Prometheus metric | Type | Labels | Source |
+|---|---|---|---|
+| `hpe_mcp_tool_calls_total` | counter | `tool`, `backend`, `outcome` | outcomes marginal |
+| `hpe_mcp_tool_capability_calls_total` | counter | `tool`, `backend`, `capability` | capabilities marginal |
+| `hpe_mcp_tool_call_latency_ms` | histogram | `tool`, `backend` (+`le`) | latency buckets, `le` cumulative; `_sum`/`_count` emitted |
+| `hpe_mcp_tool_call_truncated_total` | counter | `tool`, `backend` | truncated_events |
+| `hpe_mcp_rate_limit_waits_total` | counter | — | rate_limit wait_count |
+| `hpe_mcp_rate_limit_wait_ms_total` | counter | — | rate_limit wait_sum_ms |
+| `hpe_mcp_rate_limit_wait_max_ms` | gauge | — | rate_limit wait_max_ms |
+| `hpe_mcp_metrics_series` / `hpe_mcp_metrics_series_cap` | gauges | — | series_count / series_cap |
+| `hpe_mcp_metrics_uptime_seconds` | gauge | — | uptime_seconds |
+
+Calls are emitted as two separate marginal families — outcome and
+capability — because the registry records them as independent marginals
+per series; a joint `{capability, outcome}` series would fabricate counts
+that are never recorded.
 
 One conversion rule matters: the registry records **per-bin** (exclusive)
 bucket counts — `record_call` stops at the first matching edge — while
-Prometheus histograms require **cumulative** `le` counts. The renderer must
-accumulate left to right, and the over-max counter maps to `le="+Inf"`.
-The implementation test asserts `sum(le counts) == latency_count`.
+Prometheus histograms require **cumulative** `le` counts. The renderer
+accumulates left to right, and the over-max counter folds into
+`le="+Inf"` (so `le="+Inf"` always equals `latency_count`). The
+implementation test asserts `sum(le counts) == latency_count`.
 
 Metric names and labels join the 1.0 stability surface only when the
 renderer ships; until then both the names above and the JSON schema are
