@@ -298,3 +298,96 @@ class TestHttpSecurityChecks:
 
         captured = capsys.readouterr()
         assert "HTTP bind host" in captured.out
+
+
+class TestIndexChecks:
+    """Index remedies must describe the install in front of the operator.
+
+    A fresh clone has no ``data/`` and no scraped corpus but does have the
+    committed ``vendor/openapi`` corpus, so "run ingest_docs.py" is the wrong
+    remedy for every index there: the spec index has an offline build and the
+    prose index has nothing to ingest until sources are fetched. Each state
+    gets its own command.
+    """
+
+    @staticmethod
+    def _checks_by_name(root, monkeypatch):
+        monkeypatch.setattr(doctor, "ROOT", root)
+        return {check.name: check for check in doctor._index_checks()}
+
+    def test_fresh_clone_points_each_index_at_its_own_producer(
+        self, tmp_path, monkeypatch
+    ):
+        checks = self._checks_by_name(tmp_path, monkeypatch)
+
+        specs = checks["Structured API index"]
+        assert specs.status == "WARN"
+        assert "git checkout -- vendor/openapi" in specs.detail
+
+        sources = checks["Prose corpus sources"]
+        assert sources.status == "WARN"
+        assert "refresh_rag_sources.py --refresh-sources" in sources.detail
+
+        docs = checks["Prose docs RAG index"]
+        assert docs.status == "WARN"
+        assert "no corpus to build from" in docs.detail
+        assert "ingest_docs.py" not in docs.detail
+
+        tools = checks["Router tool index"]
+        assert tools.status == "WARN"
+        assert "ingest_tools.py" in tools.detail
+
+    def test_committed_vendor_corpus_makes_spec_index_an_offline_build(
+        self, tmp_path, monkeypatch
+    ):
+        corpus = tmp_path / "vendor" / "openapi"
+        corpus.mkdir(parents=True)
+        (corpus / "MANIFEST.json").write_text("{}")
+
+        checks = self._checks_by_name(tmp_path, monkeypatch)
+
+        specs = checks["Structured API index"]
+        assert specs.status == "WARN"
+        assert "build_spec_index.py" in specs.detail
+        assert "git checkout" not in specs.detail
+
+    def test_populated_sources_make_prose_index_a_plain_build(
+        self, tmp_path, monkeypatch
+    ):
+        source = tmp_path / "ingestion" / "sources" / "tech_docs"
+        source.mkdir(parents=True)
+        (source / "guide.md").write_text("# Guide")
+
+        checks = self._checks_by_name(tmp_path, monkeypatch)
+
+        sources = checks["Prose corpus sources"]
+        assert sources.status == "OK"
+        assert sources.detail.startswith("1 populated")
+
+        docs = checks["Prose docs RAG index"]
+        assert docs.status == "WARN"
+        assert "ingest_docs.py" in docs.detail
+
+    def test_empty_source_folder_is_not_a_populated_corpus(
+        self, tmp_path, monkeypatch
+    ):
+        (tmp_path / "ingestion" / "sources" / "tech_docs").mkdir(parents=True)
+
+        monkeypatch.setattr(doctor, "ROOT", tmp_path)
+        folders, populated = doctor._prose_sources_state()
+
+        assert (folders, populated) == (1, 0)
+
+    def test_all_indexes_present_reports_ok(self, tmp_path, monkeypatch):
+        data = tmp_path / "data"
+        data.mkdir()
+        (data / "tools.lance").mkdir()
+        (data / "docs.lance").mkdir()
+        (data / "specs.sqlite").write_text("sqlite")
+        source = tmp_path / "ingestion" / "sources" / "tech_docs"
+        source.mkdir(parents=True)
+        (source / "guide.md").write_text("# Guide")
+
+        checks = self._checks_by_name(tmp_path, monkeypatch)
+
+        assert all(check.status == "OK" for check in checks.values())
