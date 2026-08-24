@@ -1,0 +1,60 @@
+name: benchmark
+
+on:
+  pull_request:
+    paths:
+      - 'tools/benchmark/**'
+      - 'tests/benchmark/**'
+      - 'tests/fake_central/**'
+      - '.github/workflows/benchmark.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '23 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          prune-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --group dev --frozen
+
+      - name: Run benchmark gate
+        id: benchmark
+        run: >-
+          uv run python -m tools.benchmark.run
+          --manifest tests/benchmark/manifest/central-golden.yaml
+          --baseline tests/benchmark/baselines/central-golden.json
+          --repo secure_ssid
+          --out outputs/benchmark/report.json
+          --md outputs/benchmark/report.md
+        env:
+          BENCH_TASK_SUCCESS_ALLOWANCE: ${{ vars.BENCH_TASK_SUCCESS_ALLOWANCE }}
+          BENCH_API_CALL_ALLOWANCE: ${{ vars.BENCH_API_CALL_ALLOWANCE }}
+
+      - name: Upload benchmark reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-reports
+          path: |
+            outputs/benchmark/report.json
+            outputs/benchmark/report.md
+          if-no-files-found: error
+          retention-days: 30
