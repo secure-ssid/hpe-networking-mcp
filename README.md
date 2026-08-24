@@ -188,6 +188,7 @@ for reproducible tool/benchmark comparisons.
 | Every documentation page, grouped by purpose | [docs/README.md](docs/README.md) |
 | Migrating from `secure-ssid/centralmcp` | [MIGRATION.md](MIGRATION.md) |
 | Contribute, get support, or report a security issue | [CONTRIBUTING.md](CONTRIBUTING.md), [SUPPORT.md](SUPPORT.md), [SECURITY.md](SECURITY.md) |
+| Understand what data the server collects and where it goes | [PRIVACY.md](PRIVACY.md) |
 | Version history | [CHANGELOG.md](CHANGELOG.md) |
 
 ## Local setup essentials
