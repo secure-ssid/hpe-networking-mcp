@@ -596,7 +596,13 @@ def _search_lancedb(query: str, top_k: int, source_filter: SourceFilter) -> list
             )
     except optional_deps.MissingOptionalDependency as exc:
         return _degraded_optional_dep(exc)
-    except (FileNotFoundError, ValueError) as exc:
+    except FileNotFoundError as exc:
+        # Same reasoning as _degraded_spec_index: a missing prose index
+        # consulted nothing, so it renders as degraded-with-remedy rather
+        # than a bare error string. The hint is state-aware — a fresh clone
+        # has no scraped corpus, and "run the build" is not a remedy there.
+        return [{"error": str(exc), "degraded": True, "hint": _prose_remedy()}]
+    except ValueError as exc:
         return [{"error": str(exc)}]
     hits = _boost_model_match(_boost_sources(hits, query), query)
     hits = _dedup_by_content(hits)
@@ -1128,6 +1134,9 @@ def rag_diagnostics(include_ingestion_delta: bool = True) -> dict[str, Any]:
 #: way under ``HPE_MCP_RAG_BACKEND=redis``. Read through the module attribute
 #: so a test can point it somewhere else.
 PROSE_DATA_DIR = specs_index.ROOT / "data"
+#: Where the scraped prose corpus lives before ingestion. Read through the
+#: module attribute for the same reason as PROSE_DATA_DIR.
+PROSE_SOURCES_DIR = specs_index.ROOT / "ingestion" / "sources"
 PROSE_DOCS_INDEX_NAME = "docs.lance"
 #: Written by ``scripts/package_indexes.py --write-local-manifests``. It is the
 #: only on-disk record of *what* went into the built prose index and when each
@@ -1153,8 +1162,20 @@ VENDOR_FILES_MISSING_REMEDY = (
     "meanwhile"
 )
 PROSE_CORPUS_REMEDY = (
-    "build the prose corpus with `uv run python ingestion/ingest_docs.py` — it "
-    "is scraped vendor documentation and is deliberately not distributed"
+    "build the prose index with `uv run python ingestion/ingest_docs.py` — the "
+    "corpus under ingestion/sources/ is scraped vendor documentation and is "
+    "deliberately not distributed"
+)
+#: A fresh clone holds no scraped sources at all, so the build command alone
+#: is not a remedy there -- it would ingest nothing. The two states get two
+#: remedies, and `_prose_remedy` picks between them from the on-disk corpus.
+PROSE_CORPUS_FETCH_REMEDY = (
+    "ingestion/sources/ holds no scraped corpus on this install — fetch the "
+    "declared sources with `python scripts/refresh_rag_sources.py "
+    "--refresh-sources` (network; see docs/getting-started.md), then build "
+    "with `uv run python ingestion/ingest_docs.py`. Prose retrieval is "
+    "optional: exact API lookup (`lookup_api`) builds offline with "
+    "`python scripts/build_spec_index.py` and needs neither"
 )
 PROSE_MANIFEST_REMEDY = (
     "describe the built index with "
@@ -1350,10 +1371,35 @@ def _prose_backend_installed() -> bool:
         return False
 
 
+def _prose_corpus_populated() -> bool:
+    """True when at least one scraped source folder holds a file.
+
+    The fetch/build remedy split turns on this: ``ingest_docs.py`` over an
+    empty ``ingestion/sources/`` ingests nothing, so "run the build" is only
+    a remedy once something is there to build from. One populated folder is
+    enough — the build's own required-sources guard reports anything still
+    missing, and duplicating that list here would drift from it.
+    """
+    try:
+        if not PROSE_SOURCES_DIR.is_dir():
+            return False
+        return any(
+            child.is_file()
+            for folder in PROSE_SOURCES_DIR.iterdir()
+            if folder.is_dir()
+            for child in folder.iterdir()
+        )
+    except OSError:
+        return False
+
+
 def _prose_remedy() -> str:
+    remedy = (
+        PROSE_CORPUS_REMEDY if _prose_corpus_populated() else PROSE_CORPUS_FETCH_REMEDY
+    )
     if _prose_backend_installed():
-        return PROSE_CORPUS_REMEDY
-    return f"{optional_deps.install_remedy(_PROSE_EXTRA)}, then {PROSE_CORPUS_REMEDY}"
+        return remedy
+    return f"{optional_deps.install_remedy(_PROSE_EXTRA)}, then {remedy}"
 
 
 def _prose_sources(manifest: Any) -> list[dict[str, Any]] | None:

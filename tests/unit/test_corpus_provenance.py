@@ -342,3 +342,44 @@ class TestRegisteredOnTheMcpSurface:
         payload = json.loads(called.content[0].text)
         assert payload["api_specs"]["available"] is True
         assert payload["api_specs"]["document_count"] > 0
+
+
+class TestProseRemedyMatchesTheInstall:
+    """"Run the build" is only a remedy when there is something to build.
+
+    A fresh clone holds no scraped corpus under ``ingestion/sources/``, so the
+    remedy there must name the fetch step; an install with a populated corpus
+    must get the plain build command instead. The two states answer different
+    operator questions and are never interchangeable.
+    """
+
+    def test_unscraped_corpus_remedy_names_the_fetch_step(
+        self, prose_dir, tmp_path, monkeypatch
+    ):
+        monkeypatch.setattr(rag, "PROSE_SOURCES_DIR", tmp_path / "no-sources")
+
+        prose = rag.corpus_provenance()["prose_docs"]
+
+        assert "refresh_rag_sources.py --refresh-sources" in prose["remedy"]
+        assert "ingest_docs.py" in prose["remedy"]
+
+    def test_populated_corpus_remedy_is_the_plain_build(
+        self, prose_dir, tmp_path, monkeypatch
+    ):
+        source = tmp_path / "sources" / "tech_docs"
+        source.mkdir(parents=True)
+        (source / "guide.md").write_text("# Guide")
+        monkeypatch.setattr(rag, "PROSE_SOURCES_DIR", tmp_path / "sources")
+
+        prose = rag.corpus_provenance()["prose_docs"]
+
+        assert "ingest_docs.py" in prose["remedy"]
+        assert "refresh_rag_sources.py" not in prose["remedy"]
+
+    def test_an_empty_source_folder_is_not_a_populated_corpus(
+        self, tmp_path, monkeypatch
+    ):
+        (tmp_path / "sources" / "tech_docs").mkdir(parents=True)
+        monkeypatch.setattr(rag, "PROSE_SOURCES_DIR", tmp_path / "sources")
+
+        assert rag._prose_corpus_populated() is False

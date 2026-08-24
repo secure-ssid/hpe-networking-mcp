@@ -697,11 +697,32 @@ def _config_checks() -> list[Check]:
     return checks
 
 
+def _prose_sources_state() -> tuple[int, int]:
+    """(folders present, folders holding at least one file) under ingestion/sources/.
+
+    Duplicated from mcp_servers/rag.py's _prose_corpus_populated rather than
+    imported: rag.py imports `mcp` at module scope, and doctor's job is partly
+    to report why that import would fail. Keep the two-state remedy logic in
+    sync with rag.py's _prose_remedy.
+    """
+    sources_dir = ROOT / "ingestion" / "sources"
+    try:
+        folders = [entry for entry in sources_dir.iterdir() if entry.is_dir()]
+    except OSError:
+        return 0, 0
+    populated = sum(
+        1 for folder in folders if any(child.is_file() for child in folder.iterdir())
+    )
+    return len(folders), populated
+
+
 def _index_checks() -> list[Check]:
     checks = []
     tool_index = ROOT / "data" / "tools.lance"
     docs_index = ROOT / "data" / "docs.lance"
-    specs_index = ROOT / "data" / "specs.sqlite"
+    specs_index_path = ROOT / "data" / "specs.sqlite"
+    vendor_manifest = ROOT / "vendor" / "openapi" / "MANIFEST.json"
+    source_folders, populated_folders = _prose_sources_state()
     checks.append(
         Check(
             "OK" if tool_index.exists() else "WARN",
@@ -711,18 +732,63 @@ def _index_checks() -> list[Check]:
             else "missing; run `uv run python scripts/ingest_tools.py --products all`",
         )
     )
+    # specs.sqlite and docs.lance have different producers, costs and network
+    # needs — the spec index rebuilds offline from the committed vendor
+    # corpus, the prose index needs a scraped corpus — so they are reported
+    # and remedied separately, never as one "RAG indexes" line.
+    if specs_index_path.exists():
+        checks.append(Check("OK", "Structured API index", "data/specs.sqlite exists"))
+    elif vendor_manifest.exists():
+        checks.append(
+            Check(
+                "WARN",
+                "Structured API index",
+                "missing; build it offline with `python scripts/build_spec_index.py` "
+                "(committed vendor/openapi corpus — no scrape, no network)",
+            )
+        )
+    else:
+        checks.append(
+            Check(
+                "WARN",
+                "Structured API index",
+                "missing, and the committed vendor/openapi corpus is absent; restore "
+                "it with `git checkout -- vendor/openapi`, then run "
+                "`python scripts/build_spec_index.py`",
+            )
+        )
     checks.append(
         Check(
-            "OK" if docs_index.exists() and specs_index.exists() else "WARN",
-            "Docs/API RAG indexes",
-            "data/docs.lance and data/specs.sqlite exist"
-            if docs_index.exists() and specs_index.exists()
-            else (
-                "missing or partial; run `uv run python ingestion/ingest_docs.py` "
-                "if RAG lookup is needed"
-            ),
+            "OK" if populated_folders else "WARN",
+            "Prose corpus sources",
+            f"{populated_folders} populated source folder(s) under ingestion/sources/"
+            if populated_folders
+            else "no scraped corpus under ingestion/sources/ (normal on a fresh "
+            "clone); fetch the declared sources with "
+            "`python scripts/refresh_rag_sources.py --refresh-sources`",
         )
     )
+    if docs_index.exists():
+        checks.append(Check("OK", "Prose docs RAG index", "data/docs.lance exists"))
+    elif populated_folders:
+        checks.append(
+            Check(
+                "WARN",
+                "Prose docs RAG index",
+                "missing; build with "
+                "`uv run --extra ingestion python ingestion/ingest_docs.py`",
+            )
+        )
+    else:
+        checks.append(
+            Check(
+                "WARN",
+                "Prose docs RAG index",
+                "missing and no corpus to build from yet; fetch sources first "
+                "(see Prose corpus sources above). Prose RAG is optional — "
+                "exact API lookup needs only data/specs.sqlite",
+            )
+        )
     return checks
 
 
