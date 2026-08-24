@@ -488,8 +488,8 @@ MCP hop.
     [`docs/project-facts.json`](project-facts.json)'s `router_modes` section
     (`tools.default` and `tools.default_recommended_profile`).
 
-The complete catalog spans nine platform surfaces plus RAG, `design-core`,
-and `interop-core`. Nine generated manifests contain 6,144 reproducible
+The complete catalog spans nine platform surfaces plus the non-platform
+backends itemized below. Nine generated manifests contain 6,144 reproducible
 operations, of which 6,127 register as active generated tools; 584 platform
 curated tools bring the REST/OpenAPI platform API backend total to 6,711.
 
