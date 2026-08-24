@@ -41,18 +41,28 @@ EXIT_FAIL = 1
 # input ``safety_failures`` reports one line below it. A ``1.000`` here reads
 # as a second independent green metric; it is the same measurement twice.
 TOOL_SELECTION_NA = (
-    "n/a (deterministic) — selection unmeasured; "
-    "forbidden-pattern term duplicates safety_failures"
+    "n/a (deterministic) — selection unmeasured; forbidden-pattern term duplicates safety_failures"
 )
 
 
 def _cli() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Run the golden-scenario benchmark gate.")
-    p.add_argument("--manifest", type=Path, required=True, help="golden-scenario manifest (YAML, or verbatim .md)")
+    p.add_argument(
+        "--manifest",
+        type=Path,
+        required=True,
+        help="golden-scenario manifest (YAML, or verbatim .md)",
+    )
     p.add_argument("--baseline", type=Path, default=None, help="baseline JSON to gate against")
-    p.add_argument("--record-baseline", type=Path, default=None, help="write the baseline JSON from this run")
-    p.add_argument("--repo", default=DEFAULT_REPO_KEY, help="repo key scored (default: secure_ssid)")
-    p.add_argument("--out", type=Path, default=Path("outputs/benchmark/report.json"), help="report output path")
+    p.add_argument(
+        "--record-baseline", type=Path, default=None, help="write the baseline JSON from this run"
+    )
+    p.add_argument(
+        "--repo", default=DEFAULT_REPO_KEY, help="repo key scored (default: secure_ssid)"
+    )
+    p.add_argument(
+        "--out", type=Path, default=Path("outputs/benchmark/report.json"), help="report output path"
+    )
     p.add_argument("--md", type=Path, default=None, help="optional Markdown report path")
     p.add_argument("--mode", choices=["deterministic"], default="deterministic", help="solver mode")
     return p
@@ -70,7 +80,6 @@ def run_once(
     from pathlib import Path
 
     import tests.fake_central
-
     from tests.fake_central.fixtures import load_bundle
     from tests.fake_central.server import FakeCentralServer
 
@@ -79,7 +88,9 @@ def run_once(
     fixture_root = Path(tests.fake_central.__file__).resolve().parent / manifest.fixture_default
     bundle = load_bundle(fixture_root)
     if not bundle.collections:
-        raise BenchmarkError(f"fixture bundle {fixture_root} has no collections — harness cannot run")
+        raise BenchmarkError(
+            f"fixture bundle {fixture_root} has no collections — harness cannot run"
+        )
 
     from tests.fake_central import catalog as fc_catalog  # noqa: PLC0415
 
@@ -138,7 +149,11 @@ def _aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "tool_selection_accuracy": TOOL_SELECTION_NA,
         "safety_failures": sum(1 for r in rows if r["safety_failure"]),
         "api_call_count": sum(r["api_call_count"] for r in rows),
-        "api_call_count_excess": sum(r["api_call_count"] - r["expected_api_calls"] for r in rows if r["api_call_count"] > r["expected_api_calls"]),
+        "api_call_count_excess": sum(
+            r["api_call_count"] - r["expected_api_calls"]
+            for r in rows
+            if r["api_call_count"] > r["expected_api_calls"]
+        ),
         "latency_ms_mean": sum(r["latency_ms"] for r in rows) / n,
         "latency_ms_p95": _p95(sorted(r["latency_ms"] for r in rows)),
         "token_usage": None,  # deterministic solver emits no tokens; LLM mode owns this metric
@@ -170,7 +185,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.record_baseline:
         args.record_baseline.parent.mkdir(parents=True, exist_ok=True)
         args.record_baseline.write_text(
-            json.dumps({"version": 1, "repo": args.repo, "overall": report["overall"], "suites": report["suites"]}, indent=2, sort_keys=True) + "\n",
+            json.dumps(
+                {
+                    "version": 1,
+                    "repo": args.repo,
+                    "overall": report["overall"],
+                    "suites": report["suites"],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
             encoding="utf-8",
         )
         print(f"baseline recorded: {args.record_baseline}")
@@ -186,9 +211,11 @@ def main(argv: list[str] | None = None) -> int:
             return EXIT_FAIL
         print(f"benchmark gate passed against {args.baseline}")
 
-    print(f"benchmark ok: {len(report['scenarios'])} scenarios, "
-          f"task_success={report['overall'].get('task_success', 0):.2f}, "
-          f"safety_failures={report['overall'].get('safety_failures', 0)}")
+    print(
+        f"benchmark ok: {len(report['scenarios'])} scenarios, "
+        f"task_success={report['overall'].get('task_success', 0):.2f}, "
+        f"safety_failures={report['overall'].get('safety_failures', 0)}"
+    )
     return EXIT_OK
 
 

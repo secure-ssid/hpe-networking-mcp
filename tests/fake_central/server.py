@@ -64,7 +64,7 @@ class _Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
     @property
-    def fake(self) -> "FakeCentralServer":
+    def fake(self) -> FakeCentralServer:
         return self.server.fake  # type: ignore[attr-defined]
 
     def _body(self) -> dict[str, Any]:
@@ -76,7 +76,9 @@ class _Handler(BaseHTTPRequestHandler):
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             raise FakeApiError(400, "BAD_REQUEST", "request body is not valid JSON") from exc
 
-    def _respond(self, status: int, payload: Any, extra_headers: dict[str, str] | None = None) -> None:
+    def _respond(
+        self, status: int, payload: Any, extra_headers: dict[str, str] | None = None
+    ) -> None:
         data = json.dumps(payload, separators=(",", ":"), default=_json_default).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -87,7 +89,9 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
-    def _envelope(self, status: int, code: str, message: str, details: Any = None) -> dict[str, Any]:
+    def _envelope(
+        self, status: int, code: str, message: str, details: Any = None
+    ) -> dict[str, Any]:
         return {
             "code": code,
             "message": message,
@@ -143,7 +147,9 @@ class _Handler(BaseHTTPRequestHandler):
                 self._respond(404, payload)
                 return
             params = self._path_params(route, path)
-            payload, status, extra = self.fake.handle(route, params, self._query(query), self._body())
+            payload, status, extra = self.fake.handle(
+                route, params, self._query(query), self._body()
+            )
             self._record(route, status, payload)
             self._respond(status, payload, extra)
         except FakeApiError as exc:
@@ -162,7 +168,7 @@ class _Handler(BaseHTTPRequestHandler):
         parts = [p for p in route.pattern.split("/") if p]
         actual = [p for p in path.split("/") if p]
         params: dict[str, str] = {}
-        for template, value in zip(parts, actual):
+        for template, value in zip(parts, actual, strict=True):
             if template.startswith("{") and template.endswith("}"):
                 params[template[1:-1]] = value
         return params
@@ -231,11 +237,13 @@ class FakeCentralServer:
         assert self._server is not None, "server not started"
         return f"http://{self.host}:{self._server.server_port}"
 
-    def start(self) -> "FakeCentralServer":
+    def start(self) -> FakeCentralServer:
         server = ThreadingHTTPServer((self.host, self.port), _Handler)
         server.fake = self  # type: ignore[attr-defined]
         self._server = server
-        self._thread = threading.Thread(target=server.serve_forever, daemon=True, name="fake-central")
+        self._thread = threading.Thread(
+            target=server.serve_forever, daemon=True, name="fake-central"
+        )
         self._thread.start()
         return self
 
@@ -248,7 +256,7 @@ class FakeCentralServer:
             self._thread.join(timeout=5)
             self._thread = None
 
-    def __enter__(self) -> "FakeCentralServer":
+    def __enter__(self) -> FakeCentralServer:
         return self.start()
 
     def __exit__(self, *exc: Any) -> None:
@@ -284,7 +292,13 @@ class FakeCentralServer:
         }
 
     def _key(self, params: dict[str, str]) -> str:
-        return params.get("serial") or params.get("mac") or params.get("ssid") or params.get("id") or ""
+        return (
+            params.get("serial")
+            or params.get("mac")
+            or params.get("ssid")
+            or params.get("id")
+            or ""
+        )
 
     @staticmethod
     def _id_matches(item: Any, key: str) -> bool:
@@ -341,8 +355,8 @@ class FakeCentralServer:
         try:
             limit = int(query.get("limit", DEFAULT_PAGE_SIZE))
             offset = int(query.get("offset", 0))
-        except ValueError:
-            raise FakeApiError(400, "BAD_REQUEST", "limit/offset must be integers")
+        except ValueError as exc:
+            raise FakeApiError(400, "BAD_REQUEST", "limit/offset must be integers") from exc
         if limit < 0 or offset < 0:
             raise FakeApiError(400, "BAD_REQUEST", "limit/offset must be non-negative")
         if limit > MAX_PAGE_SIZE:
@@ -355,7 +369,7 @@ class FakeCentralServer:
             next_query = dict(query)
             next_query["offset"] = str(offset + limit)
             next_query["limit"] = str(limit)
-            links.append(f"<{route.pattern}?{urlencode(next_query)}>; rel=\"next\"")
+            links.append(f'<{route.pattern}?{urlencode(next_query)}>; rel="next"')
         return result, 200, {"Link": ", ".join(links)} if links else {}
 
     # --- rate limiting ---

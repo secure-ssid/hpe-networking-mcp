@@ -49,17 +49,28 @@ def load_baselines(path: str | Path) -> Baselines:
     suites = raw.get("suites", {})
     if not isinstance(overall, dict) or not isinstance(suites, dict):
         raise BaselineError(f"baseline {p}: 'overall' and 'suites' must be objects")
-    return Baselines(version=raw["version"], repo=str(raw.get("repo", "")), overall=overall, suites=suites)
+    return Baselines(
+        version=raw["version"], repo=str(raw.get("repo", "")), overall=overall, suites=suites
+    )
 
 
-def compare_run(report: dict[str, Any], baseline: Baselines, api_call_allowance: float | None = None, task_success_allowance: float | None = None) -> list[str]:
+def compare_run(
+    report: dict[str, Any],
+    baseline: Baselines,
+    api_call_allowance: float | None = None,
+    task_success_allowance: float | None = None,
+) -> list[str]:
     """Return a list of human-readable gate failures (empty = pass)."""
     import os
 
     if api_call_allowance is None:
-        api_call_allowance = float(os.environ.get("BENCH_API_CALL_ALLOWANCE", DEFAULT_API_CALL_ALLOWANCE))
+        api_call_allowance = float(
+            os.environ.get("BENCH_API_CALL_ALLOWANCE", DEFAULT_API_CALL_ALLOWANCE)
+        )
     if task_success_allowance is None:
-        task_success_allowance = float(os.environ.get("BENCH_TASK_SUCCESS_ALLOWANCE", DEFAULT_TASK_SUCCESS_ALLOWANCE))
+        task_success_allowance = float(
+            os.environ.get("BENCH_TASK_SUCCESS_ALLOWANCE", DEFAULT_TASK_SUCCESS_ALLOWANCE)
+        )
 
     failures: list[str] = []
     overall = report.get("overall", {})
@@ -75,7 +86,10 @@ def compare_run(report: dict[str, Any], baseline: Baselines, api_call_allowance:
             ("overall", overall.get("task_success", 0.0), base_overall["task_success"]),
         ):
             if value < base - task_success_allowance:
-                failures.append(f"task_success {label} {value:.3f} < baseline {base:.3f} (allowance {task_success_allowance})")
+                failures.append(
+                    f"task_success {label} {value:.3f} < baseline {base:.3f} "
+                    f"(allowance {task_success_allowance})"
+                )
     report_suites = report.get("suites", {})
     for suite in baseline.suites:
         if suite not in report_suites:
@@ -115,7 +129,8 @@ def compare_run(report: dict[str, Any], baseline: Baselines, api_call_allowance:
     cap = base_calls * (1 + api_call_allowance)
     if run_calls > cap:
         failures.append(
-            f"api_call_count {run_calls} > baseline {base_calls} + {api_call_allowance:.0%} allowance (cap {cap:.0f})"
+            f"api_call_count {run_calls} > baseline {base_calls} "
+            f"+ {api_call_allowance:.0%} allowance (cap {cap:.0f})"
         )
 
     return failures
