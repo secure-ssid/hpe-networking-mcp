@@ -14,6 +14,8 @@ from typing import Any
 
 from mcp.shared.exceptions import MCPError
 
+from hpe_networking_mcp.mcp_servers.shared import redact_tool_error_text
+
 _BLOCKED_STATUS_HTTP = {
     "blocked": 403,
     "cancelled": 409,
@@ -54,6 +56,18 @@ def _status_code(value: Any) -> int | None:
 # is recoverable. Anchoring on the httpx prefix keeps unrelated digits in a
 # message (counts, IDs, ports) from being mistaken for a status.
 _HTTPX_STATUS_RE = re.compile(r"\b(?:Client|Server) error '(\d{3})\b")
+
+
+def _redact_envelope_error(text: str) -> str:
+    """Mask credentials in a client-visible standalone-backend error string.
+
+    ``on_error`` stringifies a raised backend exception for the first (and
+    only) time here, so any credential in the message must be masked before
+    the error dict reaches the wire. Delegates to the shared
+    ``shared.redact_tool_error_text`` helper (single credential-shape
+    definition repo-wide, HX-1/HX-3 consolidation).
+    """
+    return redact_tool_error_text(text)
 
 
 def _status_from_message(message: str | None) -> int | None:
@@ -200,6 +214,9 @@ class ResponseEnvelopeMiddleware:
         """
         if isinstance(exc, (MCPError, asyncio.CancelledError, KeyboardInterrupt, SystemExit)):
             return None
-        return self.after_call(
-            name, arguments, {"error": f"{type(exc).__name__}: {exc}"}
-        )
+        # Standalone backends have no router-side dispatch helper, so a raised
+        # backend exception is stringified here for the first (and only) time.
+        # Mask any credential in the message before the error dict reaches the
+        # wire -- single application point, reusing the shared walker (HX-3).
+        message = _redact_envelope_error(f"{type(exc).__name__}: {exc}")
+        return self.after_call(name, arguments, {"error": message})

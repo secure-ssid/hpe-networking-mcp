@@ -28,6 +28,7 @@ render without browser-side JavaScript.
 | [example-prompts.md](example-prompts.md) | Complete scenarios with calls, expected shapes, and safety labels |
 | [optional-products.md](optional-products.md) | Optional product matrix, wizard behavior, env vars, and safety surface |
 | [troubleshooting.md](troubleshooting.md) | Outcome-driven setup, authentication, transport, catalog, and RAG fixes |
+| [known-limitations.md](known-limitations.md) | Current known limitations, their impact, and planned remediation |
 | [../examples/README.md](../examples/README.md) | Tested, non-secret example configs: minimal/full stdio, local/bearer HTTP, Copilot CLI, and prompt/runbook examples |
 | [../MIGRATION.md](../MIGRATION.md) | Local migration path from the legacy `secure-ssid/centralmcp` repository |
 
@@ -55,6 +56,9 @@ render without browser-side JavaScript.
 | [release-artifact-automation.md](release-artifact-automation.md) | Validation matrix, release bundle packaging, and restore/smoke-test tooling |
 | [aos8-migration-contract-matrix.md](aos8-migration-contract-matrix.md) | Authoritative AOS8-to-Classic/New Central migration contract matrix gating 0.5.0 implementation |
 | [aos8-live-dryrun-evaluation.md](aos8-live-dryrun-evaluation.md) | Read-only live/fixture-backed evaluation record of the AOS8 migration pipeline against the contract matrix |
+| [workflow-authoring-standard.md](workflow-authoring-standard.md) | Mandatory docstring, coercion, pagination, bounded-output, write-gate, and test standard for new curated workflows |
+| [benchmark-methodology.md](benchmark-methodology.md) | Credential-free benchmark scenario format, metric definitions, CI regression gate, and head-to-head publication contract |
+| [observability.md](observability.md) | Health/readiness endpoints, the two-flag metrics opt-in, snapshot schema, and the ratified Prometheus exposition design |
 
 ### Releases and archive
 

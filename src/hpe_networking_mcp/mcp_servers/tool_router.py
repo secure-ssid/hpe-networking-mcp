@@ -79,6 +79,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
     platform_write_blocked,
     platform_write_gate_state,
     platform_writes_allowed,
+    redact_tool_error_text,
     reject_unknown_env_choices,
     resolve_rag_backend,
     ungated_backend_write_blocked,
@@ -1640,6 +1641,19 @@ async def _await_dispatch_rate_gate() -> None:
 # ── invoke_read_tool / invoke_tool ───────────────────────────────────────────
 
 
+def _redact_dispatch_error(text: str) -> str:
+    """Mask credentials in a client-visible backend exception string.
+
+    The installed MCP SDK reframes a raised backend tool call as
+    ``ToolError("Error executing tool <name>: <message>")``, so a bearer
+    credential embedded mid-string escapes ``shared.redact_sensitive``'s
+    prefix-only value rule. Delegates to the shared
+    ``shared.redact_tool_error_text`` helper (single credential-shape
+    definition repo-wide, HX-1/HX-3 consolidation).
+    """
+    return redact_tool_error_text(text)
+
+
 def _unknown_tool_error(name: str) -> dict[str, Any]:
     """Structured 'tool not found' response shared by invoke_tool/invoke_read_tool.
 
@@ -1734,7 +1748,11 @@ async def _dispatch_tool(
     try:
         result = await _sdk_compat.call_tool_raw(backend, name, args, context=ctx)
     except Exception as e:
-        result = {"error": f"{type(e).__name__}: {e}"}
+        # SDK-framed exception text commonly embeds the failing request URL
+        # (and, on some platforms, credentials). Redact it before the error
+        # dict reaches the response envelope / tokenizer chain -- the raised
+        # path bypasses the middleware on_error hook (HX-1).
+        result = {"error": f"{type(e).__name__}: {_redact_dispatch_error(str(e))}"}
     # Cursors are only ever eligible for capability "read" tools; this is a
     # redundant, defense-in-depth check -- enable_cursor is only ever passed
     # True by invoke_read_tool, which already refuses non-read-only tools.
