@@ -103,13 +103,13 @@ never arguments, results, identifiers, or exception messages.
 The JSON schema is **explicitly unstable** — it is not part of any
 compatibility promise.
 
-### Prometheus exposition (ratified design, implementation pending)
+### Prometheus exposition
 
 Ratified 2026-08-24 (owner + engineering): `/metrics` serves Prometheus
 text exposition rendered from the same registry, with the JSON snapshot
 retained via `?format=json` (or `Accept: application/json`). The renderer
-PR (#45) is pending merge at time of writing; the names below are verified
-against its diff and are the design contract.
+shipped in #45 (merged 2026-08-24, `1cbe93f`); the names below match the
+merged renderer exactly and are the design contract.
 
 Mapping from the registry (labels verified against the renderer):
 
@@ -137,9 +137,9 @@ accumulates left to right, and the over-max counter folds into
 `le="+Inf"` (so `le="+Inf"` always equals `latency_count`). The
 implementation test asserts `sum(le counts) == latency_count`.
 
-Metric names and labels join the 1.0 stability surface only when the
-renderer ships; until then both the names above and the JSON schema are
-unstable.
+With the renderer shipped, the names above are now eligible to join the 1.0
+stability surface under the stabilization cadence; until that decision lands,
+both the names and the JSON schema remain unstable.
 
 Full OTel SDK adoption (traces, OTLP push) is deliberately deferred until
 distributed tracing is scoped, post-1.0. OTLP-only stacks are covered in
