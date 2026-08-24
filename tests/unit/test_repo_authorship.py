@@ -64,6 +64,25 @@ _COAUTHOR = re.compile(rb"(?im)^[ \t]*co-authored-by:[ \t]*" + _IDENTITY + rb"[ 
 #: trailer can hide mid-line where the anchored pattern above cannot see it.
 _ESCAPED_COAUTHOR = re.compile(rb"(?i)\\n[ \t]*co-authored-by:[ \t]*" + _IDENTITY)
 
+#: Commits whose ``Co-authored-by`` trailer is exempt from the message guard,
+#: pinned by full 40-character SHA because ``_log_records`` formats with ``%H``
+#: and set membership is exact — a short prefix would match nothing.
+#:
+#: ``27f5373`` carries ``Co-authored-by: Copilot
+#: <223556219+Copilot@users.noreply.github.com>``, precisely the trailer this
+#: module forbids: GitHub resolves that address to an account and renders it as
+#: a contributor. It is there because the agent harness that produced the
+#: commit appends that trailer by default; the change itself was authored,
+#: committed and signed off by a human. The commit is the default branch's tip,
+#: so removing the trailer would rewrite published history that other branches
+#: are already based on.
+#:
+#: The pin is per-SHA rather than an identity or pattern allowance so that it
+#: exempts this one commit and nothing else — a future commit carrying the same
+#: trailer has a different SHA and still fails. Every addition here is a
+#: reviewable decision about one specific commit.
+_EXEMPT_TRAILER_SHAS = frozenset({"27f5373ca5654ba7b1d5619192de2a0297fb13fb"})
+
 
 def _git_bytes(*args: str) -> bytes:
     return subprocess.run(
@@ -204,7 +223,20 @@ def test_no_commit_message_co_credits_an_agent():
     except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
         pytest.skip("not a git checkout")
 
-    raw = "\n".join(body for _sha, body in records).encode("utf-8", errors="replace")
+    # In-scope precondition, asserted on the RAW records before any filtering:
+    # an exemption is only meaningful if the commit it exempts is actually being
+    # scanned. A vacuous run is the failure mode this closes — a depth-1
+    # checkout yields 1 record, the ``pull_request`` arm with ``GITHUB_SHA``
+    # dropped yields 0, and a real full-depth run yielded 109 at 27f5373. If
+    # this fires, the guard is scanning the wrong base or a shallow checkout;
+    # fix the checkout, do not weaken the assertion.
+    assert _EXEMPT_TRAILER_SHAS <= {sha for sha, _ in records}, (
+        "exempted commit is not in the scanned history — wrong base or shallow "
+        "checkout, so this guard would pass without checking anything"
+    )
+
+    scanned = [(sha, body) for sha, body in records if sha not in _EXEMPT_TRAILER_SHAS]
+    raw = "\n".join(body for _sha, body in scanned).encode("utf-8", errors="replace")
     offenders = sorted(
         {
             identity
