@@ -30,6 +30,18 @@ time. This file is the compact index into those pages. See
 
 ### Changed
 
+- **Fresh-install RAG remedies are now state-aware.** `hpe-mcp-doctor` reports
+  the structured API index (`data/specs.sqlite`) and the prose index
+  (`data/docs.lance`) separately — the spec index's remedy is the offline
+  `python scripts/build_spec_index.py` (or `git checkout -- vendor/openapi`
+  first when the committed corpus itself is gone), and the prose index's
+  remedy names the fetch step (`python scripts/refresh_rag_sources.py
+  --refresh-sources`) when `ingestion/sources/` holds no scraped corpus yet,
+  instead of always pointing at `ingestion/ingest_docs.py`, which ingests
+  nothing on a fresh clone. The same fetch-vs-build split now backs the
+  `search_docs`/`ask_docs` missing-index error (which also gained the
+  structured `degraded`/`hint` shape `lookup_api` already used),
+  `corpus_provenance`, and the `ingest_docs.py` required-sources guard.
 - **Raised tool exceptions now return the response-envelope shape.** A tool
   that raises produces the same `{ok: false, status, data, message, tool,
   platform}` payload a returned error dict gets — on standalone backends and

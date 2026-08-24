@@ -573,3 +573,39 @@ def test_lookup_hardware_specs_unknown_model_lists_available_models():
     assert out["ok"] is False
     assert "cx6300" in out["available_models"]
     assert "ex4400" in out["available_models"]
+
+
+def _raise_missing_index(*args, **kwargs):
+    raise FileNotFoundError("LanceDB docs table missing under /nonexistent/data")
+
+
+def test_search_docs_missing_index_is_degraded_with_fetch_hint(
+    monkeypatch, tmp_path
+):
+    """A missing prose index consulted nothing -- it must render degraded with
+    a state-aware remedy, like the spec index, never as a bare error string or
+    an empty result a model could read as "no such documentation"."""
+    monkeypatch.setattr(rag, "PROSE_SOURCES_DIR", tmp_path / "no-sources")
+    monkeypatch.setattr(rag.lance_client, "connect", _raise_missing_index)
+
+    out = rag.search_docs("query no cache can hold 4f3c2b1a")
+
+    assert out[0]["degraded"] is True
+    assert "docs table missing" in out[0]["error"]
+    assert "refresh_rag_sources.py --refresh-sources" in out[0]["hint"]
+
+
+def test_search_docs_missing_index_hint_is_the_build_once_sources_exist(
+    monkeypatch, tmp_path
+):
+    source = tmp_path / "sources" / "tech_docs"
+    source.mkdir(parents=True)
+    (source / "guide.md").write_text("# Guide")
+    monkeypatch.setattr(rag, "PROSE_SOURCES_DIR", tmp_path / "sources")
+    monkeypatch.setattr(rag.lance_client, "connect", _raise_missing_index)
+
+    out = rag.search_docs("another uncached query 9e1d7c55")
+
+    assert out[0]["degraded"] is True
+    assert "ingest_docs.py" in out[0]["hint"]
+    assert "refresh_rag_sources.py" not in out[0]["hint"]

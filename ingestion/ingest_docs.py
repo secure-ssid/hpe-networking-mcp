@@ -1104,8 +1104,10 @@ def main():
         if missing:
             raise SystemExit(
                 "FAIL: required source folder(s) missing from ingestion/sources/ "
-                f"-- refusing to replace the docs index: {missing}. Refresh "
-                "them first, or pass --incremental to preserve existing rows."
+                f"-- refusing to replace the docs index: {missing}. Fetch them "
+                "with `python scripts/refresh_rag_sources.py --refresh-sources` "
+                "(see docs/getting-started.md), or pass --incremental to "
+                "preserve existing rows."
             )
 
     sources = {args.source: SOURCE_META.get(args.source, "unknown")} if args.source else SOURCE_META
@@ -1153,8 +1155,10 @@ def main():
                 raise SystemExit(
                     "FAIL: required source folder(s) missing from "
                     "ingestion/sources/ -- refusing the full rebuild fallback "
-                    f"after incremental migration: {missing}. Refresh them "
-                    "first, or restore a compatible existing index."
+                    f"after incremental migration: {missing}. Fetch them with "
+                    "`python scripts/refresh_rag_sources.py --refresh-sources` "
+                    "(see docs/getting-started.md), or restore a compatible "
+                    "existing index."
                 )
             upload_lancedb(all_records, ingested_sources, parallel=args.parallel)
         if openapi_specs_present:
