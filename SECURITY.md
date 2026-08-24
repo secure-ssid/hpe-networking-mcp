@@ -14,9 +14,9 @@ may use that flow instead:
 If that flow is not available to you, use the email address above rather than a
 public issue.
 
-If neither is available to you, open an issue at
-<https://github.com/secure-ssid/hpe-networking-mcp/issues> with only a short,
-non-sensitive summary and ask for a private reporting channel.
+If the email bounces or you cannot reach us privately by either route, open an
+issue at <https://github.com/secure-ssid/hpe-networking-mcp/issues> with only a
+short, non-sensitive summary and ask for a private reporting channel.
 
 ### Response window
 
