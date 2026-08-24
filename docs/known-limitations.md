@@ -58,8 +58,10 @@ latency aggregates, outcome counts) exposed as JSON over HTTP alongside
 with existing observability stacks requires scraping the custom format.
 Metrics and health endpoints exist only on the streamable-HTTP transport;
 stdio exposes neither.
-*Remediation:* OpenTelemetry metrics and documented health/readiness
-behavior (plan item 6).
+*Remediation:* Prometheus text exposition on `/metrics` rendered from the
+same registry (ratified design, see [observability.md](observability.md);
+OTel Collector covers OTLP-only stacks) plus documented health/readiness
+behavior (plan item 6). Full OTel SDK deferred until tracing is scoped.
 
 ## No automated upstream spec-drift sync
 

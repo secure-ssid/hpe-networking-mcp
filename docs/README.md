@@ -58,6 +58,7 @@ render without browser-side JavaScript.
 | [aos8-live-dryrun-evaluation.md](aos8-live-dryrun-evaluation.md) | Read-only live/fixture-backed evaluation record of the AOS8 migration pipeline against the contract matrix |
 | [workflow-authoring-standard.md](workflow-authoring-standard.md) | Mandatory docstring, coercion, pagination, bounded-output, write-gate, and test standard for new curated workflows |
 | [benchmark-methodology.md](benchmark-methodology.md) | Credential-free benchmark scenario format, metric definitions, CI regression gate, and head-to-head publication contract |
+| [observability.md](observability.md) | Health/readiness endpoints, the two-flag metrics opt-in, snapshot schema, and the ratified Prometheus exposition design |
 
 ### Releases and archive
 
