@@ -40,7 +40,7 @@ file.
 | Lifecycle records | 345 |
 | Generated operation manifests | 6,144 |
 | Platform API backend catalog | 6,711 |
-| Complete backend catalog (+ Central Streaming, `site-health`, local GLP preflight, `design-core`, `interop-core`) | 6,728 |
+| Complete backend catalog (platform APIs plus the non-platform backends itemized in [`docs/project-facts.json`](project-facts.json)) | 6,728 |
 | Registered router tool index rows | 6,728 |
 
 The prose index covers 30 of the 31 declared sources: `openapi_specs` is
