@@ -66,15 +66,40 @@ def compare_run(report: dict[str, Any], baseline: Baselines, api_call_allowance:
     base_overall = baseline.overall
 
     # task_success regression (overall + per-suite)
-    for label, value, base in (
-        ("overall", overall.get("task_success", 0.0), base_overall.get("task_success", 0.0)),
-    ):
-        if value < base - task_success_allowance:
-            failures.append(f"task_success {label} {value:.3f} < baseline {base:.3f} (allowance {task_success_allowance})")
-    for suite, metrics in report.get("suites", {}).items():
-        base_suite = baseline.suites.get(suite, {})
+    if "task_success" not in base_overall:
+        # Defaulting to 0.0 would ungate the overall gate entirely: every
+        # task_success clears 0.0 - allowance. Fail instead.
+        failures.append("baseline 'overall' has no task_success (re-record with --record-baseline)")
+    else:
+        for label, value, base in (
+            ("overall", overall.get("task_success", 0.0), base_overall["task_success"]),
+        ):
+            if value < base - task_success_allowance:
+                failures.append(f"task_success {label} {value:.3f} < baseline {base:.3f} (allowance {task_success_allowance})")
+    report_suites = report.get("suites", {})
+    for suite in baseline.suites:
+        if suite not in report_suites:
+            # A suite that vanishes from the run is never compared, and losing a
+            # hard suite can even raise overall task_success. Fail instead.
+            failures.append(f"suite '{suite}' is in the baseline but absent from this run")
+    for suite, metrics in report_suites.items():
+        if suite not in baseline.suites:
+            # Defaulting an absent suite to base 0.0 would silently ungate it:
+            # every task_success clears 0.0 - allowance. Fail instead.
+            failures.append(
+                f"suite '{suite}' is not in the baseline (re-record with --record-baseline)"
+            )
+            continue
+        base_suite = baseline.suites[suite]
+        if "task_success" not in base_suite:
+            # Same defaulting hazard one level down: a baseline suite entry with
+            # no task_success would compare against 0.0 and never fail.
+            failures.append(
+                f"baseline suite '{suite}' has no task_success (re-record with --record-baseline)"
+            )
+            continue
         value = metrics.get("task_success", 0.0)
-        base = base_suite.get("task_success", 0.0)
+        base = base_suite["task_success"]
         if value < base - task_success_allowance:
             failures.append(f"task_success suite '{suite}' {value:.3f} < baseline {base:.3f}")
 

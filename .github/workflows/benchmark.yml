@@ -44,9 +44,6 @@ jobs:
           --repo secure_ssid
           --out outputs/benchmark/report.json
           --md outputs/benchmark/report.md
-        env:
-          BENCH_TASK_SUCCESS_ALLOWANCE: ${{ vars.BENCH_TASK_SUCCESS_ALLOWANCE }}
-          BENCH_API_CALL_ALLOWANCE: ${{ vars.BENCH_API_CALL_ALLOWANCE }}
 
       - name: Upload benchmark reports
         if: always()
