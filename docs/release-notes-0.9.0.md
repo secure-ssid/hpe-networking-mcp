@@ -6,7 +6,9 @@ parent: "Releases"
 
 # hpe-networking-mcp 0.9.0
 
-Released 2026-08-16.
+Released 2026-08-16; later archived before publication (tag
+`archive/release-v0.9.0`). These notes are kept for history — the changes
+roll forward into the next published release after 0.8.0.
 
 Version 0.9.0 is a feature release built entirely on the 0.8.0 foundation.
 It expands the RAG corpus to 29 sources (including full Juniper hardware and
