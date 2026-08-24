@@ -6,7 +6,7 @@ Do not open a public issue with exploitable details, credentials, tokens, tenant
 IDs, customer data, or private network information.
 
 Report privately by email to **<security@securessid.com>**. This is the
-channel we can always offer and the one to prefer.
+channel to prefer.
 
 If GitHub's private vulnerability reporting is enabled for this repository, you
 may use that flow instead:
