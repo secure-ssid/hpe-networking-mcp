@@ -16,7 +16,7 @@
 #     for Docker's port-publish proxy to reach the process at all; the
 #     loopback-only guarantee comes from the host-side "127.0.0.1:" bind
 #     above, not from what the app binds to internally. MCP_ALLOWED_HOSTS /
-#     MCP_ALLOWED_ORIGINS are set explicitly (non-wildcard) because the
+#     MCP_ALLOWED_ORIGINS are set explicitly (exact port wildcards) because the
 #     router refuses to start on a non-loopback MCP_HOST otherwise -- see
 #     UnsafeHttpBindingError in src/hpe_networking_mcp/mcp_servers/shared.py.
 #   * Credentials are never passed as plaintext `environment:` values. See

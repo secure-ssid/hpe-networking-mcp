@@ -33,6 +33,40 @@ network fetch expectations from local development should still hold.
 | [`../secrets/README.md`](../secrets/README.md) | How to provision `config/credentials.yaml` and the bearer token as Docker secrets |
 | [`../secrets/mcp_http_bearer_token.example`](../secrets/mcp_http_bearer_token.example) | Placeholder bearer-token secret template |
 
+## Run the published image
+
+No checkout is needed for the container path: CI publishes the router to
+GHCR scan-gated. Every build is pushed under a `sha-<short-sha>` tag (first
+seven characters of the commit SHA) and that exact digest is promoted to
+`latest` (builds from `main`) or the matching semver tag(s) (`v*` release
+builds) only after the Trivy policy passes — so `latest` always points at
+scan-approved bytes, and `sha-<short-sha>` pins one build exactly:
+
+```bash
+docker run -d --name hpe-networking-mcp \
+  -p 127.0.0.1:8010:8010 \
+  -e MCP_HOST=0.0.0.0 \
+  -e MCP_ALLOWED_HOSTS='127.0.0.1:*,localhost:*' \
+  -e MCP_ALLOWED_ORIGINS='http://127.0.0.1:*,http://localhost:*' \
+  ghcr.io/secure-ssid/hpe-networking-mcp:latest
+```
+
+Once startup finishes (seconds), `curl http://127.0.0.1:8010/livez` answers
+`{"status":"ok"}`. The loopback-only publish keeps the server off your LAN;
+the `host:*` allowlist form is required whenever `MCP_HOST` is not loopback
+(the guard behind that rule is described under "Loopback-only exposure by
+default" below).
+
+The default image ships the baked spec index (`/app/data/specs.sqlite`), so
+credential-free exact-API lookup (`lookup_api`) works with no provisioning.
+It does **no** prose retrieval by any backend: serving a real docs corpus
+takes the `INSTALL_EXTRAS=ingestion` rebuild plus corpus mounts documented
+in "Building a RAG-capable image" below.
+
+The Compose quick start that follows instead builds from a checkout and is
+the path to use when you want credentials supplied as file secrets and the
+Redis/Ollama services managed alongside the router.
+
 ## Quick start
 
 ```bash
@@ -67,8 +101,10 @@ what lets `up -d mcp-router` bring up the router on its own.
 
 The router's own code refuses to bind beyond loopback (`MCP_HOST` other than
 `127.0.0.1`/`localhost`/`::1`) unless `MCP_ALLOWED_HOSTS` and
-`MCP_ALLOWED_ORIGINS` are **both** set explicitly, with no wildcard entries
-— see `UnsafeHttpBindingError` in
+`MCP_ALLOWED_ORIGINS` are **both** set explicitly, with every wildcard entry
+limited to the SDK-supported `<host>:*` port-wildcard form — a bare `*` or a
+subdomain glob silently matches nothing and is refused — see
+`UnsafeHttpBindingError` in
 `src/hpe_networking_mcp/mcp_servers/shared.py`. That check runs inside the
 container exactly as it does locally; this packaging doesn't touch it.
 
@@ -88,8 +124,8 @@ This is the same pattern `docker-compose.yml` already uses for `redis` and
 `ollama` — the container-internal bind address and the host-published
 address are two different security boundaries, and only the second one is
 what actually decides whether something outside the machine can reach the
-port. `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` are set to `127.0.0.1`/
-`localhost` (non-wildcard) so the router's own DNS-rebinding protection
+port. `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` are set to `127.0.0.1:*`/
+`localhost:*` port wildcards so the router's own DNS-rebinding protection
 still applies once `MCP_HOST=0.0.0.0` is in effect.
 
 If you need the router reachable from other machines (not just
