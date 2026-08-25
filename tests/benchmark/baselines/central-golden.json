@@ -1,0 +1,106 @@
+{
+  "overall": {
+    "api_call_count": 31,
+    "api_call_count_excess": 0,
+    "latency_ms_mean": 13.739285714285714,
+    "latency_ms_p95": 14.5,
+    "safety_failures": 0,
+    "task_success": 1.0,
+    "token_usage": null,
+    "tool_selection_accuracy": "n/a (deterministic) \u2014 selection unmeasured; forbidden-pattern term duplicates safety_failures"
+  },
+  "repo": "secure_ssid",
+  "suites": {
+    "adversarial": {
+      "api_call_count": 0,
+      "api_call_count_excess": 0,
+      "latency_ms_mean": 11.5,
+      "latency_ms_p95": 11.5,
+      "safety_failures": 0,
+      "task_success": 1.0,
+      "token_usage": null,
+      "tool_selection_accuracy": "n/a (deterministic) \u2014 selection unmeasured; forbidden-pattern term duplicates safety_failures"
+    },
+    "alerts": {
+      "api_call_count": 3,
+      "api_call_count_excess": 0,
+      "latency_ms_mean": 13.033333333333333,
+      "latency_ms_p95": 13.1,
+      "safety_failures": 0,
+      "task_success": 1.0,
+      "token_usage": null,
+      "tool_selection_accuracy": "n/a (deterministic) \u2014 selection unmeasured; forbidden-pattern term duplicates safety_failures"
+    },
+    "client-diagnosis": {
+      "api_call_count": 4,
+      "api_call_count_excess": 0,
+      "latency_ms_mean": 14.075,
+      "latency_ms_p95": 14.5,
+      "safety_failures": 0,
+      "task_success": 1.0,
+      "token_usage": null,
+      "tool_selection_accuracy": "n/a (deterministic) \u2014 selection unmeasured; forbidden-pattern term duplicates safety_failures"
+    },
+    "config-compliance": {
+      "api_call_count": 5,
+      "api_call_count_excess": 0,
+      "latency_ms_mean": 13.333333333333334,
+      "latency_ms_p95": 13.5,
+      "safety_failures": 0,
+      "task_success": 1.0,
+      "token_usage": null,
+      "tool_selection_accuracy": "n/a (deterministic) \u2014 selection unmeasured; forbidden-pattern term duplicates safety_failures"
+    },
+    "firmware": {
+      "api_call_count": 3,
+      "api_call_count_excess": 0,
+      "latency_ms_mean": 13.35,
+      "latency_ms_p95": 13.0,
+      "safety_failures": 0,
+      "task_success": 1.0,
+      "token_usage": null,
+      "tool_selection_accuracy": "n/a (deterministic) \u2014 selection unmeasured; forbidden-pattern term duplicates safety_failures"
+    },
+    "incident-response": {
+      "api_call_count": 5,
+      "api_call_count_excess": 0,
+      "latency_ms_mean": 17.125,
+      "latency_ms_p95": 13.5,
+      "safety_failures": 0,
+      "task_success": 1.0,
+      "token_usage": null,
+      "tool_selection_accuracy": "n/a (deterministic) \u2014 selection unmeasured; forbidden-pattern term duplicates safety_failures"
+    },
+    "nac": {
+      "api_call_count": 3,
+      "api_call_count_excess": 0,
+      "latency_ms_mean": 13.199999999999998,
+      "latency_ms_p95": 13.2,
+      "safety_failures": 0,
+      "task_success": 1.0,
+      "token_usage": null,
+      "tool_selection_accuracy": "n/a (deterministic) \u2014 selection unmeasured; forbidden-pattern term duplicates safety_failures"
+    },
+    "site-device-health": {
+      "api_call_count": 5,
+      "api_call_count_excess": 0,
+      "latency_ms_mean": 13.4,
+      "latency_ms_p95": 13.4,
+      "safety_failures": 0,
+      "task_success": 1.0,
+      "token_usage": null,
+      "tool_selection_accuracy": "n/a (deterministic) \u2014 selection unmeasured; forbidden-pattern term duplicates safety_failures"
+    },
+    "wlan-change": {
+      "api_call_count": 3,
+      "api_call_count_excess": 0,
+      "latency_ms_mean": 13.266666666666666,
+      "latency_ms_p95": 13.3,
+      "safety_failures": 0,
+      "task_success": 1.0,
+      "token_usage": null,
+      "tool_selection_accuracy": "n/a (deterministic) \u2014 selection unmeasured; forbidden-pattern term duplicates safety_failures"
+    }
+  },
+  "version": 1
+}
