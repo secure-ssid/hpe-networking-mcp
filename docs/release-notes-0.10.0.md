@@ -36,12 +36,23 @@ checkout with no network and no local build can answer `lookup_api`.
 - The index is **baked into the published container image** and published as a
   reproducible `spec-index-<tag>.tar.gz` release archive. The router overlay no
   longer shadows the baked index.
+- **That shipped index is roughly a fifth of its former size.** Schema identity
+  is a fingerprint that was repeated verbatim on every field row, so a
+  200-field schema stored its whole field list 200 times. Storing a 128-bit
+  `blake2b` digest of the same serialization instead — `hashlib`, never the
+  per-process-salted `hash()`, so builds stay deterministic — took
+  `data/specs.sqlite` from **243.2 MB to 45.6 MB** as measured by the change
+  that made it (`4cbdccc`), with `idx_fields_identity` alone falling 107.6 MB
+  to 3.6 MB. Nothing read the inlined value: every remaining use compares it
+  for equality. The image bake precedes that change, so the 0.10.0 image and
+  archive are built from the reduced database.
 
 ### Writes are denied by default — BREAKING
 
-`HPE_MCP_CENTRAL_WRITES` must be set to `1` (or
-`HPE_MCP_ACCESS_PROFILE=full-read-write`) to expose Central write and
-destructive tools. Previously Central alone defaulted to enabled, so
+`HPE_MCP_CENTRAL_WRITES` must be set to a truthy value (`1`, `true`, `yes` or
+`on`, case-insensitive) — or `HPE_MCP_ACCESS_PROFILE=full-read-write` — to
+expose Central write and destructive tools. Previously Central alone defaulted
+to enabled, so
 `import hpe_networking_mcp` with no configuration produced a server willing to
 dispatch `reboot_device` and `disconnect_client`.
 
@@ -111,7 +122,7 @@ raising.
 
 - **Response envelope on every backend.** A tool that raises now produces the
   same `{ok, status, data, message, tool, platform}` payload a returned error
-  dict gets — on all 16 standalone backend chains and through the router alike
+  dict gets — on every standalone backend chain and through the router alike
   — delivered as an `isError=true` result instead of bare `ToolError` text.
   Elicitation, protocol errors and cancellation still propagate untouched.
 - **Credential redaction on the raised-exception paths.** The SDK reframes a
@@ -120,13 +131,23 @@ raising.
   dispatch path and the standalone middleware `on_error` path now redact before
   the envelope is built, with the two duplicate helpers consolidated into one
   `shared.redact_tool_error_text` — exactly one such regex repo-wide. The mask
-  requires 8+ characters so ordinary 401 prose is not over-masked.
+  requires 8+ characters so ordinary 401 prose is not over-masked; a shorter
+  credential would slip past it, which is an accepted tradeoff because the
+  vault tokenizer still catches known secrets.
 - **Pooled HTTP clients are drained on shutdown and restart.**
   `aclose_pooled_clients()` had a docstring saying "call from server shutdown"
   and zero production call sites; every transport leaked pooled
   `httpx.AsyncClient` objects to GC, and an in-process restart inherited a
   registry of unclosable dead-loop clients. Every transport now runs under a
   serve-plus-finally-drain wrapper.
+- **Reads retry, writes never do.** A bounded retry on safe verbs only:
+  429/502/503/504 and transport errors retry up to twice, with exponential
+  backoff on a base capped at 8s and ±20% jitter — or, when the response
+  carries `Retry-After` (delta-seconds or HTTP-date), that hint as-is, hard
+  capped at 60s with no jitter. No write is ever retried. The guardrail is
+  structural rather than a policy flag: the helper takes no method parameter,
+  and the generic-executor dispatcher routes only a bodiless GET into it, so a
+  caller whose verb is decided at runtime cannot re-send a mutation.
 - **The token cache fails closed.** An unwritable cache directory raises with a
   remedy instead of silently falling back to the working directory, where a
   token file could leak into a checkout, archive or container layer. Point
@@ -202,6 +223,17 @@ missing prose index as the structured `{error, degraded, hint}` shape
 
 ### Lint, typing and supply-chain gates
 
+- **Strict typing runs in CI on a named, deliberately scoped set.** The
+  `Type check (strict, scoped)` job runs `uv run mypy` against the four targets
+  `[tool.mypy]` names — `mcp_servers/shared.py`, `mcp_servers/_middleware/`,
+  `pipeline/clients/specs_index.py` and `pipeline/project_facts.py` — under
+  `strict` with no baseline file, no blanket `ignore_missing_imports`, and no
+  `# type: ignore` in the covered set — with one deliberate concession,
+  `follow_imports = "silent"`, which lets types flow in from the unchecked
+  majority without reporting their errors. The rest of the tree is not
+  type-checked and the config does not pretend otherwise: measured 2026-08-21
+  across 150 modules, `--strict` reports 397 errors in 71 of them. Widening is
+  done one annotated module at a time, never by relaxing the gate.
 - **The lint gate looks at the whole tree.** The `Ruff lint` step named about
   twenty paths, so anything added after that list was written was unlinted and
   nothing said so. `ruff check .` surfaced 443 E501 plus 72 autofixable
@@ -277,7 +309,9 @@ The eval set expands to 42 questions with graded `nDCG` scoring, `graded_sources
 ## Catalog snapshot
 
 Every value below is `docs/project-facts.json` at this release, generated by
-`scripts/project_facts.py`. Locally built index counts — prose chunks,
+`scripts/project_facts.py`, except the two vendored-OpenAPI rows, which are
+summed from `vendor/openapi/MANIFEST.json` at the same commit. Locally built
+index counts — prose chunks,
 advisories, lifecycle rows — are deliberately excluded: they describe the
 machine that ran the generator, not the release.
 
@@ -331,15 +365,18 @@ Read that page as part of this upgrade. Its numbers are a point-in-time record
 of 0.9.0 and are not the current catalog; use the snapshot above for that.
 
 Between the archived 0.9.0 release commit and the 0.10.0 version bump, `main`
-also carried the vendored offline OpenAPI corpus, the image-baked spec index,
-deny-by-default Central writes, the offline/locally-built facts split and the
-ingestion-extra refactor. Those changes are described in the Highlights above
+also carried the vendored offline OpenAPI corpus, the image-baked spec index
+and its five-fold size reduction, deny-by-default Central writes, the
+offline/locally-built facts split, the ingestion-extra refactor and the
+resulting retrieval-client split in the published image. Those changes are
+described in the Highlights above
 and appear in neither the 0.9.0 page nor the 0.9.0 tag.
 
 ### Action required
 
 - **Set `HPE_MCP_CENTRAL_WRITES=1`** (or `HPE_MCP_ACCESS_PROFILE=full-read-write`)
-  if you relied on Central writes being implicitly enabled.
+  if you relied on Central writes being implicitly enabled; the shipped
+  `.env.example` enumerates every router and platform variable.
 - **Replace the `hpe-mcp` / `hpe-mcp-client` frontends** with an MCP host
   pointed at `hpe-mcp-router`.
 - **Set `TOKEN_CACHE_DIR`** to a writable location if your previous deployment
@@ -347,12 +384,25 @@ and appear in neither the 0.9.0 page nor the 0.9.0 tag.
 - **Use the `<host>:*` port-wildcard form** in `MCP_ALLOWED_HOSTS` for any
   non-loopback bind; bare hostnames make every real `/mcp` request fail with
   421 while `/livez` still passes.
+- **Rebuild your image with `--build-arg INSTALL_EXTRAS=ingestion`** if you
+  relied on the published image for prose retrieval; the default image ships no
+  retrieval client. See
+  [docs/production-deployment.md](production-deployment.md) for the supported
+  build matrix.
 
 ## Known boundaries
 
 - The prose RAG corpus is **not distributed**. It is built locally; the
   license-safe starter is the committed spec index, which `hpe-mcp-doctor` now
   surfaces separately.
+- **That bullet is about the corpus; the client is a separate gap.** The
+  retrieval clients live in the optional extras (LanceDB in `ingestion`, the
+  Redis backend in `redis`), so the default image installs neither and a corpus
+  alone will not help. **The mount itself is fine** — Docker creates
+  `/app/data/docs.lance` as root, so a RAG-enabled build can bind a corpus
+  there — **what is absent is the code that reads it.** Separately, and for a
+  different reason, `/app/data` is root-owned `0555` so the runtime user cannot
+  swap the baked spec index out.
 - `release-artifacts.yml` is `workflow_dispatch` only — releases are
   deliberately operator-triggered and no merge cuts one.
 - Milvus Lite remains opt-in, behind LanceDB on hybrid retrieval quality.

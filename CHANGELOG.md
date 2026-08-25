@@ -22,11 +22,19 @@ Feature release. Full detail in [docs/release-notes-0.10.0.md](docs/release-note
 ### Changed — BREAKING
 
 - **Central writes are now denied by default.** `HPE_MCP_CENTRAL_WRITES` must be
-  set to `1` (or `HPE_MCP_ACCESS_PROFILE=full-read-write`) to expose Central
-  write and destructive tools. Previously Central alone defaulted to enabled,
+  set to a truthy value (`1`, `true`, `yes` or `on`, case-insensitive) — or
+  `HPE_MCP_ACCESS_PROFILE=full-read-write` — to expose Central write and
+  destructive tools. Previously Central alone defaulted to enabled,
   which meant `import hpe_networking_mcp` with no configuration produced a
   server willing to dispatch `reboot_device` and `disconnect_client`.
-  Deployments relying on the implicit default must set the variable explicitly.
+  Deployments relying on the implicit default must now opt in explicitly, by
+  either route.
+- **The published image ships no prose-retrieval client.** The retrieval
+  clients live in the optional extras (LanceDB in `ingestion`, the Redis
+  backend in `redis`), so the default image installs neither and mounting a
+  corpus alone will not help. Rebuild with `--build-arg
+  INSTALL_EXTRAS=ingestion`; see
+  [docs/production-deployment.md](docs/production-deployment.md).
 - **Removed the standalone `hpe-mcp` and `hpe-mcp-client` frontends.** Use an
   MCP host such as VS Code/Copilot, Copilot CLI, Claude, or another stdio or
   streamable-HTTP client with `hpe-mcp-router`. Personal document ingestion is
@@ -34,6 +42,15 @@ Feature release. Full detail in [docs/release-notes-0.10.0.md](docs/release-note
 
 ### Changed
 
+- **Strict typing runs in CI on a named, scoped set.** The `Type check (strict,
+  scoped)` job runs `uv run mypy` against the four `[tool.mypy]` targets under
+  `strict`, with no baseline, no blanket `ignore_missing_imports` and no
+  `# type: ignore` in the covered set; the rest of the tree is not type-checked
+  (measured 2026-08-21: 397 `--strict` errors across 71 of 150 modules).
+- **The baked spec index is roughly a fifth of its former size.** Storing a
+  128-bit `blake2b` digest of the schema field list instead of inlining it took
+  `data/specs.sqlite` from 243.2 MB to 45.6 MB, as measured by the change that
+  made it (`4cbdccc`).
 - **Fresh-install RAG remedies are now state-aware.** `hpe-mcp-doctor` reports
   the structured API index (`data/specs.sqlite`) and the prose index
   (`data/docs.lance`) separately — the spec index's remedy is the offline
