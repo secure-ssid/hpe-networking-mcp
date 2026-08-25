@@ -497,10 +497,9 @@ uv run python scripts/validate_release.py --catalog-products all --strict-tool-i
 
 `--min-tools 6711` is the platform API compatibility floor (the
 6,711 vendor-facing platform API tools), not the complete registered backend
-total of 6,728, which also includes the protocol-only Central Streaming tool,
-the cross-platform site-health aggregator, the local GLP preflight diagnostic,
-and credential-free local tools — validation passes at or above the floor. See
-[tool-catalog.md](tool-catalog.md) for both totals.
+total of 6,728, which also includes the non-platform backends itemized in
+[tool-catalog.md](tool-catalog.md) — validation passes at or above the floor. See
+that table for both totals.
 
 Add `--strict-rag` only if you have built the local prose corpus with
 `ingestion/ingest_docs.py`. That corpus is scraped vendor documentation, is
