@@ -257,8 +257,9 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 
 Per-backend counts and coverage live in the [tool catalog](tool-catalog.md);
 reproducible comparisons against other HPE Networking MCP servers are in the
-[capability gap matrix](capability-gap-matrix.md). What changed in the latest
-tagged release is in the [0.9.0 release notes](release-notes-0.9.0.md) — older
+[capability gap matrix](capability-gap-matrix.md). The latest published
+(tagged) release is [0.8.0](release-notes-0.8.0.md). [0.10.0 notes](release-notes-0.10.0.md)
+describe in-tree `main`; [0.9.0](release-notes-0.9.0.md) is archived. Older
 notes are under **Releases** in the sidebar.
 
 <div class="docs-next" markdown="1">
