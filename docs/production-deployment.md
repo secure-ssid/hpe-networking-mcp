@@ -37,7 +37,9 @@ network fetch expectations from local development should still hold.
 
 ```bash
 # 1. Provision secrets (never commit the real files this creates):
+
 cp config/credentials.yaml.example secrets/credentials.yaml
+
 # edit secrets/credentials.yaml with real Central/GLP client id/secret values
 openssl rand -hex 32 > secrets/mcp_http_bearer_token
 chmod 600 secrets/credentials.yaml secrets/mcp_http_bearer_token
@@ -47,8 +49,8 @@ chmod 600 secrets/credentials.yaml secrets/mcp_http_bearer_token
 #    `ollama` are in docker-compose.yml's default profile, so omitting
 #    `mcp-router` here would also start two containers the default image has
 #    no client for (see "Prose retrieval" below).
-docker compose -f docker-compose.yml -f docker-compose.router.yml \
-  --profile router up -d --build mcp-router
+
+docker compose -f docker-compose.yml -f docker-compose.router.yml --profile router up -d --build mcp-router
 
 # 3. Verify:
 curl http://127.0.0.1:8010/livez
