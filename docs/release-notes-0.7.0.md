@@ -1,6 +1,6 @@
 ---
 title: "0.7.0"
-nav_order: 3
+nav_order: 4
 parent: "Releases"
 ---
 

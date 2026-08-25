@@ -64,7 +64,8 @@ render without browser-side JavaScript.
 
 | Doc | Use it for |
 |---|---|
-| [release-notes-0.9.0.md](release-notes-0.9.0.md) | Current release: RAG corpus expansion (28 scraped sources, 262,104 chunks), ANN+metadata indexes, content-hash dedup, Docker packaging, and operator runbooks |
+| [release-notes-0.10.0.md](release-notes-0.10.0.md) | Current release: vendored offline OpenAPI corpus, deny-by-default writes, `invoke_tools_batch`, Prometheus exposition, `corpus_provenance`, GHCR image publishing, and release/lint gates that check what they claim |
+| [release-notes-0.9.0.md](release-notes-0.9.0.md) | Archived before publication; rolled into 0.10.0: RAG corpus expansion (29 sources, 262,104 chunks), ANN+metadata indexes, content-hash dedup, Docker packaging, and operator runbooks |
 | [release-notes-0.8.0.md](release-notes-0.8.0.md) | Clean repository/package rename, MCP 2 transport repair, PII protection, interop tools, GLP inventory completion, strict RAG/catalog facts, and classified drift gates |
 | [release-notes-0.7.0.md](release-notes-0.7.0.md) | Artifact/live-test gates, source lifecycle provenance, structured RAG intelligence, Central/GLP/AOS8/optional-product depth, observability/security, router automation, and release artifact automation |
 | [release-notes-0.6.0.md](release-notes-0.6.0.md) | Security/lifecycle RAG, expanded Central/GLP/AOS8/Axis/Mist coverage, provenance, audit logging, and migration reports |

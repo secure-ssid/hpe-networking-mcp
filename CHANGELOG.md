@@ -13,7 +13,11 @@ time. This file is the compact index into those pages. See
 [MIGRATION.md](MIGRATION.md) for the step-by-step move from the legacy
 `secure-ssid/centralmcp` repository to this one.
 
-## [Unreleased]
+## [0.10.0] - 2026-08-25
+
+Feature release. Full detail in [docs/release-notes-0.10.0.md](docs/release-notes-0.10.0.md).
+0.9.0 was archived before publication, so upgrading from 0.8.0 also picks up
+[docs/release-notes-0.9.0.md](docs/release-notes-0.9.0.md).
 
 ### Changed — BREAKING
 
