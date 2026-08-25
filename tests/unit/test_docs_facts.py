@@ -335,9 +335,30 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
         ),
         (
             REPO_ROOT / "docs" / "tool-router.md",
-            f"| Complete backend index (platform APIs + Central Streaming + "
-            f"`site-health` + local GLP preflight + `design-core` + "
-            f"`interop-core`) | {registered_total:,} tools |",
+            f"| Complete backend index (platform APIs plus the non-platform "
+            f"backends itemized in [`docs/project-facts.json`]"
+            f"(project-facts.json)) | {registered_total:,} tools |",
+        ),
+        # docs/tool-router.md's narrative paragraph is the only place that
+        # walks the catalog sum out loud, so it is the only place a reader can
+        # catch a wrong number. It carried `design-core`: 7 against a tracked
+        # 8 and named four of the six non-platform contributors, and nothing
+        # in tests/ read it. Both totals it states are pinned here now; the
+        # membership it used to enumerate by hand is a pointer, covered by
+        # test_non_platform_backend_facts_reconcile_with_registered_total.
+        (
+            REPO_ROOT / "docs" / "tool-router.md",
+            f"platform API backend total to {platform_backend_total:,}",
+        ),
+        (
+            REPO_ROOT / "docs" / "tool-router.md",
+            f"they yield the complete {registered_total:,}-tool registered backend catalog",
+        ),
+        (
+            REPO_ROOT / "docs" / "release-indexes.md",
+            f"| Complete backend catalog (platform APIs plus the non-platform "
+            f"backends itemized in [`docs/project-facts.json`]"
+            f"(project-facts.json)) | {registered_total:,} |",
         ),
         (
             REPO_ROOT / "docs" / "tool-router.md",
@@ -362,6 +383,56 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
     ]
 
     assert missing == []
+
+
+#: The four ``tools.*`` groups the router/catalog/index pages now point at
+#: instead of listing the non-platform backends by hand.
+NON_PLATFORM_TOOL_GROUPS = (
+    "protocol_only",
+    "non_platform_aggregators",
+    "non_api_local",
+    "credential_free_local",
+)
+
+
+def test_non_platform_backend_facts_reconcile_with_registered_total():
+    """The pointer targets exist and the set they name adds up.
+
+    ``docs/tool-router.md``, ``docs/tool-catalog.md`` and
+    ``docs/release-indexes.md`` used to enumerate the non-platform backends
+    in prose. Three of those enumerations silently dropped ``rag-core``'s
+    local ``corpus_provenance`` tool and one also dropped the local GLP
+    preflight while printing a ``design-core`` count that disagreed with the
+    tracked one -- a hand-maintained derived set drifting from its source,
+    with the published totals still correct beside it.
+
+    The docs now point at these groups, so this asserts the *fact* rather
+    than a sentence: every group is present and non-empty, and the members
+    plus ``platform_backend_total`` reconstruct ``registered_total``. A
+    member added to or removed from the artifact without the totals moving
+    fails here, which the previous prose guard structurally could not catch.
+    It is deliberately not ``skipif``-guarded: a missing key must fail, not
+    silently skip.
+    """
+    tools = TRACKED["tools"]
+
+    empty = [group for group in NON_PLATFORM_TOOL_GROUPS if not tools.get(group)]
+    assert empty == [], (
+        f"docs point at tools.{{{','.join(empty)}}}, absent or empty in the facts file"
+    )
+
+    members = {
+        f"{group}.{server}": count
+        for group in NON_PLATFORM_TOOL_GROUPS
+        for server, count in tools[group].items()
+    }
+    assert all(isinstance(count, int) and count > 0 for count in members.values()), members
+
+    assert tools["platform_backend_total"] + sum(members.values()) == tools["registered_total"], (
+        f"platform_backend_total {tools['platform_backend_total']} + "
+        f"{sum(members.values())} non-platform tools {sorted(members)} "
+        f"!= registered_total {tools['registered_total']}"
+    )
 
 
 HERO = REPO_ROOT / "docs" / "assets" / "hpe-networking-mcp-hero.svg"

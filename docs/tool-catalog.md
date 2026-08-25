@@ -64,7 +64,7 @@ type rather than breaking valid defaults.
 | `rag-core` provenance | 1 | 1 | Local corpus provenance for the committed `vendor/openapi` corpus and the locally built prose index -- reads manifests and index artifacts, makes no vendor API call |
 | `design-core` | 8 | 8 | Diagram/network-design tools (drawio, Graphviz, next-ui exports) -- credential-free, no vendor API call |
 | `interop-core` | 5 | 5 | Central <-> Mist WLAN/site concept translation and bounded trend normalization -- credential-free, always loaded |
-| **Complete backend total** | **3,176** | **6,728** | Platform API total + `site-health` + `central-streaming` + local GLP preflight + `design-core` + `interop-core` |
+| **Complete backend total** | **3,176** | **6,728** | Platform API total plus the non-platform backends itemized in [`docs/project-facts.json`](project-facts.json) |
 
 [^glp-preflight]: `docs/project-facts.json` reports `tools.by_server["glp-core"]` as
     1,014 -- the 1,013 vendor-facing tools plus the local `glp_preflight`
