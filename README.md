@@ -166,9 +166,11 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 | Optional platforms | ClearPass, Mist, Apstra, AOS8, EdgeConnect, UXI, Axis Atmos Cloud, plus the credential-free `design` diagram tools |
 | Safety | Per-platform write gates, dry-run + confirmation, HTTP host/origin and bearer controls, credential-gated live-test config |
 
-Full per-backend counts live in [Tool catalog](docs/tool-catalog.md). See the
-[0.9.0 release notes](docs/release-notes-0.9.0.md) for everything added in the
-latest tagged release, and the [capability gap matrix](docs/capability-gap-matrix.md)
+Full per-backend counts live in [Tool catalog](docs/tool-catalog.md). The
+latest published (tagged) release is [0.8.0](docs/release-notes-0.8.0.md).
+[0.10.0 notes](docs/release-notes-0.10.0.md) describe in-tree `main`;
+[0.9.0](docs/release-notes-0.9.0.md) is archived. See the
+[capability gap matrix](docs/capability-gap-matrix.md)
 for reproducible tool/benchmark comparisons.
 
 ## Task-oriented guides
