@@ -49,7 +49,7 @@ entries while still reaching the full backend catalog:
 |---|---|
 | A first-time MCP user | The [five-minute credential-free quickstart](#five-minute-credential-free-quickstart) below, then [Getting started](docs/getting-started.md) |
 | An Aruba network operator | [Example prompts](docs/example-prompts.md) and [typed product workflows](docs/product-workflows.md) |
-| An hpe-networking-mcp developer | [How MCP and RAG work](docs/architecture/how-it-works.md), [Architecture overview](docs/architecture/system-overview.md), and [Contributing guide](CONTRIBUTING.md) |
+| An hpe-networking-mcp developer | [How MCP and RAG work](docs/architecture/how-it-works.md), [Architecture overview](docs/architecture/system-overview.md), [Releases](docs/releases.md), and [Contributing guide](CONTRIBUTING.md) |
 
 ## Five-minute credential-free quickstart
 
@@ -178,6 +178,7 @@ for reproducible tool/benchmark comparisons.
 | Need | Guide |
 |---|---|
 | Full setup, credentials, and MCP client connection | [Getting started](docs/getting-started.md) |
+| Run the published image or Compose overlay (GHCR) | [Production deployment](docs/production-deployment.md) |
 | Copy/paste stdio or streamable HTTP client config | [MCP client recipes](docs/mcp-client-recipes.md) |
 | Router modes, toolsets, and safe dispatch in depth | [Tool router](docs/tool-router.md) |
 | Real prompts with expected call shapes | [Example prompts](docs/example-prompts.md) |
