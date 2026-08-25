@@ -35,11 +35,13 @@ through `invoke_tool`. Neither category needs optional-product write access.
 </div>
 
 <div class="docs-callout docs-callout--danger" markdown="1">
-**Write and destructive tools are opt-in twice over.** `HPE_MCP_PRODUCT_ACCESS`
-defaults to `read-only`, which hides every optional-product write tool from
-`find_tool` and blocks direct execution through `invoke_tool`. Even after
-access is opened, each write tool still defaults to `dry_run=True` and
-requires an explicit `dry_run=False` **and** `confirm=True` on the same call
+**Write and destructive tools are opt-in twice over.**
+<code>HPE_MCP_PRODUCT_ACCESS</code>
+defaults to <code>read-only</code>, which hides every optional-product write
+tool from <code>find_tool</code> and blocks direct execution through
+<code>invoke_tool</code>. Even after access is opened, each write tool still
+defaults to <code>dry_run=True</code> and requires an explicit
+<code>dry_run=False</code> and <code>confirm=True</code> on the same call
 before it touches a real vendor API.
 </div>
 
@@ -50,7 +52,7 @@ before it touches a real vendor API.
 | Discovery | Always listed by `find_tool` | Hidden under `safe-read-only`, or under `custom` while `HPE_MCP_PRODUCT_ACCESS=read-only` |
 | Dispatch | Reads use `invoke_read_tool`; diagnostics use `invoke_tool` | `invoke_tool` returns a `blocked` error until access is opened |
 | To open | Nothing to do | `HPE_MCP_ACCESS_PROFILE=full-read-write`, or `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / one `HPE_MCP_<PLATFORM>_WRITES=1` |
-| Per-call guardrail | Server-side pagination/byte bounds | Also requires `dry_run=False` **and** `confirm=True` in the same call |
+| Per-call guardrail | Server-side pagination/byte bounds | Also requires <code>dry_run=False</code> and <code>confirm=True</code> in the same call |
 | Blast radius | Bounded reads or non-mutating diagnostics | Real vendor mutation once both gates above are satisfied |
 
 </div>
@@ -74,7 +76,9 @@ immediately after setup — no write flags involved.
 
 <div class="example-card" markdown="1">
 
-### <span class="docs-badge">ClearPass</span> <span class="docs-badge">Access control / NAC</span>
+### ClearPass
+
+Access control / NAC.
 
 - **Env:** `CLEARPASS_BASE_URL`, `CLEARPASS_API_TOKEN`
 - **Enable:** `HPE_MCP_PRODUCTS=clearpass`
@@ -88,7 +92,9 @@ invoke_read_tool("clearpass_list_endpoints", {"limit": 5, "status": "Known"})
 
 <div class="example-card" markdown="1">
 
-### <span class="docs-badge">Juniper Mist</span> <span class="docs-badge">Wireless / WAN assurance</span>
+### Juniper Mist
+
+Wireless / WAN assurance.
 
 - **Env:** `MIST_HOST`, `MIST_API_TOKEN` (optional session cookie/CSRF)
 - **Enable:** `HPE_MCP_PRODUCTS=mist`
@@ -102,7 +108,9 @@ invoke_read_tool("mist_list_sites", {"org_id": "11111111-2222-3333-4444-55555555
 
 <div class="example-card" markdown="1">
 
-### <span class="docs-badge">Apstra</span> <span class="docs-badge">Data-center fabric</span>
+### Apstra
+
+Data-center fabric.
 
 - **Env:** `APSTRA_BASE_URL`, `APSTRA_USERNAME`/`APSTRA_PASSWORD` (or `APSTRA_API_TOKEN`)
 - **Enable:** `HPE_MCP_PRODUCTS=apstra`
@@ -130,7 +138,9 @@ Apstra API running in your environment.
 
 <div class="example-card" markdown="1">
 
-### <span class="docs-badge">ArubaOS 8</span> <span class="docs-badge">Controller migration</span>
+### ArubaOS 8
+
+Controller migration.
 
 - **Env:** `AOS8_BASE_URL`, `AOS8_USERNAME`/`AOS8_PASSWORD` (or legacy `AOS8_API_TOKEN`)
 - **Enable:** `HPE_MCP_PRODUCTS=aos8`
@@ -144,7 +154,9 @@ invoke_read_tool("aos8_list_aps", {"config_path": "/md", "limit": 5})
 
 <div class="example-card" markdown="1">
 
-### <span class="docs-badge">EdgeConnect</span> <span class="docs-badge">SD-WAN operations</span>
+### EdgeConnect
+
+SD-WAN operations.
 
 - **Env:** `EDGECONNECT_BASE_URL`, `EDGECONNECT_API_TOKEN` (optional `EDGECONNECT_AUTH_HEADER`)
 - **Enable:** `HPE_MCP_PRODUCTS=edgeconnect`
@@ -158,7 +170,9 @@ invoke_read_tool("edgeconnect_list_appliances", {"limit": 5})
 
 <div class="example-card" markdown="1">
 
-### <span class="docs-badge">HPE Aruba UXI</span> <span class="docs-badge">Synthetic experience</span>
+### HPE Aruba UXI
+
+Synthetic experience.
 
 - **Env:** `UXI_CLIENT_ID`, `UXI_CLIENT_SECRET` (optional `UXI_BASE_URL`, `UXI_TOKEN_URL`)
 - **Enable:** `HPE_MCP_PRODUCTS=uxi`
@@ -172,7 +186,9 @@ invoke_read_tool("uxi_list_sensors", {"page_size": 5})
 
 <div class="example-card" markdown="1">
 
-### <span class="docs-badge">Axis Atmos Cloud</span> <span class="docs-badge">Cloud access policy</span>
+### Axis Atmos Cloud
+
+Cloud access policy.
 
 - **Env:** `AXIS_BASE_URL`, `AXIS_API_TOKEN`
 - **Enable:** `HPE_MCP_PRODUCTS=axis`
@@ -186,7 +202,9 @@ invoke_read_tool("axis_get_applications", {"page_size": 5})
 
 <div class="example-card" markdown="1">
 
-### <span class="docs-badge">Design</span> <span class="docs-badge">Diagrams / topology</span>
+### Design
+
+Diagrams / topology.
 
 - **Env:** none required (optional `HPE_MCP_DIAGRAM_ICON_DIR` for local vendor icon packs)
 - **Enable:** `HPE_MCP_PRODUCTS=design`

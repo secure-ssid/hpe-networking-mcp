@@ -24,42 +24,20 @@ tools" figure is the number that matters most for context budget. See
 
 ## Who it's for
 
-<div class="audience-grid" markdown="1">
-
-<div class="audience-card" markdown="1">
-
-### First-time MCP users
-
-New to hpe-networking-mcp or to MCP itself. Start with the
-[five-minute credential-free quickstart](#five-minute-credential-free-quickstart)
-below, then [Getting started](getting-started.md) for credentials and a
-real MCP client connection.
-
-</div>
-
-<div class="audience-card" markdown="1">
-
-### Aruba network operators
-
-Already run Aruba Central or GreenLake Platform day to day. Jump to
-[Example prompts](example-prompts.md) for ready-made call patterns, or the
-[typed product workflow roadmap](product-workflows.md) for ClearPass, Mist,
-Apstra, AOS8, EdgeConnect, and UXI tasks.
-
-</div>
-
-<div class="audience-card" markdown="1">
-
-### hpe-networking-mcp developers
-
-Extending a backend, adding a tool, or reviewing the router internals. Start
-with [How MCP and RAG work](architecture/how-it-works.md),
-[System overview](architecture/system-overview.md), and
-[Tool router](tool-router.md).
-
-</div>
-
-</div>
+- **First-time MCP users.** New to hpe-networking-mcp or to MCP itself. Start
+  with the
+  [five-minute credential-free quickstart](#five-minute-credential-free-quickstart)
+  below, then [Getting started](getting-started.md) for credentials and a
+  real MCP client connection.
+- **Aruba network operators.** Already run Aruba Central or GreenLake Platform
+  day to day. Jump to [Example prompts](example-prompts.md) for ready-made
+  call patterns, or the [typed product workflow roadmap](product-workflows.md)
+  for ClearPass, Mist, Apstra, AOS8, EdgeConnect, and UXI tasks.
+- **hpe-networking-mcp developers.** Extending a backend, adding a tool, or
+  reviewing the router internals. Start with
+  [How MCP and RAG work](architecture/how-it-works.md),
+  [System overview](architecture/system-overview.md), and
+  [Tool router](tool-router.md).
 
 ## Five-minute credential-free quickstart
 
@@ -95,9 +73,7 @@ Expected outcome: a local `hpe-networking-mcp/` working copy with no network cal
 
 **Run the wizard without credentials.**
 
-```bash
-python3 scripts/setup_wizard.py --yes --skip-credentials
-```
+<pre><code>python3 scripts/setup_wizard.py --yes --skip-credentials</code></pre>
 
 Expected outcome: dependencies install, local git-ignored config files are created, and the wizard reports each completed phase without contacting Central or GLP.
 
@@ -268,6 +244,7 @@ notes are under **Releases** in the sidebar.
 
 - New to hpe-networking-mcp: [Getting started](getting-started.md)
 - Running Aruba/GLP tasks today: [Example prompts](example-prompts.md)
+- Installing the published container: [Production deployment](production-deployment.md)
 - Building or reviewing a backend: [Tool router](tool-router.md)
 - Every other guide and reference page: the sidebar navigation
 
