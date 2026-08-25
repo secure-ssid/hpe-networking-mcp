@@ -230,6 +230,20 @@ def test_no_commit_message_co_credits_an_agent():
     # dropped yields 0, and a real full-depth run yielded 109 at 27f5373. If
     # this fires, the guard is scanning the wrong base or a shallow checkout;
     # fix the checkout, do not weaken the assertion.
+    #
+    # The three checks below catch different faults and none subsumes another:
+    # shallowness is truncated history, emptiness is a run that scanned nothing
+    # at all, and the subset check is a full-depth checkout of the *wrong*
+    # ancestry. Only the first two are independent of the exemption set — an
+    # empty frozenset is a subset of *every* set including the empty one, so the
+    # subset assertion alone stops testing anything the day the last pin is
+    # removed, and a depth-1 checkout still yields one truthy record. Measuring
+    # shallowness directly is what survives that cleanup.
+    assert _git_bytes("rev-parse", "--is-shallow-repository").strip() != b"true", (
+        "shallow checkout — the guard would scan a truncated history; set "
+        "fetch-depth: 0 on the checkout step rather than weakening this test"
+    )
+    assert records, "no commits scanned — shallow checkout or wrong base"
     assert _EXEMPT_TRAILER_SHAS <= {sha for sha, _ in records}, (
         "exempted commit is not in the scanned history — wrong base or shallow "
         "checkout, so this guard would pass without checking anything"

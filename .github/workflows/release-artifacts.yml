@@ -54,7 +54,12 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      # Full history: the strict validation below runs validate_release.py
+      # without --skip-tests, so it executes tests/unit -- including the
+      # authorship guards, which refuse a shallow checkout.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.0
