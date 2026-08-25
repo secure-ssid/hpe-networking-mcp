@@ -122,6 +122,8 @@ Repository = "https://github.com/secure-ssid/hpe-networking-mcp"
 Documentation = "https://secure-ssid.github.io/hpe-networking-mcp/"
 Issues = "https://github.com/secure-ssid/hpe-networking-mcp/issues"
 Changelog = "https://github.com/secure-ssid/hpe-networking-mcp/blob/main/CHANGELOG.md"
+Privacy = "https://github.com/secure-ssid/hpe-networking-mcp/blob/main/PRIVACY.md"
+Security = "https://github.com/secure-ssid/hpe-networking-mcp/blob/main/SECURITY.md"
 
 [dependency-groups]
 dev = ["pytest>=9.1.1", "ruff>=0.8.0", "mypy>=1.15.0"]

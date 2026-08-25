@@ -5,9 +5,33 @@
 Do not open a public issue with exploitable details, credentials, tokens, tenant
 IDs, customer data, or private network information.
 
-Use GitHub's private vulnerability reporting or security advisory flow for this
-repository when it is available. If that flow is unavailable, open a public issue
-with only a short, non-sensitive summary and ask for a private reporting channel.
+Report privately by email to **<security@securessid.com>**. This is the
+channel to prefer.
+
+If GitHub's private vulnerability reporting is enabled for this repository, you
+may use that flow instead:
+<https://github.com/secure-ssid/hpe-networking-mcp/security/advisories/new>.
+If that flow is not available to you, use the email address above rather than a
+public issue.
+
+If the email bounces or you cannot reach us privately by either route, open an
+issue at <https://github.com/secure-ssid/hpe-networking-mcp/issues> with only a
+short, non-sensitive summary and ask for a private reporting channel.
+
+### Response window
+
+This is a small, volunteer-maintained project, so these are targets rather than
+a contractual SLA:
+
+- **Acknowledgement:** within 5 business days of the report.
+- **Initial assessment** (confirmed / not reproducible / needs more detail):
+  within 10 business days.
+- **Fix or documented mitigation** for a confirmed issue: tracked publicly once
+  a fix or mitigation is available, coordinated with the reporter on timing.
+
+If you have not heard back within the acknowledgement window, please email
+again or, if you filed an advisory, ping that thread — it means the report was
+missed, not declined.
 
 Helpful non-secret details:
 
