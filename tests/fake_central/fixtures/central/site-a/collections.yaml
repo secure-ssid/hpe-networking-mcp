@@ -1,0 +1,90 @@
+clients:
+  - id: aa:bb:cc:11:22:33
+    name: wireless-phone
+    status: connected
+    site_id: site-0001
+    connected_via: ap CNAP0001
+    ssid: Corp-Net
+    health: healthy
+sites:
+  - id: site-a
+    name: Site-A
+sites_health:
+  - id: site-0001
+    health: healthy
+  - id: site-0001
+    health: degraded
+device_inventory:
+  - serial: CNSW0001
+    kind: cx-switch
+    site_id: site-0001
+    interfaces: 48
+    config_status: out-of-sync
+  - serial: CNSW0002
+    kind: aos-switch
+    site_id: site-0001
+    firmware: "10.6.0.0"
+firmware_details:
+  - serial: CNSW0001
+    current: "10.6.0.0"
+    recommended: "10.7.0.0"
+compliance:
+  - serial: CNSW0001
+    status: non-compliant
+    reason: outdated-firmware
+config_health:
+  - device: CNSW0001
+    healthy: false
+    issues: [running-config-drifted]
+wlans:
+  - id: Corp-Net
+    ssid: Corp-Net
+    security: WPA3
+  - id: Old-Guest
+    ssid: Old-Guest
+    security: WPA2
+nac:
+  - id: macreg-0001
+    mac: aa:bb:cc:11:22:33
+mobility_trails:
+  # Keyed by client MAC: GET /network-monitoring/v1/clients/{mac}/mobility-trail
+  # is a by_id route. The trail is deliberately flappy — incident-response-001
+  # asks whether this client is roaming excessively.
+  - id: aa:bb:cc:11:22:33
+    mac: aa:bb:cc:11:22:33
+    site_id: site-0001
+    transitions:
+      - timestamp: "2026-08-22T09:01:11Z"
+        from_ap: CNAP0001
+        to_ap: CNAP0002
+        rssi: -74
+        reason: signal-degraded
+      - timestamp: "2026-08-22T09:03:48Z"
+        from_ap: CNAP0002
+        to_ap: CNAP0001
+        rssi: -71
+        reason: signal-degraded
+      - timestamp: "2026-08-22T09:06:02Z"
+        from_ap: CNAP0001
+        to_ap: CNAP0002
+        rssi: -76
+        reason: signal-degraded
+      - timestamp: "2026-08-22T09:08:39Z"
+        from_ap: CNAP0002
+        to_ap: CNAP0001
+        rssi: -73
+        reason: signal-degraded
+alerts:
+  - id: ALRT-0001
+    severity: critical
+    site_id: site-0001
+    message: "AP CNAP0001 disconnected"
+    status: active
+audits:
+  - id: audit-0001
+    timestamp: 2026-08-22T09:13:02Z
+    source: system
+    action: config-change
+    summary: "firmware upgraded CNSW0001 to 10.7.0.0"
+notification_rules: []
+incident_events: []
