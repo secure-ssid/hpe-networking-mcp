@@ -109,6 +109,7 @@ jobs:
           python - <<'PY'
           import os
           import pathlib
+          import re
 
           # The notes file doubles as a Jekyll Pages document; its front matter
           # and top-level heading are page chrome, not release content. GitHub
@@ -127,9 +128,46 @@ jobs:
               lines.pop(0)
           while lines and not lines[0].strip():
               lines.pop(0)
+
+          # The source is hard-wrapped for git diffs, but GitHub renders single
+          # newlines in a release body as hard breaks. Join each paragraph into
+          # one flowing line; headings, lists, tables, blockquotes, and fenced
+          # code keep their structure.
+          out, para = [], []
+
+          def flush():
+              if para:
+                  out.append(" ".join(part.strip() for part in para))
+                  para.clear()
+
+          in_fence = False
+          for line in lines:
+              stripped = line.strip()
+              if stripped.startswith("```"):
+                  flush()
+                  out.append(line)
+                  in_fence = not in_fence
+                  continue
+              if in_fence:
+                  out.append(line)
+                  continue
+              is_struct = (
+                  not stripped
+                  or stripped.startswith("#")
+                  or stripped.startswith("|")
+                  or stripped.startswith(">")
+                  or re.match(r"^([-*+]|\d+[.)])\s", stripped)
+              )
+              if is_struct:
+                  flush()
+                  out.append(line)
+              else:
+                  para.append(line)
+          flush()
+
           body = pathlib.Path("dist/release-body.md")
           body.parent.mkdir(exist_ok=True)
-          body.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          body.write_text("\n".join(out) + "\n", encoding="utf-8")
           with pathlib.Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
               output.write(f"path={body}\n")
           PY
