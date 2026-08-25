@@ -46,6 +46,29 @@ before adding any Aruba Central or GreenLake Platform credentials. API-backed
 tools need credentials later, but this path is safe to try first with fake or
 no account details at all.
 
+Two install paths, same destination. **Option A — pull the published image
+(no checkout):**
+
+```bash
+docker run -d --name hpe-networking-mcp \
+  -p 127.0.0.1:8010:8010 \
+  -e MCP_HOST=0.0.0.0 \
+  -e MCP_ALLOWED_HOSTS='127.0.0.1:*,localhost:*' \
+  -e MCP_ALLOWED_ORIGINS='http://127.0.0.1:*,http://localhost:*' \
+  ghcr.io/secure-ssid/hpe-networking-mcp:latest
+```
+
+Once startup finishes (seconds), `curl http://127.0.0.1:8010/livez` answers
+`{"status":"ok"}`. The loopback-only publish keeps the server off your LAN;
+the `host:*` allowlist form is required whenever `MCP_HOST` is not loopback.
+The image ships the OpenAPI spec index baked at build time; semantic search
+ranking additionally wants an ingestion-extra rebuild
+(`--build-arg INSTALL_EXTRAS=ingestion`, see
+[Production deployment](production-deployment.md)).
+
+**Option B — build from source** (adds the setup wizard, doctor diagnostics,
+and local index tooling) — the six checkpoints below:
+
 <figure class="docs-figure">
   <img src="assets/diagrams/quickstart-journey.svg" alt="Six steps from cloning hpe-networking-mcp through setup, doctor checks, MCP connection, tool discovery, and a safe read-only call">
   <figcaption>The same six steps — clone, run the wizard, check the doctor, connect, discover, and call safely — are the checkpoints below.</figcaption>
@@ -63,6 +86,8 @@ cd hpe-networking-mcp
 ```
 
 Expected outcome: a local `hpe-networking-mcp/` working copy with no network calls beyond the clone itself.
+
+On Windows hosts, build and run from a shell with LF line endings (WSL2 or a configured checkout) — CRLF checkouts break the entry scripts inside Docker builds.
 
   </div>
 </div>
