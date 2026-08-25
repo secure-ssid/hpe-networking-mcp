@@ -242,19 +242,17 @@ to just that optional backend.
 | EdgeConnect | 687 / 1,270 | 1,216 generated operations, multipart uploads, fail-closed Swagger compatibility diagnostics, curated SD-WAN workflows, and (v0.7) confirmed alarm acknowledge/clear/summary and flow list/stats workflows | `EDGECONNECT_BASE_URL`, `EDGECONNECT_API_TOKEN`, optional `EDGECONNECT_AUTH_HEADER` and session overrides | Source artifact is reproducible but must be checked against live Orchestrator Swagger |
 | HPE Aruba UXI | 24 / 49 | Current 25-operation API plus OAuth, sensor/agent/group/network/test inventories and documented writes | `UXI_CLIENT_ID`, `UXI_CLIENT_SECRET`, optional `UXI_BASE_URL`, optional `UXI_TOKEN_URL` | Generic writes accept only documented method/path pairs; 5 requests/second |
 | Axis Atmos Cloud | 12 / 47 | Reviewed application, connector, tunnel, location, policy, status, and commit workflows from the deterministic SHA-pinned manifest generator, plus (v0.7) a read-only split-CRUD contract verification harness and a gated, plan-only disposable-write harness | `AXIS_BASE_URL`, `AXIS_API_TOKEN` | Writes dry-run by default |
-| Design (diagrams) | 7 / 7 | Local Draw.io, Graphviz, and NeXt UI topology exporters fed by a structured model or Central `get_topology` payloads | optional `HPE_MCP_DIAGRAM_ICON_DIR` | No vendor API; artifacts under `outputs/diagrams/` |
+| Design (diagrams) | 8 / 8 | Local Draw.io, Graphviz, and NeXt UI topology exporters fed by a structured model or Central `get_topology` payloads | optional `HPE_MCP_DIAGRAM_ICON_DIR` | No vendor API; artifacts under `outputs/diagrams/` |
 | **Optional subtotal** | **1,773 / 3,757** | Seven opt-in product backends | Product-specific | Hidden and blocked unless enabled |
 
 </div>
 
 Combined with the Central/GLP/RAG surfaces, the REST/OpenAPI platform API
 backend catalog contains 3,159 read-only-annotated tools and 6,711 registered
-tools, plus the one protocol-only Central Streaming tool --
-matching [`docs/capability-gap-matrix.md`](capability-gap-matrix.md)'s Total
-row, and excluding the two credential-free local backends (`design-core`,
-`interop-core`) plus the always-loaded `site-health` aggregator that add up to
-the complete 6,728-tool registered catalog
-reported in [`docs/tool-catalog.md`](tool-catalog.md). Diagnostic tools are
+tools, matching [`docs/capability-gap-matrix.md`](capability-gap-matrix.md)'s
+Total row. It excludes the non-platform backends, which are itemized with
+their counts in [`docs/tool-catalog.md`](tool-catalog.md) alongside the
+complete registered catalog total. Diagnostic tools are
 available in optional read-only mode but are not included in the read-only
 annotation count.
 

@@ -301,7 +301,7 @@ contains 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, and
 345 lifecycle records. The rebuilt router index contains 6,728 backend
 tools, including the protocol-only Central Streaming collector, the
 site-health cross-platform aggregator, and the local GLP preflight diagnostic. Minimal mode keeps this catalog behind the
-three-tool discovery/dispatch surface; direct-all mode exposes 6,735 tools
+three-tool discovery/dispatch surface; direct-all mode exposes 6,736 tools
 including the router itself. The current 42-question eval
 set (expanded from 24 to add structured list/correlate/diagnostics and
 negative coverage-gap questions, then further expanded with version-conflict,
