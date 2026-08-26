@@ -177,6 +177,15 @@ ENV HPE_MCP_INSTALL_REMEDY="rebuild the image with \
 `docker build --build-arg INSTALL_EXTRAS={extra}` \
 — see docs/production-deployment.md"
 
+# Profile surfacing: carry the builder's INSTALL_EXTRAS choice into this
+# stage (ARGs are stage-scoped, hence the redeclaration) under a name the
+# entrypoint and startup banner can read. An image that skipped the extras
+# must say so at start instead of leaving the partial install invisible
+# until a prose-RAG query disappoints. Empty = the default bare-router
+# profile: lookup_api works, ask_docs/search_docs have no backend.
+ARG INSTALL_EXTRAS=""
+ENV HPE_MCP_IMAGE_EXTRAS=${INSTALL_EXTRAS}
+
 ENV PATH=/app/.venv/bin:$PATH \
     VIRTUAL_ENV=/app/.venv \
     HOME=/home/mcp \

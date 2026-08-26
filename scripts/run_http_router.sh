@@ -126,6 +126,24 @@ normalize_access_profile() {
     | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
 }
 
+# Banner honesty: the default image ships no prose-RAG backend (the
+# `ingestion` extra is opt-in at build time), so its toolsets line must not
+# advertise bare `rag` without saying so. HPE_MCP_IMAGE_EXTRAS is baked into
+# the runtime stage by the Dockerfile; when it is unset we are a source
+# checkout, where the operator manages extras directly and the plain
+# toolsets list stands.
+rag_toolsets_note() {
+  if [[ -z "${HPE_MCP_IMAGE_EXTRAS+x}" ]]; then
+    return 0
+  fi
+  case ",${HPE_MCP_IMAGE_EXTRAS}," in
+    *,ingestion,*) ;;
+    *)
+      printf ' (prose-RAG backend NOT installed: rebuild with --build-arg INSTALL_EXTRAS=ingestion)'
+      ;;
+  esac
+}
+
 export MCP_TRANSPORT="${MCP_TRANSPORT:-streamable-http}"
 export MCP_HOST="${MCP_HOST:-127.0.0.1}"
 export MCP_PORT="${MCP_PORT:-8010}"
@@ -211,7 +229,7 @@ Starting hpe-networking-mcp HTTP router
   endpoint: http://${MCP_HOST}:${MCP_PORT}/mcp
   health:   http://${MCP_HOST}:${MCP_PORT}/livez, /readyz, /healthz (no auth, no MCP negotiation)
   mode:     ${HPE_MCP_ROUTER_MODE}
-  toolsets: ${HPE_MCP_TOOLSETS}
+  toolsets: ${HPE_MCP_TOOLSETS}$(rag_toolsets_note)
   products: ${HPE_MCP_PRODUCTS:-none}
   profile:  ${HPE_MCP_ACCESS_PROFILE}
   optional: ${HPE_MCP_PRODUCT_ACCESS}
