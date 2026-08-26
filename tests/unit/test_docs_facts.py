@@ -318,7 +318,7 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
         ),
         (
             REPO_ROOT / "docs" / "tool-catalog.md",
-            f"| **Platform API backend total** | **3,159** | **{platform_backend_total:,}** |",
+            f"| **Platform API backend total** | **3,160** | **{platform_backend_total:,}** |",
         ),
         (
             REPO_ROOT / "docs" / "tool-catalog.md",

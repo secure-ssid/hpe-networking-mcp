@@ -13,6 +13,58 @@ time. This file is the compact index into those pages. See
 [MIGRATION.md](MIGRATION.md) for the step-by-step move from the legacy
 `secure-ssid/centralmcp` repository to this one.
 
+## [0.11.0] - 2026-08-26
+
+Docker release. Full detail in [docs/release-notes-0.11.0.md](docs/release-notes-0.11.0.md).
+No breaking changes: existing `secrets/credentials.yaml` files keep working,
+and the new per-platform write-gate lines cannot alter an existing
+deployment's posture.
+
+### Added
+
+- **`setup_wizard.py --docker` asks every deployment question in one pass** —
+  toolsets, optional products *and their credentials*, per-platform write
+  gates, RAG image and vector backend, exposure — and emits a bundle that runs
+  with those answers. A recommended-defaults shortcut reaches a complete
+  bundle in four prompts. New `--toolsets` flag.
+- **One secret value = one `0600` file = one Compose secret = one
+  `<VAR>_FILE`.** Rotating one credential rewrites one file and restarts; no
+  other secret is read, rewritten, or re-exposed. `secrets/credentials.yaml`
+  written by the wizard now carries Central/GreenLake identity only.
+- `OLLAMA_URL` environment override, so the redis RAG backend can reach the
+  `ollama` service from inside a container.
+- A Pages link gate: any `docs/` link resolving outside `docs/` now fails.
+
+### Fixed
+
+- **`--docker` discarded the optional-product selection.**
+  `--docker --products mist` produced a stack that loaded no Mist backend and
+  held no Mist token. `HPE_MCP_PRODUCTS` was never emitted and no overlay
+  named it.
+- **Per-platform write gates never reached containers.** The nine
+  `HPE_MCP_*_WRITES` variables were written to `.env`, which Compose does not
+  inject unless a service names them, leaving the write model inert in Docker.
+- `scripts/run_http_router.sh` discarded `APSTRA_USERNAME`,
+  `APSTRA_PASSWORD`, `AOS8_USERNAME` and `AOS8_PASSWORD` — the primary
+  session-login credentials for both platforms.
+- `PRODUCT_ENV` shipped `EDGECONNECT_AUTH_HEADER: Authorization`, which the
+  generated-tool guard rejects; the runtime default is `X-Auth-Token`.
+- The redis RAG backend pointed `REDIS_URL` and Ollama at the router's own
+  loopback and started neither service; it could not have worked in Docker.
+- `cli/doctor.py` rejected the `site-health` toolset that the router accepts.
+- The wizard dumped an `EOFError` traceback on closed stdin instead of exiting
+  cleanly and naming `--yes`.
+- 24 documentation links returned 404 on the published Pages site.
+
+### Changed
+
+- `docs/production-deployment.md` is now **Docker deployment**: one ordered
+  checkout → wizard → start → verify path, with the manual procedure folded in
+  as a variant. README and `docs/index.md` no longer duplicate it.
+- Vendored GreenLake pin advanced to `05d596a01ea6`, adding
+  `glp_get_server_hardware_inventory_report`. Catalog totals move by one:
+  6,729 registered, 6,712 platform API.
+
 ## [0.10.0] - 2026-08-25
 
 Feature release. Full detail in [docs/release-notes-0.10.0.md](docs/release-notes-0.10.0.md).

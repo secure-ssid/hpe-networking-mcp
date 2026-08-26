@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
-  <title id="title">hpe-networking-mcp 0.10.0</title>
-  <desc id="desc">Low-token HPE Networking MCP toolkit with 6,144 generated operations and 6,728 backend tools across nine platform surfaces.</desc>
+  <title id="title">hpe-networking-mcp 0.11.0</title>
+  <desc id="desc">Low-token HPE Networking MCP toolkit with 6,144 generated operations and 6,729 backend tools across nine platform surfaces.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#071426"/>
@@ -21,7 +21,7 @@
   <rect width="1200" height="420" rx="32" fill="url(#bg)"/>
   <rect x="48" y="44" width="8" height="332" rx="4" fill="url(#accent)"/>
   <text x="92" y="128" class="title">hpe-networking-mcp</text>
-  <text x="92" y="174" class="subtitle">v0.10.0 · Low-token HPE Networking automation through Model Context Protocol</text>
+  <text x="92" y="174" class="subtitle">v0.11.0 · Low-token HPE Networking automation through Model Context Protocol</text>
 
   <g transform="translate(92 224)">
     <rect width="208" height="112" rx="18" fill="#0d2239" stroke="#275174"/>
@@ -29,7 +29,7 @@
     <text x="24" y="79" class="label">generated operations</text>
 
     <rect x="224" width="208" height="112" rx="18" fill="#0d2239" stroke="#275174"/>
-    <text x="248" y="50" class="metric">6,728</text>
+    <text x="248" y="50" class="metric">6,729</text>
     <text x="248" y="79" class="label">backend tools</text>
 
     <rect x="448" width="208" height="112" rx="18" fill="#0d2239" stroke="#2a7281"/>

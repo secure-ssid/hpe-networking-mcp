@@ -38,7 +38,7 @@ from hpe_networking_mcp.mcp_servers.openapi_gen.ir import OpenApiError, SpecPars
 PLATFORM = "glp"
 
 UPSTREAM_REPO = "https://github.com/nowireless4u/hpe-networking-mcp"
-UPSTREAM_REF = "a1b2afaac11001fa75a9b04bc8a3d0d5c0ffc387"
+UPSTREAM_REF = "05d596a01ea600c35879436ea3c29f6f535f54d3"
 UPSTREAM_LICENSE = "MIT"
 VENDOR_DIR = "vendor/greenlake"
 RAW_URL_TEMPLATE = (

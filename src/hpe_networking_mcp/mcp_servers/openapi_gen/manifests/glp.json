@@ -3,8 +3,8 @@
   "platform": "glp",
   "source": {
     "file_count": 29,
-    "sha256": "b047e22eef58df89ff7d10295995a1c09365b620f86c1f8f381cf0d2d404582e",
-    "operation_count": 920,
+    "sha256": "58ebc73d8e36bf3652abf235515bf6b3d932e93ff5ef50a6a2e56927903afb7c",
+    "operation_count": 921,
     "duplicate_operation_count": 0,
     "files": [
       {
@@ -49,11 +49,11 @@
       },
       {
         "file": "compute-ops-mgmt.json",
-        "sha256": "9d960a1b8d40166696b09b4ddc33e9746daf2df6966dfb87ea35dc1ab6c8d5c5",
+        "sha256": "b1a9252796ad493a1fa42f19234a39f6b05a403ee19689c928a0cf80fa176d31",
         "openapi": "3.1.0",
         "title": "HPE Compute Ops Management API",
         "version": "latest",
-        "operation_count": 206
+        "operation_count": 207
       },
       {
         "file": "consumption-analytics.json",
@@ -153,7 +153,7 @@
       },
       {
         "file": "scim.json",
-        "sha256": "ff06980d92fc5b2ecc6a5922d99b620a8fbb989b4e1ff30f63bada9919bf21ed",
+        "sha256": "6cc754218668198274bdcc9bdba3bfbf8a01eb87287221158c85891e1ee7432d",
         "openapi": "3.1.0",
         "title": "HPE GreenLake SCIM User and Group Management APIs",
         "version": "v2.0",
@@ -193,7 +193,7 @@
       },
       {
         "file": "subscription-management.json",
-        "sha256": "c7222fc9af01d2dac82779f13b12412d323c496191d999c734c9fb799be5de9a",
+        "sha256": "09f8c0cae6e0ef12f1d42cc9ba9b49f120448b198192c5a93d3ca9f3770219ab",
         "openapi": "3.1.0",
         "title": "HPE GreenLake APIs for Subscription Management",
         "version": "latest",
@@ -233,7 +233,7 @@
       },
       {
         "file": "workspace__workspace-management-v1-nb-openapi-workspace.json",
-        "sha256": "c2fd9936a3d0e30c25f7b22e8e3f9666e3d5995bc52fddc790283d4ecc2d22e5",
+        "sha256": "125dcb4e82d351b3ce6ddaf4bbcd0970332c1033828accc4e62ad6499ef9efad",
         "openapi": "3.1.0",
         "title": "HPE GreenLake for Workspace Management API",
         "version": "1.0.0",
@@ -243,7 +243,7 @@
   },
   "provenance": {
     "upstream_repo": "https://github.com/nowireless4u/hpe-networking-mcp",
-    "upstream_ref": "a1b2afaac11001fa75a9b04bc8a3d0d5c0ffc387",
+    "upstream_ref": "05d596a01ea600c35879436ea3c29f6f535f54d3",
     "upstream_license": "MIT",
     "vendor_dir": "vendor/greenlake",
     "raw_url_template": "https://raw.githubusercontent.com/nowireless4u/hpe-networking-mcp/{ref}/{vendor_dir}/{file}",
@@ -21697,6 +21697,124 @@
       ]
     },
     {
+      "name": "glp_get_server_hardware_inventory_report",
+      "key": "GET /compute-ops-mgmt/v1beta1/server-hardware-inventory-report",
+      "method": "GET",
+      "path": "/compute-ops-mgmt/v1beta1/server-hardware-inventory-report",
+      "capability": "read",
+      "source_file": "compute-ops-mgmt.json",
+      "operation_id": "get_server_hardware_inventory_report",
+      "summary": "Retrieve server hardware inventory report",
+      "description": "Retrieve server hardware inventory report data for servers matched by the provided `resource-uri` or `filter-tags`.\n\nThe `items` response structure depends on the value of the `group-by` query parameter.",
+      "tags": [
+        "server-hardware-inventory-report - v1beta1"
+      ],
+      "parameters": [
+        {
+          "name": "group-by",
+          "in": "query",
+          "required": true,
+          "type": "string",
+          "description": "Aggregation level for server hardware inventory report data.",
+          "enum": [
+            "SERVER",
+            "SERVER_MODEL",
+            "SERVER_GENERATION",
+            "SERVER_PROCESSOR",
+            "SERVER_MEMORY",
+            "SERVER_MANAGEMENT",
+            "DEVICES",
+            "DEVICE_DETAIL",
+            "DEVICE_AND_SERVER",
+            "DRIVES",
+            "DRIVE_DETAIL",
+            "DRIVE_AND_SERVER",
+            "DRIVE_LIFE_PERCENTAGE",
+            "DRIVE_LIFE_DETAIL",
+            "DRIVE_LIFE_AND_SERVER"
+          ]
+        },
+        {
+          "name": "sort",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "Sort expression in the form `<attribute> asc|desc`.\n\nSupported attributes for each `group-by` type:\n- `SERVER`: `name`, `id`, `model`, `processor`, `management`, `serverGeneration`, `memoryGiB`, `processorCount`, `deviceCount`, `powerSupplyCount`, `fanCount`, `driveCount`, `formFactor`\n- `SERVER_MODEL`: `model`, `count`\n- `SERVER_GENERATION`: `serverGeneration`, `count`\n- `SERVER_PROCESSOR`: `processor`, `count`\n- `SERVER_MEMORY`: `memoryGiB`, `count`\n- `SERVER_MANAGEMENT`: `management`, `count`\n- `DEVICES`: `deviceName`, `partNumber`, `assemblyNumber`, `technology`, `linkLanes`, `deviceCount`, `serverCount`\n- `DEVICE_DETAIL`: `deviceName`, `deviceSerialNumber`, `location`, `firmwareVersion`, `serverId`, `serverName`\n- `DEVICE_AND_SERVER`: `serverId`, `serverName`, `deviceName`, `deviceCount`\n- `DRIVES`: `driveModel`, `driveName`, `protocol`, `mediaType`, `capacityGB`, `speedGbps`, `driveCount`, `serverCount`\n- `DRIVE_DETAIL`: `serverId`, `serverName`, `driveModel`, `driveName`, `driveSerialNumber`, `location`, `driveEnclosure`, `firmware`, `failurePredicted`, `predictedMediaLifeLeftPercent`\n- `DRIVE_AND_SERVER`: `serverId`, `serverName`, `driveModel`, `driveName`, `driveCount`\n- `DRIVE_LIFE_PERCENTAGE`: `remainingDriveLifeRange`, `driveCount`, `serverCount`\n- `DRIVE_LIFE_DETAIL`: `serverId`, `serverName`, `driveSerialNumber`, `remainingDriveLifeRange`, `location`, `driveEnclosure`, `failurePredicted`, `predictedMediaLifeLeftPercent`\n- `DRIVE_LIFE_AND_SERVER`: `serverId`, `serverName`, `remainingDriveLifeRange`, `driveCount`"
+        },
+        {
+          "name": "filter",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "Filter expression in the form `<attribute> eq '\\<value>'`.\n\nSupported attributes for each `group-by` type:\n- `SERVER`: `model`, `processor`, `management`, `serverGeneration`, `memoryGiB`\n- `DEVICES`, `DEVICE_DETAIL`, `DEVICE_AND_SERVER`: `deviceName`\n- `DRIVES`, `DRIVE_DETAIL`, `DRIVE_AND_SERVER`: `driveModel`\n- `DRIVE_LIFE_PERCENTAGE`, `DRIVE_LIFE_DETAIL`, `DRIVE_LIFE_AND_SERVER`: `remainingDriveLifeRange`"
+        },
+        {
+          "name": "filter-tags",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "Limit the resources operated on by tags or return only the subset of resources that match all the filter tags."
+        },
+        {
+          "name": "resource-uri",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "URI of the resource for which server hardware inventory report data is to be retrieved.\nThis can be a server, filter or group URI.",
+          "default": "/compute-ops-mgmt/v1beta1/filters/e7cef8e6-a3f6-4490-b669-136e3ca40617"
+        },
+        {
+          "name": "excluded-servers",
+          "in": "query",
+          "required": false,
+          "type": "boolean",
+          "description": "When set to `true`, the response contains details for servers that do not have inventory data available.\n\nWhen `excluded-servers=true`, `sort` and `filter` query parameters are not supported.",
+          "default": false
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "Zero-based resource offset to start the response from",
+          "default": 0
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "The maximum number of records to return."
+        },
+        {
+          "name": "Tenant-Acid",
+          "in": "header",
+          "required": false,
+          "type": "string",
+          "description": "Tenant-Acid header can be used by an MSP workspace to make API calls on behalf of their tenant by specifying the tenant's application customer ID.\n\nIn order to make such an API call, the Bearer token must belong to an MSP workspace and this header value must be the application customer ID of a tenant within the MSP workspace. Use the `/compute-ops-mgmt/v1beta1/accounts` API to determine the application customer IDs for your tenant accounts.",
+          "format": "uuid"
+        }
+      ],
+      "security": [
+        {
+          "Bearer": []
+        }
+      ],
+      "response_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "406",
+        "500"
+      ],
+      "server_urls": [
+        "https://us-west.api.greenlake.hpe.com",
+        "https://eu-central.api.greenlake.hpe.com",
+        "https://ap-northeast.api.greenlake.hpe.com"
+      ]
+    },
+    {
       "name": "glp_get_v1beta1_server_locations",
       "key": "GET /compute-ops-mgmt/v1beta1/server-locations/{location_id}",
       "method": "GET",
@@ -36158,7 +36276,7 @@
       "source_file": "scim.json",
       "operation_id": "putUserSCIM",
       "summary": "Put user",
-      "description": "Replaces an existing user. Compliant with [SCIM 2.0](https://tools.ietf.org/html/rfc7644)",
+      "description": "Replaces an existing user. Compliant with [SCIM 2.0](https://tools.ietf.org/html/rfc7644).",
       "tags": [
         "SCIM v2beta1"
       ],

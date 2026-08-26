@@ -44,16 +44,16 @@ For a complete release/index change, use:
 uv run python scripts/ingest_tools.py --complete-catalog
 uv run python scripts/package_indexes.py --write-local-manifests
 uv run python scripts/project_facts.py --write
-uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6711
+uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6712
 uv run python scripts/check_openapi_drift.py
 uv run python scripts/check_mist_openapi_drift.py
 ```
 
 `--complete-catalog` pins every write gate and generated-tool flag before
 loading the backends, so stale shell or `.env` values cannot silently shrink
-the index. `--min-tools 6711` is the platform API compatibility floor (the
-6,711 vendor-facing platform API tools), not the complete registered backend
-total of 6,728 — validation passes at or above the floor; see
+the index. `--min-tools 6712` is the platform API compatibility floor (the
+6,712 vendor-facing platform API tools), not the complete registered backend
+total of 6,729 — validation passes at or above the floor; see
 [`docs/tool-catalog.md`](docs/tool-catalog.md) for both totals.
 After rebuilding an index, reconcile `data/SOURCE-MANIFEST.json` /
 `data/INDEX-MANIFEST.json` and regenerate
