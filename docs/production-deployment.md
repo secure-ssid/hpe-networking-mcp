@@ -193,27 +193,48 @@ INSTALL_EXTRAS=ingestion` — see docs/production-deployment.md
 
 #### Building a RAG-capable image
 
-If you have built a corpus and want it served from a container, build once
-with the extra and point the overlay at that tag:
+End-to-end checklist: from a bare checkout to prose answers served over
+Docker. Do the steps in order — steps 1–2 run on the host from a source
+checkout, steps 3–6 need only Docker.
 
 ```bash
-# 1. Build the corpus on the host (hours; accepts each vendor's terms
-#    yourself) — see release-indexes.md.
-uv run python ingestion/ingest_docs.py
+# 1. Fetch the declared vendor sources. A fresh checkout has no
+#    ingestion/sources/ tree (it is git-ignored and never committed), and
+#    ingest_docs.py refuses to replace an index built from an empty one.
+#    This crawls vendor sites for hours and accepts each vendor's document
+#    terms -- nobody can accept those terms on your behalf:
+uv run --extra ingestion python scripts/refresh_rag_sources.py --refresh-sources
 
-# 2. Build an image that can read it. `ingestion` gets the embedded LanceDB
+# 2. Build the LanceDB corpus from what step 1 fetched:
+uv run --extra ingestion python ingestion/ingest_docs.py
+
+# 3. Build an image that can read it. `ingestion` gets the embedded LanceDB
 #    backend, which needs no services. For the Redis backend instead, use
 #    INSTALL_EXTRAS=redis and set HPE_MCP_RAG_BACKEND=redis; `all` gets both.
 docker build --build-arg INSTALL_EXTRAS=ingestion \
   -t hpe-networking-mcp-router:rag .
 
-# 3. In docker-compose.router.yml set `image:` to that tag and add the
+# 4. Provision the two secrets the overlay mounts, exactly as in "Quick
+#    start" above: secrets/credentials.yaml and secrets/mcp_http_bearer_token,
+#    chmod 600, never committed. Compose cannot start the service without
+#    them.
+
+# 5. In docker-compose.router.yml set `image:` to that tag and add the
 #    mounts, read-only, individually — never `./data:/app/data`, which
-#    would shadow the baked spec index:
+#    would shadow the baked spec index. Start WITHOUT `--build`: the service
+#    also has a `build:` section, so `--build` would rebuild your :rag tag
+#    straight from the Dockerfile, whose INSTALL_EXTRAS default is empty --
+#    silently replacing the RAG-capable image with a bare one:
 #      - ./data/docs.lance:/app/data/docs.lance:ro
 #      - ./data/tools.lance:/app/data/tools.lance:ro
 docker compose -f docker-compose.yml -f docker-compose.router.yml \
-  --profile router up -d --build mcp-router
+  --profile router up -d mcp-router
+
+# 6. Verify prose retrieval end to end:
+curl http://127.0.0.1:8010/livez   # router is up
+#    then ask_docs a prose question from your MCP client: a cited,
+#    corpus-backed answer means the mount landed; the degraded hint shown
+#    under "This image is the exact-API-lookup deployment" means it did not.
 ```
 
 No CI job publishes a RAG tag; this is a supported local build. The default
