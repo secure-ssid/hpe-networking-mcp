@@ -32,7 +32,7 @@ current approval and transport behavior.
 ### GitHub Copilot CLI and app
 
 For Copilot CLI's project-level repository configuration, use
-[`.github/mcp.json`](../.github/mcp.json). It uses the `mcpServers` shape,
+[`.github/mcp.json`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/.github/mcp.json). It uses the `mcpServers` shape,
 relative `src`/`config` paths, and `type: "stdio"` so the same server
 definition is portable across Copilot CLI and other MCP hosts:
 
@@ -153,7 +153,7 @@ products) -- the recommended default for every client. For the **full
 safe-read-only** profile, the separate **full read/write** profile, a
 non-loopback **bearer-protected HTTP** profile, and a Copilot CLI/app
 example, see the tested configs and full client/transport/profile matrix in
-[`examples/README.md`](../examples/README.md). `cwd`/`PYTHONPATH`/
+[`examples/README.md`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/examples/README.md). `cwd`/`PYTHONPATH`/
 `CREDS_PATH` behavior and the package-installed (`hpe-mcp-router`)
 alternative to the direct script path are also documented there.
 
@@ -294,7 +294,7 @@ selection, trust, and tool approval. See the
 
 Claude Code's project-scoped configuration is a root `.mcp.json` file. Copy
 the tested shape from
-[`examples/mcp-clients/claude-code.mcp.json`](../examples/mcp-clients/claude-code.mcp.json)
+[`examples/mcp-clients/claude-code.mcp.json`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/examples/mcp-clients/claude-code.mcp.json)
 to `.mcp.json`, then replace the documented placeholder paths:
 
 ```bash
@@ -345,7 +345,7 @@ current approval and transport behavior.
 ### GitHub Copilot CLI and app
 
 For Copilot CLI's project-level repository configuration, use
-[`.github/mcp.json`](../.github/mcp.json). It uses the `mcpServers` shape,
+[`.github/mcp.json`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/.github/mcp.json). It uses the `mcpServers` shape,
 relative `src`/`config` paths, and `type: "stdio"` so the same server
 definition is portable across Copilot CLI and other MCP hosts:
 

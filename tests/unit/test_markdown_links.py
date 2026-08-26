@@ -76,6 +76,44 @@ def test_tracked_markdown_local_links_and_images_resolve():
     assert missing == []
 
 
+def test_docs_links_stay_inside_the_published_pages_site():
+    """A docs/ link that escapes docs/ resolves on disk but 404s on Pages.
+
+    docs/ IS the GitHub Pages source (.github/workflows/pages.yml builds
+    `source: ./docs`), so the site root is docs/, not the repo root. A link
+    like `../Dockerfile` in docs/production-deployment.md resolves fine on
+    the filesystem -- which is all the sibling test above checks -- while on
+    secure-ssid.github.io/hpe-networking-mcp/ it points at
+    secure-ssid.github.io/Dockerfile and 404s. Verified against the live
+    site before this gate was written.
+
+    Link to repo files that are not published with an absolute
+    https://github.com/secure-ssid/hpe-networking-mcp/blob/main/... URL, the
+    convention docs/release-notes-*.md already uses.
+    """
+    docs_root = (REPO_ROOT / "docs").resolve()
+    escaping = []
+
+    for path in _tracked_markdown_files():
+        if docs_root not in path.resolve().parents:
+            continue  # repo-root markdown is read on GitHub, not on Pages
+        markdown = path.read_text(errors="replace")
+        for match in MARKDOWN_LINK_RE.finditer(markdown):
+            target = match.group(1).split("#", 1)[0].strip()
+            if not target or target.startswith(
+                ("http://", "https://", "mailto:", "#", "/")
+            ):
+                continue
+            if target.startswith("<") and target.endswith(">"):
+                target = target[1:-1]
+
+            candidate = (path.parent / unquote(target)).resolve()
+            if candidate != docs_root and docs_root not in candidate.parents:
+                escaping.append(f"{path.relative_to(REPO_ROOT)} -> {target}")
+
+    assert escaping == []
+
+
 def _heading_ids(markdown: str) -> set[str]:
     ids: set[str] = set()
     duplicates: dict[str, int] = {}

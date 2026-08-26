@@ -238,5 +238,5 @@ GitHub Copilot host-side skill files updated to match:
 - MX/QFX/SRX hardware datasheets (distinct from install/maintenance guides)
   not yet scraped.
 
-See the [CHANGELOG](../CHANGELOG.md) and [prebuilt index guide](release-indexes.md)
+See the [CHANGELOG](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/CHANGELOG.md) and [prebuilt index guide](release-indexes.md)
 for release assets and restore instructions.
