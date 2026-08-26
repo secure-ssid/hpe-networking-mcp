@@ -362,9 +362,11 @@ def main() -> int:
     # where the requirement won and the caller's opt-out was silently ignored.
     facts_command = [sys.executable, "scripts/project_facts.py"]
     if args.ignore_index_facts:
-        facts_command.append("--ignore-indexes")
+        facts_command.extend(["--no-require-indexes", "--ignore-indexes"])
     elif args.strict_rag or args.strict_index_facts:
         facts_command.append("--require-indexes")
+    else:
+        facts_command.append("--no-require-indexes")
     print("\n==> Canonical project facts", flush=True)
     subprocess.run(facts_command, cwd=ROOT, check=True, env=_strict_env())
 

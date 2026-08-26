@@ -9,9 +9,9 @@ never hand-written -- see
 ``src/hpe_networking_mcp/pipeline/project_facts.py``.
 
 Usage:
-    uv run python scripts/project_facts.py                      # check for drift
-    uv run python scripts/project_facts.py --write              # regenerate
-    uv run python scripts/project_facts.py --require-indexes    # strict: indexes must exist
+    uv run python scripts/project_facts.py                      # check; indexes required
+    uv run python scripts/project_facts.py --write              # regenerate; refuses if missing
+    uv run python scripts/project_facts.py --no-require-indexes # lenient: skip missing index facts
     uv run python scripts/project_facts.py --skip-router-modes
         # fast: skip the ~15s router-mode probe
     uv run python scripts/project_facts.py --print              # dump derived facts
@@ -60,8 +60,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--require-indexes",
-        action="store_true",
-        help="fail when the local data/ indexes are missing instead of skipping index facts",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "fail when the local data/ indexes are missing instead of skipping "
+            "index facts (default: require; pass --no-require-indexes to skip)"
+        ),
     )
     parser.add_argument(
         "--ignore-indexes",
@@ -95,10 +99,22 @@ def main() -> int:
         if args.require_indexes and current.get("indexes") is None:
             print(
                 "Refusing to write index-free facts with --require-indexes: "
-                "data/specs.sqlite and data/docs.lance are missing.",
+                "data/specs.sqlite is missing. Build it with "
+                "`python scripts/build_spec_index.py`, or pass "
+                "--no-require-indexes to regenerate code-derived facts only.",
                 file=sys.stderr,
             )
             return 1
+        unbuilt = project_facts.unbuilt_index_families(current)
+        if unbuilt:
+            print(
+                "WARNING: carrying tracked locally-built index facts because "
+                "artifacts are absent: "
+                + ", ".join(unbuilt)
+                + ". Rebuild them (ingest_tools.py --complete-catalog, or the "
+                "scrape) and re-run --write, or the committed numbers stay stale.",
+                file=sys.stderr,
+            )
         try:
             tracked = project_facts.load()
         except project_facts.ProjectFactsError:
@@ -171,7 +187,7 @@ def main() -> int:
     # clean run on a fresh clone cannot be misread as having checked them.
     if unbuilt:
         print(
-            "Locally-built index facts not compared (artifact absent, not drift): "
+            "WARNING: locally-built index facts not compared (artifact absent, not drift): "
             + ", ".join(unbuilt)
         )
     return 0

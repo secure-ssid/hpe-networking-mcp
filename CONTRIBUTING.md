@@ -61,8 +61,8 @@ After rebuilding an index, reconcile `data/SOURCE-MANIFEST.json` /
 source for every published count (package version, MCP server IDs, per-backend
 tool counts, generated operations, exact `specs.sqlite` counts, RAG source
 counts). Never hand-edit that file; `scripts/project_facts.py` (run without
-arguments) fails on drift, and strict validation runs it with
-`--require-indexes`.
+arguments) fails on drift and on a missing `data/specs.sqlite`. Pass
+`--no-require-indexes` only to regenerate code-derived facts without an index.
 
 Commits that change `.github/workflows/*` require a GitHub token with both
 repository write permission and the OAuth `workflow` scope.

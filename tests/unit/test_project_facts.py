@@ -552,3 +552,72 @@ def test_placeholder_specs_db_counts_nothing_instead_of_raising(tmp_path):
 
     assert project_facts.specs_counts(empty) == {}
     assert project_facts.specs_counts(tmp_path / "absent.sqlite") == {}
+
+
+def test_cli_requires_indexes_by_default():
+    from scripts import project_facts as facts_cli
+
+    args = facts_cli._build_parser().parse_args([])
+
+    assert args.require_indexes is True
+
+
+def test_cli_no_require_indexes_is_the_opt_out():
+    from scripts import project_facts as facts_cli
+
+    args = facts_cli._build_parser().parse_args(["--no-require-indexes"])
+
+    assert args.require_indexes is False
+
+
+def test_write_refuses_index_free_facts_by_default(monkeypatch, capsys):
+    from scripts import project_facts as facts_cli
+
+    snapshot = json.loads(json.dumps(TRACKED))
+    snapshot["indexes"] = None
+    monkeypatch.setattr(
+        facts_cli.project_facts, "collect", lambda include_router_modes=True: snapshot
+    )
+    wrote: list[object] = []
+    monkeypatch.setattr(
+        facts_cli.project_facts,
+        "write",
+        lambda current, path=None: wrote.append(current) or project_facts.FACTS_PATH,
+    )
+    monkeypatch.setattr(sys, "argv", ["project_facts.py", "--write"])
+
+    assert facts_cli.main() == 1
+    assert wrote == []
+    assert "Refusing to write" in capsys.readouterr().err
+
+
+def test_write_warns_when_carrying_unbuilt_locally_built_facts(monkeypatch, capsys):
+    from scripts import project_facts as facts_cli
+
+    fresh = json.loads(json.dumps(TRACKED))
+    fresh["indexes"] = {
+        "data_dir": "data",
+        project_facts.OFFLINE_DERIVABLE: TRACKED["indexes"][project_facts.OFFLINE_DERIVABLE],
+        project_facts.LOCALLY_BUILT: {},
+    }
+    monkeypatch.setattr(
+        facts_cli.project_facts,
+        "collect",
+        lambda include_router_modes=True: json.loads(json.dumps(fresh)),
+    )
+    monkeypatch.setattr(
+        facts_cli.project_facts, "load", lambda: json.loads(json.dumps(TRACKED))
+    )
+    written: list[object] = []
+    monkeypatch.setattr(
+        facts_cli.project_facts,
+        "write",
+        lambda current, path=None: written.append(current) or project_facts.FACTS_PATH,
+    )
+    monkeypatch.setattr(sys, "argv", ["project_facts.py", "--write"])
+
+    assert facts_cli.main() == 0
+    err = capsys.readouterr().err
+    assert "WARNING" in err
+    assert "tools_lance" in err
+    assert written

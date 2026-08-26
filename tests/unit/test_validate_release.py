@@ -347,7 +347,7 @@ def test_strict_tool_index_alone_does_not_demand_unbuildable_artifacts(monkeypat
     assert any("--check-local-manifests --allow-missing-artifacts" in item for item in flattened)
     assert any("check_generated_tool_manifests.py" in item for item in flattened)
     # The index-derived facts come from artifacts this job cannot build.
-    assert not any("--require-indexes" in item for item in flattened)
+    assert any("project_facts.py --no-require-indexes" in item for item in flattened)
 
 
 def test_strict_index_facts_demands_the_offline_openapi_counts(monkeypatch):
@@ -410,7 +410,8 @@ def test_ignore_index_facts_never_contradicts_require_indexes(monkeypatch):
     facts = next(item for item in (" ".join(c) for c in commands) if "project_facts.py" in item)
 
     assert "--ignore-indexes" in facts
-    assert "--require-indexes" not in facts
+    assert "--no-require-indexes" in facts
+    assert "--require-indexes" not in facts.split()
 
 
 def test_non_strict_mode_tolerates_a_no_data_checkout(monkeypatch):
@@ -418,4 +419,4 @@ def test_non_strict_mode_tolerates_a_no_data_checkout(monkeypatch):
     flattened = [" ".join(command) for command in commands]
 
     assert any("--check-local-manifests --allow-missing-artifacts" in item for item in flattened)
-    assert any(item.endswith("scripts/project_facts.py") for item in flattened)
+    assert any("project_facts.py --no-require-indexes" in item for item in flattened)
