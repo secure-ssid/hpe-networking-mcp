@@ -318,6 +318,69 @@ def test_garbage_token_content_aborts_without_force(docker_root):
     assert not (docker_root / "secrets" / "credentials.yaml").exists()
 
 
+
+def test_binary_token_content_takes_garbage_refusal_path(docker_root):
+    """W1b: non-decodable token bytes hit the same refusal as invalid text."""
+    token_file = docker_root / "secrets" / "mcp_http_bearer_token"
+    token_file.parent.mkdir(parents=True)
+    payload = b"not-a-token\xff\xfe\x80\n"
+    token_file.write_bytes(payload)
+
+    with pytest.raises(SystemExit) as excinfo:
+        setup_wizard.main(["--docker", "--yes"])
+
+    assert excinfo.value.code != 0
+    refusal = str(excinfo.value)
+    assert "mcp_http_bearer_token" in refusal
+    assert "--force" in refusal
+    # Bytes untouched, credential step never ran.
+    assert token_file.read_bytes() == payload
+    assert not (docker_root / "secrets" / "credentials.yaml").exists()
+
+
+def test_binary_env_file_refuses_cleanly_with_nonzero_exit(
+    tmp_path, monkeypatch, capsys
+):
+    """W1b (sibling sweep): undecodable .env bytes WARN cleanly, exit 1."""
+    payload = b"\x81\x9dHPE_MCP_ROUTER_MODE=junk\xff\n"
+    (tmp_path / ".env").write_bytes(payload)
+    monkeypatch.setattr(setup_wizard, "ROOT", tmp_path)
+
+    exit_code = setup_wizard.main(
+        [
+            "--yes",
+            "--skip-install",
+            "--skip-credentials",
+            "--skip-stdio",
+            "--skip-http",
+            "--skip-catalog",
+            "--skip-doctor",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "[WARN] .env:" in captured.out
+    assert "could not merge existing entries" in captured.out
+    # The refusal leaves the undecodable bytes untouched.
+    assert (tmp_path / ".env").read_bytes() == payload
+
+
+def test_binary_optional_products_json_degrades_to_clean_warn(tmp_path):
+    """W1b (sibling sweep): undecodable .mcp.json bytes WARN instead of raising."""
+    target = tmp_path / ".mcp.json"
+    payload = b"\x81\x9d{\"mcpServers\":\xff"
+    target.write_bytes(payload)
+
+    step = setup_wizard._merge_json_env(
+        target, "hpe-networking-mcp", {"HPE_MCP_ROUTER_MODE": "minimal"}
+    )
+
+    assert step.status == "WARN"
+    assert "could not update optional product env" in step.detail
+    assert target.read_bytes() == payload
+
+
 # ---------------------------------------------------------------------------
 # C6 hygiene: generated artifacts stay untracked
 # ---------------------------------------------------------------------------

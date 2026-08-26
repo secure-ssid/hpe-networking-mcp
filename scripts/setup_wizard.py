@@ -514,7 +514,12 @@ def _write_env_file(target: Path, env: dict[str, str], *, force: bool) -> Step:
     if not env:
         return Step(_rel(target), "SKIP", "no runtime environment updates requested")
     if target.exists() and not force:
-        lines = target.read_text().splitlines()
+        try:
+            lines = target.read_text().splitlines()
+        except UnicodeDecodeError as exc:
+            return Step(
+                _rel(target), "WARN", f"could not merge existing entries: {exc}"
+            )
         existing = {key for line in lines if (key := _env_assignment_key(line))}
         existing_profile = next(
             (
@@ -590,7 +595,7 @@ def _merge_json_env(target: Path, server_name: str, env: dict[str, str]) -> Step
         return Step(_rel(target), "SKIP", "no MCP environment updates requested")
     try:
         data = json.loads(target.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
         return Step(_rel(target), "WARN", f"could not update optional product env: {exc}")
 
     servers = data.get("mcpServers") or data.get("servers") or {}
@@ -705,7 +710,10 @@ def _docker_token_step(args: argparse.Namespace) -> Step:
     """
     BEARER_TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
     if BEARER_TOKEN_PATH.exists() and not args.force:
-        existing = BEARER_TOKEN_PATH.read_text(encoding="utf-8").rstrip("\r\n")
+        try:
+            existing = BEARER_TOKEN_PATH.read_text(encoding="utf-8").rstrip("\r\n")
+        except UnicodeDecodeError:
+            existing = ""
         if re.fullmatch(r"[0-9a-f]{64}", existing):
             os.chmod(BEARER_TOKEN_PATH, 0o600)
             return Step(
