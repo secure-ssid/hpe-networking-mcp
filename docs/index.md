@@ -46,8 +46,15 @@ before adding any Aruba Central or GreenLake Platform credentials. API-backed
 tools need credentials later, but this path is safe to try first with fake or
 no account details at all.
 
-Two install paths, same destination. **Option A — pull the published image
-(no checkout):**
+Two install paths, same destination. What each gives you, before you pick:
+
+| What you get | Option A — published image | Option B — source checkout |
+|---|---|---|
+| Router tools + exact-API lookup (`lookup_api`; spec index baked into the image) | Yes | Yes |
+| Prose docs RAG (`search_docs` / `ask_docs`) | **Not included** — needs an `INSTALL_EXTRAS=ingestion` rebuild *plus* a corpus you fetch and build yourself ([end-to-end checklist](production-deployment.md#building-a-rag-capable-image)) | The same two pieces: the `ingestion` extra, plus the same self-built corpus |
+| Guided first run (`scripts/setup_wizard.py`) | No — the container starts straight into the router | Yes |
+
+**Option A — pull the published image (no checkout):**
 
 ```bash
 docker run -d --name hpe-networking-mcp \
