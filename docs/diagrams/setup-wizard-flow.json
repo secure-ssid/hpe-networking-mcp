@@ -1,5 +1,5 @@
 {
-  "title": "The six setup wizard steps",
+  "title": "Setup wizard: the local path and the --docker path",
   "rankdir": "LR",
   "nodes": [
     {
@@ -25,6 +25,22 @@
     {
       "id": "doctor",
       "label": "6. Doctor"
+    },
+    {
+      "id": "docker_choices",
+      "label": "--docker 1. Choices\n(toolsets, products,\nwrites, RAG, exposure)"
+    },
+    {
+      "id": "docker_secrets",
+      "label": "--docker 2. Secrets\n(one 0600 file\nper credential)"
+    },
+    {
+      "id": "docker_env",
+      "label": "--docker 3. .env\n(non-secret knobs)"
+    },
+    {
+      "id": "docker_overlay",
+      "label": "--docker 4. Overlay\n(compose secrets\n+ env wiring)"
     }
   ],
   "links": [
@@ -47,6 +63,18 @@
     {
       "source": "catalog",
       "target": "doctor"
+    },
+    {
+      "source": "docker_choices",
+      "target": "docker_secrets"
+    },
+    {
+      "source": "docker_secrets",
+      "target": "docker_env"
+    },
+    {
+      "source": "docker_env",
+      "target": "docker_overlay"
     }
   ]
 }

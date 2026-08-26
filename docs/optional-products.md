@@ -241,6 +241,20 @@ additionally narrows which backends the running router loads — include a
 platform name there too (e.g. `mist`) if you want the router itself scoped
 to just that optional backend.
 
+### In Docker
+
+`python3 scripts/setup_wizard.py --docker --products mist` does the whole
+wiring in one pass: it prompts for that product's settings, writes each
+credential as its own `0600` file under `secrets/`, declares each as a
+Compose secret with a `<VAR>_FILE` reference, and emits `HPE_MCP_PRODUCTS`
+so the running container loads the backend. Rotating one product's token is
+one file rewrite plus a restart.
+
+Setting `HPE_MCP_PRODUCTS` in a host `.env` alone is not enough for a
+container — Compose injects only variables the service names, and a
+credential passed as a plaintext `environment:` value defeats the point of
+the secret files. See [Docker deployment](production-deployment.md).
+
 ## Wizard product labels
 
 | Product | Variables |

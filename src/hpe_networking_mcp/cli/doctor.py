@@ -94,6 +94,7 @@ _ENV_ASSIGNMENT_RE = re.compile(
 VALID_TOOLSETS = {
     "config",
     "monitoring",
+    "site-health",
     "nac",
     "ops",
     "glp",

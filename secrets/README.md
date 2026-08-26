@@ -64,10 +64,52 @@ cp secrets/mcp_http_bearer_token.example secrets/mcp_http_bearer_token
 chmod 600 secrets/mcp_http_bearer_token
 ```
 
-Add more `*_FILE` secrets the same way (create the file, mount it as a
-Compose secret, set `<VAR>_FILE=/run/secrets/<name>` in the service
-environment) for any of the optional-product credentials documented in
-`scripts/run_http_router.sh`'s environment allow-list.
+### One secret value = one file = one Compose secret = one `<VAR>_FILE`
+
+Every credential gets its own file. That is what keeps rotation cheap:
+revoking a leaked Mist token rewrites `secrets/mist_api_token` and restarts
+the router, and no other credential is read, rewritten, or re-exposed.
+
+`python3 scripts/setup_wizard.py --docker` generates this wiring into
+`docker-compose.router.local.yml` for whatever products you select. To do it
+by hand, add three things per secret — the file, the service reference, and
+the top-level declaration:
+
+```yaml
+services:
+  mcp-router:
+    environment:
+      # Central and GreenLake client secrets. load_credentials() ranks
+      # process env above the YAML and reads exactly these names, so
+      # secrets/credentials.yaml can carry identity only.
+      SOURCE_CLIENT_SECRET_FILE: /run/secrets/central_client_secret
+      TARGET_CLIENT_SECRET_FILE: /run/secrets/glp_client_secret
+      # A product: non-secret identity inline, the credential as a file.
+      MIST_HOST: "https://api.mist.com"
+      MIST_API_TOKEN_FILE: /run/secrets/mist_api_token
+    secrets:
+      - central_client_secret
+      - glp_client_secret
+      - mist_api_token
+
+secrets:
+  central_client_secret:
+    file: ./secrets/central_client_secret
+  glp_client_secret:
+    file: ./secrets/glp_client_secret
+  mist_api_token:
+    file: ./secrets/mist_api_token
+```
+
+`SOURCE_*` is the Central account and `TARGET_*` is the GreenLake account, in
+`load_credentials()` terms. The wizard writes `secrets/credentials.yaml` with
+base URLs, client ids and workspace ids but **no** `client_secret:` keys; a
+hand-written file may still carry them inline if you would rather keep the
+two together.
+
+Never write a `<VAR>` and its `<VAR>_FILE` twin in the same file: an empty
+`<VAR>` beside a `<VAR>_FILE` refuses startup, and a non-empty one silently
+wins over the file.
 
 ## What NOT to do
 
