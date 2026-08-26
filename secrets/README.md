@@ -41,8 +41,10 @@ them. `docker/entrypoint.sh` bridges this with the common
 `<VAR>_FILE` → `<VAR>` convention used by many official images (e.g.
 Postgres's `POSTGRES_PASSWORD_FILE`): if `<VAR>` is unset and `<VAR>_FILE`
 points at a readable file, the container's own environment gets `<VAR>` set
-to that file's contents before `scripts/run_http_router.sh` starts. An
-already-set `<VAR>` always wins over `<VAR>_FILE`.
+to that file's contents before `scripts/run_http_router.sh` starts.
+An already-set **non-empty** `<VAR>` wins over `<VAR>_FILE`; a `<VAR>` set to
+the EMPTY string beside its own `<VAR>_FILE` is treated as a misconfiguration
+and refuses startup rather than silently overriding what the file provides.
 
 The full set of families the bridge recognizes (keep this list in lockstep
 with `_BRIDGE_RE` in `docker/entrypoint.sh`): `MCP_HTTP_BEARER_TOKEN`, and
