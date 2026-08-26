@@ -826,6 +826,34 @@ def test_credential_affecting_env_keys_are_listed_and_untouched(docker_root, cap
     assert "GLP_TOKEN_URL=https://stale.example.com\n" in content
 
 
+def test_docker_merge_preserves_foreign_readonly_line(docker_root):
+    """Aggregate-gate clearing drops only keys inside DOCKER_ENV_ALLOWLIST.
+
+    A host-side `.env` written by a local-mode safe-read-only run carries
+    HPE_MCP_READONLY, which sits outside the docker allowlist; a docker run on
+    the same checkout must leave that line byte-identical instead of silently
+    deleting it.
+    """
+    env_path = docker_root / ".env"
+    env_path.write_text(
+        "# operator-managed\n"
+        "HPE_MCP_ACCESS_PROFILE=safe-read-only\n"
+        "HPE_MCP_READONLY=1\n"
+        "HPE_MCP_PRODUCT_ACCESS=read-only\n",
+        encoding="utf-8",
+    )
+
+    exit_code = setup_wizard.main(["--docker", "--yes"])
+
+    assert exit_code == 0
+    content = env_path.read_text(encoding="utf-8")
+    assert "# operator-managed\n" in content
+    assert "HPE_MCP_READONLY=1\n" in content
+    env = _env_lines(env_path)
+    assert env["HPE_MCP_ACCESS_PROFILE"] == "custom"  # merge still applied
+    assert "HPE_MCP_READONLY" not in setup_wizard.DOCKER_ENV_ALLOWLIST
+
+
 def test_force_refuses_to_overwrite_env_holding_secret_keys(docker_root):
     env_path = docker_root / ".env"
     env_path.write_text("CENTRAL_API_TOKEN=old\n", encoding="utf-8")

@@ -624,7 +624,11 @@ def _write_env_file(
         updated_lines = []
         for line in lines:
             key = _env_assignment_key(line)
-            if clear_aggregate_gates and key in PROFILE_WRITE_ENV_VARS:
+            if (
+                clear_aggregate_gates
+                and key in PROFILE_WRITE_ENV_VARS
+                and key in update_keys
+            ):
                 continue
             if key in env and (
                 key in update_keys or _should_replace_env_assignment(line, env)
