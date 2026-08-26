@@ -152,11 +152,17 @@ def test_entrypoint_script_is_syntactically_valid_bash(functional_bash):
 
 def test_entrypoint_only_fills_in_unset_variables_from_file_secrets():
     text = ENTRYPOINT.read_text()
-    # Precedence must match the rest of the codebase: an explicitly-set
-    # value always wins over a *_FILE hint.
+    # Precedence has two distinct idioms and both must stay pinned: a
+    # NON-EMPTY explicit value wins over a *_FILE hint (`:-` expansion),
+    # while set-but-EMPTY beside the twin is the fail-fast refusal further
+    # down (`+set` existence check). The two must not be conflated.
     assert "_FILE" in text
+    assert re.search(r'-n\s+"\$\{!base_var:-\}"', text), (
+        "entrypoint must let a non-empty plain value win over its _FILE hint"
+    )
     assert re.search(r'-n\s+"\$\{!base_var\+set\}"', text), (
-        "entrypoint must skip already-set variables before reading a _FILE secret"
+        "entrypoint must REFUSE a set-but-EMPTY plain variable beside its "
+        "_FILE twin, not skip the hint"
     )
 
 
@@ -212,6 +218,29 @@ def test_entrypoint_aborts_on_empty_plain_secret_beside_its_file_twin(
     assert "refusing to start" in result.stderr
 
 
+def test_entrypoint_aborts_even_for_unrecognized_family_misconfigurations(
+    functional_bash, tmp_path
+):
+    """The set-but-empty refusal fires BEFORE family recognition on
+    purpose: any plain variable set-but-EMPTY beside its own *_FILE twin
+    is a misconfiguration worth stopping for, recognized or not --
+    narrowing to _BRIDGE_RE families would restore silent-disable for
+    pairs nothing in-tree consumes."""
+    stray_file = tmp_path / "stray_secret"
+    stray_file.write_text("value\n")
+    result = _run_entrypoint(
+        functional_bash,
+        {
+            "NOT_A_RECOGNIZED_SECRET": "",
+            "NOT_A_RECOGNIZED_SECRET_FILE": stray_file.as_posix(),
+        },
+        "true",
+    )
+    assert result.returncode != 0, result.stderr
+    assert "NOT_A_RECOGNIZED_SECRET" in result.stderr
+    assert "refusing to start" in result.stderr
+
+
 def test_entrypoint_non_empty_plain_value_still_wins_over_file_hint(
     functional_bash, tmp_path
 ):
@@ -248,6 +277,41 @@ def test_entrypoint_bridges_file_secret_when_plain_var_is_unset(
     assert result.stdout == "file-secret\n"
 
 
+def test_entrypoint_continues_silently_when_a_recognized_hint_is_empty(
+    functional_bash,
+):
+    """Recognized family + empty *_FILE value means no provisioned secret,
+    which is the documented optional default: startup continues and nothing
+    is bridged. The second scenario also covers the both-set-but-empty
+    fallthrough -- outcome unchanged from before the fail-fast existed."""
+    hint_only = _run_entrypoint(
+        functional_bash,
+        {"MCP_HTTP_BEARER_TOKEN_FILE": ""},
+        "/usr/bin/printenv",
+    )
+    assert hint_only.returncode == 0, hint_only.stderr
+    assert "MCP_HTTP_BEARER_TOKEN=" not in hint_only.stdout
+    assert "filled MCP_HTTP_BEARER_TOKEN" not in hint_only.stderr
+
+    both_empty = _run_entrypoint(
+        functional_bash,
+        {"MCP_HTTP_BEARER_TOKEN": "", "MCP_HTTP_BEARER_TOKEN_FILE": ""},
+        "/usr/bin/printenv",
+    )
+    assert both_empty.returncode == 0, both_empty.stderr
+    token_lines = [
+        line
+        for line in both_empty.stdout.splitlines()
+        if line.startswith("MCP_HTTP_BEARER_TOKEN=")
+    ]
+    # The harness itself exports the plain var as "", so the line legitimately
+    # shows up in printenv; the contract is that its value is STILL empty --
+    # nothing was bridged from the empty file hint.
+    assert token_lines == ["MCP_HTTP_BEARER_TOKEN="], both_empty.stdout
+    assert "refusing to start" not in both_empty.stderr
+    assert "filled MCP_HTTP_BEARER_TOKEN" not in both_empty.stderr
+
+
 def test_entrypoint_announces_missing_prose_rag_backend_when_extras_empty(
     functional_bash,
 ):
@@ -281,6 +345,8 @@ def _rag_toolsets_note_source() -> str:
         (None, ""),
         ("ingestion", ""),
         ("ingestion,redis", ""),
+        # Space-separated is the Dockerfile-documented multi-extras form.
+        ("ingestion redis", ""),
         (
             "",
             " (prose-RAG backend NOT installed: rebuild with"
@@ -525,6 +591,12 @@ def test_dockerfile_bakes_install_extras_into_the_runtime_stage():
     runtime_stage = text[last_from_end:]
     assert 'ARG INSTALL_EXTRAS=""' in runtime_stage
     assert "ENV HPE_MCP_IMAGE_EXTRAS=${INSTALL_EXTRAS}" in runtime_stage
+    assert runtime_stage.index('ARG INSTALL_EXTRAS=""') < runtime_stage.index(
+        "ENV HPE_MCP_IMAGE_EXTRAS=${INSTALL_EXTRAS}"
+    ), (
+        "runtime-stage ENV must resolve from an ARG declared above it; "
+        "ENV-above-ARG would bake an always-empty profile silently"
+    )
     assert text.count("ENV HPE_MCP_IMAGE_EXTRAS=") == 1
 
 

@@ -152,8 +152,10 @@ make that the default.
   * `MCP_HTTP_BEARER_TOKEN_FILE=/run/secrets/mcp_http_bearer_token` —
     `docker/entrypoint.sh` reads this file's contents into
     `MCP_HTTP_BEARER_TOKEN` before starting the router, the common
-    `<VAR>_FILE` convention used by many official images. An already-set
-    `<VAR>` always wins over its `<VAR>_FILE` counterpart.
+    `<VAR>_FILE` convention used by many official images. A non-empty
+    `<VAR>` wins over its `<VAR>_FILE` counterpart; a set-but-empty
+    `<VAR>` beside its counterpart is a misconfiguration and refuses
+    startup.
 * See [`../secrets/README.md`](../secrets/README.md) for the full setup
   steps and how to add more `*_FILE` secrets (optional-product API tokens,
   etc.).

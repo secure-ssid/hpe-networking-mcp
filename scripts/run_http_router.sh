@@ -136,8 +136,11 @@ rag_toolsets_note() {
   if [[ -z "${HPE_MCP_IMAGE_EXTRAS+x}" ]]; then
     return 0
   fi
-  case ",${HPE_MCP_IMAGE_EXTRAS}," in
-    *,ingestion,*) ;;
+  # Normalize before matching: the Dockerfile documents space-separated
+  # extras ("ingestion redis"), while comma lists ("ingestion,redis")
+  # build too -- uv splits commas into repeated --extra flags.
+  case " ${HPE_MCP_IMAGE_EXTRAS//,/ } " in
+    *" ingestion "*) ;;
     *)
       printf ' (prose-RAG backend NOT installed: rebuild with --build-arg INSTALL_EXTRAS=ingestion)'
       ;;
