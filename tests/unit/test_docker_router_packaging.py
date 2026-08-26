@@ -10,6 +10,7 @@ available.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -22,6 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DOCKERFILE = REPO_ROOT / "Dockerfile"
 DOCKERIGNORE = REPO_ROOT / ".dockerignore"
 ENTRYPOINT = REPO_ROOT / "docker" / "entrypoint.sh"
+ROUTER_SCRIPT = REPO_ROOT / "scripts" / "run_http_router.sh"
 ROUTER_OVERLAY = REPO_ROOT / "docker-compose.router.yml"
 BASE_COMPOSE = REPO_ROOT / "docker-compose.yml"
 SECRETS_DIR = REPO_ROOT / "secrets"
@@ -156,6 +158,162 @@ def test_entrypoint_only_fills_in_unset_variables_from_file_secrets():
     assert re.search(r'-n\s+"\$\{!base_var\+set\}"', text), (
         "entrypoint must skip already-set variables before reading a _FILE secret"
     )
+
+
+# ---------------------------------------------------------------------------
+# Image profile surfacing: INSTALL_EXTRAS baked into the image, honesty at
+# startup about what a bare image can and cannot do, and fail-fast refusal
+# of the set-but-empty secret hole.
+#
+# Unlike the static checks above, these run docker/entrypoint.sh under a
+# minimal exported environment (PATH/HOME only) so host secrets can never
+# leak into a scenario; every scenario variable is passed explicitly.
+# ---------------------------------------------------------------------------
+
+
+def _entrypoint_env(**overrides: str) -> dict[str, str]:
+    env = {
+        "PATH": os.environ.get("PATH", ""),
+        "HOME": os.environ.get("HOME", str(Path.home())),
+    }
+    env.update(overrides)
+    return env
+
+
+def _run_entrypoint(bash: str, env_overrides: dict[str, str], *argv: str):
+    return subprocess.run(
+        [bash, str(ENTRYPOINT), *argv],
+        capture_output=True,
+        text=True,
+        env=_entrypoint_env(**env_overrides),
+        timeout=60,
+    )
+
+
+def test_entrypoint_aborts_on_empty_plain_secret_beside_its_file_twin(
+    functional_bash, tmp_path
+):
+    """The latent auth-disabling hole: bridging used to skip a *_FILE hint
+    whenever the plain variable was set -- even empty -- so a stray empty
+    MCP_HTTP_BEARER_TOKEN silently served /mcp unauthenticated despite a
+    provisioned secret file. Startup must refuse instead."""
+    token_file = tmp_path / "bearer_token"
+    token_file.write_text("real-secret\n")
+    result = _run_entrypoint(
+        functional_bash,
+        {
+            "MCP_HTTP_BEARER_TOKEN": "",
+            "MCP_HTTP_BEARER_TOKEN_FILE": token_file.as_posix(),
+        },
+        "true",
+    )
+    assert result.returncode != 0, result.stderr
+    assert "MCP_HTTP_BEARER_TOKEN" in result.stderr
+    assert "refusing to start" in result.stderr
+
+
+def test_entrypoint_non_empty_plain_value_still_wins_over_file_hint(
+    functional_bash, tmp_path
+):
+    """Precedence for real values is unchanged: an explicit non-empty value
+    beats the *_FILE hint, and no bridge announcement fires."""
+    token_file = tmp_path / "bearer_token"
+    token_file.write_text("file-secret\n")
+    result = _run_entrypoint(
+        functional_bash,
+        {
+            "MCP_HTTP_BEARER_TOKEN": "explicit-value",
+            "MCP_HTTP_BEARER_TOKEN_FILE": token_file.as_posix(),
+        },
+        "/usr/bin/printenv",
+        "MCP_HTTP_BEARER_TOKEN",
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "explicit-value\n"
+    assert "filled MCP_HTTP_BEARER_TOKEN" not in result.stderr
+
+
+def test_entrypoint_bridges_file_secret_when_plain_var_is_unset(
+    functional_bash, tmp_path
+):
+    token_file = tmp_path / "bearer_token"
+    token_file.write_text("file-secret\n")
+    result = _run_entrypoint(
+        functional_bash,
+        {"MCP_HTTP_BEARER_TOKEN_FILE": token_file.as_posix()},
+        "/usr/bin/printenv",
+        "MCP_HTTP_BEARER_TOKEN",
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "file-secret\n"
+
+
+def test_entrypoint_announces_missing_prose_rag_backend_when_extras_empty(
+    functional_bash,
+):
+    """The published default installs no extras: say so once, loudly, on
+    stderr rather than letting ask_docs/search_docs disappoint later."""
+    result = _run_entrypoint(functional_bash, {}, "true")
+    assert result.returncode == 0, result.stderr
+    assert "prose-RAG tools disabled" in result.stderr
+
+
+def test_entrypoint_stays_quiet_when_extras_are_installed(functional_bash):
+    result = _run_entrypoint(
+        functional_bash, {"HPE_MCP_IMAGE_EXTRAS": "ingestion"}, "true"
+    )
+    assert result.returncode == 0, result.stderr
+    assert "prose-RAG tools disabled" not in result.stderr
+
+
+def _rag_toolsets_note_source() -> str:
+    text = ROUTER_SCRIPT.read_text()
+    start = text.index("rag_toolsets_note() {")
+    end = text.index("\n}\n", start) + 2
+    return text[start:end]
+
+
+@pytest.mark.parametrize(
+    ("extras_value", "expected"),
+    [
+        # Unset = source checkout: the operator manages extras directly and
+        # the plain toolsets list stands.
+        (None, ""),
+        ("ingestion", ""),
+        ("ingestion,redis", ""),
+        (
+            "",
+            " (prose-RAG backend NOT installed: rebuild with"
+            " --build-arg INSTALL_EXTRAS=ingestion)",
+        ),
+        (
+            "redis",
+            " (prose-RAG backend NOT installed: rebuild with"
+            " --build-arg INSTALL_EXTRAS=ingestion)",
+        ),
+    ],
+)
+def test_banner_qualifies_rag_toolset_only_without_a_backend(
+    functional_bash, extras_value, expected
+):
+    script = f"{_rag_toolsets_note_source()}\nprintf '%s' \"$(rag_toolsets_note)\""
+    overrides = (
+        {} if extras_value is None else {"HPE_MCP_IMAGE_EXTRAS": extras_value}
+    )
+    result = subprocess.run(
+        [functional_bash, "-c", script],
+        capture_output=True,
+        text=True,
+        env=_entrypoint_env(**overrides),
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == expected
+
+
+def test_banner_toolsets_line_invokes_the_rag_qualifier():
+    text = ROUTER_SCRIPT.read_text()
+    assert "toolsets: ${HPE_MCP_TOOLSETS}$(rag_toolsets_note)" in text
 
 
 def _load_yaml(path: Path) -> dict:
@@ -355,6 +513,19 @@ def test_default_image_installs_no_optional_extras():
     syncs = [line for line in text.splitlines() if "uv sync --frozen" in line]
     assert len(syncs) == 2, syncs
     assert text.count("for extra in ${INSTALL_EXTRAS}") == 2
+
+
+def test_dockerfile_bakes_install_extras_into_the_runtime_stage():
+    """ARGs are stage-scoped: the builder's INSTALL_EXTRAS choice has to be
+    redeclared and re-exported in the final stage, or the entrypoint notice
+    and banner qualifier read an always-empty profile and a partial install
+    stays invisible until a prose query fails."""
+    text = DOCKERFILE.read_text()
+    last_from_end = max(match.end() for match in FROM_LINE.finditer(text))
+    runtime_stage = text[last_from_end:]
+    assert 'ARG INSTALL_EXTRAS=""' in runtime_stage
+    assert "ENV HPE_MCP_IMAGE_EXTRAS=${INSTALL_EXTRAS}" in runtime_stage
+    assert text.count("ENV HPE_MCP_IMAGE_EXTRAS=") == 1
 
 
 def test_router_overlay_validates_standalone_and_merged_with_docker_cli(tmp_path):
