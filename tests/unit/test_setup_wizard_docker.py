@@ -826,31 +826,30 @@ def test_credential_affecting_env_keys_are_listed_and_untouched(docker_root, cap
     assert "GLP_TOKEN_URL=https://stale.example.com\n" in content
 
 
-def test_docker_merge_preserves_foreign_readonly_line(docker_root):
-    """Aggregate-gate clearing drops only keys inside DOCKER_ENV_ALLOWLIST.
+def test_docker_env_update_keeps_operator_lines_outside_allowlist(docker_root):
+    """The docker .env update path owns only DOCKER_ENV_ALLOWLIST keys.
 
-    A host-side `.env` written by a local-mode safe-read-only run carries
-    HPE_MCP_READONLY, which sits outside the docker allowlist; a docker run on
-    the same checkout must leave that line byte-identical instead of silently
-    deleting it.
+    Checkouts alternate between local-mode runs (which emit HPE_MCP_READONLY)
+    and docker runs; the aggregate-gate sweep must never swallow host-side
+    lines the docker allowlist does not cover.
     """
     env_path = docker_root / ".env"
     env_path.write_text(
-        "# operator-managed\n"
-        "HPE_MCP_ACCESS_PROFILE=safe-read-only\n"
-        "HPE_MCP_READONLY=1\n"
-        "HPE_MCP_PRODUCT_ACCESS=read-only\n",
+        "# hand-tuned below, do not regenerate\n"
+        "export HPE_MCP_READONLY=1\n"
+        "export HPE_MCP_ACCESS_PROFILE=safe-read-only\n"
+        "export HPE_MCP_PRODUCT_ACCESS=read-only\n",
         encoding="utf-8",
     )
 
-    exit_code = setup_wizard.main(["--docker", "--yes"])
+    assert setup_wizard.main(["--docker", "--yes"]) == 0
 
-    assert exit_code == 0
-    content = env_path.read_text(encoding="utf-8")
-    assert "# operator-managed\n" in content
-    assert "HPE_MCP_READONLY=1\n" in content
+    surviving_lines = env_path.read_text(encoding="utf-8").splitlines()
+    assert "# hand-tuned below, do not regenerate" in surviving_lines
+    assert "export HPE_MCP_READONLY=1" in surviving_lines
     env = _env_lines(env_path)
-    assert env["HPE_MCP_ACCESS_PROFILE"] == "custom"  # merge still applied
+    assert env["HPE_MCP_READONLY"] == "1"
+    assert env["HPE_MCP_ACCESS_PROFILE"] == "custom"
     assert "HPE_MCP_READONLY" not in setup_wizard.DOCKER_ENV_ALLOWLIST
 
 
