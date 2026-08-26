@@ -29,8 +29,8 @@ render without browser-side JavaScript.
 | [optional-products.md](optional-products.md) | Optional product matrix, wizard behavior, env vars, and safety surface |
 | [troubleshooting.md](troubleshooting.md) | Outcome-driven setup, authentication, transport, catalog, and RAG fixes |
 | [known-limitations.md](known-limitations.md) | Current known limitations, their impact, and planned remediation |
-| [../examples/README.md](../examples/README.md) | Tested, non-secret example configs: minimal/full stdio, local/bearer HTTP, Copilot CLI, and prompt/runbook examples |
-| [../MIGRATION.md](../MIGRATION.md) | Local migration path from the legacy `secure-ssid/centralmcp` repository |
+| [examples/README.md](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/examples/README.md) | Tested, non-secret example configs: minimal/full stdio, local/bearer HTTP, Copilot CLI, and prompt/runbook examples |
+| [MIGRATION.md](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/MIGRATION.md) | Local migration path from the legacy `secure-ssid/centralmcp` repository |
 
 ### Architecture
 
@@ -72,7 +72,7 @@ render without browser-side JavaScript.
 | [release-notes-0.5.0.md](release-notes-0.5.0.md) | Verified AOS8 migration expansion: source hardening, bounded Classic Central write lifecycle, expanded fail-closed New Central mappings, verification taxonomy, and read-only live/dry-run evaluation |
 | [release-notes-0.4.0.md](release-notes-0.4.0.md) | Complete 0.4.0 migration execution, Mist diagnostics, EdgeConnect compatibility, GLP, and Axis changes (historical) |
 | [release-notes-0.3.0.md](release-notes-0.3.0.md) | Prior 0.3.0 platform, migration, safety, and API-source changes (historical) |
-| [../CHANGELOG.md](../CHANGELOG.md) | Version history index into per-release notes |
+| [CHANGELOG.md](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/CHANGELOG.md) | Version history index into per-release notes |
 | [aos8-live-lab-evaluation-0.6.md](aos8-live-lab-evaluation-0.6.md) | In-progress 0.6-era live-lab evaluation (archive) |
 | [milvus-lite-pilot.md](milvus-lite-pilot.md) | Opt-in Milvus Lite pilot, not wired into the router (archive) |
 | [session-handoff.md](session-handoff.md) | Working-session handoff notes (archive) |

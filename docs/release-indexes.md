@@ -113,7 +113,7 @@ uv run python ingestion/ingest_docs.py
 ```
 
 This crawls the vendor documentation portals declared in
-[`ingestion/source_manifest.json`](../ingestion/source_manifest.json). Run it
+[`ingestion/source_manifest.json`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/ingestion/source_manifest.json). Run it
 only under your own acceptance of each vendor's terms of use. Expect it to
 take hours, and expect the first query afterwards to download the ~250 MB
 `nomic-embed-text-v1.5` embedding model into your Hugging Face cache.
@@ -258,7 +258,7 @@ family is absent or empty.
 ## Refresh RAG source inputs
 
 Scraped source files live under git-ignored `ingestion/sources/`; keep the
-tracked source list in [`ingestion/source_manifest.json`](../ingestion/source_manifest.json)
+tracked source list in [`ingestion/source_manifest.json`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/ingestion/source_manifest.json)
 current before rebuilding public indexes. The table below mirrors the tracked
 manifest so release rebuilds can cite the exact source seeds used for DevHub,
 New Central, techdocs, Feature Navigator, and OpenAPI lookup.

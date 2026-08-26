@@ -305,7 +305,7 @@ All of the above are run together by `scripts/validate_release.py`.
    site (including one that passed `True` positionally for `dry_run`) binds
    identically to 0.4.0 (commit `1f79256`) and never executes a write. No
    caller action is required; see
-   [`tests/unit/test_ssid_dryrun_positional_compat.py`](../tests/unit/test_ssid_dryrun_positional_compat.py)
+   [`tests/unit/test_ssid_dryrun_positional_compat.py`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/tests/unit/test_ssid_dryrun_positional_compat.py)
    for the reproducible positional-signature and write-guard coverage.
 8. To reproduce this release's AOS8 read-only evaluation yourself, run
    `scripts/evaluate_aos8_050_readonly.py` (offline/fixture-backed by
