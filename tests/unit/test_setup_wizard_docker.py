@@ -693,3 +693,255 @@ def test_generated_overlay_validates_standalone_and_merged_with_docker_cli(
     assert set(services.stdout.split()) == {"redis", "ollama"}, (
         "the generated overlay must stay opt-in behind the router profile"
     )
+
+
+# ---------------------------------------------------------------------------
+# W3 — .env emission + R7 combined-output audit + C3 pair-absence
+# ---------------------------------------------------------------------------
+
+
+def _env_lines(path: Path) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        key = setup_wizard._env_assignment_key(line)
+        if key is not None:
+            parsed[key] = setup_wizard._env_assignment_value(line) or ""
+    return parsed
+
+
+def test_docker_yes_emits_allowlisted_env_defaults(docker_root):
+    exit_code = setup_wizard.main(["--docker", "--yes"])
+
+    assert exit_code == 0
+    env = _env_lines(docker_root / ".env")
+    assert set(env) <= setup_wizard.DOCKER_ENV_ALLOWLIST
+    assert not any(setup_wizard._is_secret_env_var(key) for key in env)
+    # C8: defaults stay read-only/custom; nothing escalates by default.
+    assert env["HPE_MCP_ROUTER_MODE"] == "minimal"
+    assert env["HPE_MCP_ACCESS_PROFILE"] == "custom"
+    assert env["HPE_MCP_PRODUCT_ACCESS"] == "read-only"
+    assert not any(name in env for name in setup_wizard.PLATFORM_WRITE_ENV_VARS)
+    assert "HPE_MCP_RAG_BACKEND" not in env
+
+
+@pytest.mark.parametrize(
+    ("profile", "product_access", "expected_access", "gate_value"),
+    [
+        ("safe-read-only", None, "read-only", "0"),
+        ("full-read-write", None, "read-write", "1"),
+        ("custom", "read-write", "read-write", None),
+    ],
+)
+def test_env_profile_matrix_pins_gates_and_product_access(
+    docker_root, profile, product_access, expected_access, gate_value
+):
+    argv = [
+        "--docker",
+        "--yes",
+        "--access-profile",
+        profile,
+        "--products",
+        "clearpass",
+    ]
+    if product_access:
+        argv += ["--product-access", product_access]
+    assert setup_wizard.main(argv) == 0
+
+    env = _env_lines(docker_root / ".env")
+    assert env["HPE_MCP_ACCESS_PROFILE"] == profile
+    assert env["HPE_MCP_PRODUCT_ACCESS"] == expected_access
+    gates = {
+        name: env[name]
+        for name in setup_wizard.PLATFORM_WRITE_ENV_VARS
+        if name in env
+    }
+    if gate_value is None:
+        assert gates == {}
+    else:
+        assert gates == {name: gate_value for name in setup_wizard.PLATFORM_WRITE_ENV_VARS}
+
+
+def test_rag_redis_backend_lands_in_manifest_and_env(docker_root, monkeypatch):
+    monkeypatch.setattr(setup_wizard, "_choose_rag_image", lambda *, assume_yes: True)
+    monkeypatch.setattr(
+        setup_wizard, "_choose_rag_backend", lambda *, assume_yes: "redis"
+    )
+
+    manifest = setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args(["--docker", "--yes"])
+    )
+
+    assert manifest.backend == "redis"
+    assert _env_lines(docker_root / ".env")["HPE_MCP_RAG_BACKEND"] == "redis"
+
+
+def test_rag_lancedb_backend_omits_the_env_key(docker_root, monkeypatch):
+    monkeypatch.setattr(setup_wizard, "_choose_rag_image", lambda *, assume_yes: True)
+
+    manifest = setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args(["--docker", "--yes"])
+    )
+
+    assert manifest.backend == "lancedb"
+    assert "HPE_MCP_RAG_BACKEND" not in _env_lines(docker_root / ".env")
+
+
+def test_choose_rag_backend_is_opt_in(monkeypatch):
+    assert setup_wizard._choose_rag_backend(assume_yes=True) == "lancedb"
+    monkeypatch.setattr(
+        setup_wizard, "_ask", lambda prompt, default, *, assume_yes: True
+    )
+    assert setup_wizard._choose_rag_backend(assume_yes=False) == "redis"
+
+
+def test_stale_secret_env_key_warns_and_stays_byte_identical(docker_root, capsys):
+    env_path = docker_root / ".env"
+    env_path.write_text("CENTRAL_API_TOKEN=old\n", encoding="utf-8")
+
+    exit_code = setup_wizard.main(["--docker", "--yes"])
+
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert "[WARN]" in out
+    assert "CENTRAL_API_TOKEN" in out  # the WARN names the offending key
+    content = env_path.read_text(encoding="utf-8")
+    assert "CENTRAL_API_TOKEN=old\n" in content  # planted line byte-identical
+    assert _env_lines(env_path)["CENTRAL_API_TOKEN"] == "old"
+    assert "CENTRAL_API_TOKEN" not in setup_wizard.DOCKER_ENV_ALLOWLIST
+
+
+def test_credential_affecting_env_keys_are_listed_and_untouched(docker_root, capsys):
+    env_path = docker_root / ".env"
+    env_path.write_text(
+        "CREDS_PATH=config/other.yaml\nGLP_TOKEN_URL=https://stale.example.com\n",
+        encoding="utf-8",
+    )
+
+    assert setup_wizard.main(["--docker", "--yes"]) == 0
+
+    out = capsys.readouterr().out
+    assert "CREDS_PATH" in out and "GLP_TOKEN_URL" in out
+    content = env_path.read_text(encoding="utf-8")
+    assert "CREDS_PATH=config/other.yaml\n" in content
+    assert "GLP_TOKEN_URL=https://stale.example.com\n" in content
+
+
+def test_docker_env_update_keeps_operator_lines_outside_allowlist(docker_root):
+    """The docker .env update path owns only DOCKER_ENV_ALLOWLIST keys.
+
+    Checkouts alternate between local-mode runs (which emit HPE_MCP_READONLY)
+    and docker runs; the aggregate-gate sweep must never swallow host-side
+    lines the docker allowlist does not cover.
+    """
+    env_path = docker_root / ".env"
+    env_path.write_text(
+        "# hand-tuned below, do not regenerate\n"
+        "export HPE_MCP_READONLY=1\n"
+        "export HPE_MCP_ACCESS_PROFILE=safe-read-only\n"
+        "export HPE_MCP_PRODUCT_ACCESS=read-only\n",
+        encoding="utf-8",
+    )
+
+    assert setup_wizard.main(["--docker", "--yes"]) == 0
+
+    surviving_lines = env_path.read_text(encoding="utf-8").splitlines()
+    assert "# hand-tuned below, do not regenerate" in surviving_lines
+    assert "export HPE_MCP_READONLY=1" in surviving_lines
+    env = _env_lines(env_path)
+    assert env["HPE_MCP_READONLY"] == "1"
+    assert env["HPE_MCP_ACCESS_PROFILE"] == "custom"
+    assert "HPE_MCP_READONLY" not in setup_wizard.DOCKER_ENV_ALLOWLIST
+
+
+def test_force_refuses_to_overwrite_env_holding_secret_keys(docker_root):
+    env_path = docker_root / ".env"
+    env_path.write_text("CENTRAL_API_TOKEN=old\n", encoding="utf-8")
+    planted = env_path.read_bytes()
+
+    with pytest.raises(SystemExit) as excinfo:
+        setup_wizard.main(["--docker", "--yes", "--force"])
+
+    assert "CENTRAL_API_TOKEN" in str(excinfo.value)
+    assert env_path.read_bytes() == planted
+
+
+def test_binary_existing_env_degrades_to_clean_warn_in_docker_mode(
+    docker_root, capsys
+):
+    """W1b crash class, docker-mode sibling: no traceback, bytes untouched."""
+    (docker_root / ".env").write_bytes(b"\x81\x9d\xff")
+
+    exit_code = setup_wizard.main(["--docker", "--yes"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "could not merge existing entries" in captured.out
+    assert captured.err.strip() == ""
+    assert (docker_root / ".env").read_bytes() == b"\x81\x9d\xff"
+
+
+def test_no_plain_twin_of_referenced_file_vars_across_artifacts(docker_root):
+    assert setup_wizard.main(["--docker", "--yes"]) == 0
+
+    artifacts = [
+        docker_root / "secrets" / "mcp_http_bearer_token",
+        docker_root / "secrets" / "credentials.yaml",
+        docker_root / "docker-compose.router.local.yml",
+        docker_root / ".env",
+    ]
+    texts = {path.name: path.read_text(encoding="utf-8") for path in artifacts}
+
+    for name, text in texts.items():
+        assert not setup_wizard._plain_twin_violations(text), name
+
+    referenced_files = {
+        match
+        for text in texts.values()
+        for match in setup_wizard._FILE_ENV_REF_RE.findall(text)
+    }
+    assert referenced_files == {"MCP_HTTP_BEARER_TOKEN_FILE"}
+
+
+def test_plain_twin_violations_helper_shapes():
+    text = (
+        "services:\n"
+        "  MCP_HTTP_BEARER_TOKEN_FILE: /run/secrets/x\n"
+        "MCP_HTTP_BEARER_TOKEN=leak\n"
+    )
+    assert setup_wizard._plain_twin_violations(text) == ["MCP_HTTP_BEARER_TOKEN"]
+    assert setup_wizard._plain_twin_violations("MCP_HTTP_BEARER_TOKEN_FILE: x\n") == []
+
+
+def test_overlay_writer_refuses_text_carrying_a_plain_twin(docker_root, monkeypatch):
+    monkeypatch.setattr(
+        setup_wizard,
+        "_compose_overlay_text",
+        lambda manifest: (
+            "services:\n  mcp-router:\n"
+            "      MCP_HTTP_BEARER_TOKEN_FILE: /run/secrets/mcp_http_bearer_token\n"
+            "      MCP_HTTP_BEARER_TOKEN=leaked\n"
+        ),
+    )
+
+    with pytest.raises(SystemExit):
+        setup_wizard._write_compose_overlay(_overlay_manifest(), force=True)
+    assert not (docker_root / "docker-compose.router.local.yml").exists()
+
+
+def test_next_steps_mention_env_knobs_and_redis_hint(docker_root, capsys, monkeypatch):
+    setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args(["--docker", "--yes"])
+    )
+    out = capsys.readouterr().out
+    assert ".env" in out
+    capsys.readouterr()
+    monkeypatch.setattr(setup_wizard, "_choose_rag_image", lambda *, assume_yes: True)
+    monkeypatch.setattr(
+        setup_wizard, "_choose_rag_backend", lambda *, assume_yes: "redis"
+    )
+    setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args(["--docker", "--yes"])
+    )
+    out = capsys.readouterr().out
+    assert "HPE_MCP_RAG_BACKEND=redis" in out
+    assert "redis service started" in out

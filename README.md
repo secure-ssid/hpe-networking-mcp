@@ -62,7 +62,7 @@ Central or GreenLake Platform credentials.
 |---|---|---|
 | Router tools + exact-API lookup (`lookup_api`; spec index baked into the image) | Yes | Yes |
 | Prose docs RAG (`search_docs` / `ask_docs`) | **Not included** — needs an `INSTALL_EXTRAS=ingestion` rebuild *plus* a corpus you fetch and build yourself ([end-to-end checklist](docs/production-deployment.md#building-a-rag-capable-image)) | The same two pieces: the `ingestion` extra, plus the same self-built corpus |
-| Guided first run (`scripts/setup_wizard.py`) | No — the container starts straight into the router | Yes |
+| Guided first run (`scripts/setup_wizard.py`) | No — the container starts straight into the router | Yes — `--docker` also provisions the container path (secrets, generated compose overlay, `.env`; see the [one-command path](docs/production-deployment.md#one-command-path-docker)) |
 
 **Option A — pull the published image (no checkout):**
 

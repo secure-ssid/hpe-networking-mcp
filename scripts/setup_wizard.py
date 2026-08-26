@@ -135,6 +135,41 @@ PLATFORM_WRITE_ENV_VARS = (
 )
 PROFILE_WRITE_ENV_VARS = ("HPE_MCP_READONLY", *PLATFORM_WRITE_ENV_VARS)
 
+# W3 docker-mode `.env` emission: only these keys may be written, and the
+# defaults stay read-only/custom (C8). HPE_MCP_TOOLSETS has no wizard input in
+# docker mode, so it is never emitted here -- the overlay's
+# `${HPE_MCP_TOOLSETS:-central,glp,rag}` default keeps governing it.
+DOCKER_ENV_ALLOWLIST = frozenset(
+    {
+        "HPE_MCP_ROUTER_MODE",
+        "HPE_MCP_TOOLSETS",
+        "HPE_MCP_ACCESS_PROFILE",
+        "HPE_MCP_PRODUCT_ACCESS",
+        *PLATFORM_WRITE_ENV_VARS,
+        "HPE_MCP_RAG_BACKEND",
+    }
+)
+
+# R7 audit set: host-side credential resolution ranks `.env` above the YAML
+# credentials -- load_credentials in src/hpe_networking_mcp/pipeline/config.py
+# reads process env > .env > YAML, and CREDS_PATH redirects where
+# credentials.yaml is loaded from. Any of these keys in a pre-existing `.env`
+# silently changes what the host connects as, so the wizard warns listing them
+# and never modifies them.
+CREDENTIAL_AFFECTING_ENV_VARS = (
+    "CREDS_PATH",
+    "SOURCE_BASE_URL",
+    "SOURCE_CLIENT_ID",
+    "SOURCE_CLIENT_SECRET",
+    "SOURCE_GLP_WORKSPACE",
+    "TARGET_BASE_URL",
+    "TARGET_CLIENT_ID",
+    "TARGET_CLIENT_SECRET",
+    "TARGET_GLP_WORKSPACE",
+    "GLP_TOKEN_URL",
+    "GLP_BASE_URL",
+)
+
 
 @dataclass
 class Step:
@@ -149,7 +184,8 @@ class DockerManifest:
 
     W2 consumes host_ip/client_hostname/rag for overlay emission (the latter
     two prompted since W2); W3 reads backend/products/access_profile for .env
-    keys. backend stays neutral here until W3 lands its prompt.
+    keys. backend carries the W3 vector-backend choice ("redis"/"lancedb")
+    when rag is set, else None.
     """
 
     port: int
@@ -516,7 +552,42 @@ def _product_env(
     return env
 
 
-def _write_env_file(target: Path, env: dict[str, str], *, force: bool) -> Step:
+_FILE_ENV_REF_RE = re.compile(r"\b([A-Z][A-Z0-9_]*_FILE)\b")
+
+
+def _plain_twin_violations(text: str) -> list[str]:
+    """C3: list plain ``<VAR>=`` stems that shadow a referenced ``<VAR>_FILE``."""
+    violations: list[str] = []
+    for referenced in sorted(set(_FILE_ENV_REF_RE.findall(text))):
+        stem = referenced[: -len("_FILE")]
+        if re.search(rf"(?m)^\s*(?:export\s+)?{stem}=", text):
+            violations.append(stem)
+    return violations
+
+
+def _refuse_plain_file_twins(text: str, target: Path) -> None:
+    """Refuse to emit text pairing a secret *_FILE ref with its plain twin."""
+    twins = _plain_twin_violations(text)
+    if twins:
+        raise SystemExit(
+            f"refusing to emit {_rel(target)}: plain twin assignment(s) for "
+            f"referenced *_FILE variable(s): {', '.join(twins)}"
+        )
+
+
+def _write_env_file(
+    target: Path,
+    env: dict[str, str],
+    *,
+    force: bool,
+    update_keys: frozenset[str] | set[str] | None = None,
+) -> Step:
+    """Write/merge runtime env knobs; ``update_keys`` restricts the merge.
+
+    Docker mode passes DOCKER_ENV_ALLOWLIST so only allowlisted keys are
+    rewritten or appended -- every other existing line (including secrets)
+    survives byte-identically.
+    """
     if not env:
         return Step(_rel(target), "SKIP", "no runtime environment updates requested")
     if target.exists() and not force:
@@ -540,16 +611,24 @@ def _write_env_file(target: Path, env: dict[str, str], *, force: bool) -> Step:
             and _normalized_access_profile(existing_profile)
             in {"safe-read-only", "full-read-write"}
         )
-        update_keys = {
-            "HPE_MCP_ACCESS_PROFILE",
-            "HPE_MCP_PRODUCTS",
-            "HPE_MCP_PRODUCT_ACCESS",
-            *PROFILE_WRITE_ENV_VARS,
-        }
+        update_keys = (
+            {
+                "HPE_MCP_ACCESS_PROFILE",
+                "HPE_MCP_PRODUCTS",
+                "HPE_MCP_PRODUCT_ACCESS",
+                *PROFILE_WRITE_ENV_VARS,
+            }
+            if update_keys is None
+            else set(update_keys)
+        )
         updated_lines = []
         for line in lines:
             key = _env_assignment_key(line)
-            if clear_aggregate_gates and key in PROFILE_WRITE_ENV_VARS:
+            if (
+                clear_aggregate_gates
+                and key in PROFILE_WRITE_ENV_VARS
+                and key in update_keys
+            ):
                 continue
             if key in env and (
                 key in update_keys or _should_replace_env_assignment(line, env)
@@ -566,7 +645,9 @@ def _write_env_file(target: Path, env: dict[str, str], *, force: bool) -> Step:
             if updated_lines and updated_lines[-1].strip():
                 updated_lines.append("")
             updated_lines.extend(additions)
-        _write_secret_file(target, "\n".join([*updated_lines, ""]))
+        final_text = "\n".join([*updated_lines, ""])
+        _refuse_plain_file_twins(final_text, target)
+        _write_secret_file(target, final_text)
         detail = (
             "merged runtime settings; existing token values preserved"
             if additions or updated_lines != lines
@@ -579,7 +660,9 @@ def _write_env_file(target: Path, env: dict[str, str], *, force: bool) -> Step:
         *[_shell_line(name, value) for name, value in env.items()],
         "",
     ]
-    _write_secret_file(target, "\n".join(lines))
+    final_text = "\n".join(lines)
+    _refuse_plain_file_twins(final_text, target)
+    _write_secret_file(target, final_text)
     return Step(_rel(target), "OK", "created runtime environment file")
 
 
@@ -751,6 +834,17 @@ def _choose_rag_image(*, assume_yes: bool) -> bool:
     )
 
 
+def _choose_rag_backend(*, assume_yes: bool) -> str:
+    """W3 prompt: vector backend behind the RAG toolset (default lancedb)."""
+    use_redis = _ask(
+        "Store the RAG corpus in the Redis Stack service "
+        "(HPE_MCP_RAG_BACKEND=redis; otherwise the in-image LanceDB backend)?",
+        False,
+        assume_yes=assume_yes,
+    )
+    return "redis" if use_redis else "lancedb"
+
+
 def _published_port_spec(host_ip: str | None, port: int) -> str:
     """R1d: emit only a literal "<bind>:<port>:<port>" publish line."""
     bind = DEFAULT_HOST if host_ip is None else host_ip.strip()
@@ -852,6 +946,7 @@ def _compose_overlay_text(manifest: DockerManifest) -> str:
 def _write_compose_overlay(manifest: DockerManifest, *, force: bool) -> Step:
     """Emit the compose overlay LAST (K3): only after the secret gate passes."""
     text = _compose_overlay_text(manifest)  # R1d refusal happens before any I/O
+    _refuse_plain_file_twins(text, OVERLAY_PATH)  # C3 guard on the shipped bytes
     if OVERLAY_PATH.exists() and not force:
         return Step(
             _rel(OVERLAY_PATH),
@@ -861,6 +956,89 @@ def _write_compose_overlay(manifest: DockerManifest, *, force: bool) -> Step:
     with open(OVERLAY_PATH, "w", encoding="utf-8", newline="\n") as handle:
         handle.write(text)
     return Step(_rel(OVERLAY_PATH), "OK", "created compose overlay")
+
+
+def _docker_env_values(
+    args: argparse.Namespace, manifest: DockerManifest, *, product_access: str
+) -> dict[str, str]:
+    """Allowlisted `.env` knobs derived from the run (C8: read-only/custom defaults)."""
+    values = {
+        "HPE_MCP_ROUTER_MODE": args.router_mode,
+        "HPE_MCP_ACCESS_PROFILE": manifest.access_profile,
+    }
+    if manifest.access_profile == "safe-read-only":
+        values["HPE_MCP_PRODUCT_ACCESS"] = "read-only"
+        values.update({name: "0" for name in PLATFORM_WRITE_ENV_VARS})
+    elif manifest.access_profile == "full-read-write":
+        values["HPE_MCP_PRODUCT_ACCESS"] = "read-write"
+        values.update({name: "1" for name in PLATFORM_WRITE_ENV_VARS})
+    else:
+        values["HPE_MCP_PRODUCT_ACCESS"] = product_access
+    if manifest.backend == "redis":
+        values["HPE_MCP_RAG_BACKEND"] = "redis"
+    return values
+
+
+def _flagged_env_keys(lines: list[str]) -> list[str]:
+    """R7: keys in an existing `.env` that shape host-side credentials."""
+    flagged = {
+        key
+        for line in lines
+        if (key := _env_assignment_key(line))
+        and (_is_secret_env_var(key) or key in CREDENTIAL_AFFECTING_ENV_VARS)
+    }
+    return sorted(flagged)
+
+
+def _docker_env_steps(
+    args: argparse.Namespace,
+    manifest: DockerManifest,
+    *,
+    product_access: str,
+    force: bool,
+) -> list[Step]:
+    """W3 `.env` emission + R7 audit; runs after the K3 gate, overlay stays LAST.
+
+    The audit lists secret-shaped / credential-affecting keys found in a
+    pre-existing file -- host-side credential resolution ranks `.env` above the
+    YAML credentials (pipeline/config.py load_credentials) -- and never
+    modifies them. ``--force`` refuses to overwrite a file holding such keys
+    instead of silently dropping them.
+    """
+    values = _docker_env_values(args, manifest, product_access=product_access)
+    outside = sorted(set(values) - DOCKER_ENV_ALLOWLIST)
+    if outside:
+        raise SystemExit(
+            f"refusing to emit {_rel(ENV_PATH)}: key(s) outside the docker-mode "
+            f"allowlist: {', '.join(outside)}"
+        )
+    steps: list[Step] = []
+    if ENV_PATH.exists():
+        try:
+            lines = ENV_PATH.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            lines = []  # undecodable content: the writer reports it as a WARN
+        flagged = _flagged_env_keys(lines)
+        if flagged:
+            steps.append(
+                Step(
+                    _rel(ENV_PATH),
+                    "WARN",
+                    "credential-affecting keys left untouched: " + ", ".join(flagged),
+                )
+            )
+            if force:
+                raise SystemExit(
+                    f"{_rel(ENV_PATH)} holds secret-shaped or credential-affecting "
+                    f"key(s): {', '.join(flagged)}; refusing to overwrite it with "
+                    "--force. Edit the file by hand instead."
+                )
+    steps.append(
+        _write_env_file(
+            ENV_PATH, values, force=force, update_keys=set(DOCKER_ENV_ALLOWLIST)
+        )
+    )
+    return steps
 
 
 def _docker_token_step(args: argparse.Namespace) -> Step:
@@ -945,21 +1123,32 @@ def _print_docker_next_steps(manifest: DockerManifest, *, product_access: str) -
         "(six-step checklist in docs/production-deployment.md remains the "
         "manual fallback)."
     )
+    print(
+        f"{next_step + 1}. Non-secret tuning knobs live in {_rel(ENV_PATH)}; "
+        "edit them and restart the stack to apply."
+        + (
+            " HPE_MCP_RAG_BACKEND=redis additionally needs the bundled redis"
+            " service started."
+            if manifest.backend == "redis"
+            else ""
+        )
+    )
 
 
 def _run_docker_mode(args: argparse.Namespace) -> DockerManifest:
-    """--docker flow: resolve exposure, prompt W2 choices, emit secrets +
-    compose overlay.
+    """--docker flow: resolve exposure, prompt W2/W3 choices, emit secrets +
+    .env knobs + compose overlay.
 
-    All interactive prompts and refusals precede the first write; overlay/.env
-    emission MUST hook in after _finalize_docker_deployment (K3 write-order
-    invariant). .env emission itself arrives in W3.
+    All interactive prompts and refusals precede the first write; .env and
+    overlay emission MUST hook in after _finalize_docker_deployment (K3
+    write-order invariant keeps the overlay LAST).
     """
     host_ip = _resolve_docker_exposure(args)
     selected_products = _selected_products(args)
     product_access = _product_access(args, selected_products)
     client_hostname = _resolve_client_hostname(host_ip, assume_yes=args.yes)
     rag_image = _choose_rag_image(assume_yes=args.yes)
+    rag_backend = _choose_rag_backend(assume_yes=args.yes) if rag_image else None
 
     steps: list[Step] = [_docker_token_step(args)]
     if not args.skip_credentials:
@@ -976,13 +1165,16 @@ def _run_docker_mode(args: argparse.Namespace) -> DockerManifest:
         host_ip=host_ip,
         client_hostname=client_hostname,
         rag=rag_image,
-        backend=None,
+        backend=rag_backend,
         products=selected_products,
         access_profile=args.access_profile,
         token_path=BEARER_TOKEN_PATH,
         creds_path=DOCKER_CREDENTIALS_PATH,
     )
     _finalize_docker_deployment(manifest)
+    steps.extend(
+        _docker_env_steps(args, manifest, product_access=product_access, force=args.force)
+    )
     steps.append(_write_compose_overlay(manifest, force=args.force))
     _print_steps(steps)
     _print_docker_next_steps(manifest, product_access=product_access)
