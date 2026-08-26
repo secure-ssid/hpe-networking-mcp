@@ -767,6 +767,51 @@ def _env_lines(path: Path) -> dict[str, str]:
     return parsed
 
 
+def test_eof_at_a_prompt_exits_cleanly_instead_of_raising(monkeypatch, capsys):
+    """Closed stdin is end of input, not a wizard crash.
+
+    A bare EOFError traceback reads like a bug in the wizard and buries the
+    one thing the operator needs: the flag that skips the prompts.
+    """
+
+    def closed_stdin(_prompt=""):
+        raise EOFError
+
+    monkeypatch.setattr("builtins.input", closed_stdin)
+
+    with pytest.raises(SystemExit) as excinfo:
+        setup_wizard._ask("Use the recommended defaults?", True, assume_yes=False)
+
+    message = str(excinfo.value)
+    assert "stdin closed" in message
+    assert "--yes" in message, "the refusal must name the flag that skips prompts"
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_interrupt_at_a_prompt_exits_cleanly(monkeypatch):
+    def interrupted(_prompt=""):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("builtins.input", interrupted)
+
+    with pytest.raises(SystemExit, match="cancelled"):
+        setup_wizard._ask_text("Toolsets to load", "central,glp,rag")
+
+
+def test_eof_in_the_secret_prompt_exits_cleanly(monkeypatch):
+    """The getpass path needs the same handling as the plain-text one."""
+
+    def closed_stdin(_prompt=""):
+        raise EOFError
+
+    monkeypatch.setattr(setup_wizard.getpass, "getpass", closed_stdin)
+
+    with pytest.raises(SystemExit) as excinfo:
+        setup_wizard._ask_secret("MIST_API_TOKEN", "YOUR_MIST_API_TOKEN")
+
+    assert "stdin closed" in str(excinfo.value)
+
+
 def test_docker_yes_emits_allowlisted_env_defaults(docker_root):
     exit_code = setup_wizard.main(["--docker", "--yes"])
 

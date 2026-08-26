@@ -403,11 +403,37 @@ def _product_secret_files(product: str) -> dict[str, SecretFile]:
     }
 
 
+def _read_answer(prompt: str, *, secret: bool = False) -> str:
+    """Read one prompted answer, turning EOF/interrupt into a clean exit.
+
+    ``input()`` raises EOFError the moment stdin closes -- piped input that
+    ran out, Ctrl-D, or a non-interactive shell. The bare traceback reads
+    like a crash inside the wizard when it is only end of input, and it
+    buries the one thing the operator needs to know: which flag skips the
+    prompts. Ctrl-C gets the same treatment for the same reason.
+
+    Deliberately does not claim "nothing was written": prompts run either
+    side of the first write, so the summary already printed above is the
+    honest record of what exists.
+    """
+    reader = getpass.getpass if secret else input
+    try:
+        return reader(prompt)
+    except EOFError:
+        raise SystemExit(
+            f"\nsetup wizard: stdin closed while waiting for '{prompt.strip()}'. "
+            "Re-run attached to a terminal, or pass --yes to accept every "
+            "default without prompting."
+        ) from None
+    except KeyboardInterrupt:
+        raise SystemExit("\nsetup wizard: cancelled at a prompt.") from None
+
+
 def _ask(prompt: str, default: bool, *, assume_yes: bool) -> bool:
     if assume_yes:
         return default
     suffix = "Y/n" if default else "y/N"
-    answer = input(f"{prompt} [{suffix}] ").strip().lower()
+    answer = _read_answer(f"{prompt} [{suffix}] ").strip().lower()
     if not answer:
         return default
     return answer in {"y", "yes"}
@@ -415,12 +441,14 @@ def _ask(prompt: str, default: bool, *, assume_yes: bool) -> bool:
 
 def _ask_text(prompt: str, default: str = "") -> str:
     suffix = f" [{default}]" if default else ""
-    answer = input(f"{prompt}{suffix}: ").strip()
+    answer = _read_answer(f"{prompt}{suffix}: ").strip()
     return answer or default
 
 
 def _ask_secret(prompt: str, default: str) -> str:
-    answer = getpass.getpass(f"{prompt} [leave blank to keep placeholder]: ").strip()
+    answer = _read_answer(
+        f"{prompt} [leave blank to keep placeholder]: ", secret=True
+    ).strip()
     return answer or default
 
 
