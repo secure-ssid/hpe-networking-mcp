@@ -95,6 +95,55 @@ A plain `docker compose up` (no `-f docker-compose.router.yml`, no
 before this overlay existed. The overlay declares no `depends_on`, which is
 what lets `up -d mcp-router` bring up the router on its own.
 
+## One-command path (`--docker`)
+
+From a source checkout, the setup wizard provisions what "Quick start" above
+does by hand and emits a generated overlay beside the tracked one:
+
+```bash
+python3 scripts/setup_wizard.py --docker --yes
+```
+
+This creates (all git-ignored, reruns keep existing files unless `--force`):
+
+* `secrets/mcp_http_bearer_token` — a fresh 64-hex token, mode 0600, whose
+  value is never printed;
+* `secrets/credentials.yaml` — placeholder credentials to fill in (the run
+  refuses to finish an acknowledged non-loopback deployment until they are
+  real);
+* `docker-compose.router.local.yml` — a generated overlay layering over
+  `docker-compose.yml`: a literal `127.0.0.1:<port>:<port>` publish line,
+  hostname-derived allowlists, and the same `${VAR:-default}` knobs the
+  tracked overlay uses;
+* `.env` — non-secret knobs only (router mode, access profile,
+  optional-product access, and `HPE_MCP_RAG_BACKEND=redis` when that backend
+  was chosen). Secret values are never written to it; if it already holds
+  secret-shaped or credential-affecting keys, the wizard warns listing them
+  and leaves them byte-for-byte alone.
+
+Then start and verify exactly as in "Quick start", with the generated overlay:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.router.local.yml \
+  --profile router up -d mcp-router
+curl http://127.0.0.1:8010/livez
+```
+
+Answering yes to the RAG image question emits the rag variant of the overlay
+(no `build:` section; read-only `./data/docs.lance` and `./data/tools.lance`
+mounts) and asks whether to store the corpus in Redis
+(`HPE_MCP_RAG_BACKEND=redis`; start the bundled `redis` service first).
+Building that image and its corpus follows the six-step checklist under
+"Building a RAG-capable image" below — which remains the canonical fallback —
+steps 1–2 run on the host with the corrected `uv run --extra ingestion`
+forms:
+
+```bash
+uv run --extra ingestion python scripts/refresh_rag_sources.py --refresh-sources
+uv run --extra ingestion python ingestion/ingest_docs.py
+```
+
+
 ## Security choices
 
 ### Loopback-only exposure by default
