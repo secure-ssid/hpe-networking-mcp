@@ -18,6 +18,9 @@ secrets/*
 !secrets/*.example
 !secrets/README.md
 
+# Generated local compose overlay (setup_wizard.py --docker); never tracked.
+docker-compose.router.local.yml
+
 # Claude local settings (may contain credentials in allowed commands)
 .claude/settings.local.json
 
