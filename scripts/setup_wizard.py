@@ -25,7 +25,61 @@ LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 # docker-mode code reads these constants and tests patch them alongside ROOT.
 SECRETS_DIR = ROOT / "secrets"
 
-BEARER_TOKEN_PATH = SECRETS_DIR / "mcp_http_bearer_token"
+# Mirrors _BRIDGE_RE in docker/entrypoint.sh: the container fills <VAR> from a
+# <VAR>_FILE hint only for these families and logs a refusal for anything
+# else. A secret file outside this set yields a stack that looks configured
+# and silently is not, so the wizard refuses to emit one. The shell literal
+# and this pattern are pinned equal in tests/unit/test_setup_wizard_docker.py.
+_BRIDGE_FAMILY_RE = re.compile(
+    r"^(MCP_HTTP_BEARER_TOKEN|[A-Z0-9_]+_(API_TOKEN|CLIENT_SECRET|PASSWORD"
+    r"|SESSION_COOKIE|CSRF_TOKEN))$"
+)
+
+
+@dataclass(frozen=True)
+class SecretFile:
+    """One secret value: one 0600 file, one compose secret, one <VAR>_FILE.
+
+    Rotation blast radius is the point. A credential lives in exactly one
+    file, so revoking it rewrites that file and restarts the router without
+    reading, rewriting, or re-exposing any other secret.
+
+    ``path`` resolves SECRETS_DIR on access instead of binding it at
+    construction, so tests that repoint the module constant see the move.
+    """
+
+    env_var: str
+    name: str
+    label: str
+
+    @property
+    def path(self) -> Path:
+        return SECRETS_DIR / self.name
+
+    @property
+    def file_env_var(self) -> str:
+        return f"{self.env_var}_FILE"
+
+    @property
+    def container_path(self) -> str:
+        return f"/run/secrets/{self.name}"
+
+
+BEARER_SECRET = SecretFile(
+    "MCP_HTTP_BEARER_TOKEN", "mcp_http_bearer_token", "router HTTP bearer token"
+)
+# Central and GreenLake secrets live outside credentials.yaml so each rotates
+# alone. load_credentials ranks process env above the YAML and reads exactly
+# these names, so the entrypoint bridge is the whole mechanism -- no loader
+# change, and the YAML keeps carrying identity (base URLs, client ids).
+CENTRAL_SECRET = SecretFile(
+    "SOURCE_CLIENT_SECRET", "central_client_secret", "Aruba Central API client secret"
+)
+GLP_SECRET = SecretFile(
+    "TARGET_CLIENT_SECRET", "glp_client_secret", "HPE GreenLake API client secret"
+)
+
+BEARER_TOKEN_PATH = BEARER_SECRET.path
 DOCKER_CREDENTIALS_PATH = SECRETS_DIR / "credentials.yaml"
 # Generated compose overlay; gitignored, written by --docker (W2).
 OVERLAY_PATH = ROOT / "docker-compose.router.local.yml"
@@ -79,6 +133,8 @@ PRODUCT_ENV = {
         "label": "Apstra",
         "vars": {
             "APSTRA_BASE_URL": "https://apstra.example.com",
+            "APSTRA_USERNAME": "YOUR_APSTRA_USERNAME",
+            "APSTRA_PASSWORD": "YOUR_APSTRA_PASSWORD",
             "APSTRA_API_TOKEN": "YOUR_APSTRA_API_TOKEN",
         },
     },
@@ -86,6 +142,8 @@ PRODUCT_ENV = {
         "label": "ArubaOS 8",
         "vars": {
             "AOS8_BASE_URL": "https://mobility-conductor.example.com",
+            "AOS8_USERNAME": "YOUR_AOS8_USERNAME",
+            "AOS8_PASSWORD": "YOUR_AOS8_PASSWORD",
             "AOS8_API_TOKEN": "YOUR_AOS8_API_TOKEN",
         },
     },
@@ -94,7 +152,7 @@ PRODUCT_ENV = {
         "vars": {
             "EDGECONNECT_BASE_URL": "https://orchestrator.example.com",
             "EDGECONNECT_API_TOKEN": "YOUR_EDGECONNECT_API_TOKEN",
-            "EDGECONNECT_AUTH_HEADER": "Authorization",
+            "EDGECONNECT_AUTH_HEADER": "X-Auth-Token",
         },
     },
     "uxi": {
@@ -121,6 +179,32 @@ PRODUCT_ENV = {
     },
 }
 PLACEHOLDER_MARKERS = ("YOUR_", "REPLACE_ME", "PLACEHOLDER")
+# Mirror of tool_router._VALID_TOOLSETS (keys of _TOOLSET_BACKENDS plus
+# "all"). This script is stdlib-only and must import without src/ on the
+# path, so the list is duplicated rather than imported; a unit test pins the
+# three copies (here, tool_router, cli/doctor) equal.
+VALID_TOOLSETS = (
+    "aos8",
+    "all",
+    "apstra",
+    "axis",
+    "central",
+    "central-generated",
+    "clearpass",
+    "config",
+    "design",
+    "edgeconnect",
+    "glp",
+    "interop",
+    "mist",
+    "monitoring",
+    "nac",
+    "ops",
+    "rag",
+    "site-health",
+    "uxi",
+)
+DEFAULT_TOOLSETS = "central,glp,rag"
 SECRET_ENV_SUFFIXES = ("_TOKEN", "_SECRET", "_PASSWORD", "_API_KEY")
 PLATFORM_WRITE_ENV_VARS = (
     "HPE_MCP_CENTRAL_WRITES",
@@ -133,18 +217,34 @@ PLATFORM_WRITE_ENV_VARS = (
     "HPE_MCP_UXI_WRITES",
     "HPE_MCP_AXIS_WRITES",
 )
+# Which toolset/product names load the backend each write gate guards. Used
+# to ask about writes only for platforms the deployment actually runs, and to
+# pin every other gate to "0" so the emitted `.env` is never partial.
+PLATFORM_WRITE_SOURCES = {
+    "HPE_MCP_CENTRAL_WRITES": (
+        "Aruba Central",
+        ("central", "central-generated", "config", "monitoring", "nac", "ops", "site-health"),
+    ),
+    "HPE_MCP_GLP_V2BETA1_WRITES": ("HPE GreenLake", ("glp",)),
+    "HPE_MCP_AOS8_WRITES": ("ArubaOS 8", ("aos8",)),
+    "HPE_MCP_EDGECONNECT_WRITES": ("EdgeConnect", ("edgeconnect",)),
+    "HPE_MCP_APSTRA_WRITES": ("Apstra", ("apstra",)),
+    "HPE_MCP_MIST_WRITES": ("Juniper Mist", ("mist",)),
+    "HPE_MCP_CLEARPASS_WRITES": ("ClearPass", ("clearpass",)),
+    "HPE_MCP_UXI_WRITES": ("HPE Aruba UXI", ("uxi",)),
+    "HPE_MCP_AXIS_WRITES": ("Axis Atmos Cloud", ("axis",)),
+}
 PROFILE_WRITE_ENV_VARS = ("HPE_MCP_READONLY", *PLATFORM_WRITE_ENV_VARS)
 
 # W3 docker-mode `.env` emission: only these keys may be written, and the
-# defaults stay read-only/custom (C8). HPE_MCP_TOOLSETS has no wizard input in
-# docker mode, so it is never emitted here -- the overlay's
-# `${HPE_MCP_TOOLSETS:-central,glp,rag}` default keeps governing it.
+# defaults stay read-only/custom (C8).
 DOCKER_ENV_ALLOWLIST = frozenset(
     {
         "HPE_MCP_ROUTER_MODE",
         "HPE_MCP_TOOLSETS",
         "HPE_MCP_ACCESS_PROFILE",
         "HPE_MCP_PRODUCT_ACCESS",
+        "HPE_MCP_PRODUCTS",
         *PLATFORM_WRITE_ENV_VARS,
         "HPE_MCP_RAG_BACKEND",
     }
@@ -168,6 +268,9 @@ CREDENTIAL_AFFECTING_ENV_VARS = (
     "TARGET_GLP_WORKSPACE",
     "GLP_TOKEN_URL",
     "GLP_BASE_URL",
+    # Not caught by SECRET_ENV_SUFFIXES, but mist.py reads it as a live
+    # session credential, so it belongs in the do-not-touch audit set.
+    "MIST_SESSION_COOKIE",
 )
 
 
@@ -180,12 +283,18 @@ class Step:
 
 @dataclass(frozen=True)
 class DockerManifest:
-    """Cross-slice contract K1: everything downstream docker slices consume.
+    """Cross-slice contract K1: everything the docker emitters consume.
 
-    W2 consumes host_ip/client_hostname/rag for overlay emission (the latter
-    two prompted since W2); W3 reads backend/products/access_profile for .env
-    keys. backend carries the W3 vector-backend choice ("redis"/"lancedb")
-    when rag is set, else None.
+    host_ip/client_hostname/rag shape the overlay; backend carries the
+    vector-backend choice ("redis"/"lancedb") when rag is set, else None.
+    toolsets/products/access_profile/platform_gates are the routing and write
+    decisions that must reach the container. secret_files lists every
+    credential materialised as its own 0600 file beside the always-present
+    bearer token; plain_env carries the non-secret product identity values
+    (base URLs, client ids) the overlay writes literally.
+
+    Mapping fields are stored as sorted pairs so the dataclass stays frozen
+    and hashable, and so emitted artifacts are byte-stable across runs.
     """
 
     port: int
@@ -197,6 +306,10 @@ class DockerManifest:
     access_profile: str
     token_path: Path
     creds_path: Path
+    toolsets: str = DEFAULT_TOOLSETS
+    secret_files: tuple[SecretFile, ...] = ()
+    plain_env: tuple[tuple[str, str], ...] = ()
+    platform_gates: tuple[tuple[str, str], ...] = ()
 
 
 def _rel(path: Path) -> str:
@@ -222,6 +335,72 @@ def _write_secret_file(target: Path, text: str) -> None:
     os.fchmod(fd, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
+
+
+def _refuse_unbridgeable_secret(secret: SecretFile) -> None:
+    """Never emit a secret file the container is going to ignore."""
+    if _BRIDGE_FAMILY_RE.fullmatch(secret.env_var):
+        return
+    raise SystemExit(
+        f"refusing to emit secrets/{secret.name}: {secret.env_var} is not a "
+        "secret family docker/entrypoint.sh bridges, so the container would "
+        "log a refusal and start without it. Extend _BRIDGE_RE in "
+        "docker/entrypoint.sh and _BRIDGE_FAMILY_RE here together."
+    )
+
+
+def _write_prompted_secret(secret: SecretFile, value: str, *, force: bool) -> Step:
+    """Materialise one secret file, or keep an existing one byte-for-byte.
+
+    An unreadable or empty existing file aborts instead of being overwritten:
+    an empty secret silently disables whatever it guards, which is the exact
+    failure docker/entrypoint.sh also refuses to start on.
+    """
+    _refuse_unbridgeable_secret(secret)
+    target = secret.path
+    label = _rel(target)
+    if target.exists() and not force:
+        try:
+            existing = target.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            raise SystemExit(
+                f"{label} exists but could not be read as UTF-8 text ({exc}); "
+                "refusing to overwrite a secret the wizard cannot verify. Fix "
+                "or remove the file, or rerun with --force to replace it."
+            ) from exc
+        if not existing.strip():
+            raise SystemExit(
+                f"{label} exists but is empty; an empty value silently disables "
+                f"whatever {secret.env_var} guards. Remove the file, or rerun "
+                "with --force to write a new value."
+            )
+        os.chmod(target, 0o600)
+        return Step(label, "OK", "kept existing secret (mode 0600)")
+    cleaned = value.strip()
+    if not cleaned:
+        raise SystemExit(
+            f"refusing to write an empty {label}: an empty value silently "
+            f"disables whatever {secret.env_var} guards."
+        )
+    existed = target.exists()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _write_secret_file(target, cleaned + "\n")
+    detail = "rotated secret (mode 0600)" if existed else "created secret (mode 0600)"
+    return Step(label, "OK", detail)
+
+
+def _product_secret_files(product: str) -> dict[str, SecretFile]:
+    """Secret-shaped vars of one product, keyed by env var name.
+
+    Derived from PRODUCT_ENV rather than hand-listed, so a product gaining a
+    credential gains its secret file with no second edit.
+    """
+    label = PRODUCT_ENV[product]["label"]
+    return {
+        name: SecretFile(name, name.lower(), label)
+        for name in PRODUCT_ENV[product]["vars"]
+        if _is_secret_env_var(name)
+    }
 
 
 def _ask(prompt: str, default: bool, *, assume_yes: bool) -> bool:
@@ -253,7 +432,9 @@ def _csv(values: str) -> list[str]:
     return [item.strip().lower() for item in values.split(",") if item.strip()]
 
 
-def _selected_products(args: argparse.Namespace) -> list[str]:
+def _selected_products(
+    args: argparse.Namespace, *, assume_defaults: bool = False
+) -> list[str]:
     def validate(requested: list[str]) -> list[str]:
         if "all" in requested:
             return list(PRODUCT_ENV)
@@ -269,7 +450,7 @@ def _selected_products(args: argparse.Namespace) -> list[str]:
         return list(PRODUCT_ENV)
     if args.products:
         return validate(_csv(args.products))
-    if args.yes:
+    if args.yes or assume_defaults:
         return []
     if not _ask("Enable optional product starter backends?", False, assume_yes=False):
         return []
@@ -416,16 +597,32 @@ def _has_placeholders(path: Path) -> bool:
     return any(marker in text for marker in PLACEHOLDER_MARKERS)
 
 
-def _write_credentials(target: Path, *, force: bool, assume_yes: bool) -> Step:
+def _write_credentials(
+    target: Path, *, force: bool, assume_yes: bool, split_secrets: bool = False
+) -> tuple[Step, dict[str, str]]:
+    """Write the credentials YAML; optionally hold the two secrets back.
+
+    With ``split_secrets`` the emitted YAML carries identity only (base URLs,
+    client ids, workspace ids) and the captured client secrets are returned
+    keyed by the env var that carries them, for the caller to write as their
+    own files. load_credentials ranks process env above the YAML and reads
+    exactly those names, so an identity-only file loses nothing.
+    """
     if target.exists() and not force:
         if assume_yes or not _has_placeholders(target):
-            return Step(_rel(target), "SKIP", "already exists; use --force to overwrite")
+            return (
+                Step(_rel(target), "SKIP", "already exists; use --force to overwrite"),
+                {},
+            )
         if not _ask(
             "Existing config/credentials.yaml contains placeholders; update it now?",
             True,
             assume_yes=False,
         ):
-            return Step(_rel(target), "SKIP", "left existing placeholder file unchanged")
+            return (
+                Step(_rel(target), "SKIP", "left existing placeholder file unchanged"),
+                {},
+            )
 
     default_url = CENTRAL_BASE_URLS[0][1]
     central_url = _choose_base_url(
@@ -481,36 +678,60 @@ def _write_credentials(target: Path, *, force: bool, assume_yes: bool) -> Step:
             values["target_client_secret"] = values["central_client_secret"]
             values["target_workspace"] = values["central_workspace"]
 
+    secret_lines = {
+        "central": f"  client_secret: {_yaml_string(values['central_client_secret'])}",
+        "glp": f"  client_secret: {_yaml_string(values['target_client_secret'])}",
+    }
+    if split_secrets:
+        header = [
+            "# Generated by scripts/setup_wizard.py --docker.",
+            "# Identity only: each client_secret lives in its own 0600 file",
+            f"# ({CENTRAL_SECRET.name}, {GLP_SECRET.name}) so that rotating one",
+            "# credential never touches another. See secrets/README.md.",
+        ]
+        secret_lines = {"central": None, "glp": None}
+    else:
+        header = [
+            "# Generated by scripts/setup_wizard.py.",
+            "# credentials.yaml is gitignored - never commit real credentials.",
+        ]
+
+    body = [
+        *header,
+        "# Common Central API gateways:",
+        *[f"#   {name}: {url}" for name, url in CENTRAL_BASE_URLS],
+        "",
+        "central_account:",
+        f"  base_url: {_yaml_string(central_url)}",
+        f"  client_id: {_yaml_string(values['central_client_id'])}",
+        secret_lines["central"],
+        f"  glp_workspace_id: {_yaml_string(values['central_workspace'])}",
+        "",
+        "glp_account:",
+        f"  base_url: {_yaml_string(target_url)}",
+        f"  client_id: {_yaml_string(values['target_client_id'])}",
+        secret_lines["glp"],
+        f"  glp_workspace_id: {_yaml_string(values['target_workspace'])}",
+        "",
+        "glp:",
+        '  token_url: "https://sso.common.cloud.hpe.com/as/token.oauth2"',
+        '  base_url: "https://global.api.greenlake.hpe.com"',
+        "",
+    ]
+
     target.parent.mkdir(parents=True, exist_ok=True)
-    _write_secret_file(
-        target,
-        "\n".join(
-            [
-                "# Generated by scripts/setup_wizard.py.",
-                "# credentials.yaml is gitignored - never commit real credentials.",
-                "# Common Central API gateways:",
-                *[f"#   {name}: {url}" for name, url in CENTRAL_BASE_URLS],
-                "",
-                "central_account:",
-                f"  base_url: {_yaml_string(central_url)}",
-                f"  client_id: {_yaml_string(values['central_client_id'])}",
-                f"  client_secret: {_yaml_string(values['central_client_secret'])}",
-                f"  glp_workspace_id: {_yaml_string(values['central_workspace'])}",
-                "",
-                "glp_account:",
-                f"  base_url: {_yaml_string(target_url)}",
-                f"  client_id: {_yaml_string(values['target_client_id'])}",
-                f"  client_secret: {_yaml_string(values['target_client_secret'])}",
-                f"  glp_workspace_id: {_yaml_string(values['target_workspace'])}",
-                "",
-                "glp:",
-                '  token_url: "https://sso.common.cloud.hpe.com/as/token.oauth2"',
-                '  base_url: "https://global.api.greenlake.hpe.com"',
-                "",
-            ]
-        )
+    _write_secret_file(target, "\n".join(line for line in body if line is not None))
+    if split_secrets:
+        detail = "created with region choices; secrets written as separate files"
+        captured = {
+            CENTRAL_SECRET.env_var: values["central_client_secret"],
+            GLP_SECRET.env_var: values["target_client_secret"],
+        }
+        return Step(_rel(target), "OK", detail), captured
+    return (
+        Step(_rel(target), "OK", "created with region choices and placeholders/secrets"),
+        {},
     )
-    return Step(_rel(target), "OK", "created with region choices and placeholders/secrets")
 
 
 def _product_env(
@@ -824,11 +1045,133 @@ def _resolve_client_hostname(host_ip: str | None, *, assume_yes: bool) -> str:
     )
 
 
+def _choose_quick_start(*, assume_yes: bool) -> bool:
+    """First docker question: take the recommended defaults wholesale?
+
+    Accepting skips the toolset, product, access and RAG prompts -- credential
+    capture still runs, because a router with no credentials is not a
+    deployment. Explicit flags always win over the defaults this implies.
+    """
+    if assume_yes:
+        return True
+    print("\nDeployment shape")
+    print("  Recommended: loopback-only, Central + GreenLake + API lookup,")
+    print("  read-only, no optional products, no RAG image.")
+    return _ask("Use the recommended defaults?", True, assume_yes=False)
+
+
+def _validate_toolsets(raw: str) -> str:
+    requested = _csv(raw)
+    unknown = sorted(set(requested) - set(VALID_TOOLSETS))
+    if unknown:
+        raise SystemExit(
+            f"Unknown toolset(s): {', '.join(unknown)}. Accepted values: "
+            + ", ".join(sorted(VALID_TOOLSETS))
+        )
+    return ",".join(requested)
+
+
+def _choose_toolsets(*, assume_yes: bool) -> str:
+    """Which backend families the router loads (HPE_MCP_TOOLSETS)."""
+    if assume_yes:
+        return DEFAULT_TOOLSETS
+    print("\nToolsets")
+    print("  " + ", ".join(sorted(VALID_TOOLSETS)))
+    print(
+        "  Optional products selected below are unioned onto this set, so "
+        "they need no entry here."
+    )
+    return _validate_toolsets(
+        _ask_text("Toolsets to load, comma-separated", DEFAULT_TOOLSETS)
+    )
+
+
+def _choose_access_profile(args: argparse.Namespace, *, assume_yes: bool) -> str:
+    """Aggregate write posture. An explicit --access-profile skips the prompt."""
+    if assume_yes or args.access_profile != "custom":
+        return args.access_profile
+    print("\nWrite access")
+    print("  safe-read-only  every write and destructive tool refused")
+    print("  custom          per-platform choice, asked next (default)")
+    print("  full-read-write every platform's writes enabled")
+    answer = _ask_text("Access profile", "custom").strip().lower()
+    if answer not in {"safe-read-only", "custom", "full-read-write"}:
+        raise SystemExit(
+            "--access-profile must be one of: safe-read-only, custom, "
+            "full-read-write"
+        )
+    return answer
+
+
+def _choose_platform_gates(
+    profile: str, toolsets: str, products: list[str], *, assume_yes: bool
+) -> dict[str, str]:
+    """Per-platform write gates for the custom profile.
+
+    Only platforms actually loaded by the chosen toolsets/products are asked
+    about; everything else is pinned to "0" so the emitted `.env` is complete
+    and deterministic rather than silently partial.
+    """
+    selected = set(_csv(toolsets)) | set(products)
+    everything = "all" in selected
+    gates: dict[str, str] = {}
+    asked_header = False
+    for gate, (label, sources) in PLATFORM_WRITE_SOURCES.items():
+        loaded = everything or bool(selected & set(sources))
+        if not loaded or profile != "custom" or assume_yes:
+            gates[gate] = "0"
+            continue
+        if not asked_header:
+            print("\nPer-platform writes (each defaults to refused)")
+            asked_header = True
+        gates[gate] = (
+            "1"
+            if _ask(
+                f"  Allow write and destructive tools for {label}?",
+                False,
+                assume_yes=False,
+            )
+            else "0"
+        )
+    return gates
+
+
+def _docker_product_inputs(
+    products: list[str], *, assume_yes: bool
+) -> tuple[list[SecretFile], dict[str, str], dict[str, str]]:
+    """Prompt every selected product's settings in one pass.
+
+    Returns the secret files to write, their captured values keyed by env var,
+    and the non-secret identity values (base URLs, client ids, header names)
+    the overlay carries literally.
+    """
+    secret_files: list[SecretFile] = []
+    secret_values: dict[str, str] = {}
+    plain: dict[str, str] = {}
+    for product in products:
+        meta = PRODUCT_ENV[product]
+        secrets_for_product = _product_secret_files(product)
+        if meta["vars"] and not assume_yes:
+            print(f"\n{meta['label']} settings")
+        for name, default in meta["vars"].items():
+            secret = secrets_for_product.get(name)
+            if secret is None:
+                plain[name] = default if assume_yes else _ask_text(name, default)
+                continue
+            _refuse_unbridgeable_secret(secret)
+            secret_files.append(secret)
+            # A blank answer keeps the placeholder: the file is never empty
+            # (an empty bridged value silently disables the credential) and
+            # _has_placeholders still flags it for non-loopback deployments.
+            secret_values[name] = default if assume_yes else _ask_secret(name, default)
+    return secret_files, secret_values, plain
+
+
 def _choose_rag_image(*, assume_yes: bool) -> bool:
     """W2 prompt: RAG-capable image choice (opt-in; default stays non-RAG)."""
     return _ask(
         "Use the RAG-enabled image hpe-networking-mcp-router:rag "
-        "(must be built separately)?",
+        "(built for you by `docker compose ... up --build`)?",
         False,
         assume_yes=assume_yes,
     )
@@ -875,10 +1218,27 @@ def _compose_overlay_text(manifest: DockerManifest) -> str:
     allowed_hosts, allowed_origins = _compose_allowlists(manifest.client_hostname)
     port = str(manifest.port)
     if manifest.rag:
-        image_block = "    image: hpe-networking-mcp-router:rag\n"
+        # The redis backend embeds through the ollama service rather than
+        # fastembed, so it needs the redis client extra alone; `ingestion` is
+        # the embedded LanceDB stack. INSTALL_EXTRAS is space-separated.
+        extras = "redis" if manifest.backend == "redis" else "ingestion"
+        image_block = (
+            "    build:\n"
+            "      context: .\n"
+            "      dockerfile: Dockerfile\n"
+            "      args:\n"
+            f'        INSTALL_EXTRAS: "{extras}"\n'
+            "    image: hpe-networking-mcp-router:rag\n"
+        )
+        # The LanceDB corpus is bind-mounted from the host; the redis corpus
+        # lives in the redis service, so those mounts would be dead weight.
         rag_mounts = (
-            "      - ./data/docs.lance:/app/data/docs.lance:ro\n"
-            "      - ./data/tools.lance:/app/data/tools.lance:ro\n"
+            ""
+            if manifest.backend == "redis"
+            else (
+                "      - ./data/docs.lance:/app/data/docs.lance:ro\n"
+                "      - ./data/tools.lance:/app/data/tools.lance:ro\n"
+            )
         )
     else:
         image_block = (
@@ -888,19 +1248,27 @@ def _compose_overlay_text(manifest: DockerManifest) -> str:
             "    image: hpe-networking-mcp-router:local\n"
         )
         rag_mounts = ""
+
+    secret_files = sorted(manifest.secret_files, key=lambda item: item.name)
     lines = [
         "# Generated by scripts/setup_wizard.py --docker; regenerate with --force.",
         "# Layer it over the tracked bundle:",
         "#   docker compose -f docker-compose.yml \\",
         "#     -f docker-compose.router.local.yml --profile router up -d mcp-router",
+        "# Each credential is its own 0600 file under secrets/: rotate one by",
+        "# rewriting that file and restarting mcp-router; no other secret moves.",
         "services:",
         "  mcp-router:",
     ]
     lines.extend(image_block.rstrip("\n").split("\n"))
+    lines.extend(["    profiles:", "      - router"])
+    if manifest.backend == "redis":
+        # `--profile router up mcp-router` starts no other service on its own,
+        # so without this the backend would point at containers the command
+        # never launched: redis holds the vectors, ollama embeds the query.
+        lines.extend(["    depends_on:", "      - redis", "      - ollama"])
     lines.extend(
         [
-            "    profiles:",
-            "      - router",
             "    ports:",
             f'      - "{published}"',
             "    environment:",
@@ -910,14 +1278,45 @@ def _compose_overlay_text(manifest: DockerManifest) -> str:
             f'      MCP_ALLOWED_HOSTS: "{allowed_hosts}"',
             f'      MCP_ALLOWED_ORIGINS: "{allowed_origins}"',
             '      HPE_MCP_ROUTER_MODE: "${HPE_MCP_ROUTER_MODE:-minimal}"',
-            '      HPE_MCP_TOOLSETS: "${HPE_MCP_TOOLSETS:-central,glp,rag}"',
+            f'      HPE_MCP_TOOLSETS: "${{HPE_MCP_TOOLSETS:-{manifest.toolsets}}}"',
             '      HPE_MCP_ACCESS_PROFILE: "${HPE_MCP_ACCESS_PROFILE:-custom}"',
             '      HPE_MCP_RAG_BACKEND: "${HPE_MCP_RAG_BACKEND:-}"',
-            "      CREDS_PATH: /run/secrets/credentials_yaml",
-            "      MCP_HTTP_BEARER_TOKEN_FILE: /run/secrets/mcp_http_bearer_token",
+            "      HPE_MCP_PRODUCTS: "
+            f'"${{HPE_MCP_PRODUCTS:-{",".join(manifest.products)}}}"',
+            '      HPE_MCP_PRODUCT_ACCESS: "${HPE_MCP_PRODUCT_ACCESS:-read-only}"',
+        ]
+    )
+    # Deny-by-default in the overlay itself, so a deleted or hand-trimmed .env
+    # cannot silently promote a read-only deployment to read-write.
+    lines.extend(
+        f'      {gate}: "${{{gate}:-0}}"' for gate in PLATFORM_WRITE_ENV_VARS
+    )
+    if manifest.backend == "redis":
+        lines.append('      REDIS_URL: "redis://redis:6379"')
+        # OllamaClient defaults to localhost, which inside this container is
+        # the router itself.
+        lines.append('      OLLAMA_URL: "http://ollama:11434"')
+    lines.extend(
+        f'      {name}: "{value}"' for name, value in sorted(manifest.plain_env)
+    )
+    lines.append("      CREDS_PATH: /run/secrets/credentials_yaml")
+    lines.append(
+        f"      {BEARER_SECRET.file_env_var}: {BEARER_SECRET.container_path}"
+    )
+    lines.extend(
+        f"      {secret.file_env_var}: {secret.container_path}"
+        for secret in secret_files
+    )
+    lines.extend(
+        [
             "    secrets:",
             "      - credentials_yaml",
-            "      - mcp_http_bearer_token",
+            f"      - {BEARER_SECRET.name}",
+        ]
+    )
+    lines.extend(f"      - {secret.name}" for secret in secret_files)
+    lines.extend(
+        [
             "    volumes:",
             "      - router_state:/app/state",
             "      - router_outputs:/app/outputs",
@@ -932,8 +1331,15 @@ def _compose_overlay_text(manifest: DockerManifest) -> str:
             "secrets:",
             "  credentials_yaml:",
             "    file: ./secrets/credentials.yaml",
-            "  mcp_http_bearer_token:",
-            "    file: ./secrets/mcp_http_bearer_token",
+            f"  {BEARER_SECRET.name}:",
+            f"    file: ./secrets/{BEARER_SECRET.name}",
+        ]
+    )
+    for secret in secret_files:
+        lines.append(f"  {secret.name}:")
+        lines.append(f"    file: ./secrets/{secret.name}")
+    lines.extend(
+        [
             "",
             "volumes:",
             "  router_state:",
@@ -965,6 +1371,8 @@ def _docker_env_values(
     values = {
         "HPE_MCP_ROUTER_MODE": args.router_mode,
         "HPE_MCP_ACCESS_PROFILE": manifest.access_profile,
+        "HPE_MCP_TOOLSETS": manifest.toolsets,
+        "HPE_MCP_PRODUCTS": ",".join(manifest.products),
     }
     if manifest.access_profile == "safe-read-only":
         values["HPE_MCP_PRODUCT_ACCESS"] = "read-only"
@@ -974,6 +1382,8 @@ def _docker_env_values(
         values.update({name: "1" for name in PLATFORM_WRITE_ENV_VARS})
     else:
         values["HPE_MCP_PRODUCT_ACCESS"] = product_access
+        gates = dict(manifest.platform_gates)
+        values.update({name: gates.get(name, "0") for name in PLATFORM_WRITE_ENV_VARS})
     if manifest.backend == "redis":
         values["HPE_MCP_RAG_BACKEND"] = "redis"
     return values
@@ -1093,6 +1503,27 @@ def _finalize_docker_deployment(manifest: DockerManifest) -> None:
             "refusing to finish a non-loopback deployment. Fill in real OAuth "
             "credentials, or rerun without --host/--expose to stay loopback-only."
         )
+    missing = [
+        _rel(secret.path) for secret in manifest.secret_files if not secret.path.exists()
+    ]
+    if missing:
+        raise SystemExit(
+            "refusing to finish a non-loopback deployment: secret file(s) "
+            f"{', '.join(missing)} were never written. Rerun the wizard "
+            "without --host/--expose to stay loopback-only."
+        )
+    unfilled = [
+        _rel(secret.path)
+        for secret in manifest.secret_files
+        if _has_placeholders(secret.path)
+    ]
+    if unfilled:
+        raise SystemExit(
+            "refusing to finish a non-loopback deployment: secret file(s) "
+            f"{', '.join(unfilled)} still hold placeholder values. Write the "
+            "real credentials into them, or rerun without --host/--expose to "
+            "stay loopback-only."
+        )
 
 
 def _print_docker_next_steps(manifest: DockerManifest, *, product_access: str) -> None:
@@ -1113,25 +1544,42 @@ def _print_docker_next_steps(manifest: DockerManifest, *, product_access: str) -
     else:
         print(f"3. Loopback-only publishing on 127.0.0.1:{manifest.port}.")
     next_step = 4
+    print(f"{next_step}. Toolsets loaded: {manifest.toolsets}.")
+    next_step += 1
     if manifest.products:
-        print(f"4. Optional products enabled: {', '.join(manifest.products)} ({product_access}).")
-        next_step = 5
+        print(
+            f"{next_step}. Optional products enabled: "
+            f"{', '.join(manifest.products)} ({product_access})."
+        )
+        next_step += 1
+    if manifest.secret_files:
+        print(f"{next_step}. Credential files (each 0600, one value per file):")
+        for secret in sorted(manifest.secret_files, key=lambda item: item.name):
+            print(f"     {_rel(secret.path)}  ->  {secret.env_var} ({secret.label})")
+        print(
+            "     Rotate one credential by writing the new value into its file "
+            "and running"
+        )
+        print(
+            "     docker compose -f docker-compose.yml -f "
+            "docker-compose.router.local.yml restart mcp-router;"
+        )
+        print("     no other secret is read, rewritten, or re-exposed.")
+        next_step += 1
+    start_services = (
+        "mcp-router redis ollama" if manifest.backend == "redis" else "mcp-router"
+    )
     print(
         f"{next_step}. Compose overlay written to {_rel(OVERLAY_PATH)}: start it "
         "with docker compose -f docker-compose.yml -f "
-        "docker-compose.router.local.yml --profile router up -d mcp-router "
-        "(six-step checklist in docs/production-deployment.md remains the "
-        "manual fallback)."
+        f"docker-compose.router.local.yml --profile router up -d {start_services} "
+        "(docs/production-deployment.md carries the same path in prose)."
     )
     print(
         f"{next_step + 1}. Non-secret tuning knobs live in {_rel(ENV_PATH)}; "
-        "edit them and restart the stack to apply."
-        + (
-            " HPE_MCP_RAG_BACKEND=redis additionally needs the bundled redis"
-            " service started."
-            if manifest.backend == "redis"
-            else ""
-        )
+        "edit them and re-run the `up -d` command above to apply. Compose "
+        "bakes these values in when the container is created, so a plain "
+        "`restart` keeps the old ones."
     )
 
 
@@ -1143,22 +1591,56 @@ def _run_docker_mode(args: argparse.Namespace) -> DockerManifest:
     overlay emission MUST hook in after _finalize_docker_deployment (K3
     write-order invariant keeps the overlay LAST).
     """
+    # quick_start and --yes both mean "do not ask, take the default"; every
+    # prompt helper already implements exactly that under assume_yes, so the
+    # two collapse into one mechanism rather than a second short-circuit.
+    quick_start = _choose_quick_start(assume_yes=args.yes)
+    defaults = args.yes or quick_start
     host_ip = _resolve_docker_exposure(args)
-    selected_products = _selected_products(args)
+    toolsets = (
+        _validate_toolsets(args.toolsets)
+        if args.toolsets
+        else _choose_toolsets(assume_yes=defaults)
+    )
+    selected_products = _selected_products(args, assume_defaults=quick_start)
+    secret_files, secret_values, plain_env = _docker_product_inputs(
+        selected_products, assume_yes=args.yes
+    )
+    access_profile = _choose_access_profile(args, assume_yes=defaults)
+    args.access_profile = access_profile
     product_access = _product_access(args, selected_products)
+    platform_gates = _choose_platform_gates(
+        access_profile, toolsets, selected_products, assume_yes=defaults
+    )
     client_hostname = _resolve_client_hostname(host_ip, assume_yes=args.yes)
-    rag_image = _choose_rag_image(assume_yes=args.yes)
+    rag_image = _choose_rag_image(assume_yes=defaults)
     rag_backend = _choose_rag_backend(assume_yes=args.yes) if rag_image else None
 
     steps: list[Step] = [_docker_token_step(args)]
+    all_secrets = list(secret_files)
     if not args.skip_credentials:
-        steps.append(
-            _write_credentials(
-                DOCKER_CREDENTIALS_PATH,
-                force=args.force,
-                assume_yes=args.yes,
-            )
+        creds_step, captured = _write_credentials(
+            DOCKER_CREDENTIALS_PATH,
+            force=args.force,
+            assume_yes=args.yes,
+            split_secrets=True,
         )
+        steps.append(creds_step)
+        for secret in (CENTRAL_SECRET, GLP_SECRET):
+            if secret.env_var in captured:
+                all_secrets.append(secret)
+                secret_values[secret.env_var] = captured[secret.env_var]
+            elif secret.path.exists():
+                # Kept-credentials rerun: the file is already there, so keep
+                # wiring it into the overlay without touching its bytes.
+                all_secrets.append(secret)
+    for secret in all_secrets:
+        if secret.env_var in secret_values:
+            steps.append(
+                _write_prompted_secret(
+                    secret, secret_values[secret.env_var], force=args.force
+                )
+            )
 
     manifest = DockerManifest(
         port=args.port,
@@ -1167,9 +1649,13 @@ def _run_docker_mode(args: argparse.Namespace) -> DockerManifest:
         rag=rag_image,
         backend=rag_backend,
         products=selected_products,
-        access_profile=args.access_profile,
+        access_profile=access_profile,
         token_path=BEARER_TOKEN_PATH,
         creds_path=DOCKER_CREDENTIALS_PATH,
+        toolsets=toolsets,
+        secret_files=tuple(all_secrets),
+        plain_env=tuple(sorted(plain_env.items())),
+        platform_gates=tuple(sorted(platform_gates.items())),
     )
     _finalize_docker_deployment(manifest)
     steps.extend(
@@ -1189,6 +1675,15 @@ def _build_parser() -> argparse.ArgumentParser:
         "--force",
         action="store_true",
         help="overwrite existing local config files",
+    )
+    parser.add_argument(
+        "--toolsets",
+        default="",
+        help=(
+            "comma-separated toolsets the router loads (default: "
+            f"{DEFAULT_TOOLSETS}); accepted values: "
+            + ", ".join(sorted(VALID_TOOLSETS))
+        ),
     )
     parser.add_argument(
         "--host",
@@ -1315,13 +1810,12 @@ def main(argv: list[str] | None = None) -> int:
     if not args.skip_credentials and _ask(
         "Create config/credentials.yaml?", True, assume_yes=args.yes
     ):
-        steps.append(
-            _write_credentials(
-                ROOT / "config" / "credentials.yaml",
-                force=args.force,
-                assume_yes=args.yes,
-            )
+        creds_step, _ = _write_credentials(
+            ROOT / "config" / "credentials.yaml",
+            force=args.force,
+            assume_yes=args.yes,
         )
+        steps.append(creds_step)
 
     env_path = ROOT / ".env"
     if (

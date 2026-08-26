@@ -78,6 +78,20 @@ services:
       HPE_MCP_TOOLSETS: "${HPE_MCP_TOOLSETS:-central,glp,rag}"
       HPE_MCP_ACCESS_PROFILE: "${HPE_MCP_ACCESS_PROFILE:-custom}"
       HPE_MCP_RAG_BACKEND: "${HPE_MCP_RAG_BACKEND:-}"
+      HPE_MCP_PRODUCTS: "${HPE_MCP_PRODUCTS:-}"
+      # Write posture. Compose injects only variables named here, so every
+      # gate needs its own line or the per-platform model is inert in
+      # containers. Each defaults to refused, which survives a deleted .env.
+      HPE_MCP_PRODUCT_ACCESS: "${HPE_MCP_PRODUCT_ACCESS:-read-only}"
+      HPE_MCP_CENTRAL_WRITES: "${HPE_MCP_CENTRAL_WRITES:-0}"
+      HPE_MCP_GLP_V2BETA1_WRITES: "${HPE_MCP_GLP_V2BETA1_WRITES:-0}"
+      HPE_MCP_AOS8_WRITES: "${HPE_MCP_AOS8_WRITES:-0}"
+      HPE_MCP_EDGECONNECT_WRITES: "${HPE_MCP_EDGECONNECT_WRITES:-0}"
+      HPE_MCP_APSTRA_WRITES: "${HPE_MCP_APSTRA_WRITES:-0}"
+      HPE_MCP_MIST_WRITES: "${HPE_MCP_MIST_WRITES:-0}"
+      HPE_MCP_CLEARPASS_WRITES: "${HPE_MCP_CLEARPASS_WRITES:-0}"
+      HPE_MCP_UXI_WRITES: "${HPE_MCP_UXI_WRITES:-0}"
+      HPE_MCP_AXIS_WRITES: "${HPE_MCP_AXIS_WRITES:-0}"
       CREDS_PATH: /run/secrets/credentials_yaml
       MCP_HTTP_BEARER_TOKEN_FILE: /run/secrets/mcp_http_bearer_token
     secrets:
@@ -88,6 +102,12 @@ services:
       - router_outputs:/app/outputs
     restart: unless-stopped
 
+# Only the two secrets every deployment creates are declared here: compose
+# fails to start when a declared secret's file is missing. Optional-product
+# credentials get one file each, wired by
+# `python3 scripts/setup_wizard.py --docker` into the generated
+# docker-compose.router.local.yml; secrets/README.md shows the hand-rolled
+# form for the same wiring.
 secrets:
   credentials_yaml:
     file: ./secrets/credentials.yaml

@@ -99,6 +99,23 @@ Only enable non-loopback HTTP with explicit `MCP_ALLOWED_HOSTS`,
 start otherwise.
 </div>
 
+## Docker
+
+Every symptom below is a container that starts (or refuses to) with a
+credential that never arrived. `docker compose ... logs mcp-router` carries
+the literal lines quoted here; the wiring they refer to is documented in
+[Docker deployment](production-deployment.md) and
+[`../secrets/README.md`](../secrets/README.md).
+
+| Symptom | Check | Command | Expected outcome |
+|---|---|---|---|
+| `entrypoint: <VAR> is set but EMPTY while <VAR>_FILE=... is also set; refusing to start` | Both halves of the pair are set; the empty plain value would win and silently disable the credential | `grep -n '<VAR>' docker-compose.router.local.yml .env` | Exactly one of `<VAR>` and `<VAR>_FILE` carries the value. Delete the plain assignment; the wizard never emits both |
+| `entrypoint: <VAR>_FILE is set but '<VAR>' is not a recognized secret variable; NOT exporting it` | The variable is outside the bridged families in `_BRIDGE_RE` (`docker/entrypoint.sh`) | `grep -n _BRIDGE_RE docker/entrypoint.sh` | The name ends in `_API_TOKEN`, `_CLIENT_SECRET`, `_PASSWORD`, `_SESSION_COOKIE`, `_CSRF_TOKEN`, or is `MCP_HTTP_BEARER_TOKEN`. Non-secret settings belong in `environment:` as literal values, not as file secrets |
+| `entrypoint: <VAR>_FILE=/run/secrets/<name> does not exist or is not a regular file; skipping` | The Compose secret is declared but its host file is missing, so Docker mounted nothing (or a directory) | `ls -l secrets/<name>` | The host file exists and is `0600`. Rerun `python3 scripts/setup_wizard.py --docker` to recreate it |
+| Product tools are missing even though `HPE_MCP_PRODUCTS` names the product | The backend loaded but its credential is absent, or the selection never reached the container | `docker compose ... exec -T mcp-router printenv HPE_MCP_PRODUCTS` then `... logs mcp-router \| grep 'failed to load'` | `HPE_MCP_PRODUCTS` lists the product inside the container and no `backend ... failed to load` line names it. An empty value means the overlay is stale — regenerate it with `--force` |
+| Write tools refuse under the `custom` profile | The per-platform gate is `0`, which is the default that survives a deleted `.env` | `docker compose ... exec -T mcp-router printenv HPE_MCP_CENTRAL_WRITES` | Set the gate to `1` in `.env`, then `... --profile router up -d mcp-router`. A plain `restart` keeps the old value: Compose bakes interpolated values in at container creation |
+| An edited `.env` knob has no effect | The container still carries the values it was created with | `docker compose ... exec -T mcp-router printenv <KEY>` | Re-run `up -d` to recreate the container. Only rotated *secret files* take effect on a plain `restart`, because those are live bind mounts the entrypoint re-reads at start |
+
 ## Router and catalog
 
 Recommended low-token profile:

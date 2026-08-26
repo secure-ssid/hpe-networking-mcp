@@ -62,26 +62,17 @@ Central or GreenLake Platform credentials.
 |---|---|---|
 | Router tools + exact-API lookup (`lookup_api`; spec index baked into the image) | Yes | Yes |
 | Prose docs RAG (`search_docs` / `ask_docs`) | **Not included** — needs an `INSTALL_EXTRAS=ingestion` rebuild *plus* a corpus you fetch and build yourself ([end-to-end checklist](docs/production-deployment.md#building-a-rag-capable-image)) | The same two pieces: the `ingestion` extra, plus the same self-built corpus |
-| Guided first run (`scripts/setup_wizard.py`) | No — the container starts straight into the router | Yes — `--docker` also provisions the container path (secrets, generated compose overlay, `.env`; see the [one-command path](docs/production-deployment.md#one-command-path-docker)) |
+| Guided first run (`scripts/setup_wizard.py`) | No — the container starts straight into the router | Yes — `--docker` also provisions the container path (secrets, generated compose overlay, `.env`; see [Docker deployment](docs/production-deployment.md)) |
 
-**Option A — pull the published image (no checkout):**
+**Option A — pull the published image (no checkout):** one `docker run`,
+credential-free, for a look at the tool surface. The command and what it
+does (and does not) include live in
+[Docker deployment → Kicking the tyres](docs/production-deployment.md#kicking-the-tyres-the-published-image).
 
-```bash
-docker run -d --name hpe-networking-mcp \
-  -p 127.0.0.1:8010:8010 \
-  -e MCP_HOST=0.0.0.0 \
-  -e MCP_ALLOWED_HOSTS='127.0.0.1:*,localhost:*' \
-  -e MCP_ALLOWED_ORIGINS='http://127.0.0.1:*,http://localhost:*' \
-  ghcr.io/secure-ssid/hpe-networking-mcp:latest
-```
-
-Once startup finishes (seconds), `curl http://127.0.0.1:8010/livez` answers
-`{"status":"ok"}`. The loopback-only publish keeps the server off your LAN;
-the `host:*` allowlist form is required whenever `MCP_HOST` is not loopback.
-The image ships the OpenAPI spec index baked at build time; semantic search
-ranking additionally wants an ingestion-extra rebuild
-(`--build-arg INSTALL_EXTRAS=ingestion`, see
-[Production deployment](docs/production-deployment.md)).
+For a real containerized deployment — credentials, optional products, write
+gates — start at [Docker deployment](docs/production-deployment.md); its
+four steps are `git clone`, `python3 scripts/setup_wizard.py --docker`,
+`docker compose ... up -d mcp-router`, `curl .../livez`.
 
 **Option B — build from source** (adds the setup wizard, doctor diagnostics,
 and local index tooling):
@@ -186,7 +177,7 @@ for reproducible tool/benchmark comparisons.
 | Need | Guide |
 |---|---|
 | Full setup, credentials, and MCP client connection | [Getting started](docs/getting-started.md) |
-| Run the published image or Compose overlay (GHCR) | [Production deployment](docs/production-deployment.md) |
+| Run it in a container, with credentials and optional products | [Docker deployment](docs/production-deployment.md) |
 | Copy/paste stdio or streamable HTTP client config | [MCP client recipes](docs/mcp-client-recipes.md) |
 | Router modes, toolsets, and safe dispatch in depth | [Tool router](docs/tool-router.md) |
 | Real prompts with expected call shapes | [Example prompts](docs/example-prompts.md) |

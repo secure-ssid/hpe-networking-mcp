@@ -52,26 +52,17 @@ Two install paths, same destination. What each gives you, before you pick:
 |---|---|---|
 | Router tools + exact-API lookup (`lookup_api`; spec index baked into the image) | Yes | Yes |
 | Prose docs RAG (`search_docs` / `ask_docs`) | **Not included** — needs an `INSTALL_EXTRAS=ingestion` rebuild *plus* a corpus you fetch and build yourself ([end-to-end checklist](production-deployment.md#building-a-rag-capable-image)) | The same two pieces: the `ingestion` extra, plus the same self-built corpus |
-| Guided first run (`scripts/setup_wizard.py`) | No — the container starts straight into the router | Yes |
+| Guided first run (`scripts/setup_wizard.py`) | No — the container starts straight into the router | Yes — `--docker` also provisions the container path (secrets, generated compose overlay, `.env`; see [Docker deployment](production-deployment.md)) |
 
-**Option A — pull the published image (no checkout):**
+**Option A — pull the published image (no checkout):** one `docker run`,
+credential-free, for a look at the tool surface. The command and what it
+does (and does not) include live in
+[Docker deployment → Kicking the tyres](production-deployment.md#kicking-the-tyres-the-published-image).
 
-```bash
-docker run -d --name hpe-networking-mcp \
-  -p 127.0.0.1:8010:8010 \
-  -e MCP_HOST=0.0.0.0 \
-  -e MCP_ALLOWED_HOSTS='127.0.0.1:*,localhost:*' \
-  -e MCP_ALLOWED_ORIGINS='http://127.0.0.1:*,http://localhost:*' \
-  ghcr.io/secure-ssid/hpe-networking-mcp:latest
-```
-
-Once startup finishes (seconds), `curl http://127.0.0.1:8010/livez` answers
-`{"status":"ok"}`. The loopback-only publish keeps the server off your LAN;
-the `host:*` allowlist form is required whenever `MCP_HOST` is not loopback.
-The image ships the OpenAPI spec index baked at build time; semantic search
-ranking additionally wants an ingestion-extra rebuild
-(`--build-arg INSTALL_EXTRAS=ingestion`, see
-[Production deployment](production-deployment.md)).
+For a real containerized deployment — credentials, optional products, write
+gates — start at [Docker deployment](production-deployment.md); its four
+steps are `git clone`, `python3 scripts/setup_wizard.py --docker`,
+`docker compose ... up -d mcp-router`, `curl .../livez`.
 
 **Option B — build from source** (adds the setup wizard, doctor diagnostics,
 and local index tooling) — the six checkpoints below:
@@ -276,7 +267,7 @@ notes are under **Releases** in the sidebar.
 
 - New to hpe-networking-mcp: [Getting started](getting-started.md)
 - Running Aruba/GLP tasks today: [Example prompts](example-prompts.md)
-- Installing the published container: [Production deployment](production-deployment.md)
+- Running it in a container: [Docker deployment](production-deployment.md)
 - Building or reviewing a backend: [Tool router](tool-router.md)
 - Every other guide and reference page: the sidebar navigation
 

@@ -3,7 +3,10 @@ import time
 
 import httpx
 
-OLLAMA_URL = "http://localhost:11434"
+# Containers cannot reach a loopback default: inside the router container
+# localhost is the router itself, so the redis RAG backend needs to name the
+# ollama service. Env-overridable for exactly that, matching REDIS_URL.
+OLLAMA_URL = os.getenv("OLLAMA_URL", "").strip() or "http://localhost:11434"
 EMBEDDING_MODEL = "nomic-embed-text"
 # nomic-embed-text context window; truncate to stay safe
 _MAX_CHARS = 6000

@@ -1,17 +1,15 @@
 ---
-title: "Production deployment"
+title: "Docker deployment"
 nav_order: 7
 ---
 
-# Production deployment (Docker)
+# Docker deployment
 
-This is a packaging guide for running the hpe-networking-mcp streamable-HTTP
-router (`hpe-mcp-router`) in a container, in addition to (not instead of)
-the local `uv run` / stdio workflow described in
-[getting-started.md](getting-started.md) and
-[mcp-client-recipes.md](mcp-client-recipes.md). It complements, and does not
-replace, the optional local-only Redis/Ollama server backend already
-documented for `docker-compose.yml`.
+One ordered path from nothing to a running, credentialed router:
+**checkout → wizard → start → verify**. Everything else on this page is a
+variation on those four steps. Containerizing is an alternative to the local
+`uv run` / stdio workflow in [getting-started.md](getting-started.md), not a
+later stage of it.
 
 <div class="docs-callout docs-callout--safe" markdown="1">
 Nothing here is required. The router runs perfectly well with a plain
@@ -21,26 +19,187 @@ Kubernetes pod) where the same non-root, no-secrets-in-the-image, no-silent
 network fetch expectations from local development should still hold.
 </div>
 
-## Files
+## 1. Get a checkout
 
-| File | Purpose |
+```bash
+git clone https://github.com/secure-ssid/hpe-networking-mcp
+cd hpe-networking-mcp
+```
+
+The image builds from here. The spec index (2,700+ endpoints across 31
+pinned OpenAPI documents) is baked in at build time, so there is nothing to
+populate first.
+
+## 2. Run the wizard
+
+```bash
+python3 scripts/setup_wizard.py --docker
+```
+
+It asks everything the deployment needs in one pass: which toolsets to load,
+which optional products **and their credentials**, read-only or read/write
+per platform, whether to use the RAG image and which vector backend, and
+whether to publish beyond loopback. Accepting the recommended defaults at
+the first question skips to credential capture — loopback-only, Central +
+GreenLake + API lookup, read-only, no optional products.
+
+Every answer is also a flag, for scripted or repeatable runs:
+
+```bash
+python3 scripts/setup_wizard.py --docker --yes \
+  --toolsets central,glp,rag,mist \
+  --products mist \
+  --access-profile custom --product-access read-only
+```
+
+| Flag | Effect |
 |---|---|
-| [`../Dockerfile`](../Dockerfile) | Multi-stage production image for the router (`hpe-mcp-router`) |
-| [`../.dockerignore`](../.dockerignore) | Keeps secrets, `.env`, local state, and built indexes out of the build context |
-| [`../docker/entrypoint.sh`](../docker/entrypoint.sh) | Expands `*_FILE` Docker-secret conventions into plain env vars, then execs the requested command |
-| [`../docker-compose.yml`](../docker-compose.yml) | Unchanged: optional localhost-only Redis/Ollama server backend |
-| [`../docker-compose.router.yml`](../docker-compose.router.yml) | Additive overlay: the containerized router, behind a Compose `router` profile |
-| [`../secrets/README.md`](../secrets/README.md) | How to provision `config/credentials.yaml` and the bearer token as Docker secrets |
-| [`../secrets/mcp_http_bearer_token.example`](../secrets/mcp_http_bearer_token.example) | Placeholder bearer-token secret template |
+| `--yes` | take every default, prompt for nothing |
+| `--toolsets a,b,c` | backend families to load (`HPE_MCP_TOOLSETS`); default `central,glp,rag` |
+| `--products a,b` | optional products to enable, or `all`; unioned onto the toolsets |
+| `--access-profile` | `safe-read-only`, `custom` (per-platform, the default), or `full-read-write` |
+| `--product-access` | `read-only` or `read-write` for optional products under `custom` |
+| `--router-mode` | `minimal` discovery, `default` wrappers, or `direct` registration |
+| `--expose IP --expose IP` | publish beyond loopback; must be passed twice with the same value to acknowledge it |
+| `--force` | rotate secrets and regenerate the overlay instead of keeping existing files |
 
-## Run the published image
+It writes the following, all git-ignored. A rerun keeps existing files
+unless `--force` is passed:
 
-No checkout is needed for the container path: CI publishes the router to
-GHCR scan-gated. Every build is pushed under a `sha-<short-sha>` tag (first
-seven characters of the commit SHA) and that exact digest is promoted to
-`latest` (builds from `main`) or the matching semver tag(s) (`v*` release
-builds) only after the Trivy policy passes — so `latest` always points at
-scan-approved bytes, and `sha-<short-sha>` pins one build exactly:
+* `secrets/mcp_http_bearer_token` — a fresh 64-hex token, mode 0600, whose
+  value is never printed;
+* `secrets/credentials.yaml` — Central/GreenLake **identity**: base URLs,
+  client ids, workspace ids. No `client_secret` keys;
+* `secrets/central_client_secret`, `secrets/glp_client_secret` and one file
+  per selected product credential (`secrets/mist_api_token`, …), each 0600;
+* `docker-compose.router.local.yml` — a generated overlay layering over
+  `docker-compose.yml`: a literal `127.0.0.1:<port>:<port>` publish line,
+  hostname-derived allowlists, your toolset and product selection, one
+  Compose secret per credential file, and every write gate defaulted to
+  refused;
+* `.env` — non-secret knobs only: router mode, toolsets, products, access
+  profile, the nine per-platform write gates, and `HPE_MCP_RAG_BACKEND` when
+  the redis backend was chosen. Secret values never land here; if the file
+  already holds secret-shaped or credential-affecting keys the wizard warns
+  listing them and leaves them byte-for-byte alone.
+
+## 3. Start it
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.router.local.yml \
+  --profile router up -d --build mcp-router
+```
+
+Naming `mcp-router` matters: `redis` and `ollama` sit in
+`docker-compose.yml`'s default profile, so omitting the service name would
+also start two containers the default image has no client for. If you chose
+the redis RAG backend, start both of them — `... up -d mcp-router redis
+ollama` — because that path keeps its vectors in redis and embeds each query
+through ollama; the generated overlay declares `depends_on` and points
+`REDIS_URL`/`OLLAMA_URL` at those services.
+
+A plain `docker compose up` (no `-f docker-compose.router.local.yml`, no
+`--profile router`) still starts only `redis`/`ollama`, exactly as before
+this overlay existed.
+
+## 4. Verify
+
+```bash
+curl http://127.0.0.1:8010/livez
+# {"status":"ok"}
+```
+
+To confirm your selection actually reached the router rather than just the
+host, ask the container what it loaded:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.router.local.yml \
+  exec -T mcp-router python -c \
+  "from hpe_networking_mcp.mcp_servers.tool_router import _build_backends; print(sorted(_build_backends()))"
+```
+
+Each selected product appears as its own `<name>-core` backend. The
+entrypoint also logs one line per credential it bridged
+(`entrypoint: filled MIST_API_TOKEN from MIST_API_TOKEN_FILE ...`), visible
+with `docker compose ... logs mcp-router`.
+
+## Secrets: one value, one file
+
+Every credential is its own 0600 file under `secrets/`, mounted as its own
+Compose secret and read through the `<VAR>_FILE` → `<VAR>` bridge in
+[`../docker/entrypoint.sh`](../docker/entrypoint.sh). Nothing credential-shaped
+is ever passed as a plaintext `environment:` value or written to `.env`.
+
+That layout exists for rotation. Revoking one product's key is:
+
+```bash
+printf '%s' "$NEW_TOKEN" > secrets/mist_api_token
+docker compose -f docker-compose.yml -f docker-compose.router.local.yml \
+  restart mcp-router
+```
+
+No other credential is read, rewritten, or re-exposed — which is exactly
+what a single shared `.env` cannot give you. A plain `restart` is enough
+here: the Compose secret is a live mount of the host file, and the
+entrypoint re-reads it every time the container starts.
+
+Changing a **non-secret knob** in `.env` is the other case, and it needs
+`... --profile router up -d mcp-router` rather than `restart` — Compose bakes
+interpolated values into the container when it is created, so a restarted
+container keeps the values it was built with.
+
+Two paths, one for each kind of value:
+
+| Value | Where it lives | How the container reads it |
+|---|---|---|
+| Central/GreenLake identity (base URLs, client ids, workspace ids) | `secrets/credentials.yaml` | mounted at `/run/secrets/credentials_yaml`, named by `CREDS_PATH` |
+| Any single secret (client secrets, product API tokens, the bearer token) | `secrets/<name>`, one file each | `<VAR>_FILE=/run/secrets/<name>`, bridged by the entrypoint |
+
+`config/credentials.yaml` is the *host* path used by the local `uv run`
+workflow and keeps carrying secrets inline; `secrets/credentials.yaml` is the
+*container* path and holds identity only. They are separate files on purpose:
+`secrets/` is git-ignored wholesale and is what Compose mounts.
+
+[`../secrets/README.md`](../secrets/README.md) has the copyable Compose
+snippet for wiring a secret by hand.
+
+## Without the wizard
+
+The tracked [`../docker-compose.router.yml`](../docker-compose.router.yml)
+is the same stack with the same knobs, minus the generated per-product
+secret wiring (Compose refuses to start when a declared secret's file is
+missing, so it declares only the two every deployment creates):
+
+```bash
+cp config/credentials.yaml.example secrets/credentials.yaml
+# edit it with real Central/GLP client id/secret values
+openssl rand -hex 32 > secrets/mcp_http_bearer_token
+chmod 600 secrets/credentials.yaml secrets/mcp_http_bearer_token
+
+docker compose -f docker-compose.yml -f docker-compose.router.yml \
+  --profile router up -d --build mcp-router
+curl http://127.0.0.1:8010/livez
+```
+
+Set `HPE_MCP_TOOLSETS`, `HPE_MCP_PRODUCTS`, `HPE_MCP_PRODUCT_ACCESS` and the
+`HPE_MCP_*_WRITES` gates in `.env` to change what it loads, then re-run
+`up -d` to apply them; every one of those variables is interpolated by that
+file and defaults to the refusing value. To add an
+optional product's credential, follow the snippet in
+[`../secrets/README.md`](../secrets/README.md).
+
+## Kicking the tyres: the published image
+
+<div class="docs-callout docs-callout--note" markdown="1">
+No checkout, no credentials, no persistence — a look at the tool surface
+only. It is not the deployment path above.
+</div>
+
+CI publishes every build to GHCR under a `sha-<short-sha>` tag (first seven
+characters of the commit SHA) and promotes that exact digest to `latest`
+(builds from `main`) or the matching semver tags (`v*` releases) only after
+the Trivy policy passes — so `latest` always points at scan-approved bytes,
+and `sha-<short-sha>` pins one build exactly:
 
 ```bash
 docker run -d --name hpe-networking-mcp \
@@ -51,97 +210,25 @@ docker run -d --name hpe-networking-mcp \
   ghcr.io/secure-ssid/hpe-networking-mcp:latest
 ```
 
-Once startup finishes (seconds), `curl http://127.0.0.1:8010/livez` answers
-`{"status":"ok"}`. The loopback-only publish keeps the server off your LAN;
-the `host:*` allowlist form is required whenever `MCP_HOST` is not loopback
-(the guard behind that rule is described under "Loopback-only exposure by
-default" below).
+`curl http://127.0.0.1:8010/livez` answers `{"status":"ok"}` within seconds.
+The baked spec index makes credential-free exact-API lookup (`lookup_api`)
+work with no provisioning. It does **no** prose retrieval: that needs the
+`INSTALL_EXTRAS=ingestion` rebuild and a corpus, per
+[Building a RAG-capable image](#building-a-rag-capable-image) below. The
+`host:*` allowlist form is required whenever `MCP_HOST` is not loopback (see
+[Loopback-only exposure by default](#loopback-only-exposure-by-default)).
 
-The default image ships the baked spec index (`/app/data/specs.sqlite`), so
-credential-free exact-API lookup (`lookup_api`) works with no provisioning.
-It does **no** prose retrieval by any backend: serving a real docs corpus
-takes the `INSTALL_EXTRAS=ingestion` rebuild plus corpus mounts documented
-in "Building a RAG-capable image" below.
+## Files
 
-The Compose quick start that follows instead builds from a checkout and is
-the path to use when you want credentials supplied as file secrets and the
-Redis/Ollama services managed alongside the router.
-
-## Quick start
-
-```bash
-# 1. Provision secrets (never commit the real files this creates):
-
-cp config/credentials.yaml.example secrets/credentials.yaml
-
-# edit secrets/credentials.yaml with real Central/GLP client id/secret values
-openssl rand -hex 32 > secrets/mcp_http_bearer_token
-chmod 600 secrets/credentials.yaml secrets/mcp_http_bearer_token
-
-# 2. Build and start the router. The spec index ships in the image -- there is
-#    nothing to populate first. Naming the service matters: `redis` and
-#    `ollama` are in docker-compose.yml's default profile, so omitting
-#    `mcp-router` here would also start two containers the default image has
-#    no client for (see "Prose retrieval" below).
-
-docker compose -f docker-compose.yml -f docker-compose.router.yml --profile router up -d --build mcp-router
-
-# 3. Verify:
-curl http://127.0.0.1:8010/livez
-```
-
-A plain `docker compose up` (no `-f docker-compose.router.yml`, no
-`--profile router`) continues to start only `redis`/`ollama`, exactly as
-before this overlay existed. The overlay declares no `depends_on`, which is
-what lets `up -d mcp-router` bring up the router on its own.
-
-## One-command path (`--docker`)
-
-From a source checkout, the setup wizard provisions what "Quick start" above
-does by hand and emits a generated overlay beside the tracked one:
-
-```bash
-python3 scripts/setup_wizard.py --docker --yes
-```
-
-This creates (all git-ignored, reruns keep existing files unless `--force`):
-
-* `secrets/mcp_http_bearer_token` — a fresh 64-hex token, mode 0600, whose
-  value is never printed;
-* `secrets/credentials.yaml` — placeholder credentials to fill in (the run
-  refuses to finish an acknowledged non-loopback deployment until they are
-  real);
-* `docker-compose.router.local.yml` — a generated overlay layering over
-  `docker-compose.yml`: a literal `127.0.0.1:<port>:<port>` publish line,
-  hostname-derived allowlists, and the same `${VAR:-default}` knobs the
-  tracked overlay uses;
-* `.env` — non-secret knobs only (router mode, access profile,
-  optional-product access, and `HPE_MCP_RAG_BACKEND=redis` when that backend
-  was chosen). Secret values are never written to it; if it already holds
-  secret-shaped or credential-affecting keys, the wizard warns listing them
-  and leaves them byte-for-byte alone.
-
-Then start and verify exactly as in "Quick start", with the generated overlay:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.router.local.yml \
-  --profile router up -d mcp-router
-curl http://127.0.0.1:8010/livez
-```
-
-Answering yes to the RAG image question emits the rag variant of the overlay
-(no `build:` section; read-only `./data/docs.lance` and `./data/tools.lance`
-mounts) and asks whether to store the corpus in Redis
-(`HPE_MCP_RAG_BACKEND=redis`; start the bundled `redis` service first).
-Building that image and its corpus follows the six-step checklist under
-"Building a RAG-capable image" below — which remains the canonical fallback —
-steps 1–2 run on the host with the corrected `uv run --extra ingestion`
-forms:
-
-```bash
-uv run --extra ingestion python scripts/refresh_rag_sources.py --refresh-sources
-uv run --extra ingestion python ingestion/ingest_docs.py
-```
+| File | Purpose |
+|---|---|
+| [`../Dockerfile`](../Dockerfile) | Multi-stage production image for the router (`hpe-mcp-router`) |
+| [`../.dockerignore`](../.dockerignore) | Keeps secrets, `.env`, local state, and built indexes out of the build context |
+| [`../docker/entrypoint.sh`](../docker/entrypoint.sh) | Expands `*_FILE` Docker-secret conventions into plain env vars, then execs the requested command |
+| [`../docker-compose.yml`](../docker-compose.yml) | Unchanged: optional localhost-only Redis/Ollama server backend |
+| [`../docker-compose.router.yml`](../docker-compose.router.yml) | Additive overlay: the containerized router, behind a Compose `router` profile |
+| [`../scripts/setup_wizard.py`](../scripts/setup_wizard.py) | `--docker` generates the secrets, `.env` and `docker-compose.router.local.yml` above |
+| [`../secrets/README.md`](../secrets/README.md) | The `CREDS_PATH` and `<VAR>_FILE` secret conventions, with copyable Compose wiring |
 
 
 ## Security choices
@@ -265,10 +352,12 @@ uv run --extra ingestion python ingestion/ingest_docs.py
 docker build --build-arg INSTALL_EXTRAS=ingestion \
   -t hpe-networking-mcp-router:rag .
 
-# 4. Provision the two secrets the overlay mounts, exactly as in "Quick
-#    start" above: secrets/credentials.yaml and secrets/mcp_http_bearer_token,
+# 4. Provision the two secrets the overlay mounts, exactly as in "Without the
+#    wizard" above: secrets/credentials.yaml and secrets/mcp_http_bearer_token,
 #    chmod 600, never committed. Compose cannot start the service without
-#    them.
+#    them. (`setup_wizard.py --docker` does steps 4-5 for you, and its
+#    generated overlay carries the INSTALL_EXTRAS build arg, so `--build` is
+#    safe there.)
 
 # 5. In docker-compose.router.yml set `image:` to that tag and add the
 #    mounts, read-only, individually — never `./data:/app/data`, which

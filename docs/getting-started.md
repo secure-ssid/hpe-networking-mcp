@@ -13,7 +13,7 @@ what to expect before you move on.
 How the three router tools, RAG indexes, and live APIs fit together is in
 [How MCP and RAG work](architecture/how-it-works.md). To run the published
 container image instead of cloning (README Option A), see
-[Production deployment](production-deployment.md).
+[Docker deployment](production-deployment.md).
 
 <figure class="docs-figure">
   <img src="assets/diagrams/quickstart-journey.svg"

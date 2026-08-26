@@ -60,6 +60,14 @@ def _seed_real_credentials(root: Path) -> None:
     )
 
 
+def _seed_real_secrets(root: Path, *names: str) -> None:
+    """Write placeholder-free secret files so the non-loopback gate passes."""
+    secrets_dir = root / "secrets"
+    secrets_dir.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        (secrets_dir / name).write_text(f"real-{name}-value\n")
+
+
 # ---------------------------------------------------------------------------
 # K2 — module-level path constants (merge-carried interface)
 # ---------------------------------------------------------------------------
@@ -129,6 +137,9 @@ def test_manifest_carries_k1_fields_for_loopback_default(docker_root):
 
 def test_manifest_carries_flags_through_to_k1_fields(docker_root):
     _seed_real_credentials(docker_root)
+    # A non-loopback deployment refuses to finish while any emitted secret
+    # still holds a placeholder, so the product tokens must be real too.
+    _seed_real_secrets(docker_root, "clearpass_api_token", "mist_api_token")
     # --yes acknowledges exposure defaults; the flags themselves still pin
     # through to the K1 fields (W2 fills client_hostname from the ack).
     args = setup_wizard._build_parser().parse_args(
@@ -155,6 +166,7 @@ def test_manifest_carries_flags_through_to_k1_fields(docker_root):
     assert manifest.client_hostname == "192.168.10.5"
     assert manifest.products == ["clearpass", "mist"]
     assert manifest.access_profile == "full-read-write"
+    assert manifest.toolsets == setup_wizard.DEFAULT_TOOLSETS
 
 
 # ---------------------------------------------------------------------------
@@ -198,7 +210,9 @@ def test_loopback_expose_address_collapses_to_loopback_deployment(docker_root):
 
 def test_interactive_exposure_accepts_typed_twice_address(docker_root, monkeypatch):
     _seed_real_credentials(docker_root)
-    answers = iter(["y", "192.168.10.5", "n", "", "n"])
+    # quick-start "y", then the exposure acknowledgment pair, then the
+    # client-facing hostname (blank keeps the acknowledged address).
+    answers = iter(["y", "y", "192.168.10.5", ""])
     monkeypatch.setattr("builtins.input", lambda prompt="": next(answers))
 
     manifest = setup_wizard._run_docker_mode(
@@ -449,6 +463,10 @@ def test_overlay_emission_matrix(docker_root, monkeypatch, exposed, rag, product
     """W2 acceptance: loopback/exposed x RAG/no-RAG x products on/off."""
     if exposed:
         _seed_real_credentials(docker_root)
+        if products:
+            _seed_real_secrets(
+                docker_root, "clearpass_api_token", "mist_api_token"
+            )
     if rag:
         monkeypatch.setattr(
             setup_wizard, "_choose_rag_image", lambda *, assume_yes: True
@@ -477,12 +495,24 @@ def test_overlay_emission_matrix(docker_root, monkeypatch, exposed, rag, product
 
     assert service["profiles"] == ["router"]
     assert "depends_on" not in service
-    assert service["secrets"] == ["credentials_yaml", "mcp_http_bearer_token"]
-    assert service["restart"] == "unless-stopped"
-    assert config["secrets"] == {
+    extra_secrets = []
+    if products:
+        extra_secrets += ["clearpass_api_token", "mist_api_token"]
+    if not exposed:
+        # Seeded credentials are kept as-is, so only a freshly written
+        # credentials.yaml splits its client secrets into their own files.
+        extra_secrets += ["central_client_secret", "glp_client_secret"]
+    expected_secrets = ["credentials_yaml", "mcp_http_bearer_token"] + sorted(
+        extra_secrets
+    )
+    expected_secret_files = {
         "credentials_yaml": {"file": "./secrets/credentials.yaml"},
         "mcp_http_bearer_token": {"file": "./secrets/mcp_http_bearer_token"},
+        **{name: {"file": f"./secrets/{name}"} for name in sorted(extra_secrets)},
     }
+    assert service["secrets"] == expected_secrets
+    assert service["restart"] == "unless-stopped"
+    assert config["secrets"] == expected_secret_files
     assert set(config["volumes"]) == {"router_state", "router_outputs"}
 
     env = service["environment"]
@@ -500,7 +530,13 @@ def test_overlay_emission_matrix(docker_root, monkeypatch, exposed, rag, product
     assert env["MCP_ALLOWED_ORIGINS"] == ",".join(f"http://{h}:*" for h in host_names)
 
     if rag:
-        assert "build" not in service
+        # The extras rebuild is what makes the rag image reachable from
+        # `up --build`; it used to have to be built out of band.
+        assert service["build"] == {
+            "context": ".",
+            "dockerfile": "Dockerfile",
+            "args": {"INSTALL_EXTRAS": "ingestion"},
+        }
         assert service["image"] == "hpe-networking-mcp-router:rag"
         assert service["volumes"] == [
             "router_state:/app/state",
@@ -521,13 +557,29 @@ def test_overlay_emission_matrix(docker_root, monkeypatch, exposed, rag, product
     assert "docker.sock" not in text
 
 
-def test_overlay_text_ignores_product_selection():
-    """W2 consumes no product fields; W3 owns them as .env keys."""
+def test_overlay_reflects_product_selection():
+    """The overlay is what carries the selection into the container.
+
+    It used to be product-blind, which is why `--docker --products mist`
+    produced a stack that loaded no Mist backend.
+    """
     plain = setup_wizard._compose_overlay_text(_overlay_manifest())
     loaded = setup_wizard._compose_overlay_text(
-        replace(_overlay_manifest(), products=["clearpass", "mist"])
+        replace(
+            _overlay_manifest(),
+            products=["clearpass", "mist"],
+            secret_files=(
+                setup_wizard.SecretFile("MIST_API_TOKEN", "mist_api_token", "Mist"),
+            ),
+            plain_env=(("MIST_HOST", "https://api.mist.com"),),
+        )
     )
-    assert plain == loaded
+    assert plain != loaded
+    assert 'HPE_MCP_PRODUCTS: "${HPE_MCP_PRODUCTS:-}"' in plain
+    assert 'HPE_MCP_PRODUCTS: "${HPE_MCP_PRODUCTS:-clearpass,mist}"' in loaded
+    assert "MIST_API_TOKEN_FILE: /run/secrets/mist_api_token" in loaded
+    assert 'MIST_HOST: "https://api.mist.com"' in loaded
+    assert "  mist_api_token:\n    file: ./secrets/mist_api_token" in loaded
 
 
 @pytest.mark.parametrize(
@@ -547,6 +599,12 @@ def test_custom_client_hostname_drives_allowlists_not_the_bind_ip(
     _seed_real_credentials(docker_root)
     monkeypatch.setattr(
         setup_wizard, "_ask_text", lambda prompt, default="": "mcp.example.com"
+    )
+    monkeypatch.setattr(
+        setup_wizard, "_choose_toolsets", lambda *, assume_yes: setup_wizard.DEFAULT_TOOLSETS
+    )
+    monkeypatch.setattr(
+        setup_wizard, "_choose_access_profile", lambda args, *, assume_yes: "custom"
     )
     monkeypatch.setattr(
         setup_wizard, "_ask", lambda prompt, default, *, assume_yes: False
@@ -720,7 +778,13 @@ def test_docker_yes_emits_allowlisted_env_defaults(docker_root):
     assert env["HPE_MCP_ROUTER_MODE"] == "minimal"
     assert env["HPE_MCP_ACCESS_PROFILE"] == "custom"
     assert env["HPE_MCP_PRODUCT_ACCESS"] == "read-only"
-    assert not any(name in env for name in setup_wizard.PLATFORM_WRITE_ENV_VARS)
+    assert env["HPE_MCP_TOOLSETS"] == setup_wizard.DEFAULT_TOOLSETS
+    assert env["HPE_MCP_PRODUCTS"] == ""
+    # Every gate is emitted and every gate refuses: a partial `.env` would
+    # leave the container's posture depending on which keys survived.
+    assert {name: env[name] for name in setup_wizard.PLATFORM_WRITE_ENV_VARS} == {
+        name: "0" for name in setup_wizard.PLATFORM_WRITE_ENV_VARS
+    }
     assert "HPE_MCP_RAG_BACKEND" not in env
 
 
@@ -755,10 +819,10 @@ def test_env_profile_matrix_pins_gates_and_product_access(
         for name in setup_wizard.PLATFORM_WRITE_ENV_VARS
         if name in env
     }
-    if gate_value is None:
-        assert gates == {}
-    else:
-        assert gates == {name: gate_value for name in setup_wizard.PLATFORM_WRITE_ENV_VARS}
+    # The custom profile now emits every gate too -- it just derives each
+    # value from the per-platform answers instead of a blanket fill.
+    expected = gate_value or "0"
+    assert gates == {name: expected for name in setup_wizard.PLATFORM_WRITE_ENV_VARS}
 
 
 def test_rag_redis_backend_lands_in_manifest_and_env(docker_root, monkeypatch):
@@ -899,7 +963,156 @@ def test_no_plain_twin_of_referenced_file_vars_across_artifacts(docker_root):
         for text in texts.values()
         for match in setup_wizard._FILE_ENV_REF_RE.findall(text)
     }
-    assert referenced_files == {"MCP_HTTP_BEARER_TOKEN_FILE"}
+    assert referenced_files == {
+        "MCP_HTTP_BEARER_TOKEN_FILE",
+        "SOURCE_CLIENT_SECRET_FILE",
+        "TARGET_CLIENT_SECRET_FILE",
+    }
+
+
+def test_product_secrets_become_files_and_compose_secrets(docker_root):
+    assert setup_wizard.main(["--docker", "--yes", "--products", "mist"]) == 0
+
+    token = docker_root / "secrets" / "mist_api_token"
+    assert token.exists()
+    assert stat.S_IMODE(token.stat().st_mode) == 0o600
+
+    overlay = docker_root / "docker-compose.router.local.yml"
+    config = yaml.safe_load(overlay.read_text())
+    service = config["services"]["mcp-router"]
+    assert service["environment"]["MIST_API_TOKEN_FILE"] == "/run/secrets/mist_api_token"
+    # Non-secret identity rides as a literal value, never as a file secret.
+    assert service["environment"]["MIST_HOST"] == "https://api.mist.com"
+    assert "mist_api_token" in service["secrets"]
+    assert config["secrets"]["mist_api_token"] == {"file": "./secrets/mist_api_token"}
+    # C3: the plain twin must never appear beside the _FILE reference.
+    assert "MIST_API_TOKEN:" not in overlay.read_text()
+    assert "MIST_API_TOKEN" not in _env_lines(docker_root / ".env")
+
+
+def test_central_and_glp_secrets_leave_the_credentials_yaml(docker_root, monkeypatch):
+    # Drive the credential prompts by name rather than by a positional answer
+    # list, so adding a question elsewhere in the flow cannot silently shift
+    # which value lands in which field.
+    monkeypatch.setattr(
+        setup_wizard, "_choose_quick_start", lambda *, assume_yes: True
+    )
+    monkeypatch.setattr(
+        setup_wizard,
+        "_choose_base_url",
+        lambda label, *, default, assume_yes: default,
+    )
+    monkeypatch.setattr(
+        setup_wizard,
+        "_ask",
+        lambda prompt, default, *, assume_yes: (
+            default if assume_yes else "Fill OAuth credentials now?" in prompt
+        ),
+    )
+    monkeypatch.setattr(
+        setup_wizard,
+        "_ask_text",
+        lambda prompt, default="": (
+            "real-client-id" if "client ID" in prompt else "real-workspace-id"
+        ),
+    )
+    monkeypatch.setattr(
+        setup_wizard, "_ask_secret", lambda prompt, default: "real-central-secret"
+    )
+
+    setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args(["--docker", "--toolsets", "central,glp"])
+    )
+
+    creds = yaml.safe_load((docker_root / "secrets" / "credentials.yaml").read_text())
+    for section in ("central_account", "glp_account"):
+        assert "client_secret" not in creds[section]
+        assert creds[section]["client_id"] == "real-client-id"
+    for name in ("central_client_secret", "glp_client_secret"):
+        path = docker_root / "secrets" / name
+        assert path.read_text() == "real-central-secret\n"
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+    env = yaml.safe_load(
+        (docker_root / "docker-compose.router.local.yml").read_text()
+    )["services"]["mcp-router"]["environment"]
+    assert env["SOURCE_CLIENT_SECRET_FILE"] == "/run/secrets/central_client_secret"
+    assert env["TARGET_CLIENT_SECRET_FILE"] == "/run/secrets/glp_client_secret"
+
+
+def test_wizard_bridge_regex_matches_the_entrypoint_literal():
+    """A secret outside _BRIDGE_RE is silently dropped by the container."""
+    shell = (REPO_ROOT / "docker" / "entrypoint.sh").read_text(encoding="utf-8")
+    match = re.search(r"^_BRIDGE_RE='(?P<pattern>[^']+)'", shell, re.MULTILINE)
+    assert match, "docker/entrypoint.sh no longer defines _BRIDGE_RE"
+    assert setup_wizard._BRIDGE_FAMILY_RE.pattern == match.group("pattern")
+
+
+def test_every_emitted_product_secret_is_bridgeable():
+    for product in setup_wizard.PRODUCT_ENV:
+        for secret in setup_wizard._product_secret_files(product).values():
+            assert setup_wizard._BRIDGE_FAMILY_RE.fullmatch(secret.env_var), secret
+    for secret in (setup_wizard.CENTRAL_SECRET, setup_wizard.GLP_SECRET):
+        assert setup_wizard._BRIDGE_FAMILY_RE.fullmatch(secret.env_var), secret
+
+
+def test_unbridgeable_secret_is_refused_before_any_write(docker_root):
+    rogue = setup_wizard.SecretFile("MIST_CREDENTIAL", "mist_credential", "rogue")
+    with pytest.raises(SystemExit, match="not a secret family"):
+        setup_wizard._write_prompted_secret(rogue, "value", force=True)
+    assert not (docker_root / "secrets" / "mist_credential").exists()
+
+
+def test_empty_existing_secret_file_aborts_instead_of_being_overwritten(docker_root):
+    (docker_root / "secrets").mkdir(parents=True)
+    target = docker_root / "secrets" / "mist_api_token"
+    target.write_text("   \n")
+
+    with pytest.raises(SystemExit, match="is empty"):
+        setup_wizard._write_prompted_secret(
+            setup_wizard.SecretFile("MIST_API_TOKEN", "mist_api_token", "Mist"),
+            "new-value",
+            force=False,
+        )
+    assert target.read_text() == "   \n"
+
+
+def test_redis_backend_wires_the_service_url_and_dependency(docker_root, monkeypatch):
+    monkeypatch.setattr(setup_wizard, "_choose_rag_image", lambda *, assume_yes: True)
+    monkeypatch.setattr(
+        setup_wizard, "_choose_rag_backend", lambda *, assume_yes: "redis"
+    )
+    setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args(["--docker", "--yes"])
+    )
+
+    config = yaml.safe_load(
+        (docker_root / "docker-compose.router.local.yml").read_text()
+    )
+    service = config["services"]["mcp-router"]
+    # localhost inside the container is the router itself, and
+    # `up -d mcp-router` starts nothing else without depends_on.
+    assert service["environment"]["REDIS_URL"] == "redis://redis:6379"
+    # Both services are required: redis holds the vectors, ollama embeds the
+    # query (rag.py's redis path calls OllamaClient, not fastembed).
+    assert service["environment"]["OLLAMA_URL"] == "http://ollama:11434"
+    assert service["depends_on"] == ["redis", "ollama"]
+    assert service["build"]["args"]["INSTALL_EXTRAS"] == "redis"
+    assert all(".lance" not in mount for mount in service["volumes"])
+
+
+def test_wizard_toolsets_match_the_router_and_doctor():
+    from hpe_networking_mcp.cli import doctor
+    from hpe_networking_mcp.mcp_servers import tool_router
+
+    assert set(setup_wizard.VALID_TOOLSETS) == set(tool_router._VALID_TOOLSETS)
+    assert set(setup_wizard.VALID_TOOLSETS) == doctor.VALID_TOOLSETS
+
+
+def test_unknown_toolset_is_refused_before_any_write(docker_root):
+    with pytest.raises(SystemExit, match="Unknown toolset"):
+        setup_wizard.main(["--docker", "--yes", "--toolsets", "central,nope"])
+    assert not (docker_root / "secrets").exists()
 
 
 def test_plain_twin_violations_helper_shapes():
@@ -943,5 +1156,4 @@ def test_next_steps_mention_env_knobs_and_redis_hint(docker_root, capsys, monkey
         setup_wizard._build_parser().parse_args(["--docker", "--yes"])
     )
     out = capsys.readouterr().out
-    assert "HPE_MCP_RAG_BACKEND=redis" in out
-    assert "redis service started" in out
+    assert "up -d mcp-router redis ollama" in out
