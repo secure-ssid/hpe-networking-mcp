@@ -105,7 +105,7 @@ Every symptom below is a container that starts (or refuses to) with a
 credential that never arrived. `docker compose ... logs mcp-router` carries
 the literal lines quoted here; the wiring they refer to is documented in
 [Docker deployment](production-deployment.md) and
-[`../secrets/README.md`](../secrets/README.md).
+[`secrets/README.md`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/secrets/README.md).
 
 | Symptom | Check | Command | Expected outcome |
 |---|---|---|---|
