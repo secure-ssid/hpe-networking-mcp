@@ -27,9 +27,15 @@ SECRETS_DIR = ROOT / "secrets"
 
 BEARER_TOKEN_PATH = SECRETS_DIR / "mcp_http_bearer_token"
 DOCKER_CREDENTIALS_PATH = SECRETS_DIR / "credentials.yaml"
-# Generated compose overlay; gitignored, written by a later slice (W2).
+# Generated compose overlay; gitignored, written by --docker (W2).
 OVERLAY_PATH = ROOT / "docker-compose.router.local.yml"
 ENV_PATH = ROOT / ".env"
+
+# R1d guard: the published-port bind segment must be an explicit dotted-quad
+# IPv4 address, which makes the shorthand "<port>:<port>" form (LAN-wide
+# publish) structurally unreachable in generated overlays.
+_PUBLISH_BIND_RE = re.compile(r"[0-9]{1,3}(?:\.[0-9]{1,3}){3}")
+
 NON_LOOPBACK_WARNING = (
     "WARNING: Non-loopback MCP_HOST may expose credential-backed MCP tools "
     "to your network. Use firewall/auth/TLS before sharing this endpoint.\n"
@@ -141,9 +147,9 @@ class Step:
 class DockerManifest:
     """Cross-slice contract K1: everything downstream docker slices consume.
 
-    W2 reads host_ip/client_hostname/rag/backend for overlay emission; W3
-    reads backend/products/access_profile for .env keys. Fields stay neutral
-    here until the slice that prompts for them lands.
+    W2 consumes host_ip/client_hostname/rag for overlay emission (the latter
+    two prompted since W2); W3 reads backend/products/access_profile for .env
+    keys. backend stays neutral here until W3 lands its prompt.
     """
 
     port: int
@@ -701,6 +707,162 @@ def _resolve_docker_exposure(args: argparse.Namespace) -> str | None:
     return None
 
 
+def _validate_client_hostname(answer: str) -> str:
+    """Reject values that could fake ports/wildcards inside an allowlist."""
+    value = answer.strip()
+    if not value:
+        raise SystemExit("client-facing hostname cannot be empty")
+    if re.search(r"\s", value) or any(ch in value for ch in ':,*"\''):
+        raise SystemExit(
+            f"invalid client-facing hostname {value!r}: use a bare hostname or "
+            "IP with no whitespace, colons, commas, or wildcard characters"
+        )
+    return value
+
+
+def _resolve_client_hostname(host_ip: str | None, *, assume_yes: bool) -> str:
+    """W2 prompt: what clients type in their MCP client config (R3 source).
+
+    Loopback deployments face local clients only; acknowledged non-loopback
+    deployments default to the acknowledged address but accept a DNS hostname.
+    The bind address is never silently promoted into the allowlists -- the
+    value here is the operator-stated client-facing name.
+    """
+    if host_ip is None:
+        return "localhost"
+    if assume_yes:
+        return host_ip
+    return _validate_client_hostname(
+        _ask_text(
+            "Hostname clients will use to reach the router "
+            "(e.g. mcp.example.com; blank for the bare address)",
+            host_ip,
+        )
+    )
+
+
+def _choose_rag_image(*, assume_yes: bool) -> bool:
+    """W2 prompt: RAG-capable image choice (opt-in; default stays non-RAG)."""
+    return _ask(
+        "Use the RAG-enabled image hpe-networking-mcp-router:rag "
+        "(must be built separately)?",
+        False,
+        assume_yes=assume_yes,
+    )
+
+
+def _published_port_spec(host_ip: str | None, port: int) -> str:
+    """R1d: emit only a literal "<bind>:<port>:<port>" publish line."""
+    bind = DEFAULT_HOST if host_ip is None else host_ip.strip()
+    spec = f"{bind}:{port}:{port}"
+    if not _PUBLISH_BIND_RE.fullmatch(bind):
+        raise SystemExit(
+            f"refusing to emit published-port line {spec!r}: the bind must be "
+            'an explicit IPv4 address -- the shorthand "<port>:<port>" form '
+            "publishes on every interface"
+        )
+    return spec
+
+
+def _compose_allowlists(client_hostname: str | None) -> tuple[str, str]:
+    """R3: explicit client-facing entries only -- never the bind address."""
+    hosts: list[str] = []
+    for candidate in ("127.0.0.1", "localhost", client_hostname or ""):
+        if candidate and candidate not in hosts:
+            hosts.append(candidate)
+    allowed_hosts = ",".join(f"{host}:*" for host in hosts)
+    allowed_origins = ",".join(f"http://{host}:*" for host in hosts)
+    return allowed_hosts, allowed_origins
+
+
+def _compose_overlay_text(manifest: DockerManifest) -> str:
+    """Render docker-compose.router.local.yml from the K1 manifest."""
+    published = _published_port_spec(manifest.host_ip, manifest.port)
+    allowed_hosts, allowed_origins = _compose_allowlists(manifest.client_hostname)
+    port = str(manifest.port)
+    if manifest.rag:
+        image_block = "    image: hpe-networking-mcp-router:rag\n"
+        rag_mounts = (
+            "      - ./data/docs.lance:/app/data/docs.lance:ro\n"
+            "      - ./data/tools.lance:/app/data/tools.lance:ro\n"
+        )
+    else:
+        image_block = (
+            "    build:\n"
+            "      context: .\n"
+            "      dockerfile: Dockerfile\n"
+            "    image: hpe-networking-mcp-router:local\n"
+        )
+        rag_mounts = ""
+    lines = [
+        "# Generated by scripts/setup_wizard.py --docker; regenerate with --force.",
+        "# Layer it over the tracked bundle:",
+        "#   docker compose -f docker-compose.yml \\",
+        "#     -f docker-compose.router.local.yml --profile router up -d mcp-router",
+        "services:",
+        "  mcp-router:",
+    ]
+    lines.extend(image_block.rstrip("\n").split("\n"))
+    lines.extend(
+        [
+            "    profiles:",
+            "      - router",
+            "    ports:",
+            f'      - "{published}"',
+            "    environment:",
+            "      MCP_TRANSPORT: streamable-http",
+            '      MCP_HOST: "0.0.0.0"',
+            f'      MCP_PORT: "{port}"',
+            f'      MCP_ALLOWED_HOSTS: "{allowed_hosts}"',
+            f'      MCP_ALLOWED_ORIGINS: "{allowed_origins}"',
+            '      HPE_MCP_ROUTER_MODE: "${HPE_MCP_ROUTER_MODE:-minimal}"',
+            '      HPE_MCP_TOOLSETS: "${HPE_MCP_TOOLSETS:-central,glp,rag}"',
+            '      HPE_MCP_ACCESS_PROFILE: "${HPE_MCP_ACCESS_PROFILE:-custom}"',
+            '      HPE_MCP_RAG_BACKEND: "${HPE_MCP_RAG_BACKEND:-}"',
+            "      CREDS_PATH: /run/secrets/credentials_yaml",
+            "      MCP_HTTP_BEARER_TOKEN_FILE: /run/secrets/mcp_http_bearer_token",
+            "    secrets:",
+            "      - credentials_yaml",
+            "      - mcp_http_bearer_token",
+            "    volumes:",
+            "      - router_state:/app/state",
+            "      - router_outputs:/app/outputs",
+        ]
+    )
+    if rag_mounts:
+        lines.extend(rag_mounts.rstrip("\n").split("\n"))
+    lines.extend(
+        [
+            "    restart: unless-stopped",
+            "",
+            "secrets:",
+            "  credentials_yaml:",
+            "    file: ./secrets/credentials.yaml",
+            "  mcp_http_bearer_token:",
+            "    file: ./secrets/mcp_http_bearer_token",
+            "",
+            "volumes:",
+            "  router_state:",
+            "  router_outputs:",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def _write_compose_overlay(manifest: DockerManifest, *, force: bool) -> Step:
+    """Emit the compose overlay LAST (K3): only after the secret gate passes."""
+    text = _compose_overlay_text(manifest)  # R1d refusal happens before any I/O
+    if OVERLAY_PATH.exists() and not force:
+        return Step(
+            _rel(OVERLAY_PATH),
+            "OK",
+            "kept existing overlay (rerun with --force to regenerate)",
+        )
+    with open(OVERLAY_PATH, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
+    return Step(_rel(OVERLAY_PATH), "OK", "created compose overlay")
+
+
 def _docker_token_step(args: argparse.Namespace) -> Step:
     """Generate + write the HTTP bearer token; the value never reaches stdout.
 
@@ -777,20 +939,27 @@ def _print_docker_next_steps(manifest: DockerManifest, *, product_access: str) -
         print(f"4. Optional products enabled: {', '.join(manifest.products)} ({product_access}).")
         next_step = 5
     print(
-        f"{next_step}. Compose overlay: follow the six-step checklist in "
-        "docs/production-deployment.md (setup_wizard.py does not emit it yet)."
+        f"{next_step}. Compose overlay written to {_rel(OVERLAY_PATH)}: start it "
+        "with docker compose -f docker-compose.yml -f "
+        "docker-compose.router.local.yml --profile router up -d mcp-router "
+        "(six-step checklist in docs/production-deployment.md remains the "
+        "manual fallback)."
     )
 
 
 def _run_docker_mode(args: argparse.Namespace) -> DockerManifest:
-    """--docker skeleton (slice W1): resolve exposure, emit both secret files.
+    """--docker flow: resolve exposure, prompt W2 choices, emit secrets +
+    compose overlay.
 
-    Overlay and .env emission arrive in later slices and MUST hook in after
-    _finalize_docker_deployment (K3 write-order invariant).
+    All interactive prompts and refusals precede the first write; overlay/.env
+    emission MUST hook in after _finalize_docker_deployment (K3 write-order
+    invariant). .env emission itself arrives in W3.
     """
     host_ip = _resolve_docker_exposure(args)
     selected_products = _selected_products(args)
     product_access = _product_access(args, selected_products)
+    client_hostname = _resolve_client_hostname(host_ip, assume_yes=args.yes)
+    rag_image = _choose_rag_image(assume_yes=args.yes)
 
     steps: list[Step] = [_docker_token_step(args)]
     if not args.skip_credentials:
@@ -805,8 +974,8 @@ def _run_docker_mode(args: argparse.Namespace) -> DockerManifest:
     manifest = DockerManifest(
         port=args.port,
         host_ip=host_ip,
-        client_hostname=None,
-        rag=False,
+        client_hostname=client_hostname,
+        rag=rag_image,
         backend=None,
         products=selected_products,
         access_profile=args.access_profile,
@@ -814,6 +983,7 @@ def _run_docker_mode(args: argparse.Namespace) -> DockerManifest:
         creds_path=DOCKER_CREDENTIALS_PATH,
     )
     _finalize_docker_deployment(manifest)
+    steps.append(_write_compose_overlay(manifest, force=args.force))
     _print_steps(steps)
     _print_docker_next_steps(manifest, product_access=product_access)
     print(f"\nRouter exposure mode: {args.router_mode}.")

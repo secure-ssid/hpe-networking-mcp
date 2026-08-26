@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import stat
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
+import yaml
 
 from scripts import setup_wizard
 
@@ -113,8 +116,9 @@ def test_manifest_carries_k1_fields_for_loopback_default(docker_root):
 
     assert manifest.port == 8010
     assert manifest.host_ip is None
-    # Neutral until the consuming slice prompts for them (W2 hostname/RAG, W3 backend).
-    assert manifest.client_hostname is None
+    # W2 prompts the client-facing hostname (loopback default); backend stays
+    # neutral until W3 lands its prompt.
+    assert manifest.client_hostname == "localhost"
     assert manifest.rag is False
     assert manifest.backend is None
     assert manifest.products == []
@@ -125,9 +129,12 @@ def test_manifest_carries_k1_fields_for_loopback_default(docker_root):
 
 def test_manifest_carries_flags_through_to_k1_fields(docker_root):
     _seed_real_credentials(docker_root)
+    # --yes acknowledges exposure defaults; the flags themselves still pin
+    # through to the K1 fields (W2 fills client_hostname from the ack).
     args = setup_wizard._build_parser().parse_args(
         [
             "--docker",
+            "--yes",
             "--port",
             "9443",
             "--products",
@@ -145,6 +152,7 @@ def test_manifest_carries_flags_through_to_k1_fields(docker_root):
 
     assert manifest.port == 9443
     assert manifest.host_ip == "192.168.10.5"
+    assert manifest.client_hostname == "192.168.10.5"
     assert manifest.products == ["clearpass", "mist"]
     assert manifest.access_profile == "full-read-write"
 
@@ -190,7 +198,7 @@ def test_loopback_expose_address_collapses_to_loopback_deployment(docker_root):
 
 def test_interactive_exposure_accepts_typed_twice_address(docker_root, monkeypatch):
     _seed_real_credentials(docker_root)
-    answers = iter(["y", "192.168.10.5", "n"])
+    answers = iter(["y", "192.168.10.5", "n", "", "n"])
     monkeypatch.setattr("builtins.input", lambda prompt="": next(answers))
 
     manifest = setup_wizard._run_docker_mode(
@@ -198,6 +206,7 @@ def test_interactive_exposure_accepts_typed_twice_address(docker_root, monkeypat
     )
 
     assert manifest.host_ip == "192.168.10.5"
+    assert manifest.client_hostname == "192.168.10.5"
 
 
 def test_interactive_exposure_mismatch_refuses_to_expose(docker_root, monkeypatch):
@@ -406,3 +415,281 @@ def test_generated_artifacts_are_gitignored():
         "secrets/mcp_http_bearer_token",
         "secrets/credentials.yaml",
     }
+
+
+# ---------------------------------------------------------------------------
+# W2 — compose overlay emission
+# ---------------------------------------------------------------------------
+
+
+EXPOSED_IP = "192.168.10.5"
+
+
+def _overlay_manifest(**overrides):
+    values = dict(
+        port=8010,
+        host_ip=None,
+        client_hostname="localhost",
+        rag=False,
+        backend=None,
+        products=[],
+        access_profile="custom",
+        token_path=Path("secrets/mcp_http_bearer_token"),
+        creds_path=Path("secrets/credentials.yaml"),
+    )
+    values.update(overrides)
+    return setup_wizard.DockerManifest(**values)
+
+
+@pytest.mark.parametrize(
+    ("exposed", "rag", "products"),
+    [(e, r, p) for e in (False, True) for r in (False, True) for p in (False, True)],
+)
+def test_overlay_emission_matrix(docker_root, monkeypatch, exposed, rag, products):
+    """W2 acceptance: loopback/exposed x RAG/no-RAG x products on/off."""
+    if exposed:
+        _seed_real_credentials(docker_root)
+    if rag:
+        monkeypatch.setattr(
+            setup_wizard, "_choose_rag_image", lambda *, assume_yes: True
+        )
+    argv = ["--docker", "--yes", "--port", "8443"]
+    if exposed:
+        argv += ["--expose", EXPOSED_IP, "--expose", EXPOSED_IP]
+    if products:
+        argv += ["--products", "clearpass,mist"]
+    manifest = setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args(argv)
+    )
+
+    bind = EXPOSED_IP if exposed else "127.0.0.1"
+    assert manifest.client_hostname == (EXPOSED_IP if exposed else "localhost")
+    assert manifest.rag is rag
+    overlay_path = docker_root / "docker-compose.router.local.yml"
+    text = overlay_path.read_text()
+    config = yaml.safe_load(text)
+    service = config["services"]["mcp-router"]
+
+    # R1d: the single ports entry is the literal full form, same port twice.
+    match = re.fullmatch(rf"{re.escape(bind)}:(\d+):\1", service["ports"][0])
+    assert match, f"published line is not literal <bind>:<p>:<p>: {service['ports']}"
+    assert not re.search(r'- "\d+:\d+"', text), "shorthand publish line present"
+
+    assert service["profiles"] == ["router"]
+    assert "depends_on" not in service
+    assert service["secrets"] == ["credentials_yaml", "mcp_http_bearer_token"]
+    assert service["restart"] == "unless-stopped"
+    assert config["secrets"] == {
+        "credentials_yaml": {"file": "./secrets/credentials.yaml"},
+        "mcp_http_bearer_token": {"file": "./secrets/mcp_http_bearer_token"},
+    }
+    assert set(config["volumes"]) == {"router_state", "router_outputs"}
+
+    env = service["environment"]
+    assert env["MCP_TRANSPORT"] == "streamable-http"
+    assert env["MCP_HOST"] == "0.0.0.0"
+    assert env["MCP_PORT"] == "8443"
+    assert env["CREDS_PATH"] == "/run/secrets/credentials_yaml"
+    assert env["MCP_HTTP_BEARER_TOKEN_FILE"] == "/run/secrets/mcp_http_bearer_token"
+    assert env["HPE_MCP_ROUTER_MODE"] == "${HPE_MCP_ROUTER_MODE:-minimal}"
+    assert env["HPE_MCP_TOOLSETS"] == "${HPE_MCP_TOOLSETS:-central,glp,rag}"
+    assert env["HPE_MCP_ACCESS_PROFILE"] == "${HPE_MCP_ACCESS_PROFILE:-custom}"
+    assert env["HPE_MCP_RAG_BACKEND"] == "${HPE_MCP_RAG_BACKEND:-}"
+    host_names = ["127.0.0.1", "localhost"] + ([EXPOSED_IP] if exposed else [])
+    assert env["MCP_ALLOWED_HOSTS"] == ",".join(f"{h}:*" for h in host_names)
+    assert env["MCP_ALLOWED_ORIGINS"] == ",".join(f"http://{h}:*" for h in host_names)
+
+    if rag:
+        assert "build" not in service
+        assert service["image"] == "hpe-networking-mcp-router:rag"
+        assert service["volumes"] == [
+            "router_state:/app/state",
+            "router_outputs:/app/outputs",
+            "./data/docs.lance:/app/data/docs.lance:ro",
+            "./data/tools.lance:/app/data/tools.lance:ro",
+        ]
+    else:
+        assert service["build"] == {"context": ".", "dockerfile": "Dockerfile"}
+        assert service["image"] == "hpe-networking-mcp-router:local"
+        assert all(".lance" not in mount for mount in service["volumes"])
+
+    # Standing fences (R8/C4/C7), asserted in every matrix cell.
+    assert "./data:/app/data" not in text
+    assert "HPE_MCP_ALLOW_INSECURE_HTTP_BINDING" not in text
+    assert "privileged" not in text
+    assert "devices" not in text
+    assert "docker.sock" not in text
+
+
+def test_overlay_text_ignores_product_selection():
+    """W2 consumes no product fields; W3 owns them as .env keys."""
+    plain = setup_wizard._compose_overlay_text(_overlay_manifest())
+    loaded = setup_wizard._compose_overlay_text(
+        replace(_overlay_manifest(), products=["clearpass", "mist"])
+    )
+    assert plain == loaded
+
+
+@pytest.mark.parametrize(
+    "bad_bind", ["", "not-an-ip", "8010:8010", f"{EXPOSED_IP}:8010", "fe80::1"]
+)
+def test_shorthand_or_unparseable_bind_refused_before_any_write(docker_root, bad_bind):
+    """R1d negative: shorthand input can never reach a written overlay."""
+    with pytest.raises(SystemExit):
+        setup_wizard._write_compose_overlay(_overlay_manifest(host_ip=bad_bind), force=True)
+    assert not (docker_root / "docker-compose.router.local.yml").exists()
+
+
+def test_custom_client_hostname_drives_allowlists_not_the_bind_ip(
+    docker_root, monkeypatch
+):
+    """W2 acceptance: ORIGINS carry the prompted hostname, never the bind IP."""
+    _seed_real_credentials(docker_root)
+    monkeypatch.setattr(
+        setup_wizard, "_ask_text", lambda prompt, default="": "mcp.example.com"
+    )
+    monkeypatch.setattr(
+        setup_wizard, "_ask", lambda prompt, default, *, assume_yes: False
+    )
+    args = setup_wizard._build_parser().parse_args(
+        ["--docker", "--skip-credentials", "--expose", EXPOSED_IP, "--expose", EXPOSED_IP]
+    )
+    manifest = setup_wizard._run_docker_mode(args)
+
+    assert manifest.client_hostname == "mcp.example.com"
+    overlay = docker_root / "docker-compose.router.local.yml"
+    env = yaml.safe_load(overlay.read_text())["services"]["mcp-router"]["environment"]
+    assert env["MCP_ALLOWED_HOSTS"] == "127.0.0.1:*,localhost:*,mcp.example.com:*"
+    assert env["MCP_ALLOWED_ORIGINS"] == (
+        "http://127.0.0.1:*,http://localhost:*,http://mcp.example.com:*"
+    )
+    assert EXPOSED_IP not in env["MCP_ALLOWED_HOSTS"]
+    assert EXPOSED_IP not in env["MCP_ALLOWED_ORIGINS"]
+
+
+@pytest.mark.parametrize("answer", ["has space", "host:8010", "*", "a,b"])
+def test_invalid_client_hostname_refuses_before_any_write(
+    docker_root, monkeypatch, answer
+):
+    """Allowlist-source answers are validated before ANY artifact is written."""
+    _seed_real_credentials(docker_root)
+    monkeypatch.setattr(setup_wizard, "_ask_text", lambda prompt, default="": answer)
+    monkeypatch.setattr(
+        setup_wizard, "_ask", lambda prompt, default, *, assume_yes: False
+    )
+    args = setup_wizard._build_parser().parse_args(
+        ["--docker", "--skip-credentials", "--expose", EXPOSED_IP, "--expose", EXPOSED_IP]
+    )
+    with pytest.raises(SystemExit):
+        setup_wizard._run_docker_mode(args)
+    # Prompts precede every write: neither secrets nor overlay may exist.
+    assert not (docker_root / "secrets" / "mcp_http_bearer_token").exists()
+    assert not (docker_root / "docker-compose.router.local.yml").exists()
+
+
+def test_existing_overlay_kept_without_force_regenerated_with_force(docker_root, capsys):
+    yes_args = ["--docker", "--yes"]
+    setup_wizard._run_docker_mode(setup_wizard._build_parser().parse_args(yes_args))
+    overlay = docker_root / "docker-compose.router.local.yml"
+    original = overlay.read_bytes()
+
+    overlay.write_text("# hand-edited\n", encoding="utf-8")
+    capsys.readouterr()
+    setup_wizard._run_docker_mode(setup_wizard._build_parser().parse_args(yes_args))
+    assert overlay.read_text(encoding="utf-8") == "# hand-edited\n"
+    assert "kept existing overlay" in capsys.readouterr().out
+
+    setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args([*yes_args, "--force"])
+    )
+    assert overlay.read_bytes() == original
+
+
+def test_rag_image_choice_is_opt_in(monkeypatch):
+    assert setup_wizard._choose_rag_image(assume_yes=True) is False
+    monkeypatch.setattr(
+        setup_wizard, "_ask", lambda prompt, default, *, assume_yes: True
+    )
+    assert setup_wizard._choose_rag_image(assume_yes=False) is True
+
+
+def test_next_steps_point_at_emitted_overlay(docker_root, capsys):
+    setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args(["--docker", "--yes"])
+    )
+    out = capsys.readouterr().out
+    assert "docker-compose.router.local.yml" in out
+    assert "--profile router up -d mcp-router" in out
+    assert "does not emit it yet" not in out
+
+
+def test_generated_overlay_validates_standalone_and_merged_with_docker_cli(
+    docker_root, monkeypatch
+):
+    """Same `docker compose config` gate as test_docker_router_packaging.py."""
+    if shutil.which("docker") is None:
+        pytest.skip("docker CLI not installed")
+    plugin = subprocess.run(
+        ["docker", "compose", "version"], capture_output=True, timeout=10
+    )
+    if plugin.returncode != 0:
+        pytest.skip("docker compose CLI plugin not available")
+    shutil.copy(REPO_ROOT / "docker-compose.yml", docker_root / "docker-compose.yml")
+    # The RAG variant references operator-provisioned corpus mounts; give the
+    # parse step real paths even though `config` is a pure merge.
+    for lance in ("docs.lance", "tools.lance"):
+        (docker_root / "data" / lance).mkdir(parents=True, exist_ok=True)
+
+    def _validate() -> None:
+        overlay = docker_root / "docker-compose.router.local.yml"
+        standalone = subprocess.run(
+            [
+                "docker", "compose", "-f", str(overlay),
+                "--profile", "router", "config",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=docker_root,
+            timeout=30,
+        )
+        assert standalone.returncode == 0, standalone.stderr
+        merged = subprocess.run(
+            [
+                "docker", "compose", "-f", "docker-compose.yml",
+                "-f", "docker-compose.router.local.yml",
+                "--profile", "router", "config",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=docker_root,
+            timeout=30,
+        )
+        assert merged.returncode == 0, merged.stderr
+
+    setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args(["--docker", "--yes"])
+    )
+    _validate()
+
+    monkeypatch.setattr(
+        setup_wizard, "_choose_rag_image", lambda *, assume_yes: True
+    )
+    setup_wizard._run_docker_mode(
+        setup_wizard._build_parser().parse_args(["--docker", "--yes", "--force"])
+    )
+    _validate()
+
+    services = subprocess.run(
+        [
+            "docker", "compose", "-f", "docker-compose.yml",
+            "-f", "docker-compose.router.local.yml", "config", "--services",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=docker_root,
+        timeout=30,
+    )
+    assert services.returncode == 0, services.stderr
+    assert set(services.stdout.split()) == {"redis", "ollama"}, (
+        "the generated overlay must stay opt-in behind the router profile"
+    )
