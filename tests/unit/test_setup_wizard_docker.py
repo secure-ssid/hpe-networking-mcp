@@ -91,6 +91,10 @@ def test_docker_yes_emits_secret_files_and_never_echoes_token(docker_root, capsy
 
     assert exit_code == 0
     assert re.fullmatch(r"[0-9a-f]{64}", token_file.read_text().strip())
+    token_bytes = token_file.read_bytes()
+    assert token_bytes.endswith(b"\n")
+    assert b"\r" not in token_bytes  # W1a: LF-only secret bytes on win32 too
+    assert b"\r" not in creds_file.read_bytes()
 
     creds_text = creds_file.read_text()
     assert "central_account:" in creds_text
@@ -227,20 +231,26 @@ def test_placeholder_credentials_abort_acknowledged_non_loopback(docker_root, ca
     assert (docker_root / "secrets" / "credentials.yaml").exists()
 
 
-def test_skip_credentials_leaves_placeholder_gate_vacuous(docker_root):
-    exit_code = setup_wizard.main(
-        [
-            "--docker",
-            "--yes",
-            "--skip-credentials",
-            "--expose",
-            "192.168.10.5",
-            "--expose",
-            "192.168.10.5",
-        ]
-    )
+def test_skip_credentials_exposed_run_refuses_missing_credentials(docker_root):
+    """W1a K3 amendment: exposed deployments require credentials.yaml to exist."""
+    with pytest.raises(SystemExit) as excinfo:
+        setup_wizard.main(
+            [
+                "--docker",
+                "--yes",
+                "--skip-credentials",
+                "--expose",
+                "192.168.10.5",
+                "--expose",
+                "192.168.10.5",
+            ]
+        )
 
-    assert exit_code == 0
+    assert excinfo.value.code != 0
+    assert "credentials.yaml" in str(excinfo.value)
+    # K3: abort leaves no overlay/.env referencing the missing secret file.
+    assert not (docker_root / "docker-compose.router.local.yml").exists()
+    assert not (docker_root / ".env").exists()
     assert not (docker_root / "secrets" / "credentials.yaml").exists()
 
 
@@ -251,16 +261,61 @@ def test_skip_credentials_leaves_placeholder_gate_vacuous(docker_root):
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits only")
 def test_preexisting_0644_token_file_tightened_to_0600(docker_root):
-    """Pins the os.fchmod branch of _write_secret_file (:138-139)."""
+    """Pins the keep-path 0600 repair of _docker_token_step (:707-713)."""
     token_file = docker_root / "secrets" / "mcp_http_bearer_token"
     token_file.parent.mkdir(parents=True)
-    token_file.write_text("stale-token-from-an-earlier-run\n")
+    token_file.write_text("a" * 64 + "\n")
     os.chmod(token_file, 0o644)
 
     setup_wizard.main(["--docker", "--yes"])
 
     assert stat.S_IMODE(token_file.stat().st_mode) == 0o600
-    assert re.fullmatch(r"[0-9a-f]{64}", token_file.read_text().strip())
+    # Valid stale content is kept byte-for-byte; only the mode gets repaired.
+    assert token_file.read_text() == "a" * 64 + "\n"
+
+
+def test_existing_valid_token_is_kept_without_force(docker_root, capsys):
+    """W1a: a valid existing token survives a rerun byte-for-byte."""
+    token_file = docker_root / "secrets" / "mcp_http_bearer_token"
+    token_file.parent.mkdir(parents=True)
+    token_file.write_text("b" * 64 + "\n")
+
+    exit_code = setup_wizard.main(["--docker", "--yes"])
+
+    assert exit_code == 0
+    assert token_file.read_text() == "b" * 64 + "\n"
+    assert "kept existing token" in capsys.readouterr().out
+
+
+def test_force_rotates_existing_valid_token(docker_root):
+    """W1a: --force is the only path that replaces an existing valid token."""
+    token_file = docker_root / "secrets" / "mcp_http_bearer_token"
+    token_file.parent.mkdir(parents=True)
+    token_file.write_text("b" * 64 + "\n")
+
+    setup_wizard.main(["--docker", "--yes", "--force"])
+
+    content = token_file.read_text()
+    assert content != "b" * 64 + "\n"
+    assert re.fullmatch(r"[0-9a-f]{64}", content.strip())
+
+
+def test_garbage_token_content_aborts_without_force(docker_root):
+    """W1a: invalid token content is neither kept nor silently rotated."""
+    token_file = docker_root / "secrets" / "mcp_http_bearer_token"
+    token_file.parent.mkdir(parents=True)
+    token_file.write_text("stale-token-from-an-earlier-run\n")
+
+    with pytest.raises(SystemExit) as excinfo:
+        setup_wizard.main(["--docker", "--yes"])
+
+    assert excinfo.value.code != 0
+    refusal = str(excinfo.value)
+    assert "mcp_http_bearer_token" in refusal
+    assert "--force" in refusal
+    # Neither branch fired: bytes untouched, credential step never ran.
+    assert token_file.read_text() == "stale-token-from-an-earlier-run\n"
+    assert not (docker_root / "secrets" / "credentials.yaml").exists()
 
 
 # ---------------------------------------------------------------------------
