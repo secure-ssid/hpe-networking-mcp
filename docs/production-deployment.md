@@ -203,7 +203,7 @@ checkout, steps 3–6 need only Docker.
 #    ingest_docs.py refuses to replace an index built from an empty one.
 #    This crawls vendor sites for hours and accepts each vendor's document
 #    terms -- nobody can accept those terms on your behalf:
-python scripts/refresh_rag_sources.py --refresh-sources
+uv run --extra ingestion python scripts/refresh_rag_sources.py --refresh-sources
 
 # 2. Build the LanceDB corpus from what step 1 fetched:
 uv run --extra ingestion python ingestion/ingest_docs.py
