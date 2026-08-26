@@ -7,6 +7,7 @@ import argparse
 import getpass
 import json
 import os
+import re
 import secrets
 import shlex
 import subprocess
@@ -171,10 +172,13 @@ def _write_secret_file(target: Path, text: str) -> None:
     tokens) than the token cache, which already enforces 0600. ``os.fchmod``
     tightens a pre-existing (possibly 0644) file BEFORE the secret bytes land
     in it, since O_CREAT's mode only applies to newly-created files.
+    The text fd passes ``newline="\n"`` so win32 hosts emit LF-only secret
+    bytes instead of CRLF (which would corrupt byte-exact consumers such as
+    the bearer token).
     """
     fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     os.fchmod(fd, 0o600)
-    with os.fdopen(fd, "w") as f:
+    with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
 
 
@@ -692,9 +696,26 @@ def _resolve_docker_exposure(args: argparse.Namespace) -> str | None:
     return None
 
 
-def _docker_token_step() -> Step:
-    """Generate + write the HTTP bearer token; the value never reaches stdout."""
+def _docker_token_step(args: argparse.Namespace) -> Step:
+    """Generate + write the HTTP bearer token; the value never reaches stdout.
+
+    An existing file holding a valid 64-hex token is kept byte-for-byte (with
+    a 0600 repair) unless --force rotates it; invalid content aborts without
+    being silently replaced.
+    """
     BEARER_TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if BEARER_TOKEN_PATH.exists() and not args.force:
+        existing = BEARER_TOKEN_PATH.read_text(encoding="utf-8").rstrip("\r\n")
+        if re.fullmatch(r"[0-9a-f]{64}", existing):
+            os.chmod(BEARER_TOKEN_PATH, 0o600)
+            return Step(
+                _rel(BEARER_TOKEN_PATH), "OK", "kept existing token (mode 0600)"
+            )
+        raise SystemExit(
+            f"{_rel(BEARER_TOKEN_PATH)} exists but holds no valid 64-hex bearer "
+            "token; refusing to overwrite it silently. Fix or remove the file, "
+            "or rerun with --force to replace it."
+        )
     _write_secret_file(BEARER_TOKEN_PATH, secrets.token_hex(32) + "\n")
     return Step(_rel(BEARER_TOKEN_PATH), "OK", "created 64-hex bearer token (mode 0600)")
 
@@ -704,9 +725,20 @@ def _finalize_docker_deployment(manifest: DockerManifest) -> None:
 
     Slices W2/W3 write OVERLAY_PATH/ENV_PATH only after this gate passes, so
     an abort never leaves a compose file referencing missing secret files.
+    Amended (W1a, Lead-ratified): an acknowledged non-loopback deployment
+    additionally requires credentials.yaml to exist and be placeholder-free,
+    since compose bind-mounts it and a missing host path would be auto-created
+    as a directory.
     """
     if manifest.host_ip is None:
         return
+    if not manifest.creds_path.exists():
+        raise SystemExit(
+            f"{_rel(manifest.creds_path)} is required for a non-loopback "
+            "deployment; refusing to finish without it. Rerun without "
+            "--skip-credentials to seed it, or without --host/--expose to "
+            "stay loopback-only."
+        )
     if _has_placeholders(manifest.creds_path):
         raise SystemExit(
             f"{_rel(manifest.creds_path)} still contains placeholder credentials; "
@@ -752,7 +784,7 @@ def _run_docker_mode(args: argparse.Namespace) -> DockerManifest:
     selected_products = _selected_products(args)
     product_access = _product_access(args, selected_products)
 
-    steps: list[Step] = [_docker_token_step()]
+    steps: list[Step] = [_docker_token_step(args)]
     if not args.skip_credentials:
         steps.append(
             _write_credentials(
