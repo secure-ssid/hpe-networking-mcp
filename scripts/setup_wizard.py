@@ -7,6 +7,7 @@ import argparse
 import getpass
 import json
 import os
+import secrets
 import shlex
 import subprocess
 from dataclasses import dataclass
@@ -16,6 +17,22 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8010
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+# K2 surface for the --docker slices (W2/W3 consume exactly these names).
+# They bind ROOT at import time: the local-uv flow in main() derives
+# ROOT / ".env" live instead so tests patching only ROOT keep working, while
+# docker-mode code reads these constants and tests patch them alongside ROOT.
+SECRETS_DIR = ROOT / "secrets"
+
+BEARER_TOKEN_PATH = SECRETS_DIR / "mcp_http_bearer_token"
+DOCKER_CREDENTIALS_PATH = SECRETS_DIR / "credentials.yaml"
+# Generated compose overlay; gitignored, written by a later slice (W2).
+OVERLAY_PATH = ROOT / "docker-compose.router.local.yml"
+ENV_PATH = ROOT / ".env"
+NON_LOOPBACK_WARNING = (
+    "WARNING: Non-loopback MCP_HOST may expose credential-backed MCP tools "
+    "to your network. Use firewall/auth/TLS before sharing this endpoint.\n"
+)
 
 CENTRAL_BASE_URLS = [
     (
@@ -117,6 +134,26 @@ class Step:
     label: str
     status: str
     detail: str
+
+
+@dataclass(frozen=True)
+class DockerManifest:
+    """Cross-slice contract K1: everything downstream docker slices consume.
+
+    W2 reads host_ip/client_hostname/rag/backend for overlay emission; W3
+    reads backend/products/access_profile for .env keys. Fields stay neutral
+    here until the slice that prompts for them lands.
+    """
+
+    port: int
+    host_ip: str | None
+    client_hostname: str | None
+    rag: bool
+    backend: str | None
+    products: list[str]
+    access_profile: str
+    token_path: Path
+    creds_path: Path
 
 
 def _rel(path: Path) -> str:
@@ -603,7 +640,147 @@ def _print_steps(steps: list[Step]) -> None:
         print(f"[{step.status}] {step.label}: {step.detail}")
 
 
-def main() -> int:
+def _resolve_docker_exposure(args: argparse.Namespace) -> str | None:
+    """Return the published bind address for --docker, or None for loopback-only."""
+    exposes = [value.strip() for value in (args.expose or [])]
+    if len(exposes) == 1:
+        raise SystemExit(
+            "--expose must be passed TWICE with the same address to acknowledge "
+            f"a non-loopback deployment (got only: {exposes[0]})"
+        )
+    if len(set(exposes)) > 1:
+        raise SystemExit("--expose addresses disagree; pass the same address twice")
+    if exposes:
+        address = exposes[0]
+        if not address:
+            raise SystemExit("--expose requires an address")
+        if _is_loopback_host(address):
+            print("Loopback --expose address; keeping the deployment loopback-only.\n")
+            return None
+        print(NON_LOOPBACK_WARNING)
+        print(
+            "Firewall rules, a reverse proxy, and TLS are REQUIRED before "
+            "sharing this endpoint.\n"
+        )
+        return address
+    if not _is_loopback_host(args.host):
+        if args.yes:
+            raise SystemExit(
+                f"--host {args.host} is non-loopback and --yes cannot acknowledge "
+                "exposure; pass --expose <ip> twice, or rerun with --host "
+                f"{DEFAULT_HOST} to stay loopback-only"
+            )
+        if not _ask(
+            f"Expose the router beyond loopback on {args.host}?", False, assume_yes=False
+        ):
+            raise SystemExit(
+                f"--host {args.host} is non-loopback but exposure was declined; rerun "
+                f"with --host {DEFAULT_HOST}, or pass --expose <ip> twice to acknowledge"
+            )
+        confirmed = _ask_text("Re-enter the bind address to confirm", "")
+        if confirmed != args.host:
+            raise SystemExit(
+                "Bind addresses did not match; refusing to expose. Rerun with "
+                f"--host {DEFAULT_HOST}, or retry with both entries identical."
+            )
+        print(NON_LOOPBACK_WARNING)
+        print(
+            "Firewall rules, a reverse proxy, and TLS are REQUIRED before "
+            "sharing this endpoint.\n"
+        )
+        return args.host
+    return None
+
+
+def _docker_token_step() -> Step:
+    """Generate + write the HTTP bearer token; the value never reaches stdout."""
+    BEARER_TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _write_secret_file(BEARER_TOKEN_PATH, secrets.token_hex(32) + "\n")
+    return Step(_rel(BEARER_TOKEN_PATH), "OK", "created 64-hex bearer token (mode 0600)")
+
+
+def _finalize_docker_deployment(manifest: DockerManifest) -> None:
+    """K3 seam: validate emitted secrets BEFORE any overlay/.env can exist.
+
+    Slices W2/W3 write OVERLAY_PATH/ENV_PATH only after this gate passes, so
+    an abort never leaves a compose file referencing missing secret files.
+    """
+    if manifest.host_ip is None:
+        return
+    if _has_placeholders(manifest.creds_path):
+        raise SystemExit(
+            f"{_rel(manifest.creds_path)} still contains placeholder credentials; "
+            "refusing to finish a non-loopback deployment. Fill in real OAuth "
+            "credentials, or rerun without --host/--expose to stay loopback-only."
+        )
+
+
+def _print_docker_next_steps(manifest: DockerManifest, *, product_access: str) -> None:
+    print("\nNext steps (Docker bundle)")
+    if _has_placeholders(manifest.creds_path):
+        print(
+            f"1. Fill placeholders in {_rel(manifest.creds_path)} before starting "
+            "API-backed tools."
+        )
+    else:
+        print(f"1. Review {_rel(manifest.creds_path)} before starting API-backed tools.")
+    print(f"2. Bearer token file: {_rel(manifest.token_path)} (0600; value never printed).")
+    if manifest.host_ip is not None:
+        print(
+            f"3. Publishing on {manifest.host_ip}:{manifest.port}; firewall/reverse-proxy/"
+            "TLS are REQUIRED before sharing this endpoint."
+        )
+    else:
+        print(f"3. Loopback-only publishing on 127.0.0.1:{manifest.port}.")
+    next_step = 4
+    if manifest.products:
+        print(f"4. Optional products enabled: {', '.join(manifest.products)} ({product_access}).")
+        next_step = 5
+    print(
+        f"{next_step}. Compose overlay: follow the six-step checklist in "
+        "docs/production-deployment.md (setup_wizard.py does not emit it yet)."
+    )
+
+
+def _run_docker_mode(args: argparse.Namespace) -> DockerManifest:
+    """--docker skeleton (slice W1): resolve exposure, emit both secret files.
+
+    Overlay and .env emission arrive in later slices and MUST hook in after
+    _finalize_docker_deployment (K3 write-order invariant).
+    """
+    host_ip = _resolve_docker_exposure(args)
+    selected_products = _selected_products(args)
+    product_access = _product_access(args, selected_products)
+
+    steps: list[Step] = [_docker_token_step()]
+    if not args.skip_credentials:
+        steps.append(
+            _write_credentials(
+                DOCKER_CREDENTIALS_PATH,
+                force=args.force,
+                assume_yes=args.yes,
+            )
+        )
+
+    manifest = DockerManifest(
+        port=args.port,
+        host_ip=host_ip,
+        client_hostname=None,
+        rag=False,
+        backend=None,
+        products=selected_products,
+        access_profile=args.access_profile,
+        token_path=BEARER_TOKEN_PATH,
+        creds_path=DOCKER_CREDENTIALS_PATH,
+    )
+    _finalize_docker_deployment(manifest)
+    _print_steps(steps)
+    _print_docker_next_steps(manifest, product_access=product_access)
+    print(f"\nRouter exposure mode: {args.router_mode}.")
+    return manifest
+
+
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--yes", action="store_true", help="accept default wizard choices")
     parser.add_argument(
@@ -621,6 +798,17 @@ def main() -> int:
         type=int,
         default=DEFAULT_PORT,
         help=f"HTTP MCP port (default: {DEFAULT_PORT})",
+    )
+    parser.add_argument(
+        "--expose",
+        action="append",
+        default=None,
+        metavar="IP",
+        help=(
+            "publish the router on this non-loopback address instead of binding "
+            "loopback; MUST be passed twice with the same value to acknowledge "
+            "the exposure (--docker only)"
+        ),
     )
     parser.add_argument("--with-vscode", action="store_true", help="also create .vscode/mcp.json")
     parser.add_argument(
@@ -681,16 +869,28 @@ def main() -> int:
         action="store_true",
         help="do not run scripts/doctor.py at the end",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--docker",
+        action="store_true",
+        help=(
+            "emit the Docker deployment bundle (bearer token + container "
+            "credentials.yaml) instead of the local uv-run config"
+        ),
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
 
     print("hpe-networking-mcp setup wizard")
     print(f"Repository: {ROOT}")
     print("This wizard writes only local git-ignored config files.\n")
+    if args.docker:
+        _run_docker_mode(args)
+        return 0
     if not _is_loopback_host(args.host):
-        print(
-            "WARNING: Non-loopback MCP_HOST may expose credential-backed MCP tools "
-            "to your network. Use firewall/auth/TLS before sharing this endpoint.\n"
-        )
+        print(NON_LOOPBACK_WARNING)
 
     steps: list[Step] = []
     selected_products = _selected_products(args)
