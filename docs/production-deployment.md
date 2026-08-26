@@ -127,7 +127,7 @@ with `docker compose ... logs mcp-router`.
 
 Every credential is its own 0600 file under `secrets/`, mounted as its own
 Compose secret and read through the `<VAR>_FILE` → `<VAR>` bridge in
-[`../docker/entrypoint.sh`](../docker/entrypoint.sh). Nothing credential-shaped
+[`docker/entrypoint.sh`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/docker/entrypoint.sh). Nothing credential-shaped
 is ever passed as a plaintext `environment:` value or written to `.env`.
 
 That layout exists for rotation. Revoking one product's key is:
@@ -160,12 +160,12 @@ workflow and keeps carrying secrets inline; `secrets/credentials.yaml` is the
 *container* path and holds identity only. They are separate files on purpose:
 `secrets/` is git-ignored wholesale and is what Compose mounts.
 
-[`../secrets/README.md`](../secrets/README.md) has the copyable Compose
+[`secrets/README.md`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/secrets/README.md) has the copyable Compose
 snippet for wiring a secret by hand.
 
 ## Without the wizard
 
-The tracked [`../docker-compose.router.yml`](../docker-compose.router.yml)
+The tracked [`docker-compose.router.yml`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/docker-compose.router.yml)
 is the same stack with the same knobs, minus the generated per-product
 secret wiring (Compose refuses to start when a declared secret's file is
 missing, so it declares only the two every deployment creates):
@@ -186,7 +186,7 @@ Set `HPE_MCP_TOOLSETS`, `HPE_MCP_PRODUCTS`, `HPE_MCP_PRODUCT_ACCESS` and the
 `up -d` to apply them; every one of those variables is interpolated by that
 file and defaults to the refusing value. To add an
 optional product's credential, follow the snippet in
-[`../secrets/README.md`](../secrets/README.md).
+[`secrets/README.md`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/secrets/README.md).
 
 ## Kicking the tyres: the published image
 
@@ -222,13 +222,13 @@ work with no provisioning. It does **no** prose retrieval: that needs the
 
 | File | Purpose |
 |---|---|
-| [`../Dockerfile`](../Dockerfile) | Multi-stage production image for the router (`hpe-mcp-router`) |
-| [`../.dockerignore`](../.dockerignore) | Keeps secrets, `.env`, local state, and built indexes out of the build context |
-| [`../docker/entrypoint.sh`](../docker/entrypoint.sh) | Expands `*_FILE` Docker-secret conventions into plain env vars, then execs the requested command |
-| [`../docker-compose.yml`](../docker-compose.yml) | Unchanged: optional localhost-only Redis/Ollama server backend |
-| [`../docker-compose.router.yml`](../docker-compose.router.yml) | Additive overlay: the containerized router, behind a Compose `router` profile |
-| [`../scripts/setup_wizard.py`](../scripts/setup_wizard.py) | `--docker` generates the secrets, `.env` and `docker-compose.router.local.yml` above |
-| [`../secrets/README.md`](../secrets/README.md) | The `CREDS_PATH` and `<VAR>_FILE` secret conventions, with copyable Compose wiring |
+| [`Dockerfile`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/Dockerfile) | Multi-stage production image for the router (`hpe-mcp-router`) |
+| [`.dockerignore`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/.dockerignore) | Keeps secrets, `.env`, local state, and built indexes out of the build context |
+| [`docker/entrypoint.sh`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/docker/entrypoint.sh) | Expands `*_FILE` Docker-secret conventions into plain env vars, then execs the requested command |
+| [`docker-compose.yml`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/docker-compose.yml) | Unchanged: optional localhost-only Redis/Ollama server backend |
+| [`docker-compose.router.yml`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/docker-compose.router.yml) | Additive overlay: the containerized router, behind a Compose `router` profile |
+| [`scripts/setup_wizard.py`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/scripts/setup_wizard.py) | `--docker` generates the secrets, `.env` and `docker-compose.router.local.yml` above |
+| [`secrets/README.md`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/secrets/README.md) | The `CREDS_PATH` and `<VAR>_FILE` secret conventions, with copyable Compose wiring |
 
 
 ## Security choices
@@ -292,7 +292,7 @@ make that the default.
     `<VAR>` wins over its `<VAR>_FILE` counterpart; a set-but-empty
     `<VAR>` beside its counterpart is a misconfiguration and refuses
     startup.
-* See [`../secrets/README.md`](../secrets/README.md) for the full setup
+* See [`secrets/README.md`](https://github.com/secure-ssid/hpe-networking-mcp/blob/main/secrets/README.md) for the full setup
   steps and how to add more `*_FILE` secrets (optional-product API tokens,
   etc.).
 
