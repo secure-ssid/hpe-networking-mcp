@@ -13,9 +13,9 @@ Apstra, ArubaOS 8, EdgeConnect, UXI, Axis Atmos Cloud) plus 7 credential-free
 `design-core` diagram tools and 5 credential-free `interop-core` tools that
 make no vendor API call at all, plus the always-loaded cross-platform
 `site-health` aggregator, the protocol-only Central Streaming collector, and
-the local GLP preflight diagnostic. Direct-all router mode adds eight more
+the local GLP preflight diagnostic. Direct-all router mode adds twelve more
 router-native tools (present only in `direct` mode, not part of the backend
-registry itself) for **6,737 client-visible tools total**. The recommended
+registry itself) for **6,741 client-visible tools total**. The recommended
 minimal router exposes only `find_tool`, `invoke_read_tool`, and
 `invoke_tool`, then searches the larger index on demand.
 
@@ -122,10 +122,10 @@ operations register as active generated tools.
 | Mode | Client-visible tools | Use |
 |---|---:|---|
 | `minimal` | 3 | Recommended low-token discovery and dispatch |
-| `default` | 19 | Router convenience wrappers (`list_sites`, `ask_docs`, `plan_tool_workflow`, etc.) |
-| `direct` + `HPE_MCP_TOOLSETS=all` | 6,737 | Full schema introspection and debugging |
+| `default` | 23 | Router convenience wrappers (`list_sites`, `ask_docs`, `mist_clients`, etc.) |
+| `direct` + `HPE_MCP_TOOLSETS=all` | 6,741 | Full schema introspection and debugging |
 
-The `default` count (19) is measured identically whether every toolset is
+The `default` count (23) is measured identically whether every toolset is
 loaded or only the documented recommended client profile
 (`HPE_MCP_ROUTER_MODE=default`, `HPE_MCP_TOOLSETS=central,glp,rag`) is --
 `default` mode's wrapper set depends only on `central-monitoring`/`rag-core`
@@ -134,11 +134,12 @@ being loaded, which both scenarios satisfy. `docs/project-facts.json`'s
 documented-profile measurement separately from the "every toolset" scenario
 so the two are never assumed to match without being independently checked.
 
-`direct` mode's 6,737 = the complete 6,729 backend total + 8 router-native
+`direct` mode's 6,741 = the complete 6,729 backend total + 12 router-native
 tools that have no backend-identity equivalent at all (`find_tool`,
 `invoke_read_tool`, `invoke_tool`, `invoke_read_tool_batch`,
 `invoke_tools_batch`, `plan_tool_workflow`, `plan_reconciliation_schedule`,
-`evaluate_compliance_policy`). The other 11 `default`-mode wrapper names
+`evaluate_compliance_policy`, `mist_clients`, `mist_devices`, `mist_ports`,
+`mist_health`). The other 11 `default`-mode wrapper names
 (`list_scopes`, `get_global_scope_id`, `list_sites`, `list_devices`,
 `find_device`, `find_client`, `ask_docs`, `search_docs`, `list_skills`,
 `load_skill`, `lookup_api`) intentionally reuse the name of a real backend

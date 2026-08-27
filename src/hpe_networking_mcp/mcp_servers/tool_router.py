@@ -761,6 +761,19 @@ def _load_all_backends() -> None:
     _tool_backend_names.update(staged_backend_names)
 
 
+#: Force every enabled backend to import at process startup instead of
+#: lazily on the first find_tool hit that needs it (see the "if name not in
+#: _tool_index" lazy-load check inside find_tool). Off by default: importing
+#: every backend eagerly costs real wall-clock time (mist-core alone is
+#: ~1.9s; central's curated modules are ~0.1s each) that a request would
+#: otherwise pay lazily on first touch instead of at startup. A dedicated,
+#: latency-sensitive deployment (e.g. a chatbot backend) trades that
+#: one-time startup delay for a guarantee the first real query is never
+#: the one that pays it.
+if os.getenv("HPE_MCP_ROUTER_EAGER_LOAD", "").strip().lower() in {"1", "true", "yes"}:
+    _load_all_backends()
+
+
 def _register_direct_backend_tools(target: MCPServer | None = None) -> list[str]:
     """Register every enabled backend tool directly on the router server.
 
@@ -2734,6 +2747,182 @@ if _ROUTER_MODE != "minimal" and "central-monitoring" in _BACKENDS:
     async def find_client(ctx: Context, query: str) -> dict[str, Any]:
         """Find a client by name / MAC / IP."""
         return await invoke_tool(ctx, "find_client", {"mac_or_ip": query})
+
+
+# ── Mist convenience wrappers (fast-path: skip find_tool for common asks) ──
+#
+# Mist has no equivalent of the Central wrappers above: every Mist question
+# otherwise pays find_tool's semantic search over mist-core's ~1,050-tool
+# surface, then a second call to actually run it, and almost every Mist
+# generated/curated tool requires an org_id (and often a site_id) the model
+# has no way to know without yet another round trip (mist_get_self). These
+# wrappers default both from MIST_ORG_ID/MIST_SITE_ID when the caller omits
+# them, narrow the client-search window from Mist's own ~14-day default to
+# "who's on now", and cache each dispatched result for
+# HPE_MCP_ROUTER_WRAPPER_CACHE_TTL_SECONDS (default 30s, 0 disables) so a
+# repeat question in the same session doesn't re-hit Mist Cloud.
+
+_MIST_DEFAULT_ORG_ID_ENV = "MIST_ORG_ID"
+_MIST_DEFAULT_SITE_ID_ENV = "MIST_SITE_ID"
+_WRAPPER_CACHE_TTL_ENV = "HPE_MCP_ROUTER_WRAPPER_CACHE_TTL_SECONDS"
+_WRAPPER_CACHE_DEFAULT_TTL_SECONDS = 30.0
+_WRAPPER_CACHE: dict[tuple[str, str], tuple[float, Any]] = {}
+
+
+def _mist_default_org_id() -> str:
+    return os.getenv(_MIST_DEFAULT_ORG_ID_ENV, "").strip()
+
+
+def _mist_default_site_id() -> str:
+    return os.getenv(_MIST_DEFAULT_SITE_ID_ENV, "").strip()
+
+
+def _wrapper_cache_ttl_seconds() -> float:
+    raw = os.getenv(_WRAPPER_CACHE_TTL_ENV, "").strip()
+    if not raw:
+        return _WRAPPER_CACHE_DEFAULT_TTL_SECONDS
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return _WRAPPER_CACHE_DEFAULT_TTL_SECONDS
+
+
+async def _cached_dispatch(ctx: Context, name: str, arguments: dict[str, Any]) -> Any:
+    """``invoke_tool`` with a short, opt-out in-process TTL cache.
+
+    Keyed on (tool name, canonical arguments) only -- never on caller
+    identity -- so this is safe only for the read-only wrappers below; never
+    reuse this for a write dispatch.
+    """
+    ttl = _wrapper_cache_ttl_seconds()
+    key = (name, json.dumps(arguments, sort_keys=True, default=str))
+    if ttl > 0:
+        cached = _WRAPPER_CACHE.get(key)
+        if cached is not None and cached[0] > time.monotonic():
+            return cached[1]
+    result = await invoke_tool(ctx, name, arguments)
+    if ttl > 0:
+        _WRAPPER_CACHE[key] = (time.monotonic() + ttl, result)
+    return result
+
+
+# Gated on router mode only, deliberately *not* also on "mist-core" in
+# _BACKENDS: router_mode_facts() (pipeline/project_facts.py) asserts
+# default-mode's client-visible tool count is identical whether it is
+# probed under the documented recommended profile (no optional products)
+# or under every toolset/product enabled at once -- gating on product
+# selection would make these 4 tools appear only in the latter, diverging
+# the two counts docs/tool-catalog.md and docs/tool-router.md publish as a
+# single shared number. Calling one of these when mist-core was never
+# loaded degrades the same way any other tool name mist-core would have
+# owned does: invoke_tool's own unknown-tool path already resolves the
+# "mist" prefix to a platform-not-enabled hint (_unconfigured_platform_hint),
+# so no separate check is needed here for that case specifically.
+if _ROUTER_MODE != "minimal":
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def mist_clients(
+        ctx: Context,
+        minutes: int = 30,
+        limit: int = 50,
+        org_id: str | None = None,
+        site_id: str | None = None,
+    ) -> Any:
+        """Wireless clients seen on the Mist network recently (default: last 30 min).
+
+        Fast path for "how many/which clients are on Mist" -- dispatches
+        straight to the org wireless-client search with a narrow window
+        instead of find_tool + Mist's own ~14-day default. org_id defaults
+        from MIST_ORG_ID when omitted; pass site_id to scope to one site.
+        """
+        resolved_org = (org_id or _mist_default_org_id()).strip()
+        if not resolved_org:
+            return {
+                "error": "org_id not provided and MIST_ORG_ID is not set",
+                "hint": "Set MIST_ORG_ID on the router, or pass org_id explicitly.",
+            }
+        args: dict[str, Any] = {
+            "org_id": resolved_org,
+            "duration": f"{max(1, minutes)}m",
+            "limit": limit,
+        }
+        if site_id:
+            args["site_id"] = site_id
+        return await _cached_dispatch(ctx, "mist_search_org_wireless_clients", args)
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def mist_devices(
+        ctx: Context,
+        device_type: Literal["ap", "switch", "gateway"] | None = None,
+        limit: int = 100,
+        org_id: str | None = None,
+    ) -> Any:
+        """Mist device inventory (APs/switches/gateways), org-wide.
+
+        org_id defaults from MIST_ORG_ID when omitted. device_type narrows
+        to one kind; omit it for the full inventory.
+        """
+        resolved_org = (org_id or _mist_default_org_id()).strip()
+        if not resolved_org:
+            return {
+                "error": "org_id not provided and MIST_ORG_ID is not set",
+                "hint": "Set MIST_ORG_ID on the router, or pass org_id explicitly.",
+            }
+        args = {"org_id": resolved_org, "device_type": device_type, "limit": limit}
+        return await _cached_dispatch(ctx, "mist_list_org_inventory", args)
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def mist_ports(
+        ctx: Context,
+        switch_mac: str,
+        limit: int = 100,
+        site_id: str | None = None,
+    ) -> Any:
+        """Switch port status for one Mist switch (by MAC).
+
+        site_id defaults from MIST_SITE_ID when omitted.
+        """
+        resolved_site = (site_id or _mist_default_site_id()).strip()
+        if not resolved_site:
+            return {
+                "error": "site_id not provided and MIST_SITE_ID is not set",
+                "hint": "Set MIST_SITE_ID on the router, or pass site_id explicitly.",
+            }
+        args = {"site_id": resolved_site, "switch_mac": switch_mac, "limit": limit}
+        return await _cached_dispatch(ctx, "mist_list_switch_ports", args)
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def mist_health(
+        ctx: Context,
+        limit: int = 50,
+        mist_site_id: str | None = None,
+        central_site_id: str | None = None,
+        central_site_name: str | None = None,
+    ) -> Any:
+        """"Anything wrong?" -- bounded Mist site assurance snapshot (switches,
+        gateways, alarms), optionally alongside Central's site health in the
+        same call.
+
+        mist_site_id defaults from MIST_SITE_ID when omitted; pass
+        central_site_id/central_site_name to include Central's read too.
+        """
+        resolved_mist_site = (mist_site_id or _mist_default_site_id()).strip()
+        if not resolved_mist_site and not central_site_id and not central_site_name:
+            return {
+                "error": "no site identifier available",
+                "hint": (
+                    "Set MIST_SITE_ID on the router, or pass mist_site_id/"
+                    "central_site_id/central_site_name explicitly."
+                ),
+            }
+        args: dict[str, Any] = {"limit": limit}
+        if resolved_mist_site:
+            args["mist_site_id"] = resolved_mist_site
+        if central_site_id:
+            args["central_site_id"] = central_site_id
+        if central_site_name:
+            args["central_site_name"] = central_site_name
+        return await _cached_dispatch(ctx, "get_site_health", args)
 
 
 if _ROUTER_MODE != "minimal" and "rag-core" in _BACKENDS:

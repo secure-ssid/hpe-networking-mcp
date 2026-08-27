@@ -469,18 +469,19 @@ MCP hop.
 | Profile | Client-visible / indexed tools |
 |---|---:|
 | Minimal router | 3 client-visible tools |
-| Default router | 19 client-visible tools[^compliance-tool] |
+| Default router | 23 client-visible tools[^compliance-tool] |
 | Platform API backend index | 6,712 tools |
 | Complete backend index (platform APIs plus the non-platform backends itemized in [`docs/project-facts.json`](project-facts.json)) | 6,729 tools |
-| Direct-all router | 6,737 client-visible tools |
+| Direct-all router | 6,741 client-visible tools |
 
 </div>
 
 [^compliance-tool]: v0.7 added `plan_tool_workflow` and
     `plan_reconciliation_schedule`; the post-v0.7 compliance expansion adds
     `evaluate_compliance_policy` paired with the batch dispatchers
-    `invoke_read_tool_batch` and `invoke_tools_batch`, raising the
-    default-mode count to 19.
+    `invoke_read_tool_batch` and `invoke_tools_batch`; the Mist fast-path
+    wrappers `mist_clients`, `mist_devices`, `mist_ports`, and `mist_health`
+    added afterward, raising the default-mode count to 23.
     `minimal` mode remains the same three-tool surface. This count is
     identical whether every toolset/product is loaded or only the
     documented recommended profile (`HPE_MCP_TOOLSETS=central,glp,rag`) is

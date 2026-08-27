@@ -974,6 +974,204 @@ def test_find_client_wrapper_forwards_backend_mac_arg(monkeypatch):
     ]
 
 
+def test_mist_clients_wrapper_defaults_org_id_and_narrows_window(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.setenv("MIST_ORG_ID", "org-from-env")
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"data": {"results": []}}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.mist_clients(object(), minutes=15))
+
+    assert result == {"data": {"results": []}}
+    assert calls == [
+        (
+            "mist_search_org_wireless_clients",
+            {"org_id": "org-from-env", "duration": "15m", "limit": 50},
+        )
+    ]
+
+
+def test_mist_clients_wrapper_prefers_explicit_org_id_over_env(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.setenv("MIST_ORG_ID", "org-from-env")
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append(arguments)
+        return {}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    asyncio.run(router.mist_clients(object(), org_id="org-explicit"))
+
+    assert calls[0]["org_id"] == "org-explicit"
+
+
+def test_mist_clients_wrapper_errors_without_org_id(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.delenv("MIST_ORG_ID", raising=False)
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.mist_clients(object()))
+
+    assert "error" in result
+    assert calls == []
+
+
+def test_mist_devices_wrapper_forwards_device_type_and_env_org_id(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.setenv("MIST_ORG_ID", "org-from-env")
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"inventory": {"items": []}}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.mist_devices(object(), device_type="ap"))
+
+    assert result == {"inventory": {"items": []}}
+    assert calls == [
+        (
+            "mist_list_org_inventory",
+            {"org_id": "org-from-env", "device_type": "ap", "limit": 100},
+        )
+    ]
+
+
+def test_mist_devices_wrapper_errors_without_org_id(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.delenv("MIST_ORG_ID", raising=False)
+
+    result = asyncio.run(router.mist_devices(object()))
+
+    assert "error" in result
+
+
+def test_mist_ports_wrapper_forwards_switch_mac_and_env_site_id(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.setenv("MIST_SITE_ID", "site-from-env")
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"ports": {"items": []}}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.mist_ports(object(), switch_mac="aabbccddeeff"))
+
+    assert result == {"ports": {"items": []}}
+    assert calls == [
+        (
+            "mist_list_switch_ports",
+            {"site_id": "site-from-env", "switch_mac": "aabbccddeeff", "limit": 100},
+        )
+    ]
+
+
+def test_mist_ports_wrapper_errors_without_site_id(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.delenv("MIST_SITE_ID", raising=False)
+
+    result = asyncio.run(router.mist_ports(object(), switch_mac="aabbccddeeff"))
+
+    assert "error" in result
+
+
+def test_mist_health_wrapper_defaults_mist_site_id_from_env(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.setenv("MIST_SITE_ID", "site-from-env")
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"status": "available"}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.mist_health(object()))
+
+    assert result == {"status": "available"}
+    assert calls == [("get_site_health", {"limit": 50, "mist_site_id": "site-from-env"})]
+
+
+def test_mist_health_wrapper_includes_central_site_when_provided(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.delenv("MIST_SITE_ID", raising=False)
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    asyncio.run(router.mist_health(object(), central_site_name="HQ"))
+
+    assert calls == [("get_site_health", {"limit": 50, "central_site_name": "HQ"})]
+
+
+def test_mist_health_wrapper_errors_without_any_site_identifier(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.delenv("MIST_SITE_ID", raising=False)
+
+    result = asyncio.run(router.mist_health(object()))
+
+    assert "error" in result
+
+
+def test_cached_dispatch_reuses_result_within_ttl(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.delenv("HPE_MCP_ROUTER_WRAPPER_CACHE_TTL_SECONDS", raising=False)
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"call": len(calls)}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    ctx = object()
+    first = asyncio.run(router._cached_dispatch(ctx, "some_tool", {"a": 1}))
+    second = asyncio.run(router._cached_dispatch(ctx, "some_tool", {"a": 1}))
+
+    assert first == second == {"call": 1}
+    assert len(calls) == 1
+
+
+def test_cached_dispatch_bypassed_when_ttl_is_zero(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    monkeypatch.setenv("HPE_MCP_ROUTER_WRAPPER_CACHE_TTL_SECONDS", "0")
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"call": len(calls)}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    ctx = object()
+    first = asyncio.run(router._cached_dispatch(ctx, "some_tool", {"a": 1}))
+    second = asyncio.run(router._cached_dispatch(ctx, "some_tool", {"a": 1}))
+
+    assert first == {"call": 1}
+    assert second == {"call": 2}
+    assert len(calls) == 2
+
+
 def test_generated_record_for_collision_alias_keeps_provenance_on_generated_tool(
     monkeypatch,
 ):
