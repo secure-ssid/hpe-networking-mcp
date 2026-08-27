@@ -9,7 +9,7 @@ parent: "Architecture"
 This is the current mental model for hpe-networking-mcp. Counts come from
 [`docs/project-facts.json`](../project-facts.json). Historical design notes
 live in [system overview](system-overview.md) and
-[RAG architecture](RAG-ARCHITECTURE.md). Per-release notes, including 0.10.0,
+[RAG architecture](RAG-ARCHITECTURE.md). Per-release notes, including 0.11.0,
 are under [Releases](../releases.md).
 
 <figure class="docs-figure">

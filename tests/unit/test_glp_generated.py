@@ -19,8 +19,8 @@ import hpe_networking_mcp.mcp_servers.glp as glp
 import hpe_networking_mcp.mcp_servers.openapi_gen.http_exec as http_exec
 from hpe_networking_mcp.mcp_servers.openapi_gen import manifest_operation_count
 
-EXPECTED_OPERATION_COUNT = 920
-EXPECTED_REGISTERED_OPERATION_COUNT = 906
+EXPECTED_OPERATION_COUNT = 921
+EXPECTED_REGISTERED_OPERATION_COUNT = 907
 
 READ_LIST = "glp_get_v1beta1_user_preferences"
 READ_PATH = "glp_get_audit_log"

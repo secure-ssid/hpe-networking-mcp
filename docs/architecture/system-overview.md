@@ -9,7 +9,7 @@ parent: "Architecture"
 For the current mental model — three router tools, RAG vs live APIs, dry-run
 and write gates, and read-only planners — start with
 [How MCP and RAG work](how-it-works.md). This page is the runtime map.
-Per-release notes, including 0.10.0, are under [Releases](../releases.md).
+Per-release notes, including 0.11.0, are under [Releases](../releases.md).
 
 hpe-networking-mcp places a small MCP router in front of Aruba Central, GreenLake,
 documentation indexes, and opt-in product backends. Users discover a capability

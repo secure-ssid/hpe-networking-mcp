@@ -21,7 +21,7 @@ Counts below describe the full read-write registration of the *platform API* bac
 | Platform | Manifest operations | Active generated tools | Curated tools | Executable total | Read | Diagnostic | Write | Destructive | Source / provenance |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|
 | Aruba Central | 1,677 | 1,677 | 249 | **1,926** | 799 | 31 | 816 | 280 | official OpenAPI + curated; Official HPE APIs; OAuth token manager ready |
-| GreenLake Platform | 920 | 906 | 107 | **1,013** | 572 | 0 | 353 | 88 | official OpenAPI + curated; Official HPE APIs; Workspace OAuth ready |
+| GreenLake Platform | 921 | 907 | 107 | **1,014** | 573 | 0 | 353 | 88 | official OpenAPI + curated; Official HPE APIs; Workspace OAuth ready |
 | RAG / API lookup | 0 | 0 | 15 | **15** | 15 | 0 | 0 | 0 | committed application code; Local indexes over cited sources; No platform auth |
 | ClearPass | 816 | 815 | 30 | **845** | 285 | 0 | 412 | 148 | official OpenAPI + curated; Official HPE API; API credential ready |
 | Juniper Mist | 1,050 | 1,050 | 30 | **1,080** | 547 | 9 | 405 | 119 | official OpenAPI + curated; Official Juniper OpenAPI; REST token/session ready |
@@ -30,9 +30,9 @@ Counts below describe the full read-write registration of the *platform API* bac
 | EdgeConnect | 1,216 | 1,216 | 54 | **1,270** | 687 | 121 | 359 | 103 | instance artifact + curated; Target Orchestrator Swagger; Token/session and doctor ready |
 | HPE Aruba UXI | 25 | 25 | 24 | **49** | 24 | 0 | 16 | 9 | official OpenAPI + curated; Official HPE API; OAuth client credentials ready |
 | Axis Atmos Cloud | 47 | 47 | 0 | **47** | 12 | 0 | 23 | 12 | reviewed benchmark-derived registry; Benchmark only; verify with Axis; Static bearer token ready |
-| **Total** | **6,144** | **6,127** | **584** | **6,711** | **3,159** | **165** | **2,545** | **842** | |
+| **Total** | **6,145** | **6,128** | **584** | **6,712** | **3,160** | **165** | **2,545** | **842** | |
 
-The 6,144 manifest records are provenance-bearing generated operations. Only 6,127 register as executable generated tools because 17 are intentionally excluded. Adding 584 curated tools yields 6,711 executable platform API backend tools. The three minimal-router tools are a separate client-visible dispatch surface, not three additional backend capabilities.
+The 6,145 manifest records are provenance-bearing generated operations. Only 6,128 register as executable generated tools because 17 are intentionally excluded. Adding 584 curated tools yields 6,712 executable platform API backend tools. The three minimal-router tools are a separate client-visible dispatch surface, not three additional backend capabilities.
 
 In 2 of the rows above the curated count sits below the backend's own registration on purpose: `glp-core` defines 108 curated tools of which 107 count here (`glp_preflight`), and `rag-core` defines 16 curated tools of which 15 count here (`corpus_provenance`). Those tools inspect local configuration, cache, or committed-corpus state, make no vendor API call, and describe the catalog rather than extending it, so counting them in a platform API benchmark would inflate it. The set is `NON_API_LOCAL_TOOLS` in `src/hpe_networking_mcp/pipeline/project_facts.py`; [`docs/tool-catalog.md`](tool-catalog.md) lists them as their own rows.
 
@@ -88,8 +88,8 @@ The benchmark's 5,960 endpoint count was reproduced from the pinned tree with it
 
 ### Why the headline totals are non-equivalent
 
-- **6,711 platform API tools vs. 4,109** compares executable backend registries, but generation strategy and curated overlap differ; it does not prove practical superiority.
-- **6,144 vs. 5,960** compares hpe-networking-mcp generated operation records with the benchmark's documentation index. The latter includes endpoints that may have no callable tool, so this is not a tool-count comparison.
+- **6,712 platform API tools vs. 4,109** compares executable backend registries, but generation strategy and curated overlap differ; it does not prove practical superiority.
+- **6,145 vs. 5,960** compares hpe-networking-mcp generated operation records with the benchmark's documentation index. The latter includes endpoints that may have no callable tool, so this is not a tool-count comparison.
 - Router/code/dynamic surfaces intentionally expose only discovery and dispatch tools. A smaller top-level surface can still reach a much larger backend.
 - Capability quality depends on authentication, bounded responses, safe writes, async-result handling, and verified workflows—not raw endpoint quantity.
 

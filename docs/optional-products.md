@@ -280,7 +280,7 @@ the secret files. See [Docker deployment](production-deployment.md).
 </div>
 
 Combined with the Central/GLP/RAG surfaces, the REST/OpenAPI platform API
-backend catalog contains 3,159 read-only-annotated tools and 6,711 registered
+backend catalog contains 3,160 read-only-annotated tools and 6,712 registered
 tools, matching [`docs/capability-gap-matrix.md`](capability-gap-matrix.md)'s
 Total row. It excludes the non-platform backends, which are itemized with
 their counts in [`docs/tool-catalog.md`](tool-catalog.md) alongside the

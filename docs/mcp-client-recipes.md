@@ -15,7 +15,7 @@ HPE_MCP_TOOLSETS=central,glp,rag
 
 This exposes only `find_tool`, `invoke_read_tool`, and `invoke_tool` in
 minimal mode while still letting the router reach the backend catalog on
-demand. The complete index can contain 6,728 backend tools, while minimal
+demand. The complete index can contain 6,729 backend tools, while minimal
 mode keeps only three discovery/dispatch tools in client context.
 The remaining profiles in that file are direct debug servers
 (`central-monitoring`, `central-config`, `central-ops`, `central-nac`,
@@ -329,7 +329,7 @@ The file uses the `mcpServers` shape and an explicit `type: "stdio"` entry:
 }
 ```
 
-9: demand. The complete index can contain 6,728 backend tools, while minimal
+9: demand. The complete index can contain 6,729 backend tools, while minimal
 10: The remaining profiles in that file are direct debug servers
 (`central-monitoring`, `central-config`, `central-ops`, `central-nac`,
 `central-streaming`, `glp-core`)

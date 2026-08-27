@@ -470,9 +470,9 @@ MCP hop.
 |---|---:|
 | Minimal router | 3 client-visible tools |
 | Default router | 19 client-visible tools[^compliance-tool] |
-| Platform API backend index | 6,711 tools |
-| Complete backend index (platform APIs plus the non-platform backends itemized in [`docs/project-facts.json`](project-facts.json)) | 6,728 tools |
-| Direct-all router | 6,736 client-visible tools |
+| Platform API backend index | 6,712 tools |
+| Complete backend index (platform APIs plus the non-platform backends itemized in [`docs/project-facts.json`](project-facts.json)) | 6,729 tools |
+| Direct-all router | 6,737 client-visible tools |
 
 </div>
 
@@ -490,15 +490,15 @@ MCP hop.
 
 The complete catalog spans nine platform surfaces plus the non-platform
 backends itemized below. Nine generated manifests contain 6,144 reproducible
-operations, of which 6,127 register as active generated tools; 584 platform
-curated tools bring the REST/OpenAPI platform API backend total to 6,711.
+operations, of which 6,128 register as active generated tools; 584 platform
+curated tools bring the REST/OpenAPI platform API backend total to 6,712.
 
 The remaining registered backends are not platform APIs. They are itemized
 per backend under `tools.protocol_only`, `tools.non_platform_aggregators`,
 `tools.non_api_local` and `tools.credential_free_local` in
 [`docs/project-facts.json`](project-facts.json), which is the generated
 source of truth for the split; together with the platform total they yield
-the complete 6,728-tool registered backend catalog. Minimal mode does not
+the complete 6,729-tool registered backend catalog. Minimal mode does not
 expose that schema surface to the MCP client -- it searches the catalog on
 demand.
 

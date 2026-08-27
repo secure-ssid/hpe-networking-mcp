@@ -8,7 +8,7 @@
 [![Release](https://img.shields.io/github/v/release/secure-ssid/hpe-networking-mcp?display_name=tag)](https://github.com/secure-ssid/hpe-networking-mcp/releases)
 [![Image](https://img.shields.io/badge/image-ghcr.io-2088FF)](https://github.com/secure-ssid/hpe-networking-mcp/pkgs/container/hpe-networking-mcp)
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,728 backend tools, 3 minimal router tools, and nine platform surfaces with optional local RAG](docs/assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,144 generated operations, 6,729 backend tools, 3 minimal router tools, and nine platform surfaces with optional local RAG](docs/assets/hpe-networking-mcp-hero.svg)
 
 The banner tracks the current backend catalog: a large tool surface stays
 available on demand, while the MCP client itself only ever sees three router
@@ -157,8 +157,8 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | Non-additive profiles: 380 core tools / 2842 read-only optional starters / 5822 read-write optional starters; REST/OpenAPI platform API backend total: 6,711; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,728; direct-all: 6,736 |
-| Capability totals (platform APIs) | 3,159 read / 165 diagnostic / 2,545 write / 842 destructive |
+| Tool catalog | Non-additive profiles: 380 core tools / 2842 read-only optional starters / 5822 read-write optional starters; REST/OpenAPI platform API backend total: 6,712; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,729; direct-all: 6,737 |
+| Capability totals (platform APIs) | 3,160 read / 165 diagnostic / 2,545 write / 842 destructive |
 | RAG | 392,471 prose chunks in LanceDB across 30 scraped sources |
 | Structured lookup | 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |
 | API provenance | Aruba ReadMe registries, official Mist/Apstra sources, pinned GLP and EdgeConnect snapshots, SHA-pinned Axis generator |
@@ -281,12 +281,12 @@ The full repository map, including generated/git-ignored paths, lives in
 
 ```bash
 uv run pytest tests/unit -q
-uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6711
+uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6712
 ```
 
-`--min-tools 6711` is the platform API compatibility floor (the
-6,711 vendor-facing platform API tools), not the complete registered backend
-total of 6,728, which also includes the protocol-only Central Streaming tool,
+`--min-tools 6712` is the platform API compatibility floor (the
+6,712 vendor-facing platform API tools), not the complete registered backend
+total of 6,729, which also includes the protocol-only Central Streaming tool,
 the cross-platform `site-health` aggregator, the local GLP preflight
 diagnostic, and credential-free local tools — validation passes at or above
 the floor. See
