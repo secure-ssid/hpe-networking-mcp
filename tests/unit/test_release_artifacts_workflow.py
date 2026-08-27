@@ -227,6 +227,12 @@ class TestPagesWorkflow:
             "pages": "read",
         }
 
+    def test_pages_cancels_superseded_builds(self):
+        concurrency = _load(PAGES_WORKFLOW)["concurrency"]
+
+        assert concurrency["group"] == "pages"
+        assert concurrency["cancel-in-progress"] is True
+
     def test_pages_uses_docs_as_jekyll_source(self):
         document = _load(PAGES_WORKFLOW)
         build_steps = document["jobs"]["build"]["steps"]
