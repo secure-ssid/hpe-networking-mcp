@@ -5,8 +5,8 @@ nav_order: 9
 
 # Known limitations
 
-Current as of 2026-08-24 (`main`, package version 0.11.0; latest published
-release v0.8.0). Counts derive from `docs/project-facts.json`, which is
+Current as of 2026-08-28 (`main`, package version 0.11.0; latest published
+release v0.11.0). Counts derive from `docs/project-facts.json`, which is
 regenerated from code and committed manifests, never hand-edited. Each entry
 states the limitation, its impact, and the planned remediation.
 

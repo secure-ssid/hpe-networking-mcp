@@ -34,6 +34,16 @@ deployment's posture.
 - `OLLAMA_URL` environment override, so the redis RAG backend can reach the
   `ollama` service from inside a container.
 - A Pages link gate: any `docs/` link resolving outside `docs/` now fails.
+- **Six new router fast-path wrapper tools**: `mist_clients`, `mist_devices`,
+  `mist_ports`, `mist_health` (Mist; `org_id`/`site_id` default from
+  `MIST_ORG_ID`/`MIST_SITE_ID`), and `get_site`, `list_clients` (Central,
+  reusing the curated tools' own names). Each dispatches directly to its
+  backend tool instead of paying `find_tool`'s semantic search first.
+  `mist_clients` narrows its search window via `duration=<minutes>m` instead
+  of Mist's ~14-day default; every Mist wrapper result is cached for
+  `HPE_MCP_ROUTER_WRAPPER_CACHE_TTL_SECONDS` (default 30s, `0` disables).
+- `HPE_MCP_ROUTER_EAGER_LOAD=1`: imports every enabled backend at process
+  startup instead of lazily on the first real query.
 
 ### Fixed
 
