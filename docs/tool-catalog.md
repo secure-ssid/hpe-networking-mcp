@@ -122,10 +122,10 @@ operations register as active generated tools.
 | Mode | Client-visible tools | Use |
 |---|---:|---|
 | `minimal` | 3 | Recommended low-token discovery and dispatch |
-| `default` | 23 | Router convenience wrappers (`list_sites`, `ask_docs`, `mist_clients`, etc.) |
+| `default` | 25 | Router convenience wrappers (`list_sites`, `ask_docs`, `mist_clients`, etc.) |
 | `direct` + `HPE_MCP_TOOLSETS=all` | 6,741 | Full schema introspection and debugging |
 
-The `default` count (23) is measured identically whether every toolset is
+The `default` count (25) is measured identically whether every toolset is
 loaded or only the documented recommended client profile
 (`HPE_MCP_ROUTER_MODE=default`, `HPE_MCP_TOOLSETS=central,glp,rag`) is --
 `default` mode's wrapper set depends only on `central-monitoring`/`rag-core`
@@ -139,13 +139,14 @@ tools that have no backend-identity equivalent at all (`find_tool`,
 `invoke_read_tool`, `invoke_tool`, `invoke_read_tool_batch`,
 `invoke_tools_batch`, `plan_tool_workflow`, `plan_reconciliation_schedule`,
 `evaluate_compliance_policy`, `mist_clients`, `mist_devices`, `mist_ports`,
-`mist_health`). The other 11 `default`-mode wrapper names
+`mist_health`). The other 13 `default`-mode wrapper names
 (`list_scopes`, `get_global_scope_id`, `list_sites`, `list_devices`,
-`find_device`, `find_client`, `ask_docs`, `search_docs`, `list_skills`,
-`load_skill`, `lookup_api`) intentionally reuse the name of a real backend
-tool, so they don't add to the total in direct mode -- the router's compact
-forwarding signature simply wins over the backend's registration for that
-name. See [`docs/project-facts.json`](project-facts.json)'s `router_modes`
+`find_device`, `find_client`, `get_site`, `list_clients`, `ask_docs`,
+`search_docs`, `list_skills`, `load_skill`, `lookup_api`) intentionally
+reuse the name of a real backend tool, so they don't add to the total in
+direct mode -- the router's compact forwarding signature simply wins over
+the backend's registration for that name. See
+[`docs/project-facts.json`](project-facts.json)'s `router_modes`
 section for the exact, regenerable derivation.
 
 ```env

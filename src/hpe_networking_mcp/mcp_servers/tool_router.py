@@ -2748,6 +2748,35 @@ if _ROUTER_MODE != "minimal" and "central-monitoring" in _BACKENDS:
         """Find a client by name / MAC / IP."""
         return await invoke_tool(ctx, "find_client", {"mac_or_ip": query})
 
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def get_site(ctx: Context, name: str) -> dict[str, Any]:
+        """Find a Central site by name (case-insensitive)."""
+        return await invoke_tool(ctx, "get_site", {"name": name})
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def list_clients(
+        ctx: Context,
+        site_id: str | None = None,
+        connection_type: str | None = None,
+        ssid: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Any:
+        """List Central-connected clients, optionally filtered by site/SSID/type.
+
+        All filters are optional -- omit site_id for an account-wide list; no
+        site lookup is needed first. Prefer find_client for a single
+        already-known MAC/IP/hostname instead of filtering this list.
+        """
+        args = {
+            "site_id": site_id,
+            "connection_type": connection_type,
+            "ssid": ssid,
+            "limit": limit,
+            "offset": offset,
+        }
+        return await invoke_tool(ctx, "list_clients", args)
+
 
 # ── Mist convenience wrappers (fast-path: skip find_tool for common asks) ──
 #

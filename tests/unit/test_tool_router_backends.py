@@ -974,6 +974,47 @@ def test_find_client_wrapper_forwards_backend_mac_arg(monkeypatch):
     ]
 
 
+def test_get_site_wrapper_forwards_backend_name_arg(monkeypatch):
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"name": "HQ"}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.get_site(object(), "HQ"))
+
+    assert result == {"name": "HQ"}
+    assert calls == [("get_site", {"name": "HQ"})]
+
+
+def test_list_clients_wrapper_forwards_filters_and_needs_no_site_lookup(monkeypatch):
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return [{"macAddress": "aa:bb:cc:dd:ee:ff"}]
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.list_clients(object(), connection_type="Wireless"))
+
+    assert result == [{"macAddress": "aa:bb:cc:dd:ee:ff"}]
+    assert calls == [
+        (
+            "list_clients",
+            {
+                "site_id": None,
+                "connection_type": "Wireless",
+                "ssid": None,
+                "limit": 100,
+                "offset": 0,
+            },
+        )
+    ]
+
+
 def test_mist_clients_wrapper_defaults_org_id_and_narrows_window(monkeypatch):
     monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
     monkeypatch.setenv("MIST_ORG_ID", "org-from-env")
