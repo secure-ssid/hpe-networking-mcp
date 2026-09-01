@@ -1,0 +1,168 @@
+CHANGELOG.md:
+  rule-id: naming-kebab-case
+  path: CHANGELOG.md
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+CODE_OF_CONDUCT.md:
+  rule-id: naming-kebab-case
+  path: CODE_OF_CONDUCT.md
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+MIGRATION.md:
+  rule-id: naming-kebab-case
+  path: MIGRATION.md
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+PRIVACY.md:
+  rule-id: naming-kebab-case
+  path: PRIVACY.md
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+SECURITY.md:
+  rule-id: naming-kebab-case
+  path: SECURITY.md
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+SUPPORT.md:
+  rule-id: naming-kebab-case
+  path: SUPPORT.md
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+THIRD_PARTY_NOTICES.md:
+  rule-id: naming-kebab-case
+  path: THIRD_PARTY_NOTICES.md
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+docs/_config.yml:
+  rule-id: naming-kebab-case
+  path: docs/_config.yml
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+docs/_includes/head_custom.html:
+  rule-id: naming-kebab-case
+  path: docs/_includes/head_custom.html
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+docs/architecture/RAG-ARCHITECTURE.md:
+  rule-id: naming-kebab-case
+  path: docs/architecture/RAG-ARCHITECTURE.md
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+scripts/_apstra_operations.py:
+  rule-id: naming-kebab-case
+  path: scripts/_apstra_operations.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/_paths.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/_paths.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_cache_hygiene.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_cache_hygiene.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/__init__.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/__init__.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/_outcome.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/_outcome.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/audit_log.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/audit_log.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/install.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/install.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/mac_normalizer.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/mac_normalizer.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/metrics.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/metrics.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/null_strip.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/null_strip.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/pii_tokenizer.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/pii_tokenizer.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/rate_limit.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/rate_limit.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/response_envelope.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/response_envelope.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/secret_tokenizer.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/secret_tokenizer.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_middleware/unknown_tool_suggest.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_middleware/unknown_tool_suggest.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/_sdk_compat.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/_sdk_compat.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/skills/TEMPLATE.md:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/skills/TEMPLATE.md
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
+src/hpe_networking_mcp/mcp_servers/skills/_engine.py:
+  rule-id: naming-kebab-case
+  path: src/hpe_networking_mcp/mcp_servers/skills/_engine.py
+  reason: pre-existing repository layout; adopt records the convention instead of renaming files for style conformity
+  owner: pika adopt
+  review-condition: re-review when the path is next modified or at the next convention audit
