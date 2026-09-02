@@ -46,6 +46,7 @@ SERVERS = [
     ("site-health", "hpe_networking_mcp.mcp_servers.site_health"),
     ("glp-core", "hpe_networking_mcp.mcp_servers.glp"),
     ("rag-core", "hpe_networking_mcp.mcp_servers.rag"),
+    ("catalog-core", "hpe_networking_mcp.mcp_servers.catalog"),
     # Credential-free and always loaded by the router (tool_router's
     # _ALWAYS_ON_BACKENDS), so it is always indexed too.
     ("interop-core", "hpe_networking_mcp.mcp_servers.interop"),

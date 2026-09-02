@@ -560,6 +560,35 @@ def test_lookup_hardware_specs_is_registered_as_an_mcp_tool():
     assert "lookup_hardware_specs" in names
 
 
+def test_ask_docs_routes_sku_request_to_local_hardware_catalog(monkeypatch):
+    catalog_result = {
+        "ok": True,
+        "match_type": "exact_sku",
+        "results": [
+            {
+                "sku": "JL665A",
+                "model": "CX 6300F 48G Class 4 PoE 4SFP56 Switch",
+                "port_count": 48,
+                "poe": "Class 4 PoE",
+                "source": {"url": "https://example.test/cx6300"},
+            }
+        ],
+    }
+    monkeypatch.setattr(rag.hardware_catalog, "is_catalog_query", lambda _question: True)
+    monkeypatch.setattr(rag.hardware_catalog, "search", lambda *args, **kwargs: catalog_result)
+    monkeypatch.setattr(
+        rag.hardware_catalog,
+        "format_compact_answer",
+        lambda _result: "Hardware catalog results:\n- JL665A",
+    )
+
+    out = rag.ask_docs("What SKU is a 48 port CX 6300 PoE switch?")
+
+    assert out["mode"] == "hardware_catalog"
+    assert "JL665A" in out["answer"]
+    assert out["citations"][0]["source_url"] == "https://example.test/cx6300"
+
+
 def test_lookup_hardware_specs_returns_full_spec_for_known_model():
     out = rag.lookup_hardware_specs("cx6300")
     assert out["ok"] is True

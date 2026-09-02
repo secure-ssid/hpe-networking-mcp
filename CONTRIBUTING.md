@@ -53,7 +53,7 @@ uv run python scripts/check_mist_openapi_drift.py
 loading the backends, so stale shell or `.env` values cannot silently shrink
 the index. `--min-tools 6712` is the platform API compatibility floor (the
 6,712 vendor-facing platform API tools), not the complete registered backend
-total of 6,729 — validation passes at or above the floor; see
+total of 6,731 — validation passes at or above the floor; see
 [`docs/tool-catalog.md`](docs/tool-catalog.md) for both totals.
 After rebuilding an index, reconcile `data/SOURCE-MANIFEST.json` /
 `data/INDEX-MANIFEST.json` and regenerate

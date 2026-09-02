@@ -63,6 +63,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        INSTALL_EXTRAS: ingestion
     image: hpe-networking-mcp-router:local
     profiles:
       - router

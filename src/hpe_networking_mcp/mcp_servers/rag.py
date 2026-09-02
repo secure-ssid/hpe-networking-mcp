@@ -35,6 +35,7 @@ from hpe_networking_mcp.pipeline import artifact_contracts as contracts
 from hpe_networking_mcp.pipeline.clients import (
     advisory_index,
     aoscx_release_index,
+    hardware_catalog,
     hardware_specs,
     rag_cache,
     specs_index,
@@ -1743,6 +1744,34 @@ def ask_docs(
     retrieval_question = _contextual_question(question, context)
     mode = "search_docs"
     hits: list[dict[str, Any]] = []
+
+    if source is None and hardware_catalog.is_catalog_query(question):
+        catalog_result = hardware_catalog.search(question, include_specs=False, limit=k)
+        if catalog_result.get("ok"):
+            catalog_hits = catalog_result.get("results") or []
+            return {
+                "answer": hardware_catalog.format_compact_answer(catalog_result),
+                "citations": [
+                    {
+                        "file_path": f"hardware_catalog:{item['sku']}",
+                        "source": "hardware_catalog",
+                        "doc_type": "hardware-catalog",
+                        "score": 1.0,
+                        "source_url": item["source"]["url"],
+                    }
+                    for item in catalog_hits
+                ],
+                "mode": "hardware_catalog",
+            }
+        # An index miss after a real SKU/configuration request should not be
+        # replaced with semantically similar prose. It needs more product
+        # traits, or its local catalog needs building/refreshing.
+        if catalog_result.get("match_type") == "no_match" or catalog_result.get("hint"):
+            return {
+                "answer": hardware_catalog.format_compact_answer(catalog_result),
+                "citations": [],
+                "mode": "hardware_catalog",
+            }
 
     if source is None:
         hw_model = hardware_specs.detect_hardware_query(question)

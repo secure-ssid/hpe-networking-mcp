@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "purpose": "Reviewed official-source registry for the local hardware SKU catalog. A blocked or structurally changed source must retain the last verified snapshot and be marked stale; no reseller fallback is permitted.",
+  "snapshot": "ingestion/hardware_catalog_seed.json",
+  "sources": [
+    {"vendor": "aruba", "source": "Aruba hardware PDFs", "refresh_policy": "official snapshot; retain last verified data if blocked"},
+    {"vendor": "juniper", "source": "Juniper product datasheets", "refresh_policy": "official snapshot; retain last verified data if blocked"}
+  ]
+}

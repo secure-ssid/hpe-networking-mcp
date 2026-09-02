@@ -45,6 +45,7 @@ render without browser-side JavaScript.
 | Doc | Use it for |
 |---|---|
 | [tool-catalog.md](tool-catalog.md) | Per-backend counts, capability families, build modes, and safety notes |
+| [juniper-mist-jvd.md](juniper-mist-jvd.md) | Exact Juniper/Mist SKU calls, citation semantics, RAG routing, and JVD design/build workflow |
 | [product-workflows.md](product-workflows.md) | Typed ClearPass/Mist/Apstra/AOS8/EdgeConnect/UXI workflow roadmap |
 | [central-v07-workflows.md](central-v07-workflows.md) | Central v0.7 depth workflows: VSF template lifecycle, bulk site/site-collection delete, firmware-compliance campaigns, config-health remediation, troubleshooting orchestration |
 | [rag-coverage-matrix.md](rag-coverage-matrix.md) | Vendor, product, version, and document-class RAG coverage |
@@ -167,7 +168,7 @@ uv run python scripts/ingest_tools.py
 # Include optional product starters in the tool catalog
 uv run python scripts/ingest_tools.py --products all
 
-# Include every guarded write tool (6,729 backend tools)
+# Include every guarded write tool (6,731 backend tools)
 uv run python scripts/ingest_tools.py --complete-catalog
 
 # Start the model-agnostic HTTP MCP router
@@ -189,4 +190,4 @@ the product selector to local stdio MCP configs. The HTTP helper safely loads
 expected `.env` assignments first and exits with listener details instead of
 starting a duplicate router when the selected port is already in use.
 
-The release helper enforces the documented tool catalog floor and checks local LanceDB tool-index freshness when `data/tools.lance` exists. `--min-tools 6712` is the platform API compatibility floor (the 6,712 vendor-facing platform API tools), not the complete registered backend total of 6,729, which also includes the protocol-only Central Streaming tool, the cross-platform site-health aggregator, the local GLP preflight diagnostic, and credential-free local tools — validation passes at or above the floor; see [Tool catalog](tool-catalog.md) for both totals. The unit suite also carries static regression guards for async-safe MCP tools, shared `httpx` client boundaries, project metadata (`hpe-networking-mcp` package name with no direct sync SDK/`requests` runtime dependencies), committed low-token MCP config examples, local-only config files, router product/toolset docs, bounded generic read-only GET tools, MCP list default bounds, RAG/search top_k bounds, public tool-count claims, tool-count docstrings, rendered RAG/index doc-fact claims, tracked Markdown local links and images, Pages sitemap and robots metadata, documented router example arguments, product workflow tool-name tables, and wizard optional-product env tables.
+The release helper enforces the documented tool catalog floor and checks local LanceDB tool-index freshness when `data/tools.lance` exists. `--min-tools 6712` is the platform API compatibility floor (the 6,712 vendor-facing platform API tools), not the complete registered backend total of 6,731, which also includes the protocol-only Central Streaming tool, the cross-platform site-health aggregator, local GLP and SKU-catalog helpers, and credential-free local tools — validation passes at or above the floor; see [Tool catalog](tool-catalog.md) for both totals. The unit suite also carries static regression guards for async-safe MCP tools, shared `httpx` client boundaries, project metadata (`hpe-networking-mcp` package name with no direct sync SDK/`requests` runtime dependencies), committed low-token MCP config examples, local-only config files, router product/toolset docs, bounded generic read-only GET tools, MCP list default bounds, RAG/search top_k bounds, public tool-count claims, tool-count docstrings, rendered RAG/index doc-fact claims, tracked Markdown local links and images, Pages sitemap and robots metadata, documented router example arguments, product workflow tool-name tables, and wizard optional-product env tables.

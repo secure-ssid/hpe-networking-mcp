@@ -16,9 +16,9 @@ Optional product backends can be enabled with:
 Toolsets can narrow loaded backends:
   HPE_MCP_TOOLSETS=central,rag
 
-The credential-free ``interop-core`` backend (Central <-> Mist concept
-translation + bounded trend normalization) is always loaded, on every
-profile, and also has its own ``HPE_MCP_TOOLSETS=interop`` value.
+The credential-free ``catalog-core`` (local hardware SKU lookup) and
+``interop-core`` (Central <-> Mist concept translation + bounded trend
+normalization) backends are always loaded on every profile.
 
 Point MCP clients at THIS server instead of individual backend servers to keep
 context cost low and let small local models pick tools reliably.
@@ -144,6 +144,7 @@ _GENERATED_BACKENDS = {
 #: Each also keeps an explicit toolset entry below for callers that want to
 #: load *only* it.
 _ALWAYS_ON_BACKENDS = {
+    "catalog-core": "hpe_networking_mcp.mcp_servers.catalog",
     "interop-core": "hpe_networking_mcp.mcp_servers.interop",
 }
 _OPTIONAL_BACKENDS = {
@@ -158,6 +159,7 @@ _OPTIONAL_BACKENDS = {
 }
 _OPTIONAL_SERVER_NAMES = {server_name for server_name, _ in _OPTIONAL_BACKENDS.values()}
 _SERVER_PLATFORMS = {
+    "catalog-core": "catalog",
     "interop-core": "interop",
     "central-config": "central",
     "central-monitoring": "central",
@@ -187,6 +189,7 @@ _TOOLSET_BACKENDS = {
     },
     "site-health": {"site-health"},
     "central-generated": {"central-generated"},
+    "catalog": {"catalog-core"},
     "interop": {"interop-core"},
     "clearpass": {"clearpass-core"},
     "mist": {"mist-core"},
@@ -2952,6 +2955,42 @@ if _ROUTER_MODE != "minimal":
         if central_site_name:
             args["central_site_name"] = central_site_name
         return await _cached_dispatch(ctx, "get_site_health", args)
+
+
+if _ROUTER_MODE != "minimal" and "catalog-core" in _BACKENDS:
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def search_hardware_catalog(
+        ctx: Context,
+        query: str,
+        vendor: str | None = None,
+        include_specs: bool = False,
+        limit: int = 5,
+    ) -> Any:
+        """Find HPE Aruba or HPE Juniper SKU candidates from local SQLite.
+
+        Use an exact SKU/part number, or a model/configuration phrase such as
+        ``CX 6300 PoE 48 port``. This does not use RAG or call a vendor API.
+        """
+        args: dict[str, Any] = {
+            "query": query,
+            "include_specs": include_specs,
+            "limit": limit,
+        }
+        if vendor:
+            args["vendor"] = vendor
+        return await invoke_tool(ctx, "search_hardware_catalog", args)
+
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def compare_hardware(ctx: Context, devices: list[str]) -> Any:
+        """Compare two to five Aruba or Juniper SKUs from local SQLite.
+
+        This is read-only and available without RAG. Use exact SKUs when a
+        model family has variants; the tool returns choices instead of
+        selecting an arbitrary device.
+        """
+        return await invoke_tool(ctx, "compare_hardware", {"devices": devices})
 
 
 if _ROUTER_MODE != "minimal" and "rag-core" in _BACKENDS:

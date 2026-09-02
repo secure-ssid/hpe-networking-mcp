@@ -8,7 +8,7 @@
 [![Release](https://img.shields.io/github/v/release/secure-ssid/hpe-networking-mcp?display_name=tag)](https://github.com/secure-ssid/hpe-networking-mcp/releases)
 [![Image](https://img.shields.io/badge/image-ghcr.io-2088FF)](https://github.com/secure-ssid/hpe-networking-mcp/pkgs/container/hpe-networking-mcp)
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,729 backend tools, 3 minimal router tools, and nine platform surfaces with optional local RAG](docs/assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,145 generated operations, 6,731 backend tools, 3 minimal router tools, and nine platform surfaces with optional local RAG](docs/assets/hpe-networking-mcp-hero.svg)
 
 The banner tracks the current backend catalog: a large tool surface stays
 available on demand, while the MCP client itself only ever sees three router
@@ -133,6 +133,21 @@ into your Hugging Face cache. **Credential-free is not the same as offline:**
 the quickstart above needs no vendor credentials, but the corpus build and
 first query both need network access.
 
+### Hardware SKU search is a separate local build
+
+Build the deterministic HPE Aruba and HPE Juniper/Mist SKU catalog when you
+need a model/configuration query such as `CX 6300 PoE 48 port`:
+
+```bash
+uv run python scripts/build_hardware_catalog.py
+```
+
+`search_hardware_catalog` uses exact SKU aliases and SQLite FTS locally. It
+returns at most five compact candidates with official-source links, and its
+coverage/freshness status prevents a partial snapshot from posing as complete.
+`compare_hardware` compares two to five resolved SKUs without RAG, returning
+only verified normalized fields and explicit unknowns for unavailable data.
+
 ## Write safety at a glance
 
 - `find_tool` only searches the local tool catalog; it never calls a vendor API.
@@ -157,7 +172,7 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | Non-additive profiles: 380 core tools / 2842 read-only optional starters / 5822 read-write optional starters; REST/OpenAPI platform API backend total: 6,712; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,729; direct-all: 6,741 |
+| Tool catalog | Non-additive profiles: 382 core tools / 2844 read-only optional starters / 5824 read-write optional starters; REST/OpenAPI platform API backend total: 6,712; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,731; direct-all: 6,743 |
 | Capability totals (platform APIs) | 3,160 read / 165 diagnostic / 2,545 write / 842 destructive |
 | RAG | 392,471 prose chunks in LanceDB across 30 scraped sources |
 | Structured lookup | 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |
@@ -286,7 +301,7 @@ uv run python scripts/validate_release.py --catalog-products all --strict-tool-i
 
 `--min-tools 6712` is the platform API compatibility floor (the
 6,712 vendor-facing platform API tools), not the complete registered backend
-total of 6,729, which also includes the protocol-only Central Streaming tool,
+total of 6,731, which also includes the protocol-only Central Streaming tool,
 the cross-platform `site-health` aggregator, the local GLP preflight
 diagnostic, and credential-free local tools — validation passes at or above
 the floor. See

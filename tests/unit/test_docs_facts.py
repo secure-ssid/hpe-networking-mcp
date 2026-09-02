@@ -322,7 +322,7 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
         ),
         (
             REPO_ROOT / "docs" / "tool-catalog.md",
-            f"| **Complete backend total** | **3,176** | **{registered_total:,}** |",
+            f"| **Complete backend total** | **3,177** | **{registered_total:,}** |",
         ),
         (
             REPO_ROOT / "docs" / "tool-router.md",
@@ -366,7 +366,8 @@ def test_current_state_docs_carry_canonical_router_mode_counts():
         ),
         (
             REPO_ROOT / "docs" / "assets" / "platform-coverage.svg",
-            f"6,144 generated | {registered_total:,} backend | {direct_all:,} direct-all",
+            f"{TRACKED['generated_operations']['total']:,} generated | "
+            f"{registered_total:,} backend | {direct_all:,} direct-all",
         ),
     ]
     assert minimal == 3

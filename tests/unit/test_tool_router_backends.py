@@ -52,12 +52,18 @@ def test_build_backends_toolsets_narrow_core(monkeypatch):
     monkeypatch.delenv("HPE_MCP_PRODUCTS", raising=False)
     monkeypatch.setenv("HPE_MCP_TOOLSETS", "monitoring,rag")
     backends = router._build_backends()
-    # interop-core is credential-free/read-only-local and always loaded.
-    assert set(backends) == {"central-monitoring", "rag-core", "interop-core"}
+    # catalog-core and interop-core are credential-free/read-only-local and
+    # always loaded, independent of the selected toolsets.
+    assert set(backends) == {
+        "catalog-core",
+        "central-monitoring",
+        "rag-core",
+        "interop-core",
+    }
 
 
-def test_always_on_interop_backend_is_present_in_every_profile(monkeypatch):
-    """interop-core loads on the default, minimal and narrow profiles alike."""
+def test_always_on_local_backends_are_present_in_every_profile(monkeypatch):
+    """Catalog and interop load on the default, minimal and narrow profiles alike."""
     monkeypatch.delenv("HPE_MCP_PRODUCTS", raising=False)
     for toolsets in (None, "central,glp,rag", "rag", "all"):
         if toolsets is None:
@@ -65,7 +71,10 @@ def test_always_on_interop_backend_is_present_in_every_profile(monkeypatch):
         else:
             monkeypatch.setenv("HPE_MCP_TOOLSETS", toolsets)
         backends = router._build_backends()
+        assert backends.get("catalog-core") == "hpe_networking_mcp.mcp_servers.catalog", toolsets
         assert backends.get("interop-core") == "hpe_networking_mcp.mcp_servers.interop", toolsets
+    assert router._TOOLSET_BACKENDS["catalog"] == {"catalog-core"}
+    assert router._SERVER_PLATFORMS["catalog-core"] == "catalog"
     assert router._TOOLSET_BACKENDS["interop"] == {"interop-core"}
     assert router._SERVER_PLATFORMS["interop-core"] == "interop"
 
@@ -876,6 +885,53 @@ def test_find_tool_reports_semantic_error_without_keyword_fallback(monkeypatch):
 
 def test_default_router_exposes_ask_docs_wrapper_when_rag_enabled():
     assert "ask_docs" in router.mcp._tool_manager._tools
+    assert "search_hardware_catalog" in router.mcp._tool_manager._tools
+    assert "compare_hardware" in router.mcp._tool_manager._tools
+
+
+def test_hardware_catalog_wrapper_forwards_compact_search_arguments(monkeypatch):
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((ctx, name, arguments))
+        return {"ok": True}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(
+        router.search_hardware_catalog(
+            object(), "CX 6300 PoE 48 port", vendor="aruba", limit=3
+        )
+    )
+
+    assert result == {"ok": True}
+    assert calls == [
+        (
+            calls[0][0],
+            "search_hardware_catalog",
+            {
+                "query": "CX 6300 PoE 48 port",
+                "vendor": "aruba",
+                "include_specs": False,
+                "limit": 3,
+            },
+        )
+    ]
+
+
+def test_hardware_comparison_wrapper_forwards_device_identifiers(monkeypatch):
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((ctx, name, arguments))
+        return {"ok": True}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.compare_hardware(object(), ["JL665A", "JL727B"]))
+
+    assert result == {"ok": True}
+    assert calls == [(calls[0][0], "compare_hardware", {"devices": ["JL665A", "JL727B"]})]
 
 
 def test_invoke_tool_is_marked_destructive_because_it_can_dispatch_writes():

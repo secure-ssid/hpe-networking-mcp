@@ -38,10 +38,10 @@ file.
 | Fields (offline) | 31,432 |
 | Security advisories | 104 |
 | Lifecycle records | 345 |
-| Generated operation manifests | 6,144 |
+| Generated operation manifests | 6,145 |
 | Platform API backend catalog | 6,712 |
-| Complete backend catalog (platform APIs plus the non-platform backends itemized in [`docs/project-facts.json`](project-facts.json)) | 6,729 |
-| Registered router tool index rows | 6,729 |
+| Complete backend catalog (platform APIs plus the non-platform backends itemized in [`docs/project-facts.json`](project-facts.json)) | 6,731 |
+| Registered router tool index rows | 6,731 |
 
 The prose index covers 30 of the 31 declared sources: `openapi_specs` is
 parsed only into `data/specs.sqlite` (see below), while several declared

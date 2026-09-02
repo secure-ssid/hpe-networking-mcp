@@ -80,6 +80,7 @@ BACKEND_MODULES: dict[str, str] = {
     "axis-core": "axis",
     "design-core": "design",
     "rag-core": "rag",
+    "catalog-core": "catalog",
     "interop-core": "interop",
 }
 
@@ -503,7 +504,7 @@ class TestNoBackendEscapesAWriteGate:
 
     def test_ungated_backends_ship_no_write_tools(self):
         servers_with_writes = {record.server for record in write_catalog()}
-        for server in ("rag-core", "interop-core", "design-core"):
+        for server in ("rag-core", "catalog-core", "interop-core", "design-core"):
             assert server not in servers_with_writes
 
     def test_closed_gates_disable_every_writing_backend(self, monkeypatch):

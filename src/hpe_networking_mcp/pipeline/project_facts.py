@@ -33,6 +33,7 @@ import os
 import sqlite3
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -99,13 +100,12 @@ NON_PLATFORM_AGGREGATOR_SERVERS = ("site-health",)
 #: workflows in a platform backend.
 NON_API_LOCAL_TOOLS = {
     "glp-core": frozenset({"glp_preflight"}),
-    # ``corpus_provenance`` reads ``vendor/openapi/MANIFEST.json`` and the
-    # local index artifacts to report what backed an answer. It reaches no
-    # vendor API, so counting it in the published platform-API benchmark
-    # (``platform_backend_total``, the 6,711 in docs/capability-gap-matrix.md)
-    # would inflate that number with a tool that describes the catalog rather
-    # than extending it.
+    # These helpers inspect only local artifacts. ``corpus_provenance``
+    # reports what backed a RAG answer; the catalog tools read the separate,
+    # always-loaded SQLite SKU snapshot. Neither reaches a vendor API, so
+    # neither belongs in the published platform-API benchmark.
     "rag-core": frozenset({"corpus_provenance"}),
+    "catalog-core": frozenset({"search_hardware_catalog", "compare_hardware"}),
 }
 
 FULL_WRITE_GATE_ENV = {
@@ -162,11 +162,12 @@ ROUTER_MODE_ENV = {
 #: The documented, recommended default client profile (``.mcp.json.example``,
 #: README quickstart, ``.cursor/mcp.json``, etc.): only the always-on core
 #: backends (``central``, ``glp``, ``rag``, plus the credential-free
-#: ``interop-core`` backend that every profile loads regardless of
+#: ``catalog-core`` and ``interop-core`` backends that every profile loads regardless of
 #: ``HPE_MCP_TOOLSETS``). Measured separately from :data:`ROUTER_MODE_ENV`'s
 #: "every toolset/product" scenario because ``default`` mode's convenience
 #: wrapper count depends only on whether ``central-monitoring``/``rag-core``
-#: are loaded -- true under both scenarios today -- but a future wrapper
+#: are loaded -- true under both scenarios today, with catalog-core always
+#: loaded too -- but a future wrapper
 #: gated on some other backend could make them diverge, and the actually
 #: documented client profile is this one, not ``HPE_MCP_TOOLSETS=all``.
 RECOMMENDED_PROFILE_ENV = {
@@ -757,7 +758,21 @@ def index_facts() -> dict[str, Any] | None:
     counts = specs_counts()
     offline: dict[str, Any] = {}
     local: dict[str, Any] = {}
-    offline_specs = {t: counts[t] for t in OFFLINE_DERIVABLE_SPECS_TABLES if t in counts}
+    # ``data/specs.sqlite`` may be an old locally restored bundle. Its
+    # advisory/lifecycle tables are correctly local facts, but its OpenAPI
+    # tables must never become the published offline contract: those counts
+    # are defined by a fresh build from committed vendor/openapi inputs.
+    # Build into a temporary database so deriving facts cannot overwrite a
+    # user's local advisory/lifecycle artifact.
+    from scripts.build_spec_index import VENDOR_DIR, build_spec_index
+
+    with tempfile.TemporaryDirectory(prefix="hpe-mcp-project-facts-") as temporary_dir:
+        rebuilt = build_spec_index(VENDOR_DIR, Path(temporary_dir) / "specs.sqlite")
+    offline_specs = {
+        table: int(rebuilt[table])
+        for table in OFFLINE_DERIVABLE_SPECS_TABLES
+        if table in rebuilt
+    }
     local_specs = {t: counts[t] for t in LOCALLY_BUILT_SPECS_TABLES if t in counts}
     if offline_specs:
         offline["specs_sqlite"] = offline_specs

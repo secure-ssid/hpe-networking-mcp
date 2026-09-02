@@ -34,8 +34,8 @@ That profile publishes three router tools:
 | `invoke_read_tool` | Run a read-only backend tool. Refuses writes and destructive tools. |
 | `invoke_tool` | Dispatch any enabled backend tool. Marked destructive because it can reach writes. |
 
-The catalog behind those three tools currently holds **6,728** registered
-backend tools and **6,144** generated OpenAPI operations. Direct-all mode
+The catalog behind those three tools currently holds **6,731** registered
+backend tools and **6,145** generated OpenAPI operations. Direct-all mode
 exposes **6,736** client-visible tools and is for debugging, not daily use.
 
 ## Two kinds of answers

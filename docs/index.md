@@ -15,7 +15,7 @@ vendor. This project is one such server: point any MCP client at it and it
 exposes a searchable HPE networking tool catalog behind a small, low-token
 surface.
 
-![hpe-networking-mcp banner showing 6,144 generated operations, 6,729 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,145 generated operations, 6,731 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
 
 Whatever backend does the work, an MCP client sees only three router tools
 under the recommended `minimal` profile — the banner's "3 minimal router
@@ -32,6 +32,7 @@ tools" figure is the number that matters most for context budget. See
 - **Aruba network operators.** Already run Aruba Central or GreenLake Platform
   day to day. Jump to [Example prompts](example-prompts.md) for ready-made
   call patterns, or the [typed product workflow roadmap](product-workflows.md)
+  For Juniper/Mist SKU selection, citations, and the JVD design/build boundary, see [Juniper/Mist and JVD workflow](juniper-mist-jvd.md).
   for ClearPass, Mist, Apstra, AOS8, EdgeConnect, and UXI tasks.
 - **hpe-networking-mcp developers.** Extending a backend, adding a tool, or
   reviewing the router internals. Start with
@@ -244,7 +245,7 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | 6,144 generated operations (6,128 active) / 584 curated / 6,729 backend tools / 6,741 direct-all |
+| Tool catalog | 6,145 generated operations (6,128 active) / 584 curated / 6,731 backend tools / 6,743 direct-all |
 | Capability totals (platform APIs) | 3,160 read, 165 diagnostic, 2,545 write, 842 destructive |
 | RAG | 392,471 prose chunks in LanceDB across 30 scraped sources |
 | Structured lookup | 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |
