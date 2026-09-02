@@ -1792,10 +1792,16 @@ def ask_docs(
                             # the curated hardware_specs.py catalog. Do not
                             # format this as a real datasheet file path; no
                             # such file exists in the repo or ingestion corpus.
+                            # source/doc_type must not claim datasheet
+                            # provenance either: hardware_specs.py carries no
+                            # source URLs, and the entries are series-level,
+                            # so they cannot answer a per-SKU question.
                             "file_path": f"hardware_specs_catalog:{hw_model}",
-                            "source": "hardware_datasheets",
-                            "doc_type": "datasheet",
+                            "source": "hardware_specs_catalog",
+                            "doc_type": "curated-summary",
                             "score": 1.0,
+                            "coverage": "series-level",
+                            "source_url": None,
                         }
                     ],
                     "mode": "hardware_specs",

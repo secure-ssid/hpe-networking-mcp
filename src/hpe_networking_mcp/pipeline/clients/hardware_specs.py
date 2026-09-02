@@ -5,7 +5,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
-# Authoritative datasheet hardware specifications for switches and APs
+# Series-level hardware specifications for switches and APs. These entries are
+# curated in-repo and carry no source URL, so they are not datasheets and must
+# not be cited as one; they describe a series, not an orderable part number.
 HARDWARE_CATALOG: dict[str, dict[str, Any]] = {
     "cx6300": {
         "model": "Aruba CX 6300 Switch Series (6300F / 6300M)",
@@ -409,7 +411,7 @@ def get_hardware_specs(model_key: str) -> dict[str, Any] | None:
 
 
 def format_hardware_specs_markdown(model_key: str) -> str:
-    """Render a comprehensive Markdown datasheet summary for the switch / AP."""
+    """Render a Markdown series-level specification summary for the switch / AP."""
     spec = HARDWARE_CATALOG.get(model_key)
     if not spec:
         return f"Hardware specifications for '{model_key}' are not available in catalog."
@@ -437,5 +439,12 @@ def format_hardware_specs_markdown(model_key: str) -> str:
             f"• **PoE Power:** {spec['poe']}",
             f"• **Key Features:** {spec['features']}",
         ])
+
+    lines.extend([
+        "",
+        "_Series-level summary from the built-in catalog. It carries no source "
+        "URL and is not a per-SKU datasheet, so it cannot confirm an ordering "
+        "part number. For an exact SKU use `search_hardware_catalog`._",
+    ])
 
     return "\n".join(lines)

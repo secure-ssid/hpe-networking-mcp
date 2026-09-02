@@ -496,7 +496,7 @@ def test_ask_docs_routes_hardware_specs_query():
     assert "880 Gbps" in out["answer"]
     assert "VSF" in out["answer"]
     assert len(out["citations"]) == 1
-    assert out["citations"][0]["source"] == "hardware_datasheets"
+    assert out["citations"][0]["source"] == "hardware_specs_catalog"
 
 
 def test_ask_docs_routes_juniper_hardware_query():
@@ -638,3 +638,27 @@ def test_search_docs_missing_index_hint_is_the_build_once_sources_exist(
     assert out[0]["degraded"] is True
     assert "ingest_docs.py" in out[0]["hint"]
     assert "refresh_rag_sources.py" not in out[0]["hint"]
+
+
+def test_hardware_specs_citation_does_not_claim_datasheet_provenance():
+    """hardware_specs.py holds no source URLs, so its citation must not present
+    itself as a datasheet. Claiming doc_type "datasheet" with score 1.0 and no
+    URL let a 20-entry in-repo dict outrank genuinely cited corpus evidence."""
+    out = rag.ask_docs("cx6300 specs")
+    citation = out["citations"][0]
+
+    assert citation["source"] == "hardware_specs_catalog"
+    assert citation["doc_type"] != "datasheet"
+    assert citation["source"] != "hardware_datasheets"
+    # The absence of provenance is stated, not left to be inferred.
+    assert citation["source_url"] is None
+    assert citation["coverage"] == "series-level"
+
+
+def test_hardware_specs_answer_discloses_it_cannot_confirm_a_sku():
+    """A series-level summary must not read as an orderable-part answer."""
+    out = rag.ask_docs("cx6300 specs")
+
+    answer = out["answer"].casefold()
+    assert "series-level" in answer
+    assert "search_hardware_catalog" in answer
