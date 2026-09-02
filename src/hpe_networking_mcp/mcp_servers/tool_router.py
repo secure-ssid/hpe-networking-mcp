@@ -2732,28 +2732,38 @@ if _ROUTER_MODE != "minimal" and "central-monitoring" in _BACKENDS:
         return await invoke_tool(ctx, "get_global_scope_id")
 
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def list_sites(ctx: Context, limit: int = 50, offset: int = 0) -> dict[str, Any]:
-        """List sites (paginated)."""
+    async def list_sites(
+        ctx: Context, limit: int = 50, offset: int = 0
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """List sites (paginated).
+
+        Returns a bare list unless HPE_MCP_BOUND_LISTS wraps it with pagination.
+        """
         return await invoke_tool(ctx, "list_sites", {"limit": limit, "offset": offset})
 
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def list_devices(ctx: Context, limit: int = 50, offset: int = 0) -> dict[str, Any]:
-        """List devices (paginated)."""
+    async def list_devices(
+        ctx: Context, limit: int = 50, offset: int = 0
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """List devices (paginated).
+
+        Returns a bare list unless HPE_MCP_BOUND_LISTS wraps it with pagination.
+        """
         return await invoke_tool(ctx, "list_devices", {"limit": limit, "offset": offset})
 
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def find_device(ctx: Context, query: str) -> dict[str, Any]:
-        """Find a device by serial number."""
+    async def find_device(ctx: Context, query: str) -> dict[str, Any] | None:
+        """Find a device by serial number. Returns None if not found."""
         return await invoke_tool(ctx, "find_device", {"serial_number": query})
 
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def find_client(ctx: Context, query: str) -> dict[str, Any]:
-        """Find a client by name / MAC / IP."""
+    async def find_client(ctx: Context, query: str) -> dict[str, Any] | None:
+        """Find a client by name / MAC / IP. Returns None if not found."""
         return await invoke_tool(ctx, "find_client", {"mac_or_ip": query})
 
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def get_site(ctx: Context, name: str) -> dict[str, Any]:
-        """Find a Central site by name (case-insensitive)."""
+    async def get_site(ctx: Context, name: str) -> dict[str, Any] | None:
+        """Find a Central site by name (case-insensitive). Returns None if not found."""
         return await invoke_tool(ctx, "get_site", {"name": name})
 
     @_dispatching_wrapper_tool(READ_ONLY)
