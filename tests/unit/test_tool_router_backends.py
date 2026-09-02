@@ -287,7 +287,7 @@ def test_find_tool_filters_semantic_hits_from_disabled_backends(monkeypatch):
     monkeypatch.setattr(
         router._lance,
         "search_tools",
-        lambda db, query, vec, top_k: [
+        lambda db, query, vec, top_k, servers=None: [
             {
                 "name": "create_vlan",
                 "server": "central-config",
@@ -308,6 +308,56 @@ def test_find_tool_filters_semantic_hits_from_disabled_backends(monkeypatch):
     results = router.find_tool("vlan docs", top_k=5)
 
     assert [item["name"] for item in results] == ["search_docs"]
+
+
+def test_find_tool_filters_keyword_hits_from_disabled_backends(monkeypatch):
+    """The keyword pass must not recommend tools this deployment cannot invoke.
+
+    ``_tool_index`` spans the whole catalog so discovery can reason about every
+    backend, but only the enabled ones are actually callable. The semantic pass
+    always dropped disabled-backend hits while the keyword pass did not, so a
+    complete-catalog index surfaced raw endpoints the router would reject.
+    """
+    monkeypatch.setattr(router, "_BACKEND", "lancedb")
+    monkeypatch.setattr(
+        router, "_BACKENDS", {"rag-core": "hpe_networking_mcp.mcp_servers.rag"}
+    )
+    monkeypatch.setattr(router, "_load_all_backends", lambda: None)
+    monkeypatch.setattr(router, "_generated_records", lambda: {})
+    monkeypatch.setattr(
+        router,
+        "_tool_index",
+        {
+            "clearpass_network_device_get": SimpleNamespace(
+                name="clearpass_network_device_get",
+                description="Read a ClearPass network device",
+                parameters={},
+                annotations=SimpleNamespace(
+                    read_only_hint=True, destructive_hint=False, idempotent_hint=True
+                ),
+            ),
+            "list_devices": SimpleNamespace(
+                name="list_devices",
+                description="List network devices",
+                parameters={},
+                annotations=SimpleNamespace(
+                    read_only_hint=True, destructive_hint=False, idempotent_hint=True
+                ),
+            ),
+        },
+    )
+    monkeypatch.setattr(
+        router,
+        "_tool_backend_names",
+        {
+            "clearpass_network_device_get": "clearpass-core",
+            "list_devices": "rag-core",
+        },
+    )
+
+    hits = router._keyword_hits("network devices", limit=10)
+
+    assert [h["name"] for h in hits] == ["list_devices"]
 
 
 def test_find_tool_filters_optional_write_hits_when_read_only(monkeypatch):
@@ -351,7 +401,7 @@ def test_find_tool_filters_optional_write_hits_when_read_only(monkeypatch):
     monkeypatch.setattr(
         router._lance,
         "search_tools",
-        lambda db, query, vec, top_k: [
+        lambda db, query, vec, top_k, servers=None: [
             {
                 "name": "clearpass_write",
                 "server": "clearpass-core",
@@ -396,7 +446,7 @@ def test_find_tool_omits_schema_by_default(monkeypatch):
     monkeypatch.setattr(
         router._lance,
         "search_tools",
-        lambda db, query, vec, top_k: [
+        lambda db, query, vec, top_k, servers=None: [
             {
                 "name": "create_vlan",
                 "server": "central-config",
@@ -435,7 +485,7 @@ def test_find_tool_can_include_schema_when_requested(monkeypatch):
     monkeypatch.setattr(
         router._lance,
         "search_tools",
-        lambda db, query, vec, top_k: [
+        lambda db, query, vec, top_k, servers=None: [
             {
                 "name": "create_vlan",
                 "server": "central-config",
@@ -471,7 +521,7 @@ def test_find_tool_hydrates_annotations_for_semantic_only_results(monkeypatch):
     monkeypatch.setattr(
         router._lance,
         "search_tools",
-        lambda db, query, vec, top_k: [
+        lambda db, query, vec, top_k, servers=None: [
             {
                 "name": "search_docs",
                 "server": "rag-core",
@@ -565,7 +615,7 @@ def test_find_tool_filters_keyword_results_and_reports_write_contract(monkeypatc
     monkeypatch.setattr(
         router._lance,
         "search_tools",
-        lambda db, query, vec, top_k: [],
+        lambda db, query, vec, top_k, servers=None: [],
     )
 
     result = router.find_tool(
@@ -686,7 +736,7 @@ def test_find_tool_filters_semantic_results_by_diagnostic_capability(monkeypatch
     monkeypatch.setattr(
         router._lance,
         "search_tools",
-        lambda db, query, vec, top_k: [
+        lambda db, query, vec, top_k, servers=None: [
             {
                 "name": "mist_widget_status",
                 "server": "mist-core",

@@ -85,6 +85,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
     ungated_backend_write_blocked,
     validate_access_profile_environment,
 )
+from hpe_networking_mcp.mcp_servers.skills import set_enabled_platforms
 from hpe_networking_mcp.optional_deps import MissingOptionalDependency
 from hpe_networking_mcp.pipeline import artifact_contracts as _artifact_contracts
 from hpe_networking_mcp.pipeline import compliance as _compliance
@@ -624,6 +625,18 @@ _BACKENDS = _build_backends()
 # the model to call tools that are not in the tool list.
 register_router_prompts(mcp, enabled_backends=_BACKENDS)
 
+# Skills carry the same platform metadata prompts do, so gate them the same
+# way. Ungated, the whole directory was listed regardless of backend, so
+# `uxi-diagnostics` appeared on a deployment with no UXI tool at all -- a
+# runbook whose every step is uncallable.
+set_enabled_platforms(
+    {
+        _SERVER_PLATFORMS[server_name]
+        for server_name in _BACKENDS
+        if server_name in _SERVER_PLATFORMS
+    }
+)
+
 _tool_index: dict[str, Any] = {}  # name -> MCPServer Tool
 _tool_servers: dict[str, Any] = {}  # name -> owning MCPServer backend (for dispatch)
 _tool_backend_names: dict[str, str] = {}  # name -> owning server name
@@ -911,6 +924,13 @@ def _keyword_hits(query: str, limit: int, include_schema: bool = False) -> list[
     q_low = query.lower()
     scored: list[tuple[float, Any]] = []
     for name, tool in _tool_index.items():
+        if _tool_backend_names.get(name) not in _BACKENDS:
+            # ``_tool_index`` spans every backend so discovery can reason about
+            # the whole catalog, but this deployment can only invoke the
+            # enabled ones. The semantic pass has always dropped hits from
+            # disabled backends; the keyword pass did not, so a complete-catalog
+            # index let find_tool recommend tools the router cannot call.
+            continue
         if _optional_write_disabled(name, tool) or _readonly_blocks(tool):
             continue
         name_tokens = set(name.lower().split("_")) - _STOPWORDS
@@ -1153,7 +1173,11 @@ def find_tool(
         else:
             vec = _embedder.embed_query(query)
             hits = _lance.search_tools(
-                _lance.connect(), query, vec, top_k=min(max(top_k * 4, 20), 50)
+                _lance.connect(),
+                query,
+                vec,
+                top_k=min(max(top_k * 4, 20), 50),
+                servers=_BACKENDS,
             )
         added = 0
         for h in hits:
@@ -3092,6 +3116,11 @@ if _ROUTER_MODE != "minimal" and "rag-core" in _BACKENDS:
             "list_skills",
             {"platform": platform, "tag": tag, "detail": detail},
         )
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def find_skill(ctx: Context, query: str, limit: int = 3) -> Any:
+        """Find the runbook (skill) matching a free-text request, from rag-core."""
+        return await invoke_tool(ctx, "find_skill", {"query": query, "limit": limit})
 
     @_dispatching_wrapper_tool(READ_ONLY)
     async def load_skill(ctx: Context, name: str) -> Any:

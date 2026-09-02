@@ -155,7 +155,7 @@ router._tool_backend_names = {
 router._load_all_backends = lambda: None
 router._embedder.embed_query = lambda query: [0.0]
 router._lance.connect = lambda: object()
-router._lance.search_tools = lambda db, query, vec, top_k: []
+router._lance.search_tools = lambda db, query, vec, top_k, servers=None: []
 
 async def main():
     async with Client(router.mcp) as client:

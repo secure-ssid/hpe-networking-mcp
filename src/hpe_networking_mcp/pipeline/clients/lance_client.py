@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Collection
 from pathlib import Path
 from typing import Any
 
@@ -440,14 +441,35 @@ def tool_count(db, table_name: str = TOOLS_TABLE) -> int | None:
     return table.count_rows() if table is not None else None
 
 
+def _sql_quote(value: str) -> str:
+    """Render ``value`` as a single-quoted SQL string literal.
+
+    Backend names are internal identifiers rather than user input, but the
+    filter below is string-built SQL, so escaping embedded quotes keeps a
+    malformed name from turning into a broken (or injected) predicate.
+    """
+    escaped = value.replace("'", "''")
+    return f"'{escaped}'"
+
+
 def search_tools(
     db,
     query_text: str,
     query_vector: list[float],
     top_k: int = 10,
     table_name: str = TOOLS_TABLE,
+    servers: Collection[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Hybrid search over tool definitions (same shape as redis search_tools)."""
+    """Hybrid search over tool definitions (same shape as redis search_tools).
+
+    ``servers`` restricts the search to tools owned by the given backends. The
+    filter is pushed into the query as a prefilter rather than applied to the
+    results: the tools table holds the complete catalog (thousands of raw REST
+    endpoints across every platform), while a given deployment enables only a
+    handful of backends. Filtering afterwards meant the deep fetch could come
+    back entirely full of tools from disabled backends, which were then all
+    discarded -- leaving the semantic leg contributing nothing at all.
+    """
     table = tools_table(db, table_name)
     if table is None:
         return []
@@ -458,6 +480,9 @@ def search_tools(
         .text(query_text)
         .limit(max(top_k * 3, 15))  # deep fetch per leg, fuse, then slice
     )
+    if servers:
+        allowed = ", ".join(_sql_quote(s) for s in sorted(servers))
+        q = q.where(f"server IN ({allowed})", prefilter=True)
     hits = []
     for r in q.to_list()[:top_k]:
         hits.append({

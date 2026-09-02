@@ -233,6 +233,74 @@ class TestToolsTable:
         empty = lc.connect(tmp_path / "empty")
         assert lc.search_tools(empty, "anything", _vec(99)) == []
 
+    def test_servers_filter_excludes_disabled_backends(self, db):
+        """A deployment only enables some backends; the rest must not surface.
+
+        The tools table holds the complete catalog, so without a prefilter the
+        deep fetch could return nothing but tools from disabled backends.
+        """
+        rows = [
+            {"id": "t1", "server": "central-config", "name": "create_vlan",
+             "description": "Create a VLAN", "schema_json": "{}",
+             "fts_text": "create vlan create_vlan Create a VLAN", "vector": _vec(4)},
+            {"id": "t2", "server": "clearpass-core", "name": "cppm_create_vlan",
+             "description": "Create a VLAN", "schema_json": "{}",
+             "fts_text": "create vlan cppm_create_vlan Create a VLAN", "vector": _vec(4)},
+        ]
+        lc.create_tools_table(db, rows)
+
+        hits = lc.search_tools(
+            db, "create a vlan", _vec(4), top_k=10, servers=["central-config"]
+        )
+        assert [h["name"] for h in hits] == ["create_vlan"]
+
+    def test_servers_filter_keeps_enabled_backend_hits(self, db):
+        """The filter must narrow to the enabled set, not drop everything."""
+        rows = [
+            {"id": "t1", "server": "central-config", "name": "create_vlan",
+             "description": "Create a VLAN", "schema_json": "{}",
+             "fts_text": "create vlan create_vlan Create a VLAN", "vector": _vec(4)},
+            {"id": "t2", "server": "glp-core", "name": "glp_preflight",
+             "description": "Inspect local GLP readiness", "schema_json": "{}",
+             "fts_text": "glp preflight local readiness", "vector": _vec(6)},
+        ]
+        lc.create_tools_table(db, rows)
+
+        hits = lc.search_tools(
+            db, "create a vlan", _vec(4), top_k=10,
+            servers=["central-config", "glp-core"],
+        )
+        assert "create_vlan" in {h["name"] for h in hits}
+
+    def test_no_servers_filter_searches_whole_catalog(self, db):
+        """Omitting ``servers`` must preserve the previous unfiltered behaviour."""
+        rows = [
+            {"id": "t1", "server": "central-config", "name": "create_vlan",
+             "description": "Create a VLAN", "schema_json": "{}",
+             "fts_text": "create vlan create_vlan Create a VLAN", "vector": _vec(4)},
+            {"id": "t2", "server": "clearpass-core", "name": "cppm_create_vlan",
+             "description": "Create a VLAN", "schema_json": "{}",
+             "fts_text": "create vlan cppm_create_vlan Create a VLAN", "vector": _vec(4)},
+        ]
+        lc.create_tools_table(db, rows)
+
+        hits = lc.search_tools(db, "create a vlan", _vec(4), top_k=10)
+        assert {h["server"] for h in hits} == {"central-config", "clearpass-core"}
+
+    def test_server_name_with_quote_does_not_break_filter(self, db):
+        """Backend names are internal, but the SQL predicate is string-built."""
+        rows = [
+            {"id": "t1", "server": "it's-core", "name": "odd_backend_tool",
+             "description": "Create a VLAN", "schema_json": "{}",
+             "fts_text": "create vlan odd_backend_tool Create a VLAN", "vector": _vec(4)},
+        ]
+        lc.create_tools_table(db, rows)
+
+        hits = lc.search_tools(
+            db, "create a vlan", _vec(4), top_k=10, servers=["it's-core"]
+        )
+        assert [h["name"] for h in hits] == ["odd_backend_tool"]
+
     def test_merge_tool_rows_upserts_without_rebuilding_table(self, db):
         rows = [
             {"id": "t1", "server": "central-config", "name": "create_vlan",

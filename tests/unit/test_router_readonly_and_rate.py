@@ -69,6 +69,12 @@ def wired_router(monkeypatch):
     monkeypatch.setattr(
         router, "_tool_backend_names", {n: "test-backend" for n in tools}, raising=True
     )
+    # Keyword discovery only surfaces tools from enabled backends, so the
+    # fixture's synthetic backend has to be enabled for these tools to be
+    # visible at all.
+    monkeypatch.setattr(
+        router, "_BACKENDS", {"test-backend": "tests.fixture"}, raising=True
+    )
     monkeypatch.setattr(router, "_load_all_backends", lambda: None, raising=True)
     return backend
 
