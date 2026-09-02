@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hpe-networking-mcp"
 version = "0.11.0"
-description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,731-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
+description = "Low-token HPE Networking MCP router (3 discovery/dispatch tools) over a 6,732-tool backend catalog for Aruba Central, GreenLake Platform, AOS8 migrations, Mist, ClearPass, Apstra, EdgeConnect, UXI, Axis Atmos, RAG, and OpenAPI."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

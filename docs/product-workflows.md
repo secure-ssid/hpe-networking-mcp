@@ -25,8 +25,8 @@ The ArubaOS 8-to-Classic/New Central migration rows below are gated by the autho
 | RAG/OpenAPI | 12 |
 | Optional products, read-only annotated | 1,773 |
 | Optional products, guarded writes included | 3,757 |
-| **Platform API backend catalog** | **6,712** |
-| **Complete backend catalog** | **6,731** |
+| **Platform API backend catalog** | **6,713** |
+| **Complete backend catalog** | **6,732** |
 
 The difference between the two totals is the non-platform backends, itemized
 with their counts in [`docs/tool-catalog.md`](tool-catalog.md).

@@ -10,6 +10,7 @@ adapted for hpe-networking-mcp tool naming and the find_tool → invoke_read_too
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -66,6 +67,10 @@ _LIST_NEXT_STEP_MATCHED = (
     "the full step-by-step body, then follow it. Do not improvise from metadata."
 )
 _LIST_NEXT_STEP_EMPTY = "No skills matched these filters. Proceed with find_tool / platform tools."
+_FIND_NEXT_STEP_EMPTY = (
+    "No skill matched that request. Call `list_skills()` to browse what is "
+    "available, or go straight to `find_tool` for a single-step answer."
+)
 
 
 @dataclass(frozen=True)
@@ -162,6 +167,12 @@ def _match_tokens(text: str) -> set[str]:
         tok = "".join(ch for ch in raw.lower() if ch.isalnum())
         if len(tok) >= 2 and tok not in _MATCH_STOPWORDS:
             out.add(tok)
+            # Operators type "clients keep dropping" while the runbook is
+            # tagged "client". Emitting a crude singular alongside the token
+            # (on both the query and the searchable text, so normalization is
+            # symmetric) lets plural phrasing match without a stemmer.
+            if len(tok) > 3 and tok.endswith("s"):
+                out.add(tok[:-1])
     return out
 
 
@@ -254,6 +265,47 @@ def reset_registry_for_tests(registry: SkillRegistry | None = None) -> None:
     _REGISTRY = registry
 
 
+# -- Backend gating ----------------------------------------------------------
+#
+# Prompts are gated by enabled backend already (tool_router calls
+# register_router_prompts(..., enabled_backends=_BACKENDS)), but skills load
+# whole-directory, so `uxi-diagnostics` was listed on a deployment carrying no
+# UXI tool at all -- a runbook whose every step is uncallable.
+#
+# The router calls set_enabled_platforms() once it knows its backends. Until
+# then the gate stays open (None), which leaves the standalone rag-core server
+# and every existing test unchanged.
+_ENABLED_PLATFORMS: frozenset[str] | None = None
+
+
+def set_enabled_platforms(platforms: Collection[str] | None) -> None:
+    """Restrict browse/search to skills this deployment can actually run.
+
+    Pass ``None`` to disable gating entirely (the default).
+    """
+    global _ENABLED_PLATFORMS
+    _ENABLED_PLATFORMS = None if platforms is None else frozenset(platforms)
+
+
+def _platform_visible(skill: Skill) -> bool:
+    if _ENABLED_PLATFORMS is None:
+        return True
+    # A skill declaring no platform is platform-agnostic, so it stays visible.
+    if not skill.platforms:
+        return True
+    # The FIRST platform is the required one; the rest are correlation targets
+    # the runbook uses "when those backends are enabled". Every skill named
+    # `<platform>-*` lists that platform first, and unprefixed skills lead with
+    # the platform they cannot run without. Gating on "any platform enabled"
+    # would keep `uxi-diagnostics` visible on a UXI-less deployment purely
+    # because it can *also* correlate against Central.
+    return skill.platforms[0] in _ENABLED_PLATFORMS
+
+
+def _visible(skills: list[Skill]) -> list[Skill]:
+    return [skill for skill in skills if _platform_visible(skill)]
+
+
 def list_skills_payload(
     platform: str | list[str] | None = None,
     tag: str | list[str] | None = None,
@@ -261,7 +313,7 @@ def list_skills_payload(
     registry: SkillRegistry | None = None,
 ) -> dict[str, Any]:
     reg = registry or get_registry()
-    results = reg.filter(platform=platform, tag=tag)
+    results = _visible(reg.filter(platform=platform, tag=tag))
     skills: list[dict[str, Any]] = []
     for skill in results:
         entry = skill.to_metadata() if detail else skill.to_summary()
@@ -271,6 +323,34 @@ def list_skills_payload(
         "count": len(results),
         "skills": skills,
         "next_step": _LIST_NEXT_STEP_MATCHED if results else _LIST_NEXT_STEP_EMPTY,
+    }
+
+
+def find_skill_payload(
+    query: str,
+    limit: int = 3,
+    registry: SkillRegistry | None = None,
+) -> dict[str, Any]:
+    """Rank skills against free-text intent.
+
+    ``list_skills`` filters only by platform/tag, so selecting a runbook from
+    a natural-language request meant reading every entry. The registry has
+    carried a token-overlap matcher all along; this exposes it.
+    """
+    reg = registry or get_registry()
+    capped = max(1, limit)
+    # Over-fetch before gating so hidden skills cannot consume result slots.
+    matches = _visible(reg.match(query, limit=capped * 4))[:capped]
+    skills: list[dict[str, Any]] = []
+    for skill in matches:
+        entry = skill.to_summary()
+        entry["load_with"] = f"load_skill(name={skill.name!r})"
+        skills.append(entry)
+    return {
+        "query": query,
+        "count": len(skills),
+        "skills": skills,
+        "next_step": _LIST_NEXT_STEP_MATCHED if skills else _FIND_NEXT_STEP_EMPTY,
     }
 
 

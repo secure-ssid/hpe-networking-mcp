@@ -26,12 +26,12 @@ def test_capability_report_counts_and_classification_are_deterministic():
     assert first == second
     assert sum(row["generated"] for row in rows) == 6145
     assert sum(row["registered_generated"] for row in rows) == 6128
-    assert sum(row["curated"] for row in rows) == 584
-    assert sum(row["registered"] for row in rows) == 6712
+    assert sum(row["curated"] for row in rows) == 585
+    assert sum(row["registered"] for row in rows) == 6713
 
     capabilities = sum((row["capabilities"] for row in rows), report_capability_gaps.Counter())
     assert capabilities == {
-        "read": 3160,
+        "read": 3161,
         "diagnostic": 165,
         "write": 2545,
         "destructive": 842,

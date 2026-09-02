@@ -1,4 +1,4 @@
-"""MCP server — Aruba/HPE documentation RAG tools (16 tools).
+"""MCP server — Aruba/HPE documentation RAG tools (17 tools).
 
 Covers: hybrid (vector + BM25) search over ingested Aruba Central developer
 docs, tech docs, NAC docs, VSG docs, HTML tech docs, Junos CLI, Junos
@@ -30,7 +30,11 @@ from mcp.server.mcpserver import MCPServer
 
 from hpe_networking_mcp import optional_deps
 from hpe_networking_mcp.mcp_servers.shared import READ_ONLY, READ_ONLY_LOCAL, resolve_rag_backend
-from hpe_networking_mcp.mcp_servers.skills import list_skills_payload, load_skill_payload
+from hpe_networking_mcp.mcp_servers.skills import (
+    find_skill_payload,
+    list_skills_payload,
+    load_skill_payload,
+)
 from hpe_networking_mcp.pipeline import artifact_contracts as contracts
 from hpe_networking_mcp.pipeline.clients import (
     advisory_index,
@@ -1918,6 +1922,18 @@ def list_skills(
     suggested tool lists. Load a full runbook with load_skill(name).
     """
     return list_skills_payload(platform=platform, tag=tag, detail=detail)
+
+
+@mcp.tool(annotations=READ_ONLY_LOCAL)
+def find_skill(query: str, limit: int = 3) -> dict[str, Any]:
+    """Find the runbook (skill) that fits a request, by free-text intent.
+
+    Use this instead of reading all of list_skills when the user describes a
+    goal in their own words ("clients keep dropping", "audit our SSIDs",
+    "is the network healthy this morning"). Returns ranked skill metadata;
+    load the winner with load_skill(name).
+    """
+    return find_skill_payload(query=query, limit=limit)
 
 
 @mcp.tool(annotations=READ_ONLY_LOCAL)

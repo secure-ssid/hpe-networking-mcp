@@ -15,7 +15,7 @@ vendor. This project is one such server: point any MCP client at it and it
 exposes a searchable HPE networking tool catalog behind a small, low-token
 surface.
 
-![hpe-networking-mcp banner showing 6,145 generated operations, 6,731 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
+![hpe-networking-mcp banner showing 6,145 generated operations, 6,732 backend tools, 3 minimal router tools, and nine platform surfaces with embedded RAG](assets/hpe-networking-mcp-hero.svg)
 
 Whatever backend does the work, an MCP client sees only three router tools
 under the recommended `minimal` profile — the banner's "3 minimal router
@@ -245,8 +245,8 @@ platform, or keep `custom` with `HPE_MCP_PRODUCT_ACCESS=read-write` / a narrower
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | 6,145 generated operations (6,128 active) / 584 curated / 6,731 backend tools / 6,743 direct-all |
-| Capability totals (platform APIs) | 3,160 read, 165 diagnostic, 2,545 write, 842 destructive |
+| Tool catalog | 6,145 generated operations (6,128 active) / 584 curated / 6,732 backend tools / 6,744 direct-all |
+| Capability totals (platform APIs) | 3,161 read, 165 diagnostic, 2,545 write, 842 destructive |
 | RAG | 392,471 prose chunks in LanceDB across 30 scraped sources |
 | Structured lookup | 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |
 | API provenance | Aruba ReadMe registries, official Mist/Apstra sources, pinned GLP and EdgeConnect snapshots, SHA-pinned Axis generator |
