@@ -2735,8 +2735,9 @@ if _ROUTER_MODE != "minimal" and "central-monitoring" in _BACKENDS:
     async def list_sites(
         ctx: Context, limit: int = 50, offset: int = 0
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """List sites (paginated).
+        """List Central sites (paginated). For Mist sites use mist_get.
 
+        Mist equivalent: mist_get with /api/v1/orgs/{org_id}/sites.
         Returns a bare list unless HPE_MCP_BOUND_LISTS wraps it with pagination.
         """
         return await invoke_tool(ctx, "list_sites", {"limit": limit, "offset": offset})
@@ -2745,7 +2746,7 @@ if _ROUTER_MODE != "minimal" and "central-monitoring" in _BACKENDS:
     async def list_devices(
         ctx: Context, limit: int = 50, offset: int = 0
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """List devices (paginated).
+        """List Central devices (paginated). For Mist inventory use mist_devices instead.
 
         Returns a bare list unless HPE_MCP_BOUND_LISTS wraps it with pagination.
         """
@@ -2753,12 +2754,19 @@ if _ROUTER_MODE != "minimal" and "central-monitoring" in _BACKENDS:
 
     @_dispatching_wrapper_tool(READ_ONLY)
     async def find_device(ctx: Context, query: str) -> dict[str, Any] | None:
-        """Find a device by serial number. Returns None if not found."""
+        """Find a Central device by serial number. Returns None if not found.
+
+        Covers Central-managed devices only. For Mist use mist_devices.
+        """
         return await invoke_tool(ctx, "find_device", {"serial_number": query})
 
     @_dispatching_wrapper_tool(READ_ONLY)
     async def find_client(ctx: Context, query: str) -> dict[str, Any] | None:
-        """Find a client by name / MAC / IP. Returns None if not found."""
+        """Find a Central client by name / MAC / IP. Returns None if not found.
+
+        Covers Central-connected clients only. For Mist use mist_clients, or
+        mist_get_client for one MAC at a known site.
+        """
         return await invoke_tool(ctx, "find_client", {"mac_or_ip": query})
 
     @_dispatching_wrapper_tool(READ_ONLY)
