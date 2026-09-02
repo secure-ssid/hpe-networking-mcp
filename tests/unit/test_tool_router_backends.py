@@ -360,6 +360,91 @@ def test_find_tool_filters_keyword_hits_from_disabled_backends(monkeypatch):
     assert [h["name"] for h in hits] == ["list_devices"]
 
 
+def test_keyword_ranking_prefers_curated_over_generated(monkeypatch):
+    """Curated entry points must outrank one-per-endpoint generated tools.
+
+    On a complete-catalog index there are thousands of generated tools, so
+    without this "what devices are on my network" ranked a raw ClearPass
+    endpoint above list_devices.
+    """
+    monkeypatch.setattr(router, "_BACKENDS", {"a": "x", "b": "y"})
+    monkeypatch.setattr(router, "_load_all_backends", lambda: None)
+    monkeypatch.setattr(
+        router,
+        "_generated_records",
+        lambda: {"clearpass_network_device_get": {"operation_id": "NetworkDeviceGet",
+                                                  "operation_key": "GET /network-device"}},
+    )
+    tools = {
+        "clearpass_network_device_get": SimpleNamespace(
+            name="clearpass_network_device_get",
+            description="Get a list of network devices",
+            parameters={},
+            annotations=SimpleNamespace(
+                read_only_hint=True, destructive_hint=False, idempotent_hint=True
+            ),
+        ),
+        "list_devices": SimpleNamespace(
+            name="list_devices",
+            description="List network devices",
+            parameters={},
+            annotations=SimpleNamespace(
+                read_only_hint=True, destructive_hint=False, idempotent_hint=True
+            ),
+        ),
+    }
+    monkeypatch.setattr(router, "_tool_index", tools)
+    monkeypatch.setattr(
+        router,
+        "_tool_backend_names",
+        {"clearpass_network_device_get": "a", "list_devices": "b"},
+    )
+
+    hits = router._keyword_hits("network devices", limit=10)
+
+    assert hits[0]["name"] == "list_devices"
+
+
+def test_exact_operation_id_still_outranks_the_generated_penalty(monkeypatch):
+    """The penalty must not break precise API lookups."""
+    monkeypatch.setattr(router, "_BACKENDS", {"a": "x", "b": "y"})
+    monkeypatch.setattr(router, "_load_all_backends", lambda: None)
+    monkeypatch.setattr(
+        router,
+        "_generated_records",
+        lambda: {"clearpass_network_device_get": {"operation_id": "networkdeviceget",
+                                                  "operation_key": "get /network-device"}},
+    )
+    tools = {
+        "clearpass_network_device_get": SimpleNamespace(
+            name="clearpass_network_device_get",
+            description="Get a list of network devices",
+            parameters={},
+            annotations=SimpleNamespace(
+                read_only_hint=True, destructive_hint=False, idempotent_hint=True
+            ),
+        ),
+        "list_devices": SimpleNamespace(
+            name="list_devices",
+            description="List network devices",
+            parameters={},
+            annotations=SimpleNamespace(
+                read_only_hint=True, destructive_hint=False, idempotent_hint=True
+            ),
+        ),
+    }
+    monkeypatch.setattr(router, "_tool_index", tools)
+    monkeypatch.setattr(
+        router,
+        "_tool_backend_names",
+        {"clearpass_network_device_get": "a", "list_devices": "b"},
+    )
+
+    hits = router._keyword_hits("networkdeviceget network devices", limit=10)
+
+    assert hits[0]["name"] == "clearpass_network_device_get"
+
+
 def test_find_tool_filters_optional_write_hits_when_read_only(monkeypatch):
     monkeypatch.setenv("HPE_MCP_PRODUCT_ACCESS", "read-only")
     monkeypatch.setenv("HPE_MCP_CLEARPASS_WRITES", "0")  # .env sets this; explicit disable wins

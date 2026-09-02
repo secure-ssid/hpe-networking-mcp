@@ -872,6 +872,12 @@ _STOPWORDS = {
 # whose schema actually accepts the same parameter — never as sole evidence.
 _SCOPE_QUERY_TERMS = {"serial", "site", "workspace", "scope", "region"}
 
+#: Keyword-score penalty applied to generated (one-per-REST-endpoint) tools so
+#: curated entry points win natural-language queries. Deliberately far smaller
+#: than the operationId/path boosts (+3 to +8) that fire when the caller is
+#: actually looking up a specific API operation.
+_GENERATED_KEYWORD_PENALTY = 1.0
+
 
 def _query_tokens(query: str) -> set[str]:
     """Tokenize a find_tool query for high-precision name overlap.
@@ -953,6 +959,15 @@ def _keyword_hits(query: str, limit: int, include_schema: bool = False) -> list[
             score += 0.15
         generated = generated_records.get(name)
         if generated:
+            # Curated tools are the intended entry points for natural-language
+            # questions; generated tools are one-per-REST-endpoint and there
+            # are thousands of them, so on a complete-catalog index they crowd
+            # out the curated tool a user actually wants ("what devices are on
+            # my network" ranked clearpass_network_device_get over
+            # list_devices). Penalise them for generic queries only -- the
+            # operationId and path boosts below are an order of magnitude
+            # larger, so an exact API lookup still wins comfortably.
+            score -= _GENERATED_KEYWORD_PENALTY
             op_id = str(generated.get("operation_id") or "").lower()
             op_key = str(generated.get("operation_key") or "").lower()
             if op_id and op_id == q_low:
