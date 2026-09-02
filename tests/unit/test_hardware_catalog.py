@@ -276,3 +276,42 @@ def test_punctuated_queries_do_not_raise_and_still_match(tmp_path):
 
     assert result["ok"] is True
     assert {item["sku"] for item in result["results"]} >= {"AP47-US", "AP47E-US"}
+
+
+def test_candidate_results_carry_partial_coverage_guidance(tmp_path):
+    """A partial snapshot must not read as the complete product family.
+
+    Regression: a 3-SKU CX 6300 result was presented as exhaustive and the
+    answer then invented a different family as a "newer replacement".
+    """
+    db_path = _built_catalog(tmp_path)
+
+    result = hardware_catalog.search("CX 6300", db_path=db_path)
+
+    assert result["ok"] is True
+    guidance = result["guidance"].casefold()
+    assert "not the complete product family" in guidance
+    assert "replacement" in guidance
+    assert result["catalog"]["coverage"] == "partial"
+
+
+def test_exact_sku_lookup_also_carries_coverage_guidance(tmp_path):
+    db_path = _built_catalog(tmp_path)
+
+    result = hardware_catalog.search("JL659A", db_path=db_path)
+
+    assert result["match_type"] == "exact_sku"
+    assert "from memory" in result["guidance"].casefold()
+
+
+def test_comparison_guidance_forbids_inferring_from_the_model_name(tmp_path):
+    """Regression: JL659A vs JL661A are both 6300M, so a modular-versus-fixed
+    explanation is wrong; the real difference is SmartRate versus 1GbE."""
+    db_path = _built_catalog(tmp_path)
+
+    result = hardware_catalog.compare(["JL659A", "JL661A"], db_path=db_path)
+
+    assert result["ok"] is True
+    guidance = result["guidance"].casefold()
+    assert "do not infer a distinction from the model name" in guidance
+    assert "successor or replacement" in guidance

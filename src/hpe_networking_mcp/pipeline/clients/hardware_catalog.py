@@ -29,6 +29,22 @@ MISSING_CATALOG_REMEDY = (
     "official-source seed and does not make a vendor API call at query time"
 )
 
+PARTIAL_COVERAGE_GUIDANCE = (
+    "These are only the SKUs this catalog snapshot carries, not the complete product "
+    "family. Coverage is partial, so do not present the list as exhaustive and do not "
+    "add SKUs, specifications, or lifecycle claims from memory. Do not recommend or "
+    "mention a different product family as a newer model, successor, or replacement "
+    "unless it appears in these results. If the user needs the full family list, say "
+    "the catalog snapshot is incomplete and point them at the official vendor source."
+)
+
+COMPARISON_GUIDANCE = (
+    "Describe differences only from the fields under 'comparison'. Do not infer a "
+    "distinction from the model name; for example do not claim a modular-versus-fixed "
+    "difference unless the compared SKUs actually differ on that field. Do not "
+    "introduce another product family as a successor or replacement."
+)
+
 _SCHEMA = """
 CREATE TABLE products (
     sku TEXT PRIMARY KEY,
@@ -503,6 +519,7 @@ def search(
                 "ok": True,
                 "match_type": "exact_sku",
                 "results": [_as_result(exact[0], include_specs=include_specs)],
+                "guidance": PARTIAL_COVERAGE_GUIDANCE,
                 "catalog": metadata,
                 "provenance": provenance,
             }
@@ -547,6 +564,7 @@ def search(
             "ok": True,
             "match_type": "candidate" if len(matches) > 1 else "best_candidate",
             "results": [_as_result(row, include_specs=include_specs) for row in matches],
+            "guidance": PARTIAL_COVERAGE_GUIDANCE,
             "catalog": metadata,
             "provenance": provenance,
         }
@@ -681,6 +699,7 @@ def compare(
                 for row in resolved
             ],
             "comparison": {"fields": _comparison_fields(resolved)},
+            "guidance": COMPARISON_GUIDANCE,
             "catalog": metadata,
         }
         if stale_skus:
