@@ -1666,14 +1666,18 @@ def _bounded_evidence_answer(
 def lookup_hardware_specs(
     model: str,
 ) -> dict[str, Any]:
-    """Look up authoritative hardware datasheet specifications for switches and APs.
+    """Look up series-level hardware specifications for switches and APs.
 
     Exact, curated catalog lookup (no RAG search) — use this INSTEAD of
-    ask_docs/search_docs for exact hardware datasheet questions. Returns switching
+    ask_docs/search_docs for hardware specification questions. Returns switching
     capacity, throughput, stacking (VSF/Virtual Chassis), port configurations,
     PoE wattage, uplinks, architecture, and routing/security features for
     Aruba CX (6000, 6100, 6200, 6300, 6400, 8325, 8360, 10000), Juniper EX
     (2300, 4000, 4100, 4400, 4650), Aruba APs (635), and Mist APs (45).
+
+    Entries describe a switch/AP *series* and carry no source URL, so they
+    cannot confirm an ordering part number; use search_hardware_catalog for a
+    SKU.
 
     Args:
         model: Hardware model identifier, e.g. "cx6300", "ex4000", "ex4400",
@@ -1687,8 +1691,19 @@ def lookup_hardware_specs(
     if not spec:
         return {
             "ok": False,
+            # "not_found" maps to HTTP 404 in ResponseEnvelopeMiddleware. Without
+            # it a resolved "this model isn't catalogued" answer fell through to
+            # the generic 500 fallback and was reported to clients as a server
+            # fault with "retrying may help" -- advice that can only waste calls,
+            # since the result is deterministic.
+            "status": "not_found",
             "error": f"Hardware model '{model}' not found in hardware specifications catalog.",
             "available_models": sorted(hardware_specs.HARDWARE_CATALOG.keys()),
+            "guidance": (
+                "This catalog is series-level (e.g. 'cx6300'), so it holds no "
+                "ordering part numbers. To resolve a SKU such as JL658A use "
+                "search_hardware_catalog."
+            ),
         }
     return {
         "ok": True,

@@ -662,3 +662,36 @@ def test_hardware_specs_answer_discloses_it_cannot_confirm_a_sku():
     answer = out["answer"].casefold()
     assert "series-level" in answer
     assert "search_hardware_catalog" in answer
+
+
+def test_uncatalogued_model_is_not_reported_as_a_retryable_server_error():
+    """A resolved "no such model" answer must not surface as HTTP 500.
+
+    ResponseEnvelopeMiddleware falls back to 500 for any result carrying an
+    `error` key, so a deterministic miss was returned to clients as a server
+    fault hinting that "retrying may help" - advice that can only waste calls.
+    The middleware already maps status "not_found" to 404; the tool just had
+    to say so.
+    """
+    from hpe_networking_mcp.mcp_servers._middleware.response_envelope import (
+        _blocked_status,
+    )
+
+    result = rag.lookup_hardware_specs("JL658A")
+
+    assert result["ok"] is False
+    assert result["status"] == "not_found"
+    assert _blocked_status(result) == (True, 404)
+    # A SKU question should be pointed at the tool that can actually answer it.
+    assert "search_hardware_catalog" in result["guidance"]
+
+
+def test_catalogued_model_still_resolves_without_an_error_envelope():
+    from hpe_networking_mcp.mcp_servers._middleware.response_envelope import (
+        _blocked_status,
+    )
+
+    result = rag.lookup_hardware_specs("cx6300")
+
+    assert result["ok"] is True
+    assert _blocked_status(result) == (False, None)
