@@ -1049,6 +1049,7 @@ def test_hardware_catalog_wrapper_forwards_compact_search_arguments(monkeypatch)
                 "vendor": "aruba",
                 "include_specs": False,
                 "include_taa": False,
+                "multigig_only": False,
                 "limit": 3,
             },
         )

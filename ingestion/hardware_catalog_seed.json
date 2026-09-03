@@ -79,13 +79,20 @@
         "uplinks": "4x SFP56",
         "poe_class": "Class 4"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/hardware/switches/6300/QSG/HPE_a00093415en_us.pdf",
       "source_title": "Aruba 6300F/M Start Here guide",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": false,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "JL661A",
@@ -107,13 +114,20 @@
         "uplinks": "4x SFP56",
         "poe_class": "Class 4"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/hardware/switches/6300/QSG/HPE_a00093415en_us.pdf",
       "source_title": "Aruba 6300F/M Start Here guide",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": false,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "JL659A",
@@ -135,13 +149,20 @@
         "uplinks": "4x SFP56",
         "poe_class": "Class 6"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/hardware/switches/6300/QSG/HPE_a00093415en_us.pdf",
       "source_title": "Aruba 6300F/M Start Here guide",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": true,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "JL727B",
@@ -163,13 +184,20 @@
         "uplinks": "4x SFP+",
         "poe_budget": "370W"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/hardware/switches/6200/IGSG/Aruba_6200_IGSG.pdf",
       "source_title": "Aruba 6200F Installation and Getting Started Guide",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": false,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "JL728B",
@@ -191,13 +219,20 @@
         "uplinks": "4x SFP+",
         "poe_budget": "740W"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/hardware/switches/6200/IGSG/Aruba_6200_IGSG.pdf",
       "source_title": "Aruba 6200F Installation and Getting Started Guide",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": false,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "EX4400-48P",
@@ -219,13 +254,20 @@
         "poe_budget": "1310W/2200W",
         "included_power_supply": "1600W AC"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.juniper.net/gb/en/products/switches/ex-series/ex4400-line-of-ethernet-switches-datasheet.html",
       "source_title": "EX4400 Line of Ethernet Switches Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": false,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "EX4400-48MP",
@@ -246,13 +288,20 @@
         "poe_budget": "1260W/2200W",
         "included_power_supply": "1600W AC"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.juniper.net/gb/en/products/switches/ex-series/ex4400-line-of-ethernet-switches-datasheet.html",
       "source_title": "EX4400 Line of Ethernet Switches Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": true,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "EX4100-48P",
@@ -273,13 +322,20 @@
         "poe_per_port": "30W",
         "uplinks": "4x 10GbE and 4x 10/25GbE"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.juniper.net/gb/en/products/switches/ex-series/ex4100-line-of-ethernet-switches-datasheet.html",
       "source_title": "EX4100 Line of Ethernet Switches Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": false,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "EX4400-24P",
@@ -302,13 +358,20 @@
         "included_power_supply": "1050W AC",
         "throughput": "324 Gbps unidirectional / 648 Gbps bidirectional"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.juniper.net/documentation/us/en/hardware/ex4400/topics/concept/ex4400-models.html",
       "source_title": "EX4400 Models and Specifications",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": false,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "EX4100-24P",
@@ -330,13 +393,20 @@
         "uplinks": "4x 10GbE SFP+ and 4x 10/25GbE SFP28",
         "first_junos_release": "22.2R1"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.juniper.net/documentation/us/en/hardware/ex4100/topics/concept/ex4100-models.html",
       "source_title": "EX4100 Models and Specifications",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": false,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "AP47-US",
@@ -358,13 +428,20 @@
         "radios": "four",
         "ethernet": "2x multigigabit RJ45"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.juniper.net/gb/en/products/access-points/ap47-access-point-datasheet.html",
       "source_title": "AP47 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": true,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "AP47E-US",
@@ -386,13 +463,20 @@
         "antenna": "external",
         "ethernet": "2x multigigabit RJ45"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.juniper.net/gb/en/products/access-points/ap47-access-point-datasheet.html",
       "source_title": "AP47 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": true,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "ME-X2-M",
@@ -415,13 +499,20 @@
         "throughput": "40Gbps",
         "interfaces": "4x 10GbE SFP+ data and 2x 1GbE management"
       },
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.juniper.net/content/dam/www/assets/datasheets/us/en/access-points/juniper-edge-datasheet.pdf",
       "source_title": "Juniper Mist Edge Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified",
-      "taa": false
+      "taa": false,
+      "multigig": false,
+      "min_sw": null,
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "JL666A",
@@ -442,12 +533,19 @@
         "minimum_software_version": "10.04.0001"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.04.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "JL667A",
@@ -468,12 +566,19 @@
         "minimum_software_version": "10.04.0001"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.04.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "JL668A",
@@ -494,12 +599,19 @@
         "minimum_software_version": "10.04.0001"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.04.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "R8S89A",
@@ -520,12 +632,19 @@
         "minimum_software_version": "10.10.0002"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": true,
+      "min_sw": "10.10.0002",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "R8S90A",
@@ -546,12 +665,19 @@
         "minimum_software_version": "10.10.0002"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": true,
+      "min_sw": "10.10.0002",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "R8S91A",
@@ -572,12 +698,19 @@
         "minimum_software_version": "10.10.0002"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": true,
+      "min_sw": "10.10.0002",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "R8S92A",
@@ -598,12 +731,19 @@
         "minimum_software_version": "10.10.0002"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.10.0002",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0E91A",
@@ -624,12 +764,19 @@
         "minimum_software_version": "10.13.1000"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": true,
+      "min_sw": "10.13.1000",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0F99A",
@@ -650,12 +797,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0G00A",
@@ -676,12 +830,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0G01A",
@@ -702,12 +863,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0G03A",
@@ -728,12 +896,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0G04A",
@@ -754,12 +929,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": true,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0G05A",
@@ -780,12 +962,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": true,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0G06A",
@@ -806,12 +995,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0G95A",
@@ -832,12 +1028,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0G96A",
@@ -858,12 +1061,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0G97A",
@@ -884,12 +1094,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0G98A",
@@ -910,12 +1127,19 @@
         "minimum_software_version": "10.14.0001"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": false,
+      "min_sw": "10.14.0001",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S0X44A",
@@ -936,12 +1160,19 @@
         "minimum_software_version": "10.13.1000"
       },
       "taa": true,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": true,
+      "min_sw": "10.13.1000",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S3L75A",
@@ -962,12 +1193,19 @@
         "minimum_software_version": "10.14.0006"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": true,
+      "min_sw": "10.14.0006",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S3L76A",
@@ -988,12 +1226,19 @@
         "minimum_software_version": "10.14.0006"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": true,
+      "min_sw": "10.14.0006",
+      "eos_date": null,
+      "eol_date": null
     },
     {
       "sku": "S3L77A",
@@ -1014,12 +1259,19 @@
         "minimum_software_version": "10.14.0006"
       },
       "taa": false,
-      "lifecycle_status": "unknown",
-      "lifecycle": {},
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
       "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
       "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "multigig": true,
+      "min_sw": "10.14.0006",
+      "eos_date": null,
+      "eol_date": null
     }
   ]
 }

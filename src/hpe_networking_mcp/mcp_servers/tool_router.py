@@ -3023,6 +3023,7 @@ if _ROUTER_MODE != "minimal" and "catalog-core" in _BACKENDS:
         vendor: str | None = None,
         include_specs: bool = False,
         include_taa: bool = False,
+        multigig_only: bool = False,
         limit: int = 5,
     ) -> Any:
         """Find HPE Aruba or HPE Juniper SKU candidates from local SQLite.
@@ -3039,6 +3040,7 @@ if _ROUTER_MODE != "minimal" and "catalog-core" in _BACKENDS:
             "query": query,
             "include_specs": include_specs,
             "include_taa": include_taa,
+            "multigig_only": multigig_only,
             "limit": limit,
         }
         if vendor:

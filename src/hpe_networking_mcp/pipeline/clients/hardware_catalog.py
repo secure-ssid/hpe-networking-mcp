@@ -59,6 +59,10 @@ CREATE TABLE products (
     summary TEXT NOT NULL,
     specs_json TEXT NOT NULL,
     taa INTEGER NOT NULL DEFAULT 0,
+    multigig INTEGER NOT NULL DEFAULT 0,
+    min_sw TEXT,
+    eos_date TEXT,
+    eol_date TEXT,
     lifecycle_status TEXT NOT NULL,
     lifecycle_json TEXT NOT NULL,
     source_url TEXT NOT NULL,
@@ -223,7 +227,7 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                 conn.execute(
                     (
                         "INSERT INTO products VALUES "
-                        "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                     ),
                     (
                         sku,
@@ -238,6 +242,10 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                         str(record["summary"]).strip(),
                         json.dumps(specs, sort_keys=True, separators=(",", ":")),
                         1 if record.get("taa") else 0,
+                        1 if record.get("multigig") else 0,
+                        (str(record["min_sw"]).strip() if record.get("min_sw") else None),
+                        (str(record["eos_date"]).strip() if record.get("eos_date") else None),
+                        (str(record["eol_date"]).strip() if record.get("eol_date") else None),
                         status,
                         json.dumps(lifecycle, sort_keys=True, separators=(",", ":")),
                         str(record["source_url"]).strip(),
@@ -304,6 +312,16 @@ def _metadata(conn: sqlite3.Connection) -> dict[str, str]:
 
 
 def _as_result(row: sqlite3.Row, *, include_specs: bool) -> dict[str, Any]:
+    lifecycle: dict[str, Any] = {
+        "status": row["lifecycle_status"],
+        **json.loads(row["lifecycle_json"]),
+    }
+    # Only surface dates when the vendor has actually announced one, so a
+    # current product does not carry empty end-of-sale noise.
+    if row["eos_date"]:
+        lifecycle["end_of_sale"] = row["eos_date"]
+    if row["eol_date"]:
+        lifecycle["end_of_support"] = row["eol_date"]
     result: dict[str, Any] = {
         "sku": row["sku"],
         "vendor": row["vendor"],
@@ -313,10 +331,13 @@ def _as_result(row: sqlite3.Row, *, include_specs: bool) -> dict[str, Any]:
         "device_type": row["device_type"],
         "port_count": row["port_count"],
         "poe": row["poe"] or None,
+        "multigig": bool(row["multigig"]),
+        "min_sw": row["min_sw"],
         "uplinks": row["uplinks"] or None,
+        "description": row["summary"],
         "summary": row["summary"],
         "taa": bool(row["taa"]),
-        "lifecycle": {"status": row["lifecycle_status"], **json.loads(row["lifecycle_json"])},
+        "lifecycle": lifecycle,
         "source": {
             "url": row["source_url"],
             "title": row["source_title"],
@@ -423,6 +444,7 @@ def _candidate_matches(
     vendor: str | None = None,
     limit: int = 5,
     include_taa: bool = True,
+    multigig_only: bool = False,
 ) -> tuple[list[sqlite3.Row], list[str], int, int]:
     """Return bounded ranked matches plus any requested models absent from the catalog.
 
@@ -476,6 +498,8 @@ def _candidate_matches(
     model_token = any(re.fullmatch(r"[a-z]+\d+[a-z0-9]*", token) for token in tokens)
     minimum_score = 10 if model_token else 16
     kept = [row for score, row in ranked if score >= minimum_score]
+    if multigig_only:
+        kept = [row for row in kept if row["multigig"]]
     withheld_taa = 0
     if not include_taa:
         before = len(kept)
@@ -490,6 +514,7 @@ def search(
     vendor: str | None = None,
     include_specs: bool = False,
     include_taa: bool = False,
+    multigig_only: bool = False,
     limit: int = 5,
     db_path: Path = DB_PATH,
 ) -> dict[str, Any]:
@@ -544,7 +569,7 @@ def search(
             }
         matches, uncovered_models, withheld_taa, total_matches = _candidate_matches(
             conn, clean_query, vendor=normalized_vendor, limit=bounded_limit,
-            include_taa=include_taa,
+            include_taa=include_taa, multigig_only=multigig_only,
         )
         if uncovered_models:
             # Fail closed: the query named a model this snapshot does not

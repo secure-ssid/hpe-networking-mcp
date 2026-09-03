@@ -23,6 +23,7 @@ def search_hardware_catalog(
     vendor: str | None = None,
     include_specs: bool = False,
     include_taa: bool = False,
+    multigig_only: bool = False,
     limit: int = 5,
 ) -> dict[str, Any]:
     """Find HPE Aruba or HPE Juniper hardware SKUs without RAG.
@@ -42,6 +43,7 @@ def search_hardware_catalog(
         vendor: Optional ``aruba`` or ``juniper`` filter.
         include_specs: Include detailed normalized specifications (default false).
         include_taa: Include TAA federal-procurement variants (default false).
+        multigig_only: Only Smart Rate / multi-gigabit models (default false).
         limit: Maximum candidates, clamped to 1-50 (default 5).
     """
     return hardware_catalog.search(
@@ -49,6 +51,7 @@ def search_hardware_catalog(
         vendor=vendor,
         include_specs=include_specs,
         include_taa=include_taa,
+        multigig_only=multigig_only,
         limit=limit,
     )
 

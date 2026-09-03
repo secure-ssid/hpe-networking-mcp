@@ -352,3 +352,40 @@ def test_catalog_covers_the_6300l_variant(tmp_path):
 
     skus = {item["sku"] for item in result["results"]}
     assert {"S3L75A", "S3L76A", "S3L77A"} <= skus
+
+
+def test_results_expose_the_requested_operator_columns(tmp_path):
+    """sku / model / poe / port / min sw / multigig / eos / eol / description."""
+    db_path = _built_catalog(tmp_path)
+
+    result = hardware_catalog.search("S3L76A", db_path=db_path)
+    item = result["results"][0]
+
+    for column in ("sku", "model", "poe", "port_count", "min_sw", "multigig", "description"):
+        assert column in item, column
+    assert item["min_sw"] == "10.14.0006"
+    assert item["multigig"] is True
+    assert item["lifecycle"]["status"] == "current"
+
+
+def test_current_products_carry_no_empty_eos_noise(tmp_path):
+    """EoS/EoL keys appear only when the vendor actually announced a date."""
+    db_path = _built_catalog(tmp_path)
+
+    item = hardware_catalog.search("S3L76A", db_path=db_path)["results"][0]
+
+    assert "end_of_sale" not in item["lifecycle"]
+    assert "end_of_support" not in item["lifecycle"]
+    assert "End-of-Sale list" in item["lifecycle"]["basis"]
+
+
+def test_multigig_only_filters_to_smart_rate_models(tmp_path):
+    db_path = _built_catalog(tmp_path)
+
+    result = hardware_catalog.search(
+        "CX 6300", limit=50, multigig_only=True, db_path=db_path
+    )
+
+    assert result["results"]
+    assert all(item["multigig"] is True for item in result["results"])
+    assert {"S3L75A", "S3L76A", "S3L77A"} <= {item["sku"] for item in result["results"]}
