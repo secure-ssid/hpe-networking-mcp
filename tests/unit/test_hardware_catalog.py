@@ -465,9 +465,30 @@ def test_a_catalog_miss_hands_off_to_the_documentation_search(tmp_path):
     """A curated snapshot missing a product must not read as 'does not exist'."""
     db_path = _built_catalog(tmp_path)
 
-    result = hardware_catalog.search("AP-755", db_path=db_path)
+    result = hardware_catalog.search("CX 8325", db_path=db_path)
 
     assert result["ok"] is False
     assert result["next_tool"] == "search_docs"
     assert "search_docs" in result["guidance"]
     assert "does not mean the product does not exist" in result["guidance"]
+
+
+def test_model_identifiers_are_not_presented_as_orderable_part_numbers(tmp_path):
+    """AP-755 is a model name; the ordering part number is not in this snapshot."""
+    db_path = _built_catalog(tmp_path)
+
+    access_point = hardware_catalog.search("AP-755", db_path=db_path)["results"][0]
+    switch = hardware_catalog.search("JL659A", db_path=db_path)["results"][0]
+
+    assert access_point["sku_kind"] == "model"
+    assert switch["sku_kind"] == "part_number"
+
+
+def test_aruba_access_points_report_their_minimum_aos10_release(tmp_path):
+    db_path = _built_catalog(tmp_path)
+
+    result = hardware_catalog.search("760 Series", limit=50, db_path=db_path)
+    skus = {item["sku"]: item for item in result["results"]}
+
+    assert {"AP-763", "AP-764", "AP-765", "AP-765EX"} <= set(skus)
+    assert skus["AP-765"]["min_sw"] == "10.8.0.0"

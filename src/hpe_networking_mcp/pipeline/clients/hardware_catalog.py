@@ -66,6 +66,7 @@ CREATE TABLE products (
     uplinks TEXT,
     summary TEXT NOT NULL,
     specs_json TEXT NOT NULL,
+    sku_kind TEXT NOT NULL DEFAULT 'part_number',
     taa INTEGER NOT NULL DEFAULT 0,
     multigig INTEGER NOT NULL DEFAULT 0,
     min_sw TEXT,
@@ -246,7 +247,7 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                     (
                         "INSERT INTO products VALUES "
                         "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                     ),
                     (
                         sku,
@@ -260,6 +261,7 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                         str(record.get("uplinks") or "").strip(),
                         str(record["summary"]).strip(),
                         json.dumps(specs, sort_keys=True, separators=(",", ":")),
+                        str(record.get("sku_kind") or "part_number"),
                         1 if record.get("taa") else 0,
                         1 if record.get("multigig") else 0,
                         (str(record["min_sw"]).strip() if record.get("min_sw") else None),
@@ -400,6 +402,7 @@ def _as_result(row: sqlite3.Row, *, include_specs: bool) -> dict[str, Any]:
         "description": row["summary"],
         "summary": row["summary"],
         "taa": bool(row["taa"]),
+        "sku_kind": row["sku_kind"],
         "lifecycle": lifecycle,
         "source": {
             "url": row["source_url"],

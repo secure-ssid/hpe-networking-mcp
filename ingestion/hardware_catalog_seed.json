@@ -128,6 +128,12 @@
       "vendor": "juniper",
       "status": "verified",
       "url": "https://www.juniper.net/us/en/products/access-points/ap66-access-point-datasheet.html"
+    },
+    {
+      "id": "aruba-central-onprem-supported-devices",
+      "vendor": "aruba",
+      "status": "verified",
+      "url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm"
     }
   ],
   "products": [
@@ -164,7 +170,8 @@
       "multigig": false,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "JL661A",
@@ -199,7 +206,8 @@
       "multigig": false,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "JL659A",
@@ -234,7 +242,8 @@
       "multigig": true,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "JL727B",
@@ -269,7 +278,8 @@
       "multigig": false,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "JL728B",
@@ -304,7 +314,8 @@
       "multigig": false,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "EX4400-48P",
@@ -339,7 +350,8 @@
       "multigig": false,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "EX4400-48MP",
@@ -373,7 +385,8 @@
       "multigig": true,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "EX4100-48P",
@@ -407,7 +420,8 @@
       "multigig": false,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "EX4400-24P",
@@ -443,7 +457,8 @@
       "multigig": false,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "EX4100-24P",
@@ -478,7 +493,8 @@
       "multigig": false,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "AP47-US",
@@ -498,7 +514,10 @@
       "specs": {
         "wifi": "Wi-Fi 7 (802.11be)",
         "radios": "four",
-        "ethernet": "2x multigigabit RJ45"
+        "ethernet": "2x multigigabit RJ45",
+        "poe_watts_full_functionality": "29.3\u00a0watts",
+        "poe_minimum": "802.3at/bt",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "lifecycle_status": "current",
       "lifecycle": {
@@ -521,7 +540,8 @@
       "iot_sensors": "Pressure, temperature, accelerometer",
       "deployment": "Indoor",
       "ble": true,
-      "zigbee": null
+      "zigbee": null,
+      "sku_kind": "model"
     },
     {
       "sku": "AP47E-US",
@@ -564,7 +584,8 @@
       "iot_sensors": "Pressure, temperature, accelerometer",
       "deployment": "Indoor",
       "ble": true,
-      "zigbee": null
+      "zigbee": null,
+      "sku_kind": "model"
     },
     {
       "sku": "ME-X2-M",
@@ -600,7 +621,8 @@
       "multigig": false,
       "min_sw": null,
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "JL666A",
@@ -633,7 +655,8 @@
       "multigig": false,
       "min_sw": "10.04.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "JL667A",
@@ -666,7 +689,8 @@
       "multigig": false,
       "min_sw": "10.04.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "JL668A",
@@ -699,7 +723,8 @@
       "multigig": false,
       "min_sw": "10.04.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "R8S89A",
@@ -732,7 +757,8 @@
       "multigig": true,
       "min_sw": "10.10.0002",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "R8S90A",
@@ -765,7 +791,8 @@
       "multigig": true,
       "min_sw": "10.10.0002",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "R8S91A",
@@ -798,7 +825,8 @@
       "multigig": true,
       "min_sw": "10.10.0002",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "R8S92A",
@@ -831,7 +859,8 @@
       "multigig": false,
       "min_sw": "10.10.0002",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0E91A",
@@ -864,7 +893,8 @@
       "multigig": true,
       "min_sw": "10.13.1000",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0F99A",
@@ -897,7 +927,8 @@
       "multigig": false,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0G00A",
@@ -930,7 +961,8 @@
       "multigig": false,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0G01A",
@@ -963,7 +995,8 @@
       "multigig": false,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0G03A",
@@ -996,7 +1029,8 @@
       "multigig": false,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0G04A",
@@ -1029,7 +1063,8 @@
       "multigig": true,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0G05A",
@@ -1062,7 +1097,8 @@
       "multigig": true,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0G06A",
@@ -1095,7 +1131,8 @@
       "multigig": false,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0G95A",
@@ -1128,7 +1165,8 @@
       "multigig": false,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0G96A",
@@ -1161,7 +1199,8 @@
       "multigig": false,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0G97A",
@@ -1194,7 +1233,8 @@
       "multigig": false,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0G98A",
@@ -1227,7 +1267,8 @@
       "multigig": false,
       "min_sw": "10.14.0001",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S0X44A",
@@ -1260,7 +1301,8 @@
       "multigig": true,
       "min_sw": "10.13.1000",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S3L75A",
@@ -1293,7 +1335,8 @@
       "multigig": true,
       "min_sw": "10.14.0006",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S3L76A",
@@ -1326,7 +1369,8 @@
       "multigig": true,
       "min_sw": "10.14.0006",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "S3L77A",
@@ -1359,7 +1403,8 @@
       "multigig": true,
       "min_sw": "10.14.0006",
       "eos_date": null,
-      "eol_date": null
+      "eol_date": null,
+      "sku_kind": "part_number"
     },
     {
       "sku": "AP12",
@@ -1373,7 +1418,7 @@
       "family": "AP12",
       "device_type": "ap",
       "port_count": null,
-      "poe": null,
+      "poe": "802.3af minimum",
       "uplinks": null,
       "summary": "Indoor Wall Plate/ Desk Mount Wi-Fi 6 access point (802.11ax (Wi-Fi 6) 2x2:2).",
       "specs": {
@@ -1382,7 +1427,10 @@
         "wi-fi radios": "Dedicated third radio for scanning",
         "antenna options": "Internal",
         "warranty": "Limited Lifetime",
-        "frequencies supported": "2.4 GHz, 5 GHz"
+        "frequencies supported": "2.4 GHz, 5 GHz",
+        "poe_watts_full_functionality": "12.9\u00a0watts",
+        "poe_minimum": "802.3af",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 6",
       "ble": null,
@@ -1405,7 +1453,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap24-access-point-datasheet.html",
       "source_title": "AP24 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP21",
@@ -1429,7 +1478,10 @@
         "virtual bluetooth le": "\u2713",
         "warranty": "Limited Lifetime",
         "power_options": "802.3af PoE 12V/3A DC power supply",
-        "iot_radios": "16 directional antenna + 1 omni antenna Bluetooth -"
+        "iot_radios": "16 directional antenna + 1 omni antenna Bluetooth -",
+        "poe_watts_full_functionality": "12.9\u00a0watts",
+        "poe_minimum": "802.3af",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 5",
       "ble": true,
@@ -1452,7 +1504,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap21-access-point-datasheet.html",
       "source_title": "AP21 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP24",
@@ -1478,7 +1531,10 @@
         "iot sensors": "Temperature, Accelerometer",
         "warranty": "Limited Lifetime",
         "frequencies supported": "2.4 GHz, 5 GHz, 6 GHz",
-        "power_options": "802.3af: Full functionality 5 GHz 2x2 + 2.4 GHz 2x2 + 1x1 scan (tri-band) 5 GHz 2x2 + 6 GHz 2x2 + 1x1 scan (tri-band)"
+        "power_options": "802.3af: Full functionality 5 GHz 2x2 + 2.4 GHz 2x2 + 1x1 scan (tri-band) 5 GHz 2x2 + 6 GHz 2x2 + 1x1 scan (tri-band)",
+        "poe_watts_full_functionality": "13\u00a0watts",
+        "poe_minimum": "802.3af",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 6E",
       "ble": null,
@@ -1501,7 +1557,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap24-access-point-datasheet.html",
       "source_title": "AP24 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP32",
@@ -1530,7 +1587,10 @@
         "warranty": "Limited Lifetime",
         "frequencies supported": "2.4GHz 5GHz",
         "power_options": "802.3at PoE, 802.3bt PoE",
-        "iot_radios": "Omnidirectional Bluetooth antenna Supports superbeacon mode with iBeacon and Eddystone -"
+        "iot_radios": "Omnidirectional Bluetooth antenna Supports superbeacon mode with iBeacon and Eddystone -",
+        "poe_watts_full_functionality": "19.5\u00a0watts",
+        "poe_minimum": "802.3af",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 6",
       "ble": true,
@@ -1553,7 +1613,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap32-access-point-datasheet.html",
       "source_title": "AP32 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP33",
@@ -1581,7 +1642,10 @@
         "warranty": "Limited Lifetime",
         "frequencies supported": "2.4 GHz, 5 GHz",
         "power_options": "802.3at PoE, 802.3bt PoE",
-        "iot_radios": "vBLE 16-element directional antenna array + omnidirecctional Bluetooth antenna -"
+        "iot_radios": "vBLE 16-element directional antenna array + omnidirecctional Bluetooth antenna -",
+        "poe_watts_full_functionality": "19.5\u00a0watts",
+        "poe_minimum": "802.3af",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 6",
       "ble": true,
@@ -1604,7 +1668,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap33-access-point-datasheet.html",
       "source_title": "AP33 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP34",
@@ -1631,7 +1696,9 @@
         "warranty": "Limited Lifetime",
         "frequencies supported": "2.4 GHz, 5 GHz, 6 GHz",
         "power_options": "802.3af: Single radio, cloud connectivity only 802.3at: Full functionality",
-        "iot_radios": "Omni Bluetooth Antenna -"
+        "iot_radios": "Omni Bluetooth Antenna -",
+        "poe_watts_full_functionality": "20.9\u00a0watts",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 6E",
       "ble": true,
@@ -1654,7 +1721,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap34-access-point-datasheet.html",
       "source_title": "AP34 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP36",
@@ -1671,7 +1739,7 @@
       "family": "AP36",
       "device_type": "ap",
       "port_count": null,
-      "poe": null,
+      "poe": "802.3at minimum",
       "uplinks": null,
       "summary": "Indoor Wi-Fi 7 access point (Wi-Fi 7 802.11be 5/6 GHz: (4x4:4) 2.4 GHz: (2x2:2)).",
       "specs": {
@@ -1689,7 +1757,10 @@
         "secondary ethernet port": "Yes",
         "warranty": "Limited lifetime",
         "iot_radios": "Dual core 802.15.4 radios and dual omnidirectional antennas, Bluetooth 6.0. -",
-        "bluetooth_version": "6.0"
+        "bluetooth_version": "6.0",
+        "poe_watts_full_functionality": "29.3\u00a0watts",
+        "poe_minimum": "802.3at",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 7",
       "ble": true,
@@ -1712,7 +1783,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap37-ap36-access-point-datasheet.html",
       "source_title": "AP37 and AP36 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP37",
@@ -1745,7 +1817,9 @@
         "warranty": "Limited lifetime",
         "power_options": "PoE PD Support via Eth0: 802.3bt: Full function. 802.3at: Reduced functionality. 802.3af: All radios disabled, cloud connectivity only.",
         "iot_radios": "Dual core 802.15.4 radios and dual omnidirectional antennas, vBLE directional antenna array, Bluetooth 6.0. -",
-        "bluetooth_version": "6.0"
+        "bluetooth_version": "6.0",
+        "poe_minimum": "802.3at",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 7",
       "ble": true,
@@ -1768,7 +1842,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap37-ap36-access-point-datasheet.html",
       "source_title": "AP37 and AP36 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP41",
@@ -1785,7 +1860,7 @@
       "family": "AP41",
       "device_type": "ap",
       "port_count": null,
-      "poe": null,
+      "poe": "802.3at minimum",
       "uplinks": null,
       "summary": "Indoor Wi-Fi 5 access point (802.11ac Wave2 4x4 : 4).",
       "specs": {
@@ -1795,7 +1870,9 @@
         "antenna options": "Internal/External",
         "virtual bluetooth le": "\u2713",
         "iot interface": "\u2713",
-        "warranty": "Limited Lifetime"
+        "warranty": "Limited Lifetime",
+        "poe_minimum": "802.3at",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 5",
       "ble": true,
@@ -1818,7 +1895,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap21-access-point-datasheet.html",
       "source_title": "AP21 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP43",
@@ -1852,7 +1930,9 @@
         "usb": "\u2713",
         "frequencies supported": "2.4 GHz, 5 GHz",
         "power_options": "802.3at PoE, 802.3bt PoE, 12V/3A DC power supply",
-        "iot_radios": "vBLE 16-element Directional Antenna Array + Omni Bluetooth Antenna -"
+        "iot_radios": "vBLE 16-element Directional Antenna Array + Omni Bluetooth Antenna -",
+        "poe_minimum": "802.3at",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 6",
       "ble": true,
@@ -1875,7 +1955,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap43-access-point-datasheet.html",
       "source_title": "AP43 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP45",
@@ -1906,7 +1987,9 @@
         "warranty": "Limited Lifetime",
         "frequencies supported": "2.4 GHz, 5 GHz, 6 GHz",
         "power_options": "802.3af: Single radio 1x1 + BLE and Scan. Eth0 1 Gbps, Eth1 disabled, no USB. This mode is meant to connect to the cloud and tell you AP needs more power 802.3at: Any two radios 4x4 or with three data",
-        "iot_radios": "vBLE 16-element Directional Antenna Array + Omni Bluetooth Antenna -"
+        "iot_radios": "vBLE 16-element Directional Antenna Array + Omni Bluetooth Antenna -",
+        "poe_watts_full_functionality": "29.3\u00a0watts",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 6E",
       "ble": true,
@@ -1929,7 +2012,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap45-datasheet.html",
       "source_title": "AP45 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP61",
@@ -1957,7 +2041,10 @@
         "virtual bluetooth le": "\u2713",
         "warranty": "1 Year",
         "power_options": "802.3at PoE",
-        "iot_radios": "16 directional antenna + 1 omni antenna -"
+        "iot_radios": "16 directional antenna + 1 omni antenna -",
+        "poe_watts_full_functionality": "19.5\u00a0watts",
+        "poe_minimum": "802.3at",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 5",
       "ble": true,
@@ -1980,7 +2067,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap61-access-point-datasheet.html",
       "source_title": "AP61 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP63",
@@ -2010,7 +2098,10 @@
         "warranty": "One Year",
         "frequencies supported": "2.4 GHz, 5 GHz",
         "power_options": "802.3at PoE (no PoE out), 802.3bt PoE",
-        "iot_radios": "vBLE 16-element Directional Antenna Array + Omni Bluetooth Antenna -"
+        "iot_radios": "vBLE 16-element Directional Antenna Array + Omni Bluetooth Antenna -",
+        "poe_watts_full_functionality": "25.2\u00a0watts",
+        "poe_minimum": "802.3at",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 6",
       "ble": true,
@@ -2033,7 +2124,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap63-access-point-datasheet.html",
       "source_title": "AP63 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP64",
@@ -2059,7 +2151,10 @@
         "gps/gnss": "\u2713",
         "warranty": "One Year",
         "frequencies supported": "2.4 GHz, 5 GHz, 6 GHz",
-        "power_options": "802.3af: Full functionality 5 GHz 2x2 + 2.4 GHz 2x2 + 1x1 scan (tri-band) 5 GHz 2x2 + 6 GHz 2x2 + 1x1 scan (tri-band)"
+        "power_options": "802.3af: Full functionality 5 GHz 2x2 + 2.4 GHz 2x2 + 1x1 scan (tri-band) 5 GHz 2x2 + 6 GHz 2x2 + 1x1 scan (tri-band)",
+        "poe_watts_full_functionality": "13\u00a0watts",
+        "poe_minimum": "802.3af",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 6E",
       "ble": null,
@@ -2082,7 +2177,8 @@
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap64-access-point-datasheet.html",
       "source_title": "AP64 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "sku_kind": "model"
     },
     {
       "sku": "AP66",
@@ -2115,7 +2211,10 @@
         "warranty": "One year",
         "power_options": "PoE PD support via Eth0: 1. 802.3at - Full function 2. 802.3af - All radios disabled. Cloud connectivity only",
         "iot_radios": "Dual core 802.15.4 radios and dual omnidirectional antennas, Bluetooth 6.0 -",
-        "bluetooth_version": "6.0"
+        "bluetooth_version": "6.0",
+        "poe_watts_full_functionality": "25.5\u00a0watts",
+        "poe_minimum": "802.3af (cloud connectivity only)",
+        "poe_source": "Juniper Mist AP PoE requirements"
       },
       "wifi_standard": "Wi-Fi 7",
       "ble": true,
@@ -2137,6 +2236,3573 @@
       },
       "source_url": "https://www.juniper.net/us/en/products/access-points/ap66-access-point-datasheet.html",
       "source_title": "AP66 Access Point Datasheet",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified",
+      "sku_kind": "model"
+    },
+    {
+      "sku": "AP-303",
+      "sku_kind": "model",
+      "aliases": [
+        "AP303",
+        "AP 303",
+        "303 Series AP-303"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-303 Access Point",
+      "family": "303 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "303 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "303 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-303H",
+      "sku_kind": "model",
+      "aliases": [
+        "AP303H",
+        "AP 303H",
+        "303H Series AP-303H"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-303H Access Point",
+      "family": "303H Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "303H Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "303H Series",
+        "wifi_standard_source": "HPE Aruba Networking documentation corpus"
+      },
+      "wifi_standard": "Wi-Fi 5",
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-303P",
+      "sku_kind": "model",
+      "aliases": [
+        "AP303P",
+        "AP 303P",
+        "303 Series AP-303P"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-303P Access Point",
+      "family": "303 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "303 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "303 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-304",
+      "sku_kind": "model",
+      "aliases": [
+        "AP304",
+        "AP 304",
+        "300 Series AP-304"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-304 Access Point",
+      "family": "300 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "300 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "300 Series",
+        "wifi_standard_source": "HPE Aruba Networking documentation corpus"
+      },
+      "wifi_standard": "Wi-Fi 5",
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-305",
+      "sku_kind": "model",
+      "aliases": [
+        "AP305",
+        "AP 305",
+        "300 Series AP-305"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-305 Access Point",
+      "family": "300 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "300 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "300 Series",
+        "wifi_standard_source": "HPE Aruba Networking documentation corpus"
+      },
+      "wifi_standard": "Wi-Fi 5",
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-314",
+      "sku_kind": "model",
+      "aliases": [
+        "AP314",
+        "AP 314",
+        "310 Series AP-314"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-314 Access Point",
+      "family": "310 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "310 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "310 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-315",
+      "sku_kind": "model",
+      "aliases": [
+        "AP315",
+        "AP 315",
+        "310 Series AP-315"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-315 Access Point",
+      "family": "310 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "310 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "310 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-318",
+      "sku_kind": "model",
+      "aliases": [
+        "AP318",
+        "AP 318",
+        "318 Series AP-318"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-318 Access Point",
+      "family": "318 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "318 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "318 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-334",
+      "sku_kind": "model",
+      "aliases": [
+        "AP334",
+        "AP 334",
+        "330 Series AP-334"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-334 Access Point",
+      "family": "330 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "330 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "330 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-335",
+      "sku_kind": "model",
+      "aliases": [
+        "AP335",
+        "AP 335",
+        "330 Series AP-335"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-335 Access Point",
+      "family": "330 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "330 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "330 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-344",
+      "sku_kind": "model",
+      "aliases": [
+        "AP344",
+        "AP 344",
+        "340 Series AP-344"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-344 Access Point",
+      "family": "340 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "340 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "340 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-345",
+      "sku_kind": "model",
+      "aliases": [
+        "AP345",
+        "AP 345",
+        "340 Series AP-345"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-345 Access Point",
+      "family": "340 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "340 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "340 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-365",
+      "sku_kind": "model",
+      "aliases": [
+        "AP365",
+        "AP 365",
+        "360 Series AP-365"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-365 Access Point",
+      "family": "360 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "360 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "360 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-367",
+      "sku_kind": "model",
+      "aliases": [
+        "AP367",
+        "AP 367",
+        "360 Series AP-367"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-367 Access Point",
+      "family": "360 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "360 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "360 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-374",
+      "sku_kind": "model",
+      "aliases": [
+        "AP374",
+        "AP 374",
+        "370 Series AP-374"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-374 Access Point",
+      "family": "370 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "370 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "370 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-375",
+      "sku_kind": "model",
+      "aliases": [
+        "AP375",
+        "AP 375",
+        "370 Series AP-375"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-375 Access Point",
+      "family": "370 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "370 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "370 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-375ATEX",
+      "sku_kind": "model",
+      "aliases": [
+        "AP375ATEX",
+        "AP 375ATEX",
+        "370 Series AP-375ATEX"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-375ATEX Access Point",
+      "family": "370 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "370 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "370 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-375EX",
+      "sku_kind": "model",
+      "aliases": [
+        "AP375EX",
+        "AP 375EX",
+        "370 Series AP-375EX"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-375EX Access Point",
+      "family": "370 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "370 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "370 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-377",
+      "sku_kind": "model",
+      "aliases": [
+        "AP377",
+        "AP 377",
+        "370 Series AP-377"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-377 Access Point",
+      "family": "370 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "370 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "370 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-377EX",
+      "sku_kind": "model",
+      "aliases": [
+        "AP377EX",
+        "AP 377EX",
+        "370 Series AP-377EX"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-377EX Access Point",
+      "family": "370 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "370 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "370 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-387",
+      "sku_kind": "model",
+      "aliases": [
+        "AP387",
+        "AP 387",
+        "380 Series AP-387"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-387 Access Point",
+      "family": "380 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "380 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "380 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-503",
+      "sku_kind": "model",
+      "aliases": [
+        "AP503",
+        "AP 503",
+        "503 Series AP-503"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-503 Access Point",
+      "family": "503 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "503 Series access point supported by AOS-10 from 10.5.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.5.0.0",
+        "release_track": "SSR",
+        "series": "503 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.5.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-503H",
+      "sku_kind": "model",
+      "aliases": [
+        "AP503H",
+        "AP 503H",
+        "500H Series AP-503H"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-503H Access Point",
+      "family": "500H Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "500H Series access point supported by AOS-10 from 10.3.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.0.0",
+        "release_track": "SSR",
+        "series": "500H Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-503R",
+      "sku_kind": "model",
+      "aliases": [
+        "AP503R",
+        "AP 503R",
+        "500R Series AP-503R"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-503R Access Point",
+      "family": "500R Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "500R Series access point supported by AOS-10 from 10.5.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.5.0.0",
+        "release_track": "SSR",
+        "series": "500R Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.5.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-504",
+      "sku_kind": "model",
+      "aliases": [
+        "AP504",
+        "AP 504",
+        "500 Series AP-504"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-504 Access Point",
+      "family": "500 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "500 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "500 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-505",
+      "sku_kind": "model",
+      "aliases": [
+        "AP505",
+        "AP 505",
+        "500 Series AP-505"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-505 Access Point",
+      "family": "500 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "500 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "500 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-505H",
+      "sku_kind": "model",
+      "aliases": [
+        "AP505H",
+        "AP 505H",
+        "500H Series AP-505H"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-505H Access Point",
+      "family": "500H Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "500H Series access point supported by AOS-10 from 10.3.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.0.0",
+        "release_track": "SSR",
+        "series": "500H Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-514",
+      "sku_kind": "model",
+      "aliases": [
+        "AP514",
+        "AP 514",
+        "510 Series AP-514"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-514 Access Point",
+      "family": "510 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "510 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "510 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-515",
+      "sku_kind": "model",
+      "aliases": [
+        "AP515",
+        "AP 515",
+        "510 Series AP-515"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-515 Access Point",
+      "family": "510 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "510 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "510 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-518",
+      "sku_kind": "model",
+      "aliases": [
+        "AP518",
+        "AP 518",
+        "518 Series AP-518"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-518 Access Point",
+      "family": "518 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "518 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "518 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-534",
+      "sku_kind": "model",
+      "aliases": [
+        "AP534",
+        "AP 534",
+        "530 Series AP-534"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-534 Access Point",
+      "family": "530 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "530 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "530 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-535",
+      "sku_kind": "model",
+      "aliases": [
+        "AP535",
+        "AP 535",
+        "530 Series AP-535"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-535 Access Point",
+      "family": "530 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "530 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "530 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-555",
+      "sku_kind": "model",
+      "aliases": [
+        "AP555",
+        "AP 555",
+        "550 Series AP-555"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-555 Access Point",
+      "family": "550 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "550 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "550 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-565",
+      "sku_kind": "model",
+      "aliases": [
+        "AP565",
+        "AP 565",
+        "560 Series AP-565"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-565 Access Point",
+      "family": "560 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "560 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "560 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-565EX",
+      "sku_kind": "model",
+      "aliases": [
+        "AP565EX",
+        "AP 565EX",
+        "560 Series AP-565EX"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-565EX Access Point",
+      "family": "560 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "560 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "560 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-567",
+      "sku_kind": "model",
+      "aliases": [
+        "AP567",
+        "AP 567",
+        "560 Series AP-567"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-567 Access Point",
+      "family": "560 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "560 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "560 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-567EX",
+      "sku_kind": "model",
+      "aliases": [
+        "AP567EX",
+        "AP 567EX",
+        "560 Series AP-567EX"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-567EX Access Point",
+      "family": "560 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "560 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "560 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-574",
+      "sku_kind": "model",
+      "aliases": [
+        "AP574",
+        "AP 574",
+        "570 Series AP-574"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-574 Access Point",
+      "family": "570 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "570 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "570 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-575",
+      "sku_kind": "model",
+      "aliases": [
+        "AP575",
+        "AP 575",
+        "570 Series AP-575"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-575 Access Point",
+      "family": "570 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "570 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "570 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-575EX",
+      "sku_kind": "model",
+      "aliases": [
+        "AP575EX",
+        "AP 575EX",
+        "570 Series AP-575EX"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-575EX Access Point",
+      "family": "570 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "570 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "570 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-577",
+      "sku_kind": "model",
+      "aliases": [
+        "AP577",
+        "AP 577",
+        "570 Series AP-577"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-577 Access Point",
+      "family": "570 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "570 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "570 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-577EX",
+      "sku_kind": "model",
+      "aliases": [
+        "AP577EX",
+        "AP 577EX",
+        "570 Series AP-577EX"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-577EX Access Point",
+      "family": "570 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "570 Series access point supported by AOS-10 from 10.3.1.1 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.3.1.1",
+        "release_track": "SSR",
+        "series": "570 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.3.1.1",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-584",
+      "sku_kind": "model",
+      "aliases": [
+        "AP584",
+        "AP 584",
+        "580 Series AP-584"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-584 Access Point",
+      "family": "580 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "580 Series access point supported by AOS-10 from 10.4.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.4.0.0",
+        "release_track": "LSR",
+        "series": "580 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.4.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-585",
+      "sku_kind": "model",
+      "aliases": [
+        "AP585",
+        "AP 585",
+        "580 Series AP-585"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-585 Access Point",
+      "family": "580 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "580 Series access point supported by AOS-10 from 10.4.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.4.0.0",
+        "release_track": "LSR",
+        "series": "580 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.4.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-585EX",
+      "sku_kind": "model",
+      "aliases": [
+        "AP585EX",
+        "AP 585EX",
+        "580 Series AP-585EX"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-585EX Access Point",
+      "family": "580 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "580 Series access point supported by AOS-10 from 10.4.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.4.0.0",
+        "release_track": "LSR",
+        "series": "580 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.4.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-587",
+      "sku_kind": "model",
+      "aliases": [
+        "AP587",
+        "AP 587",
+        "580 Series AP-587"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-587 Access Point",
+      "family": "580 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "580 Series access point supported by AOS-10 from 10.4.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.4.0.0",
+        "release_track": "LSR",
+        "series": "580 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.4.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-587EX",
+      "sku_kind": "model",
+      "aliases": [
+        "AP587EX",
+        "AP 587EX",
+        "580 Series AP-587EX"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-587EX Access Point",
+      "family": "580 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "580 Series access point supported by AOS-10 from 10.4.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.4.0.0",
+        "release_track": "LSR",
+        "series": "580 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.4.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-605H",
+      "sku_kind": "model",
+      "aliases": [
+        "AP605H",
+        "AP 605H",
+        "600H Series AP-605H"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-605H Access Point",
+      "family": "600H Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "600H Series access point supported by AOS-10 from 10.7.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.0.0",
+        "release_track": "SSR",
+        "series": "600H Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-605R",
+      "sku_kind": "model",
+      "aliases": [
+        "AP605R",
+        "AP 605R",
+        "600R Series AP-605R"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-605R Access Point",
+      "family": "600R Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "600R Series access point supported by AOS-10 from 10.5.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.5.0.0",
+        "release_track": "SSR",
+        "series": "600R Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.5.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-615",
+      "sku_kind": "model",
+      "aliases": [
+        "AP615",
+        "AP 615",
+        "610 Series AP-615"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-615 Access Point",
+      "family": "610 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "610 Series access point supported by AOS-10 from 10.5.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.5.0.0",
+        "release_track": "SSR",
+        "series": "610 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.5.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-634",
+      "sku_kind": "model",
+      "aliases": [
+        "AP634",
+        "AP 634",
+        "630 Series AP-634"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-634 Access Point",
+      "family": "630 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "630 Series access point supported by AOS-10 from 10.6.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.6.0.0",
+        "release_track": "SSR",
+        "series": "630 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.6.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-634A",
+      "sku_kind": "model",
+      "aliases": [
+        "AP634A",
+        "AP 634A",
+        "630 Series AP-634A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-634A Access Point",
+      "family": "630 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "630 Series access point supported by AOS-10 from 10.7.2.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.2.0",
+        "release_track": "SSR",
+        "series": "630 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.2.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-635",
+      "sku_kind": "model",
+      "aliases": [
+        "AP635",
+        "AP 635",
+        "630 Series AP-635"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-635 Access Point",
+      "family": "630 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "630 Series access point supported by AOS-10 from 10.4.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.4.0.0",
+        "release_track": "LSR",
+        "series": "630 Series",
+        "wifi_standard_source": "HPE Aruba Networking documentation corpus"
+      },
+      "wifi_standard": "Wi-Fi 6E",
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.4.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-635A",
+      "sku_kind": "model",
+      "aliases": [
+        "AP635A",
+        "AP 635A",
+        "630 Series AP-635A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-635A Access Point",
+      "family": "630 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "630 Series access point supported by AOS-10 from 10.7.2.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.2.0",
+        "release_track": "SSR",
+        "series": "630 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.2.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-654",
+      "sku_kind": "model",
+      "aliases": [
+        "AP654",
+        "AP 654",
+        "650 Series AP-654"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-654 Access Point",
+      "family": "650 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "650 Series access point supported by AOS-10 from 10.6.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.6.0.0",
+        "release_track": "SSR",
+        "series": "650 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.6.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-654A",
+      "sku_kind": "model",
+      "aliases": [
+        "AP654A",
+        "AP 654A",
+        "650 Series AP-654A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-654A Access Point",
+      "family": "650 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "650 Series access point supported by AOS-10 from 10.7.2.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.2.0",
+        "release_track": "SSR",
+        "series": "650 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.2.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-655",
+      "sku_kind": "model",
+      "aliases": [
+        "AP655",
+        "AP 655",
+        "650 Series AP-655"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-655 Access Point",
+      "family": "650 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "650 Series access point supported by AOS-10 from 10.4.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.4.0.0",
+        "release_track": "LSR",
+        "series": "650 Series",
+        "wifi_standard_source": "HPE Aruba Networking documentation corpus"
+      },
+      "wifi_standard": "Wi-Fi 6E",
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.4.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-655A",
+      "sku_kind": "model",
+      "aliases": [
+        "AP655A",
+        "AP 655A",
+        "650 Series AP-655A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-655A Access Point",
+      "family": "650 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "650 Series access point supported by AOS-10 from 10.7.2.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.2.0",
+        "release_track": "SSR",
+        "series": "650 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.2.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-674",
+      "sku_kind": "model",
+      "aliases": [
+        "AP674",
+        "AP 674",
+        "670 Series AP-674"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-674 Access Point",
+      "family": "670 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "670 Series access point supported by AOS-10 from 10.7.1.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.1.0",
+        "release_track": "SSR",
+        "series": "670 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.1.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-675",
+      "sku_kind": "model",
+      "aliases": [
+        "AP675",
+        "AP 675",
+        "670 Series AP-675"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-675 Access Point",
+      "family": "670 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "670 Series access point supported by AOS-10 from 10.7.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.0.0",
+        "release_track": "SSR",
+        "series": "670 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-677",
+      "sku_kind": "model",
+      "aliases": [
+        "AP677",
+        "AP 677",
+        "670 Series AP-677"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-677 Access Point",
+      "family": "670 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "670 Series access point supported by AOS-10 from 10.7.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.0.0",
+        "release_track": "SSR",
+        "series": "670 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-679",
+      "sku_kind": "model",
+      "aliases": [
+        "AP679",
+        "AP 679",
+        "670 Series AP-679"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-679 Access Point",
+      "family": "670 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "670 Series access point supported by AOS-10 from 10.7.1.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.1.0",
+        "release_track": "SSR",
+        "series": "670 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.1.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-721H",
+      "sku_kind": "model",
+      "aliases": [
+        "AP721H",
+        "AP 721H",
+        "720H Series AP-721H"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-721H Access Point",
+      "family": "720H Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "720H Series access point supported by AOS-10 from 10.8.1.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.8.1.0",
+        "release_track": "LSR",
+        "series": "720H Series",
+        "wifi_standard_source": "HPE Aruba Networking documentation corpus"
+      },
+      "wifi_standard": "Wi-Fi 7",
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.8.1.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-723H",
+      "sku_kind": "model",
+      "aliases": [
+        "AP723H",
+        "AP 723H",
+        "720H Series AP-723H"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-723H Access Point",
+      "family": "720H Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": "802.3af minimum",
+      "uplinks": null,
+      "summary": "720H Series access point supported by AOS-10 from 10.8.1.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.8.1.0",
+        "release_track": "LSR",
+        "series": "720H Series",
+        "wifi_standard_source": "HPE Aruba Networking documentation corpus",
+        "poe_watts_full_functionality": "25.5\u00a0watts",
+        "poe_minimum": "802.3af (cloud connectivity only)",
+        "poe_source": "Juniper Mist AP PoE requirements"
+      },
+      "wifi_standard": "Wi-Fi 7",
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.8.1.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-725",
+      "sku_kind": "model",
+      "aliases": [
+        "AP725",
+        "AP 725",
+        "720 Series AP-725"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-725 Access Point",
+      "family": "720 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "720 Series access point supported by AOS-10 from 10.7.2.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.2.0",
+        "release_track": "SSR",
+        "series": "720 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.2.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-725H",
+      "sku_kind": "model",
+      "aliases": [
+        "AP725H",
+        "AP 725H",
+        "720H Series AP-725H"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-725H Access Point",
+      "family": "720H Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "720H Series access point supported by AOS-10 from 10.8.1.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.8.1.0",
+        "release_track": "LSR",
+        "series": "720H Series",
+        "wifi_standard_source": "HPE Aruba Networking documentation corpus"
+      },
+      "wifi_standard": "Wi-Fi 7",
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.8.1.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-734",
+      "sku_kind": "model",
+      "aliases": [
+        "AP734",
+        "AP 734",
+        "730 Series AP-734"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-734 Access Point",
+      "family": "730 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "730 Series access point supported by AOS-10 from 10.7.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.0.0",
+        "release_track": "SSR",
+        "series": "730 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-734A",
+      "sku_kind": "model",
+      "aliases": [
+        "AP734A",
+        "AP 734A",
+        "730 Series AP-734A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-734A Access Point",
+      "family": "730 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "730 Series access point supported by AOS-10 from 10.7.2.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.2.0",
+        "release_track": "SSR",
+        "series": "730 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.2.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-735",
+      "sku_kind": "model",
+      "aliases": [
+        "AP735",
+        "AP 735",
+        "730 Series AP-735"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-735 Access Point",
+      "family": "730 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "730 Series access point supported by AOS-10 from 10.7.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.0.0",
+        "release_track": "SSR",
+        "series": "730 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-735A",
+      "sku_kind": "model",
+      "aliases": [
+        "AP735A",
+        "AP 735A",
+        "730 Series AP-735A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-735A Access Point",
+      "family": "730 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "730 Series access point supported by AOS-10 from 10.7.2.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.2.0",
+        "release_track": "SSR",
+        "series": "730 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.2.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-745",
+      "sku_kind": "model",
+      "aliases": [
+        "AP745",
+        "AP 745",
+        "740 Series AP-745"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-745 Access Point",
+      "family": "740 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "740 Series access point supported by AOS-10 from 10.8.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.8.0.0",
+        "release_track": "LSR",
+        "series": "740 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.8.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-754",
+      "sku_kind": "model",
+      "aliases": [
+        "AP754",
+        "AP 754",
+        "750 Series AP-754"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-754 Access Point",
+      "family": "750 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "750 Series access point supported by AOS-10 from 10.7.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.0.0",
+        "release_track": "SSR",
+        "series": "750 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-754A",
+      "sku_kind": "model",
+      "aliases": [
+        "AP754A",
+        "AP 754A",
+        "750 Series AP-754A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-754A Access Point",
+      "family": "750 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "750 Series access point supported by AOS-10 from 10.7.2.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.2.0",
+        "release_track": "SSR",
+        "series": "750 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.2.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-755",
+      "sku_kind": "model",
+      "aliases": [
+        "AP755",
+        "AP 755",
+        "750 Series AP-755"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-755 Access Point",
+      "family": "750 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "750 Series access point supported by AOS-10 from 10.7.0.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.0.0",
+        "release_track": "SSR",
+        "series": "750 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-755A",
+      "sku_kind": "model",
+      "aliases": [
+        "AP755A",
+        "AP 755A",
+        "750 Series AP-755A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-755A Access Point",
+      "family": "750 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "750 Series access point supported by AOS-10 from 10.7.2.0 (SSR).",
+      "specs": {
+        "aos10_minimum_release": "10.7.2.0",
+        "release_track": "SSR",
+        "series": "750 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.7.2.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-763",
+      "sku_kind": "model",
+      "aliases": [
+        "AP763",
+        "AP 763",
+        "760 Series AP-763"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-763 Access Point",
+      "family": "760 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "760 Series access point supported by AOS-10 from 10.8.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.8.0.0",
+        "release_track": "LSR",
+        "series": "760 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.8.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-764",
+      "sku_kind": "model",
+      "aliases": [
+        "AP764",
+        "AP 764",
+        "760 Series AP-764"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-764 Access Point",
+      "family": "760 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "760 Series access point supported by AOS-10 from 10.8.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.8.0.0",
+        "release_track": "LSR",
+        "series": "760 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.8.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-765",
+      "sku_kind": "model",
+      "aliases": [
+        "AP765",
+        "AP 765",
+        "760 Series AP-765"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-765 Access Point",
+      "family": "760 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "760 Series access point supported by AOS-10 from 10.8.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.8.0.0",
+        "release_track": "LSR",
+        "series": "760 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.8.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "AP-765EX",
+      "sku_kind": "model",
+      "aliases": [
+        "AP765EX",
+        "AP 765EX",
+        "760 Series AP-765EX"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "AP-765EX Access Point",
+      "family": "760 Series",
+      "device_type": "ap",
+      "port_count": null,
+      "poe": null,
+      "uplinks": null,
+      "summary": "760 Series access point supported by AOS-10 from 10.8.0.0 (LSR).",
+      "specs": {
+        "aos10_minimum_release": "10.8.0.0",
+        "release_track": "LSR",
+        "series": "760 Series"
+      },
+      "wifi_standard": null,
+      "ble": null,
+      "vble": null,
+      "zigbee": null,
+      "uwb": null,
+      "gnss": null,
+      "iot_sensors": null,
+      "deployment": null,
+      "multigig": false,
+      "min_sw": "10.8.0.0",
+      "eos_date": null,
+      "eol_date": null,
+      "taa": false,
+      "lifecycle_status": "current",
+      "lifecycle": {
+        "basis": "not listed in the HPE Aruba hardware End-of-Sale list",
+        "checked_against": "lifecycle_notices/aruba-hardware-end-of-sale-list.md"
+      },
+      "source_url": "https://arubanetworking.hpe.com/techdocs/central-on-prem/303x/content/get-started/supp-devices.htm",
+      "source_title": "HPE Aruba Networking Central On-Premises - Supported Devices",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified"
     }
