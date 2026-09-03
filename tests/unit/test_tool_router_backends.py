@@ -1050,6 +1050,7 @@ def test_hardware_catalog_wrapper_forwards_compact_search_arguments(monkeypatch)
                 "include_specs": False,
                 "include_taa": False,
                 "multigig_only": False,
+                "wifi_standard": None,
                 "limit": 3,
             },
         )

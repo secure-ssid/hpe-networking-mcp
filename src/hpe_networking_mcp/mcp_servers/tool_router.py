@@ -3024,6 +3024,7 @@ if _ROUTER_MODE != "minimal" and "catalog-core" in _BACKENDS:
         include_specs: bool = False,
         include_taa: bool = False,
         multigig_only: bool = False,
+        wifi_standard: str | None = None,
         limit: int = 5,
     ) -> Any:
         """Find HPE Aruba or HPE Juniper SKU candidates from local SQLite.
@@ -3041,6 +3042,7 @@ if _ROUTER_MODE != "minimal" and "catalog-core" in _BACKENDS:
             "include_specs": include_specs,
             "include_taa": include_taa,
             "multigig_only": multigig_only,
+            "wifi_standard": wifi_standard,
             "limit": limit,
         }
         if vendor:

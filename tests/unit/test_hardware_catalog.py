@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -389,3 +390,84 @@ def test_multigig_only_filters_to_smart_rate_models(tmp_path):
     assert result["results"]
     assert all(item["multigig"] is True for item in result["results"])
     assert {"S3L75A", "S3L76A", "S3L77A"} <= {item["sku"] for item in result["results"]}
+
+
+def test_wifi_standard_filter_matches_marketing_and_ieee_names(tmp_path):
+    """'Wi-Fi 7' and '802.11be' name the same generation."""
+    db_path = _built_catalog(tmp_path)
+
+    marketing = hardware_catalog.search(
+        "access point", limit=50, wifi_standard="Wi-Fi 7", db_path=db_path
+    )
+    ieee = hardware_catalog.search(
+        "access point", limit=50, wifi_standard="802.11be", db_path=db_path
+    )
+
+    assert [item["sku"] for item in marketing["results"]] == [
+        item["sku"] for item in ieee["results"]
+    ]
+    assert {"AP36", "AP37", "AP66"} <= {item["sku"] for item in marketing["results"]}
+
+
+def test_wifi_6e_is_not_treated_as_wifi_6(tmp_path):
+    """The 6E suffix is a different generation, not a spelling of Wi-Fi 6."""
+    db_path = _built_catalog(tmp_path)
+
+    six_e = hardware_catalog.search(
+        "access point", limit=50, wifi_standard="Wi-Fi 6E", db_path=db_path
+    )
+    six = hardware_catalog.search(
+        "access point", limit=50, wifi_standard="Wi-Fi 6", db_path=db_path
+    )
+
+    six_e_skus = {item["sku"] for item in six_e["results"]}
+    six_skus = {item["sku"] for item in six["results"]}
+    assert six_e_skus and six_skus
+    assert not (six_e_skus & six_skus)
+    assert "AP45" in six_e_skus
+    assert "AP43" in six_skus
+
+
+def test_access_points_report_iot_radios_separately(tmp_path):
+    """vBLE is a Juniper antenna feature, not a synonym for having Bluetooth."""
+    db_path = _built_catalog(tmp_path)
+
+    wireless = hardware_catalog.search("AP66", db_path=db_path)["results"][0]["wireless"]
+
+    assert wireless["wifi_standard"] == "Wi-Fi 7"
+    assert wireless["zigbee"] is True
+    assert wireless["bluetooth"] is True
+    assert wireless["vble"] is False
+    assert wireless["deployment"] == "Indoor/Outdoor"
+
+
+def test_virtual_ble_implies_a_bluetooth_radio(tmp_path):
+    """A vBLE antenna array cannot exist without Bluetooth."""
+    db_path = _built_catalog(tmp_path)
+
+    with sqlite3.connect(db_path) as conn:
+        broken = conn.execute(
+            "SELECT sku FROM products WHERE vble = 1 AND (ble IS NULL OR ble = 0)"
+        ).fetchall()
+
+    assert broken == []
+
+
+def test_switches_do_not_carry_empty_wireless_noise(tmp_path):
+    db_path = _built_catalog(tmp_path)
+
+    switch = hardware_catalog.search("JL659A", db_path=db_path)["results"][0]
+
+    assert "wireless" not in switch
+
+
+def test_a_catalog_miss_hands_off_to_the_documentation_search(tmp_path):
+    """A curated snapshot missing a product must not read as 'does not exist'."""
+    db_path = _built_catalog(tmp_path)
+
+    result = hardware_catalog.search("AP-755", db_path=db_path)
+
+    assert result["ok"] is False
+    assert result["next_tool"] == "search_docs"
+    assert "search_docs" in result["guidance"]
+    assert "does not mean the product does not exist" in result["guidance"]

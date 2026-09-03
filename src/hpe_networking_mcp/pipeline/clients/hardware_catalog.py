@@ -35,9 +35,17 @@ PARTIAL_COVERAGE_GUIDANCE = (
     "add SKUs, specifications, or lifecycle claims from memory. Do not recommend or "
     "mention a different product family as a newer model, successor, or replacement "
     "unless it appears in these results. If the user needs the full family list, say "
-    "the catalog snapshot is incomplete and point them at the official vendor source."
+    "the catalog snapshot is incomplete and point them at the official vendor source. "
+    "If the requested model is missing entirely, call `search_docs` before concluding "
+    "it does not exist."
 )
 
+RAG_FALLBACK = (
+    "This catalog is a curated SKU snapshot, not the full product line, so a miss here "
+    "does not mean the product does not exist. Call `search_docs` next to check the "
+    "documentation corpus before telling the user anything is unavailable, and never "
+    "fall back to your own memory for models, SKUs or specifications."
+)
 COMPARISON_GUIDANCE = (
     "Describe differences only from the fields under 'comparison'. Do not infer a "
     "distinction from the model name; for example do not claim a modular-versus-fixed "
@@ -61,6 +69,14 @@ CREATE TABLE products (
     taa INTEGER NOT NULL DEFAULT 0,
     multigig INTEGER NOT NULL DEFAULT 0,
     min_sw TEXT,
+    wifi_standard TEXT,
+    ble INTEGER,
+    vble INTEGER,
+    zigbee INTEGER,
+    uwb INTEGER,
+    gnss INTEGER,
+    iot_sensors TEXT,
+    deployment TEXT,
     eos_date TEXT,
     eol_date TEXT,
     lifecycle_status TEXT NOT NULL,
@@ -80,10 +96,12 @@ CREATE TABLE catalog_meta (
 );
 CREATE VIRTUAL TABLE product_fts USING fts5(
     sku, vendor, brand, model, family, device_type, poe, uplinks, summary,
+    wifi_standard,
     tokenize='unicode61 remove_diacritics 2'
 );
 CREATE INDEX idx_products_vendor ON products(vendor);
 CREATE INDEX idx_products_device_type ON products(device_type);
+CREATE INDEX idx_products_wifi ON products(wifi_standard);
 CREATE INDEX idx_products_port_count ON products(port_count);
 CREATE INDEX idx_aliases_sku ON sku_aliases(sku);
 """
@@ -227,7 +245,8 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                 conn.execute(
                     (
                         "INSERT INTO products VALUES "
-                        "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                     ),
                     (
                         sku,
@@ -244,6 +263,26 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                         1 if record.get("taa") else 0,
                         1 if record.get("multigig") else 0,
                         (str(record["min_sw"]).strip() if record.get("min_sw") else None),
+                        (
+                            str(record["wifi_standard"]).strip()
+                            if record.get("wifi_standard")
+                            else None
+                        ),
+                        _tri_state(record.get("ble")),
+                        _tri_state(record.get("vble")),
+                        _tri_state(record.get("zigbee")),
+                        _tri_state(record.get("uwb")),
+                        _tri_state(record.get("gnss")),
+                        (
+                            str(record["iot_sensors"]).strip()
+                            if record.get("iot_sensors")
+                            else None
+                        ),
+                        (
+                            str(record["deployment"]).strip()
+                            if record.get("deployment")
+                            else None
+                        ),
                         (str(record["eos_date"]).strip() if record.get("eos_date") else None),
                         (str(record["eol_date"]).strip() if record.get("eol_date") else None),
                         status,
@@ -264,7 +303,7 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                     conn.execute("INSERT INTO sku_aliases(alias, sku) VALUES (?, ?)", (alias, sku))
                     alias_count += 1
                 conn.execute(
-                    """INSERT INTO product_fts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    """INSERT INTO product_fts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         sku,
                         str(record["vendor"]).strip().casefold(),
@@ -275,6 +314,7 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                         str(record.get("poe") or "").strip(),
                         str(record.get("uplinks") or "").strip(),
                         str(record["summary"]).strip(),
+                        str(record.get("wifi_standard") or "").strip(),
                     ),
                 )
             metadata = {
@@ -311,6 +351,29 @@ def _metadata(conn: sqlite3.Connection) -> dict[str, str]:
     }
 
 
+def _normalise_wifi(value: str | None) -> str:
+    """Match 'wifi7', 'Wi-Fi 7' and '802.11be' to the same generation."""
+    if not value:
+        return ""
+    text = value.casefold()
+    for generation, markers in (
+        ("wifi7", ("wi-fi 7", "wifi 7", "wifi7", "802.11be")),
+        ("wifi6e", ("wi-fi 6e", "wifi 6e", "wifi6e")),
+        ("wifi6", ("wi-fi 6", "wifi 6", "wifi6", "802.11ax")),
+        ("wifi5", ("wi-fi 5", "wifi 5", "wifi5", "802.11ac")),
+    ):
+        if any(marker in text for marker in markers):
+            return generation
+    return text.strip()
+
+
+def _tri_state(value: Any) -> int | None:
+    """Keep unknown distinct from a documented 'No'."""
+    if value is None:
+        return None
+    return 1 if value else 0
+
+
 def _as_result(row: sqlite3.Row, *, include_specs: bool) -> dict[str, Any]:
     lifecycle: dict[str, Any] = {
         "status": row["lifecycle_status"],
@@ -345,6 +408,24 @@ def _as_result(row: sqlite3.Row, *, include_specs: bool) -> dict[str, Any]:
             "status": row["source_status"],
         },
     }
+    wireless: dict[str, Any] = {}
+    if row["wifi_standard"]:
+        wireless["wifi_standard"] = row["wifi_standard"]
+    for column, key in (
+        ("ble", "bluetooth"),
+        ("vble", "vble"),
+        ("zigbee", "zigbee"),
+        ("uwb", "uwb"),
+        ("gnss", "gnss"),
+    ):
+        if row[column] is not None:
+            wireless[key] = bool(row[column])
+    if row["iot_sensors"]:
+        wireless["iot_sensors"] = row["iot_sensors"]
+    if row["deployment"]:
+        wireless["deployment"] = row["deployment"]
+    if wireless:
+        result["wireless"] = wireless
     if include_specs:
         result["specs"] = json.loads(row["specs_json"])
     return result
@@ -445,6 +526,7 @@ def _candidate_matches(
     limit: int = 5,
     include_taa: bool = True,
     multigig_only: bool = False,
+    wifi_standard: str | None = None,
 ) -> tuple[list[sqlite3.Row], list[str], int, int]:
     """Return bounded ranked matches plus any requested models absent from the catalog.
 
@@ -500,6 +582,9 @@ def _candidate_matches(
     kept = [row for score, row in ranked if score >= minimum_score]
     if multigig_only:
         kept = [row for row in kept if row["multigig"]]
+    if wifi_standard:
+        wanted = _normalise_wifi(wifi_standard)
+        kept = [row for row in kept if _normalise_wifi(row["wifi_standard"]) == wanted]
     withheld_taa = 0
     if not include_taa:
         before = len(kept)
@@ -515,6 +600,7 @@ def search(
     include_specs: bool = False,
     include_taa: bool = False,
     multigig_only: bool = False,
+    wifi_standard: str | None = None,
     limit: int = 5,
     db_path: Path = DB_PATH,
 ) -> dict[str, Any]:
@@ -529,7 +615,11 @@ def search(
         return {
             "ok": False,
             "error": "query must not be empty",
-            "guidance": "Include a model, SKU, device type, port count, or PoE requirement.",
+            "guidance": (
+                "Include a model, SKU, device type, port count, or PoE requirement. "
+                + RAG_FALLBACK
+            ),
+            "next_tool": "search_docs",
         }
     normalized_vendor = (
         vendor.strip().casefold() if isinstance(vendor, str) and vendor.strip() else None
@@ -570,6 +660,7 @@ def search(
         matches, uncovered_models, withheld_taa, total_matches = _candidate_matches(
             conn, clean_query, vendor=normalized_vendor, limit=bounded_limit,
             include_taa=include_taa, multigig_only=multigig_only,
+            wifi_standard=wifi_standard,
         )
         if uncovered_models:
             # Fail closed: the query named a model this snapshot does not
@@ -588,8 +679,10 @@ def search(
                     f"{named} is not in this catalog snapshot "
                     f"(coverage: {metadata.get('coverage', 'partial')}). Any items under "
                     "'related' belong to a different product family and must not be "
-                    "substituted. Confirm the model against the official vendor source."
+                    "substituted. Confirm the model against the official vendor source. "
+                    + RAG_FALLBACK
                 ),
+                "next_tool": "search_docs",
                 "catalog": metadata,
                 "provenance": provenance,
             }
@@ -600,8 +693,10 @@ def search(
                 "results": [],
                 "guidance": (
                     "No catalog match. Include the vendor, device type, model/family, and "
-                    "port count or PoE requirement so the catalog can narrow candidates."
+                    "port count or PoE requirement so the catalog can narrow candidates. "
+                    + RAG_FALLBACK
                 ),
+                "next_tool": "search_docs",
                 "catalog": metadata,
                 "provenance": provenance,
             }
