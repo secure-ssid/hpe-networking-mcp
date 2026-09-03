@@ -22,25 +22,33 @@ def search_hardware_catalog(
     query: str,
     vendor: str | None = None,
     include_specs: bool = False,
+    include_taa: bool = False,
     limit: int = 5,
 ) -> dict[str, Any]:
     """Find HPE Aruba or HPE Juniper hardware SKUs without RAG.
 
     Searches a local SQLite catalog: exact SKU/part-number aliases first, then
-    up to five deterministic model/configuration candidates. Use a phrase such
-    as ``CX 6300 PoE 48 port`` when the exact SKU is not known. Responses carry
+    deterministic model/configuration candidates. Use a phrase such as
+    ``CX 6300 PoE 48 port`` when the exact SKU is not known. Responses carry
     concise identity data and official source links; detailed specs are opt-in.
+
+    TAA variants are federal-procurement duplicates of the standard SKUs and
+    are withheld by default so family listings stay readable; the response
+    reports how many were withheld. Raise ``limit`` when the user asks for a
+    whole family: ``total_matches`` reports how many matched.
 
     Args:
         query: SKU, model, or configuration requirement.
         vendor: Optional ``aruba`` or ``juniper`` filter.
         include_specs: Include detailed normalized specifications (default false).
-        limit: Maximum candidates, clamped to 1-5 (default 5).
+        include_taa: Include TAA federal-procurement variants (default false).
+        limit: Maximum candidates, clamped to 1-50 (default 5).
     """
     return hardware_catalog.search(
         query,
         vendor=vendor,
         include_specs=include_specs,
+        include_taa=include_taa,
         limit=limit,
     )
 

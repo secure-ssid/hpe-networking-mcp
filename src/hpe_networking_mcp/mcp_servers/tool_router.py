@@ -3022,16 +3022,23 @@ if _ROUTER_MODE != "minimal" and "catalog-core" in _BACKENDS:
         query: str,
         vendor: str | None = None,
         include_specs: bool = False,
+        include_taa: bool = False,
         limit: int = 5,
     ) -> Any:
         """Find HPE Aruba or HPE Juniper SKU candidates from local SQLite.
 
         Use an exact SKU/part number, or a model/configuration phrase such as
         ``CX 6300 PoE 48 port``. This does not use RAG or call a vendor API.
+
+        TAA federal-procurement variants are withheld unless ``include_taa``
+        is set; the response reports how many were withheld. When the user
+        asks for a whole family, raise ``limit`` (max 50) and check
+        ``total_matches``.
         """
         args: dict[str, Any] = {
             "query": query,
             "include_specs": include_specs,
+            "include_taa": include_taa,
             "limit": limit,
         }
         if vendor:

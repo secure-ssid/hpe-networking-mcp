@@ -58,6 +58,7 @@ CREATE TABLE products (
     uplinks TEXT,
     summary TEXT NOT NULL,
     specs_json TEXT NOT NULL,
+    taa INTEGER NOT NULL DEFAULT 0,
     lifecycle_status TEXT NOT NULL,
     lifecycle_json TEXT NOT NULL,
     source_url TEXT NOT NULL,
@@ -222,7 +223,7 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                 conn.execute(
                     (
                         "INSERT INTO products VALUES "
-                        "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                     ),
                     (
                         sku,
@@ -236,6 +237,7 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                         str(record.get("uplinks") or "").strip(),
                         str(record["summary"]).strip(),
                         json.dumps(specs, sort_keys=True, separators=(",", ":")),
+                        1 if record.get("taa") else 0,
                         status,
                         json.dumps(lifecycle, sort_keys=True, separators=(",", ":")),
                         str(record["source_url"]).strip(),
@@ -313,6 +315,7 @@ def _as_result(row: sqlite3.Row, *, include_specs: bool) -> dict[str, Any]:
         "poe": row["poe"] or None,
         "uplinks": row["uplinks"] or None,
         "summary": row["summary"],
+        "taa": bool(row["taa"]),
         "lifecycle": {"status": row["lifecycle_status"], **json.loads(row["lifecycle_json"])},
         "source": {
             "url": row["source_url"],
@@ -419,13 +422,17 @@ def _candidate_matches(
     *,
     vendor: str | None = None,
     limit: int = 5,
-) -> tuple[list[sqlite3.Row], list[str]]:
+    include_taa: bool = True,
+) -> tuple[list[sqlite3.Row], list[str], int, int]:
     """Return bounded ranked matches plus any requested models absent from the catalog.
 
     The second element is non-empty when the query named a model/family the
     snapshot does not cover. Callers must not present the rows as answers in
     that case: the remaining candidates belong to a *different* family, and
     offering them silently is how a wrong product reaches a quote.
+
+    The third element is the number of TAA variants withheld when
+    ``include_taa`` is false.
     """
     tokens = _tokens(query)
     port_match = _PORT_RE.search(query)
@@ -468,7 +475,13 @@ def _candidate_matches(
     # without a SKU suffix.
     model_token = any(re.fullmatch(r"[a-z]+\d+[a-z0-9]*", token) for token in tokens)
     minimum_score = 10 if model_token else 16
-    return [row for score, row in ranked if score >= minimum_score][:limit], uncovered_models
+    kept = [row for score, row in ranked if score >= minimum_score]
+    withheld_taa = 0
+    if not include_taa:
+        before = len(kept)
+        kept = [row for row in kept if not row["taa"]]
+        withheld_taa = before - len(kept)
+    return kept[:limit], uncovered_models, withheld_taa, len(kept)
 
 
 def search(
@@ -476,10 +489,16 @@ def search(
     *,
     vendor: str | None = None,
     include_specs: bool = False,
+    include_taa: bool = False,
     limit: int = 5,
     db_path: Path = DB_PATH,
 ) -> dict[str, Any]:
-    """Search exact SKU aliases before returning bounded, ranked candidates."""
+    """Search exact SKU aliases before returning bounded, ranked candidates.
+
+    TAA variants are federal-procurement duplicates of the standard SKUs, so
+    they are withheld unless ``include_taa`` is set. They are still counted and
+    reported so the caller knows they exist.
+    """
     clean_query = query.strip()
     if not clean_query:
         return {
@@ -493,7 +512,7 @@ def search(
     if normalized_vendor and normalized_vendor not in {"aruba", "juniper"}:
         return {"ok": False, "error": "vendor must be 'aruba' or 'juniper'"}
     try:
-        bounded_limit = max(1, min(int(limit), 5))
+        bounded_limit = max(1, min(int(limit), 50))
     except (TypeError, ValueError):
         bounded_limit = 5
     try:
@@ -523,8 +542,9 @@ def search(
                 "catalog": metadata,
                 "provenance": provenance,
             }
-        matches, uncovered_models = _candidate_matches(
-            conn, clean_query, vendor=normalized_vendor, limit=bounded_limit
+        matches, uncovered_models, withheld_taa, total_matches = _candidate_matches(
+            conn, clean_query, vendor=normalized_vendor, limit=bounded_limit,
+            include_taa=include_taa,
         )
         if uncovered_models:
             # Fail closed: the query named a model this snapshot does not
@@ -564,7 +584,24 @@ def search(
             "ok": True,
             "match_type": "candidate" if len(matches) > 1 else "best_candidate",
             "results": [_as_result(row, include_specs=include_specs) for row in matches],
-            "guidance": PARTIAL_COVERAGE_GUIDANCE,
+            "total_matches": total_matches,
+            "returned": len(matches),
+            "taa_variants_withheld": withheld_taa,
+            "guidance": (
+                PARTIAL_COVERAGE_GUIDANCE
+                + (
+                    f" Showing {len(matches)} of {total_matches} matches; raise `limit` "
+                    "to see the rest."
+                    if total_matches > len(matches)
+                    else ""
+                )
+                + (
+                    f" {withheld_taa} TAA federal-procurement variant(s) were withheld; "
+                    "pass include_taa=true to list them."
+                    if withheld_taa
+                    else ""
+                )
+            ),
             "catalog": metadata,
             "provenance": provenance,
         }
@@ -586,7 +623,7 @@ def _resolve_comparison_device(
     ).fetchall()
     if exact:
         return exact[0], None
-    candidates, uncovered_models = _candidate_matches(conn, clean_query, limit=5)
+    candidates, uncovered_models, _, _ = _candidate_matches(conn, clean_query, limit=5)
     if uncovered_models:
         return None, {
             "query": clean_query,

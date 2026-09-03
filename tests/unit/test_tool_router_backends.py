@@ -1048,6 +1048,7 @@ def test_hardware_catalog_wrapper_forwards_compact_search_arguments(monkeypatch)
                 "query": "CX 6300 PoE 48 port",
                 "vendor": "aruba",
                 "include_specs": False,
+                "include_taa": False,
                 "limit": 3,
             },
         )

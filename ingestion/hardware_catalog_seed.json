@@ -50,12 +50,21 @@
       "vendor": "juniper",
       "status": "verified",
       "url": "https://www.juniper.net/documentation/us/en/hardware/ex4100/topics/concept/ex4100-models.html"
+    },
+    {
+      "id": "aruba-aoscx-rn-6300-products-supported",
+      "vendor": "aruba",
+      "status": "verified",
+      "url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm"
     }
   ],
   "products": [
     {
       "sku": "JL665A",
-      "aliases": ["Aruba 6300F 48G PoE", "CX6300F-48G-POE"],
+      "aliases": [
+        "Aruba 6300F 48G PoE",
+        "CX6300F-48G-POE"
+      ],
       "vendor": "aruba",
       "brand": "HPE Aruba Networking",
       "model": "CX 6300F 48G Class 4 PoE 4SFP56 Switch",
@@ -65,17 +74,25 @@
       "poe": "Class 4 PoE",
       "uplinks": "4x SFP56",
       "summary": "48-port 1GbE fixed access switch with Class 4 PoE and four SFP56 uplinks.",
-      "specs": {"access_ports": "48x 1GbE", "uplinks": "4x SFP56", "poe_class": "Class 4"},
+      "specs": {
+        "access_ports": "48x 1GbE",
+        "uplinks": "4x SFP56",
+        "poe_class": "Class 4"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.arubanetworks.com/techdocs/hardware/switches/6300/QSG/HPE_a00093415en_us.pdf",
       "source_title": "Aruba 6300F/M Start Here guide",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "JL661A",
-      "aliases": ["Aruba 6300M 48G PoE", "CX6300M-48G-POE"],
+      "aliases": [
+        "Aruba 6300M 48G PoE",
+        "CX6300M-48G-POE"
+      ],
       "vendor": "aruba",
       "brand": "HPE Aruba Networking",
       "model": "CX 6300M 48G Class 4 PoE 4SFP56 Switch",
@@ -85,17 +102,25 @@
       "poe": "Class 4 PoE",
       "uplinks": "4x SFP56",
       "summary": "48-port modular-power 1GbE switch with Class 4 PoE and four SFP56 uplinks.",
-      "specs": {"access_ports": "48x 1GbE", "uplinks": "4x SFP56", "poe_class": "Class 4"},
+      "specs": {
+        "access_ports": "48x 1GbE",
+        "uplinks": "4x SFP56",
+        "poe_class": "Class 4"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.arubanetworks.com/techdocs/hardware/switches/6300/QSG/HPE_a00093415en_us.pdf",
       "source_title": "Aruba 6300F/M Start Here guide",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "JL659A",
-      "aliases": ["Aruba 6300M 48SR5", "CX6300M-48SR5-POE"],
+      "aliases": [
+        "Aruba 6300M 48SR5",
+        "CX6300M-48SR5-POE"
+      ],
       "vendor": "aruba",
       "brand": "HPE Aruba Networking",
       "model": "CX 6300M 48SR5 Class 6 PoE 4SFP56 Switch",
@@ -105,17 +130,25 @@
       "poe": "Class 6 PoE",
       "uplinks": "4x SFP56",
       "summary": "48-port Smart Rate access switch with Class 6 PoE and four SFP56 uplinks.",
-      "specs": {"access_ports": "48x Smart Rate", "uplinks": "4x SFP56", "poe_class": "Class 6"},
+      "specs": {
+        "access_ports": "48x Smart Rate",
+        "uplinks": "4x SFP56",
+        "poe_class": "Class 6"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.arubanetworks.com/techdocs/hardware/switches/6300/QSG/HPE_a00093415en_us.pdf",
       "source_title": "Aruba 6300F/M Start Here guide",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "JL727B",
-      "aliases": ["Aruba 6200F 48G PoE", "CX6200F-48G-POE"],
+      "aliases": [
+        "Aruba 6200F 48G PoE",
+        "CX6200F-48G-POE"
+      ],
       "vendor": "aruba",
       "brand": "HPE Aruba Networking",
       "model": "CX 6200F 48G Class 4 PoE 4SFP+ 370W Switch",
@@ -125,17 +158,25 @@
       "poe": "Class 4 PoE, 370W",
       "uplinks": "4x SFP+",
       "summary": "48-port 1GbE access switch with Class 4 PoE, 370W budget, and four SFP+ uplinks.",
-      "specs": {"access_ports": "48x 1GbE", "uplinks": "4x SFP+", "poe_budget": "370W"},
+      "specs": {
+        "access_ports": "48x 1GbE",
+        "uplinks": "4x SFP+",
+        "poe_budget": "370W"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.arubanetworks.com/techdocs/hardware/switches/6200/IGSG/Aruba_6200_IGSG.pdf",
       "source_title": "Aruba 6200F Installation and Getting Started Guide",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "JL728B",
-      "aliases": ["Aruba 6200F 48G PoE 740W", "CX6200F-48G-POE-740W"],
+      "aliases": [
+        "Aruba 6200F 48G PoE 740W",
+        "CX6200F-48G-POE-740W"
+      ],
       "vendor": "aruba",
       "brand": "HPE Aruba Networking",
       "model": "CX 6200F 48G Class 4 PoE 4SFP+ 740W Switch",
@@ -145,17 +186,25 @@
       "poe": "Class 4 PoE, 740W",
       "uplinks": "4x SFP+",
       "summary": "48-port 1GbE access switch with Class 4 PoE, 740W budget, and four SFP+ uplinks.",
-      "specs": {"access_ports": "48x 1GbE", "uplinks": "4x SFP+", "poe_budget": "740W"},
+      "specs": {
+        "access_ports": "48x 1GbE",
+        "uplinks": "4x SFP+",
+        "poe_budget": "740W"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.arubanetworks.com/techdocs/hardware/switches/6200/IGSG/Aruba_6200_IGSG.pdf",
       "source_title": "Aruba 6200F Installation and Getting Started Guide",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "EX4400-48P",
-      "aliases": ["EX4400 48P", "EX4400-48P-S"],
+      "aliases": [
+        "EX4400 48P",
+        "EX4400-48P-S"
+      ],
       "vendor": "juniper",
       "brand": "HPE Juniper Networking",
       "model": "EX4400-48P Ethernet Switch",
@@ -165,17 +214,24 @@
       "poe": "PoE++, 1310W/2200W with one/two power supplies",
       "uplinks": "Virtual Chassis DAC ordered separately",
       "summary": "48-port 1GbE PoE++ EX4400 switch supplied with a 1600W AC power supply.",
-      "specs": {"access_ports": "48x 10/100/1000BASE-T", "poe_budget": "1310W/2200W", "included_power_supply": "1600W AC"},
+      "specs": {
+        "access_ports": "48x 10/100/1000BASE-T",
+        "poe_budget": "1310W/2200W",
+        "included_power_supply": "1600W AC"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.juniper.net/gb/en/products/switches/ex-series/ex4400-line-of-ethernet-switches-datasheet.html",
       "source_title": "EX4400 Line of Ethernet Switches Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "EX4400-48MP",
-      "aliases": ["EX4400 48MP"],
+      "aliases": [
+        "EX4400 48MP"
+      ],
       "vendor": "juniper",
       "brand": "HPE Juniper Networking",
       "model": "EX4400-48MP Multigigabit Ethernet Switch",
@@ -185,17 +241,24 @@
       "poe": "PoE++, 1260W/2200W with one/two power supplies",
       "uplinks": "Virtual Chassis DAC ordered separately",
       "summary": "48-port multigigabit EX4400 PoE++ switch supplied with a 1600W AC power supply.",
-      "specs": {"access_ports": "12x 100M/1/2.5/5/10GbE plus 36x 100M/1/2.5GbE", "poe_budget": "1260W/2200W", "included_power_supply": "1600W AC"},
+      "specs": {
+        "access_ports": "12x 100M/1/2.5/5/10GbE plus 36x 100M/1/2.5GbE",
+        "poe_budget": "1260W/2200W",
+        "included_power_supply": "1600W AC"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.juniper.net/gb/en/products/switches/ex-series/ex4400-line-of-ethernet-switches-datasheet.html",
       "source_title": "EX4400 Line of Ethernet Switches Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "EX4100-48P",
-      "aliases": ["EX4100 48P"],
+      "aliases": [
+        "EX4100 48P"
+      ],
       "vendor": "juniper",
       "brand": "HPE Juniper Networking",
       "model": "EX4100-48P Ethernet Switch",
@@ -205,17 +268,25 @@
       "poe": "PoE+, up to 30W per port",
       "uplinks": "4x 10GbE and 4x 10/25GbE Virtual Chassis/uplink ports",
       "summary": "48-port 1GbE PoE+ EX4100 switch with redundant fans and a 920W AC power supply.",
-      "specs": {"access_ports": "48x 1GbE", "poe_per_port": "30W", "uplinks": "4x 10GbE and 4x 10/25GbE"},
+      "specs": {
+        "access_ports": "48x 1GbE",
+        "poe_per_port": "30W",
+        "uplinks": "4x 10GbE and 4x 10/25GbE"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.juniper.net/gb/en/products/switches/ex-series/ex4100-line-of-ethernet-switches-datasheet.html",
       "source_title": "EX4100 Line of Ethernet Switches Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "EX4400-24P",
-      "aliases": ["EX4400 24P", "EX4400-24P-S"],
+      "aliases": [
+        "EX4400 24P",
+        "EX4400-24P-S"
+      ],
       "vendor": "juniper",
       "brand": "HPE Juniper Networking",
       "model": "EX4400-24P Ethernet Switch",
@@ -225,17 +296,25 @@
       "poe": "PoE-bt, up to 90W per port",
       "uplinks": "2x 100GbE QSFP28 (built in) plus one extension module slot",
       "summary": "24-port 1GbE PoE-bt EX4400 switch supplied with a 1050W AC power supply.",
-      "specs": {"access_ports": "24x 10/100/1000BASE-T", "poe_per_port": "90W", "included_power_supply": "1050W AC", "throughput": "324 Gbps unidirectional / 648 Gbps bidirectional"},
+      "specs": {
+        "access_ports": "24x 10/100/1000BASE-T",
+        "poe_per_port": "90W",
+        "included_power_supply": "1050W AC",
+        "throughput": "324 Gbps unidirectional / 648 Gbps bidirectional"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.juniper.net/documentation/us/en/hardware/ex4400/topics/concept/ex4400-models.html",
       "source_title": "EX4400 Models and Specifications",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "EX4100-24P",
-      "aliases": ["EX4100 24P"],
+      "aliases": [
+        "EX4100 24P"
+      ],
       "vendor": "juniper",
       "brand": "HPE Juniper Networking",
       "model": "EX4100-24P Ethernet Switch",
@@ -245,17 +324,26 @@
       "poe": "PoE+, 30W per port by default",
       "uplinks": "4x 10GbE SFP+ MACsec-enabled and 4x 10/25GbE SFP28 Virtual Chassis",
       "summary": "24-port 1GbE PoE+ EX4100 switch with redundant fans and a 920W AC power supply.",
-      "specs": {"access_ports": "24x 1GbE", "poe_per_port": "30W", "uplinks": "4x 10GbE SFP+ and 4x 10/25GbE SFP28", "first_junos_release": "22.2R1"},
+      "specs": {
+        "access_ports": "24x 1GbE",
+        "poe_per_port": "30W",
+        "uplinks": "4x 10GbE SFP+ and 4x 10/25GbE SFP28",
+        "first_junos_release": "22.2R1"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.juniper.net/documentation/us/en/hardware/ex4100/topics/concept/ex4100-models.html",
       "source_title": "EX4100 Models and Specifications",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "AP47-US",
-      "aliases": ["AP47 US", "AP47"],
+      "aliases": [
+        "AP47 US",
+        "AP47"
+      ],
       "vendor": "juniper",
       "brand": "HPE Juniper Networking",
       "model": "AP47-US Indoor Omni Wi-Fi 7 Access Point",
@@ -265,17 +353,25 @@
       "poe": "PoE powered device",
       "uplinks": "2x 100M/1/2.5/5/10GbE RJ45",
       "summary": "US indoor-omni four-radio 802.11be Wi-Fi 7 access point.",
-      "specs": {"wifi": "Wi-Fi 7 (802.11be)", "radios": "four", "ethernet": "2x multigigabit RJ45"},
+      "specs": {
+        "wifi": "Wi-Fi 7 (802.11be)",
+        "radios": "four",
+        "ethernet": "2x multigigabit RJ45"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.juniper.net/gb/en/products/access-points/ap47-access-point-datasheet.html",
       "source_title": "AP47 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "AP47E-US",
-      "aliases": ["AP47E US", "AP47 external antenna"],
+      "aliases": [
+        "AP47E US",
+        "AP47 external antenna"
+      ],
       "vendor": "juniper",
       "brand": "HPE Juniper Networking",
       "model": "AP47E-US External-Antenna Wi-Fi 7 Access Point",
@@ -285,17 +381,25 @@
       "poe": "PoE powered device",
       "uplinks": "2x 100M/1/2.5/5/10GbE RJ45",
       "summary": "US external-antenna four-radio 802.11be Wi-Fi 7 access point.",
-      "specs": {"wifi": "Wi-Fi 7 (802.11be)", "antenna": "external", "ethernet": "2x multigigabit RJ45"},
+      "specs": {
+        "wifi": "Wi-Fi 7 (802.11be)",
+        "antenna": "external",
+        "ethernet": "2x multigigabit RJ45"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.juniper.net/gb/en/products/access-points/ap47-access-point-datasheet.html",
       "source_title": "AP47 Access Point Datasheet",
       "snapshot_at": "2026-09-02T00:00:00Z",
-      "source_status": "verified"
+      "source_status": "verified",
+      "taa": false
     },
     {
       "sku": "ME-X2-M",
-      "aliases": ["Mist Edge X2", "ME X2 M"],
+      "aliases": [
+        "Mist Edge X2",
+        "ME X2 M"
+      ],
       "vendor": "juniper",
       "brand": "HPE Juniper Networking",
       "model": "Mist Edge ME-X2-M Appliance",
@@ -305,11 +409,615 @@
       "poe": "Not applicable",
       "uplinks": "4x 10GbE SFP+ data and 2x 1GbE management",
       "summary": "Mist Edge appliance supporting up to 2,000 APs, 20,000 clients, and 40Gbps throughput.",
-      "specs": {"max_aps": 2000, "max_clients": 20000, "throughput": "40Gbps", "interfaces": "4x 10GbE SFP+ data and 2x 1GbE management"},
+      "specs": {
+        "max_aps": 2000,
+        "max_clients": 20000,
+        "throughput": "40Gbps",
+        "interfaces": "4x 10GbE SFP+ data and 2x 1GbE management"
+      },
       "lifecycle_status": "unknown",
       "lifecycle": {},
       "source_url": "https://www.juniper.net/content/dam/www/assets/datasheets/us/en/access-points/juniper-edge-datasheet.pdf",
       "source_title": "Juniper Mist Edge Datasheet",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified",
+      "taa": false
+    },
+    {
+      "sku": "JL666A",
+      "aliases": [
+        "6300F JL666A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "Aruba 6300F 24-port 1GbE Class 4 PoE and 4-port SFP56 Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": "Class 4 PoE",
+      "uplinks": null,
+      "summary": "Aruba 6300F 24-port 1GbE Class 4 PoE and 4-port SFP56 Switch",
+      "specs": {
+        "variant": "6300F",
+        "minimum_software_version": "10.04.0001"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "JL667A",
+      "aliases": [
+        "6300F JL667A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "Aruba 6300F 48-port 1GbE and 4-port SFP56 Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": null,
+      "uplinks": null,
+      "summary": "Aruba 6300F 48-port 1GbE and 4-port SFP56 Switch",
+      "specs": {
+        "variant": "6300F",
+        "minimum_software_version": "10.04.0001"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "JL668A",
+      "aliases": [
+        "6300F JL668A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "Aruba 6300F 24-port 1GbE and 4-port SFP56 Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": null,
+      "uplinks": null,
+      "summary": "Aruba 6300F 24-port 1GbE and 4-port SFP56 Switch",
+      "specs": {
+        "variant": "6300F",
+        "minimum_software_version": "10.04.0001"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "R8S89A",
+      "aliases": [
+        "6300M R8S89A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "Aruba 6300M 24p SR10 10Gbase-T, PTP/AVB, 60W Class6 PoE with 2 x 50G and 2 x 25G MACsec Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": "Class 6 PoE",
+      "uplinks": null,
+      "summary": "Aruba 6300M 24p SR10 10Gbase-T, PTP/AVB, 60W Class6 PoE with 2 x 50G and 2 x 25G MACsec Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.10.0002"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "R8S90A",
+      "aliases": [
+        "6300M R8S90A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "Aruba 6300M 48p SR5 (up to 5G), PTP/AVB, 90W Class 8 PoE with 2 x 50G and 2 x 25G MACsec Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": "Class 8 PoE",
+      "uplinks": null,
+      "summary": "Aruba 6300M 48p SR5 (up to 5G), PTP/AVB, 90W Class 8 PoE with 2 x 50G and 2 x 25G MACsec Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.10.0002"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "R8S91A",
+      "aliases": [
+        "6300M R8S91A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "Aruba 6300M 48p SR5 (up to 5G) 60W Class6 PoE with 12p 90W Class 8 PoE with 2x 50G and 2x10G LRM/MACsec Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": "Class 6 PoE",
+      "uplinks": null,
+      "summary": "Aruba 6300M 48p SR5 (up to 5G) 60W Class6 PoE with 12p 90W Class 8 PoE with 2x 50G and 2x10G LRM/MACsec Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.10.0002"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "R8S92A",
+      "aliases": [
+        "6300M R8S92A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "Aruba 6300M 24p SFP+ 10G LRM support and 2 x 50G and 2 x 25G MACsec Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": null,
+      "uplinks": null,
+      "summary": "Aruba 6300M 24p SFP+ 10G LRM support and 2 x 50G and 2 x 25G MACsec Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.10.0002"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0E91A",
+      "aliases": [
+        "6300M S0E91A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300M 48p SR10 1G/2.5G/5G/10G PTP/AVB Class8 PoE and 4p 100G MACsec Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": "Class 8 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300M 48p SR10 1G/2.5G/5G/10G PTP/AVB Class8 PoE and 4p 100G MACsec Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.13.1000"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0F99A",
+      "aliases": [
+        "6300M S0F99A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300M 24p 1GbE Class4 PoE 4p SFP56 TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": "Class 4 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300M 24p 1GbE Class4 PoE 4p SFP56 TAA Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0G00A",
+      "aliases": [
+        "6300M S0G00A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300M 48p 1GbE 4p SFP56 TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": null,
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300M 48p 1GbE 4p SFP56 TAA Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0G01A",
+      "aliases": [
+        "6300M S0G01A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300M 24p 1GbE 4p SFP56 TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": null,
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300M 24p 1GbE 4p SFP56 TAA Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0G03A",
+      "aliases": [
+        "6300M S0G03A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300M 24p SFP+ and 4p SFP56 TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": null,
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300M 24p SFP+ and 4p SFP56 TAA Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0G04A",
+      "aliases": [
+        "6300M S0G04A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300M 48p HPE Smart Rate 1/2.5/5GbE Class 6 PoE and 4p SFP56 TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": "Class 6 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300M 48p HPE Smart Rate 1/2.5/5GbE Class 6 PoE and 4p SFP56 TAA Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0G05A",
+      "aliases": [
+        "6300M S0G05A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300M 24p HPE Smart Rate 1/2.5/5GbE Class 6 PoE and 4p SFP56 TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": "Class 6 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300M 24p HPE Smart Rate 1/2.5/5GbE Class 6 PoE and 4p SFP56 TAA Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0G06A",
+      "aliases": [
+        "6300M S0G06A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300M 48p 1GbE Class 4 PoE atond 4p SFP56 TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": "Class 4 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300M 48p 1GbE Class 4 PoE atond 4p SFP56 TAA Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0G95A",
+      "aliases": [
+        "6300F S0G95A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300F 48G Class4 4p SFP56 50G TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": "Class 4 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300F 48G Class4 4p SFP56 50G TAA Switch",
+      "specs": {
+        "variant": "6300F",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0G96A",
+      "aliases": [
+        "6300F S0G96A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300F 24G Class4 4p SFP56 50G TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": "Class 4 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300F 24G Class4 4p SFP56 50G TAA Switch",
+      "specs": {
+        "variant": "6300F",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0G97A",
+      "aliases": [
+        "6300F S0G97A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300F 48G 4p SFP56 50G TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": null,
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300F 48G 4p SFP56 50G TAA Switch",
+      "specs": {
+        "variant": "6300F",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0G98A",
+      "aliases": [
+        "6300F S0G98A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300F 24G 4p SFP56 50G TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": null,
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300F 24G 4p SFP56 50G TAA Switch",
+      "specs": {
+        "variant": "6300F",
+        "minimum_software_version": "10.14.0001"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S0X44A",
+      "aliases": [
+        "6300M S0X44A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300M 48p SR10 1G/2.5G/5G/10G PTP/AVB Class8 PoE 4p 100G MACsec TAA Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": "Class 8 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300M 48p SR10 1G/2.5G/5G/10G PTP/AVB Class8 PoE 4p 100G MACsec TAA Switch",
+      "specs": {
+        "variant": "6300M",
+        "minimum_software_version": "10.13.1000"
+      },
+      "taa": true,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S3L75A",
+      "aliases": [
+        "6300L S3L75A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300L 24SRX CL6 2L2Y Layer2 Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 24,
+      "poe": "Class 6 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300L 24SRX CL6 2L2Y Layer2 Switch",
+      "specs": {
+        "variant": "6300L",
+        "minimum_software_version": "10.14.0006"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S3L76A",
+      "aliases": [
+        "6300L S3L76A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300L 48SR5 CL8 2L2Y Layer2 Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": "Class 8 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300L 48SR5 CL8 2L2Y Layer2 Switch",
+      "specs": {
+        "variant": "6300L",
+        "minimum_software_version": "10.14.0006"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
+      "snapshot_at": "2026-09-02T00:00:00Z",
+      "source_status": "verified"
+    },
+    {
+      "sku": "S3L77A",
+      "aliases": [
+        "6300L S3L77A"
+      ],
+      "vendor": "aruba",
+      "brand": "HPE Aruba Networking",
+      "model": "HPE Aruba Networking 6300L 48SR5 CL8/6 2L2P Layer2 Switch",
+      "family": "CX 6300",
+      "device_type": "switch",
+      "port_count": 48,
+      "poe": "Class 8 PoE",
+      "uplinks": null,
+      "summary": "HPE Aruba Networking 6300L 48SR5 CL8/6 2L2P Layer2 Switch",
+      "specs": {
+        "variant": "6300L",
+        "minimum_software_version": "10.14.0006"
+      },
+      "taa": false,
+      "lifecycle_status": "unknown",
+      "lifecycle": {},
+      "source_url": "https://www.arubanetworks.com/techdocs/AOS-CX/Consolidated_RNs/Portal_Home/Content/cx-home.htm",
+      "source_title": "AOS-CX 10.18.0001 release notes, products supported (6300/6300L/6400)",
       "snapshot_at": "2026-09-02T00:00:00Z",
       "source_status": "verified"
     }

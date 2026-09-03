@@ -315,3 +315,40 @@ def test_comparison_guidance_forbids_inferring_from_the_model_name(tmp_path):
     guidance = result["guidance"].casefold()
     assert "do not infer a distinction from the model name" in guidance
     assert "successor or replacement" in guidance
+
+
+def test_taa_variants_are_withheld_by_default_and_counted(tmp_path):
+    """Regression: TAA federal SKUs doubled every family listing."""
+    db_path = _built_catalog(tmp_path)
+
+    default = hardware_catalog.search("CX 6300", limit=50, db_path=db_path)
+    with_taa = hardware_catalog.search(
+        "CX 6300", limit=50, include_taa=True, db_path=db_path
+    )
+
+    assert all(item["taa"] is False for item in default["results"])
+    assert default["taa_variants_withheld"] > 0
+    assert "include_taa=true" in default["guidance"]
+    assert len(with_taa["results"]) > len(default["results"])
+    assert any(item["taa"] is True for item in with_taa["results"])
+
+
+def test_limit_is_no_longer_capped_at_five(tmp_path):
+    """Regression: a hard cap of 5 made whole-family answers impossible."""
+    db_path = _built_catalog(tmp_path)
+
+    result = hardware_catalog.search("CX 6300", limit=50, include_taa=True, db_path=db_path)
+
+    assert len(result["results"]) > 5
+    assert result["returned"] == len(result["results"])
+    assert result["total_matches"] >= result["returned"]
+
+
+def test_catalog_covers_the_6300l_variant(tmp_path):
+    """Regression: the assistant asserted no 6300L exists; it does."""
+    db_path = _built_catalog(tmp_path)
+
+    result = hardware_catalog.search("CX 6300L", limit=50, db_path=db_path)
+
+    skus = {item["sku"] for item in result["results"]}
+    assert {"S3L75A", "S3L76A", "S3L77A"} <= skus
