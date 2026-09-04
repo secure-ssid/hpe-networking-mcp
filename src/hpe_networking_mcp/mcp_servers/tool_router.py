@@ -2954,6 +2954,138 @@ if _ROUTER_MODE != "minimal":
         return await _cached_dispatch(ctx, "get_site_health", args)
 
 
+# ── AOS8 convenience wrappers (fast-path: skip find_tool for common asks) ──
+#
+# Unlike Mist, AOS8 needs no org/site default resolution -- config_path
+# already defaults sensibly (aos8_get_vlans) or the underlying tool has no
+# scoping identifier at all (aos8_list_controllers). The problem these
+# wrappers solve is discovery cost: aos8-core has zero curated top-level
+# convenience tools today, so every "what VLANs/switches/ports look like"
+# question pays a full find_tool semantic search over aos8-core's surface
+# before the model can even name the right curated tool. Gated on router
+# mode only, deliberately *not* also on "aos8-core" in _BACKENDS, for the
+# same reason documented above the Mist wrappers: gating on product
+# selection would make these tools present under ROUTER_MODE_ENV's "every
+# toolset" scenario but absent under RECOMMENDED_PROFILE_ENV (which loads
+# only central,glp,rag), diverging the "default" vs.
+# "default_recommended_profile" counts docs/tool-catalog.md and
+# docs/tool-router.md publish as a single shared number. Calling one of
+# these when aos8-core was never loaded degrades the same way any other
+# aos8-prefixed tool name does: invoke_tool's unknown-tool path already
+# resolves it to a platform-not-enabled hint.
+if _ROUTER_MODE != "minimal":
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def aos8_switches(ctx: Context, limit: int = 50, offset: int = 0) -> Any:
+        """AOS8 Mobility Conductor controller list (`show switches`).
+
+        Fast path for "what switches/controllers do we have" -- dispatches
+        straight to the curated controller-list tool instead of find_tool.
+        """
+        args = {"limit": limit, "offset": offset}
+        return await _cached_dispatch(ctx, "aos8_list_controllers", args)
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def aos8_ports(ctx: Context, ap_name: str, limit: int = 50, offset: int = 0) -> Any:
+        """Wired-port status for one AOS8 AP (`show ap port status`).
+
+        Fast path for "what's the interface/port status on this AP".
+        """
+        args = {"ap_name": ap_name, "limit": limit, "offset": offset}
+        return await _cached_dispatch(ctx, "aos8_get_ap_wired_ports", args)
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def aos8_vlans(
+        ctx: Context, config_path: str = "/md", limit: int = 50, offset: int = 0
+    ) -> Any:
+        """AOS8 VLAN configuration at one hierarchy node (default: `/md`).
+
+        Fast path for "what VLANs are configured" -- dispatches straight to
+        the curated VLAN-list tool instead of find_tool.
+        """
+        args = {"config_path": config_path, "limit": limit, "offset": offset}
+        return await _cached_dispatch(ctx, "aos8_get_vlans", args)
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def aos8_migration(
+        ctx: Context,
+        run_id: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+        include_details: bool = False,
+    ) -> Any:
+        """AOS8 migration-run status (one run) or summary list (all runs).
+
+        Pass run_id for one run's candidate state/results/verification;
+        omit it to list bounded run summaries instead.
+        """
+        if run_id:
+            args: dict[str, Any] = {
+                "run_id": run_id,
+                "limit": limit,
+                "offset": offset,
+                "include_details": include_details,
+            }
+            return await _cached_dispatch(ctx, "aos8_get_migration_run", args)
+        return await _cached_dispatch(
+            ctx, "aos8_list_migration_runs", {"limit": limit, "offset": offset}
+        )
+
+
+# ── ClearPass convenience wrappers (fast-path: skip find_tool for common asks) ──
+#
+# Same rationale as the AOS8 wrappers above: clearpass-core has zero
+# curated top-level convenience tools today, so "who is this MAC/is this
+# session active" questions pay a full find_tool search over clearpass-
+# core's surface (dominated by hundreds of near-duplicate generated ACL
+# config-object tool names) before reaching the three curated lookup tools
+# that actually answer them. Gated on router mode only, for the identical
+# default/default_recommended_profile-count reason documented above.
+if _ROUTER_MODE != "minimal":
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def clearpass_endpoint(ctx: Context, mac_address: str) -> Any:
+        """Look up one ClearPass endpoint by MAC address.
+
+        Fast path for "what do we know about this device" -- dispatches
+        straight to the curated endpoint-by-MAC lookup instead of
+        find_tool.
+        """
+        args = {"mac_address": mac_address}
+        return await _cached_dispatch(ctx, "clearpass_get_endpoint_by_mac", args)
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def clearpass_active_session(
+        ctx: Context, mac_address: str, interval: int | None = None
+    ) -> Any:
+        """Is this MAC's ClearPass session currently active, and since when?
+
+        Fast path for "is this device online right now" -- dispatches
+        straight to the active-session-by-MAC lookup instead of find_tool.
+        """
+        args: dict[str, Any] = {"mac_address": mac_address}
+        if interval is not None:
+            args["interval"] = interval
+        return await _cached_dispatch(ctx, "clearpass_mac_active_session_by_mac_address_get", args)
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def clearpass_sessions(
+        ctx: Context,
+        status: str | None = None,
+        limit: int = 25,
+        offset: int = 0,
+    ) -> Any:
+        """List recent ClearPass Access Tracker sessions, optionally by status.
+
+        Fast path for "what's been authenticating lately" -- pass status
+        (e.g. ``FAILED``, ``ALLOW``) to filter, or omit it for any status.
+        """
+        args: dict[str, Any] = {"limit": limit, "offset": offset}
+        if status is not None:
+            args["status"] = status
+        return await _cached_dispatch(ctx, "clearpass_list_access_tracker_sessions", args)
+
+
 if _ROUTER_MODE != "minimal" and "rag-core" in _BACKENDS:
 
     @_dispatching_wrapper_tool(READ_ONLY)

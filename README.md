@@ -157,7 +157,7 @@ See [Tool router](docs/tool-router.md) for the complete discovery/dispatch/write
 
 | Area | Current snapshot |
 |---|---|
-| Tool catalog | Non-additive profiles: 380 core tools / 2842 read-only optional starters / 5822 read-write optional starters; REST/OpenAPI platform API backend total: 6,712; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,729; direct-all: 6,741 |
+| Tool catalog | Non-additive profiles: 380 core tools / 2842 read-only optional starters / 5822 read-write optional starters; REST/OpenAPI platform API backend total: 6,712; protocol-only Central Streaming: 1; cross-platform site-health: 1; complete backend index: 6,729; direct-all: 6,748 |
 | Capability totals (platform APIs) | 3,160 read / 165 diagnostic / 2,545 write / 842 destructive |
 | RAG | 392,471 prose chunks in LanceDB across 30 scraped sources |
 | Structured lookup | 2,734 endpoints, 6,363 schemas, 31,432 fields, 104 advisories, 345 lifecycle records |

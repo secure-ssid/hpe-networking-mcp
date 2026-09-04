@@ -1174,6 +1174,180 @@ def test_mist_health_wrapper_errors_without_any_site_identifier(monkeypatch):
     assert "error" in result
 
 
+def test_aos8_switches_wrapper_forwards_pagination(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"controllers": {"items": []}}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.aos8_switches(object(), limit=10, offset=5))
+
+    assert result == {"controllers": {"items": []}}
+    assert calls == [("aos8_list_controllers", {"limit": 10, "offset": 5})]
+
+
+def test_aos8_ports_wrapper_forwards_ap_name(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"wired_ports": {"items": []}}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.aos8_ports(object(), ap_name="ap-01"))
+
+    assert result == {"wired_ports": {"items": []}}
+    assert calls == [("aos8_get_ap_wired_ports", {"ap_name": "ap-01", "limit": 50, "offset": 0})]
+
+
+def test_aos8_vlans_wrapper_defaults_config_path(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"vlans": []}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.aos8_vlans(object()))
+
+    assert result == {"vlans": []}
+    assert calls == [("aos8_get_vlans", {"config_path": "/md", "limit": 50, "offset": 0})]
+
+
+def test_aos8_migration_wrapper_gets_one_run_when_run_id_given(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"run": {"id": "run-1"}}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.aos8_migration(object(), run_id="run-1"))
+
+    assert result == {"run": {"id": "run-1"}}
+    assert calls == [
+        (
+            "aos8_get_migration_run",
+            {"run_id": "run-1", "limit": 50, "offset": 0, "include_details": False},
+        )
+    ]
+
+
+def test_aos8_migration_wrapper_lists_runs_when_run_id_omitted(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"runs": []}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.aos8_migration(object()))
+
+    assert result == {"runs": []}
+    assert calls == [("aos8_list_migration_runs", {"limit": 50, "offset": 0})]
+
+
+def test_clearpass_endpoint_wrapper_forwards_mac_address(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"endpoint": {"status": "Known"}}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.clearpass_endpoint(object(), mac_address="aa:bb:cc:dd:ee:ff"))
+
+    assert result == {"endpoint": {"status": "Known"}}
+    assert calls == [("clearpass_get_endpoint_by_mac", {"mac_address": "aa:bb:cc:dd:ee:ff"})]
+
+
+def test_clearpass_active_session_wrapper_forwards_mac_and_interval(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"active": True}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(
+        router.clearpass_active_session(object(), mac_address="aabbccddeeff", interval=60)
+    )
+
+    assert result == {"active": True}
+    assert calls == [
+        (
+            "clearpass_mac_active_session_by_mac_address_get",
+            {"mac_address": "aabbccddeeff", "interval": 60},
+        )
+    ]
+
+
+def test_clearpass_active_session_wrapper_omits_interval_when_not_given(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    asyncio.run(router.clearpass_active_session(object(), mac_address="aabbccddeeff"))
+
+    assert calls == [
+        ("clearpass_mac_active_session_by_mac_address_get", {"mac_address": "aabbccddeeff"})
+    ]
+
+
+def test_clearpass_sessions_wrapper_forwards_status_filter(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {"sessions": []}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    result = asyncio.run(router.clearpass_sessions(object(), status="FAILED"))
+
+    assert result == {"sessions": []}
+    assert calls == [
+        ("clearpass_list_access_tracker_sessions", {"limit": 25, "offset": 0, "status": "FAILED"})
+    ]
+
+
+def test_clearpass_sessions_wrapper_omits_status_when_not_given(monkeypatch):
+    monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
+    calls = []
+
+    async def fake_invoke_tool(ctx, name, arguments=None):
+        calls.append((name, arguments))
+        return {}
+
+    monkeypatch.setattr(router, "invoke_tool", fake_invoke_tool)
+
+    asyncio.run(router.clearpass_sessions(object()))
+
+    assert calls == [("clearpass_list_access_tracker_sessions", {"limit": 25, "offset": 0})]
+
+
 def test_cached_dispatch_reuses_result_within_ttl(monkeypatch):
     monkeypatch.setattr(router, "_WRAPPER_CACHE", {})
     monkeypatch.delenv("HPE_MCP_ROUTER_WRAPPER_CACHE_TTL_SECONDS", raising=False)

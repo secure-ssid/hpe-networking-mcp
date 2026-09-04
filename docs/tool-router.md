@@ -469,10 +469,10 @@ MCP hop.
 | Profile | Client-visible / indexed tools |
 |---|---:|
 | Minimal router | 3 client-visible tools |
-| Default router | 25 client-visible tools[^compliance-tool] |
+| Default router | 32 client-visible tools[^compliance-tool] |
 | Platform API backend index | 6,712 tools |
 | Complete backend index (platform APIs plus the non-platform backends itemized in [`docs/project-facts.json`](project-facts.json)) | 6,729 tools |
-| Direct-all router | 6,741 client-visible tools |
+| Direct-all router | 6,748 client-visible tools |
 
 </div>
 
@@ -483,7 +483,12 @@ MCP hop.
     wrappers `mist_clients`, `mist_devices`, `mist_ports`, and `mist_health`
     added afterward; `get_site` and `list_clients` (closing a gap where "get
     a site by name"/"list clients" had no direct wrapper) added after that,
-    raising the default-mode count to 25.
+    raising the default-mode count to 25; the AOS8 fast-path wrappers
+    `aos8_switches`, `aos8_ports`, `aos8_vlans`, `aos8_migration` and the
+    ClearPass fast-path wrappers `clearpass_endpoint`,
+    `clearpass_active_session`, `clearpass_sessions` (closing the gap where
+    those two platforms had zero convenience wrappers) added after that,
+    raising the default-mode count to 32.
     `minimal` mode remains the same three-tool surface. This count is
     identical whether every toolset/product is loaded or only the
     documented recommended profile (`HPE_MCP_TOOLSETS=central,glp,rag`) is
