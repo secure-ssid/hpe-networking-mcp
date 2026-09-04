@@ -216,3 +216,17 @@ Postman collections are in `resources/` (git-ignored — download with `python r
 - Large tool results — grep before using: `list_devices`, `get_device_health`, `get_wireless_metrics`, `list_switch_ports`, `list_audit_logs`, `cx_show`.
 - Use `site_id` / `serial_number` / `filter` params to limit API results before they hit context.
 - Use `HPE_MCP_ROUTER_MODE=minimal` and narrow `HPE_MCP_TOOLSETS` for daily client configs; expose optional product backends only when needed.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as GitHub issues in `secure-ssid/hpe-networking-mcp` (via `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
