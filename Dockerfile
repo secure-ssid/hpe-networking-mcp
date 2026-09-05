@@ -50,7 +50,7 @@
 # its own vendored Rust crates are in the image's scan surface. 0.11.x ships
 # quinn-proto 0.11.14 (GHSA-4w2j-m93h-cj5j) and rustls-webpki 0.103.9
 # (GHSA-82j2-j2ch-gfr8); the 0.12 line clears both. Keep this at/above 0.12.5.
-FROM ghcr.io/astral-sh/uv:0.12.5@sha256:e85be844203885286c60ffad8a858d48afb6c5a5c237ca0e67f12e74b8f174b1 AS uv-bin
+FROM ghcr.io/astral-sh/uv:0.12.8@sha256:d1cbaeadc234fe19c0d93daabcf5e98738cd93c6d1dd4918ef6aa30735feb23a AS uv-bin
 
 # Builder and runtime MUST carry byte-identical references -- one interpreter
 # version, one CVE surface. The ARG used to guarantee that structurally; now
