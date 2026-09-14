@@ -113,6 +113,24 @@ def test_vendor_filter_and_detailed_specs(tmp_path):
     assert all("specs" in item for item in result["results"])
 
 
+@pytest.mark.parametrize("tokens", [["switch"], ["notinthecatalogindex"], []])
+@pytest.mark.parametrize("vendor", [None, "juniper", "juniper' OR 1=1 --"])
+def test_candidate_query_variants_bind_vendor_values(tmp_path, tokens, vendor):
+    db_path = _built_catalog(tmp_path)
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = hardware_catalog._candidate_rows(conn, tokens, vendor)
+
+    if vendor == "juniper' OR 1=1 --":
+        assert rows == []
+    elif vendor:
+        assert rows
+        assert all(row["vendor"] == vendor for row in rows)
+    else:
+        assert {row["vendor"] for row in rows} >= {"aruba", "juniper"}
+    assert len(rows) <= 500
+
+
 def test_limit_is_bounded_even_for_a_malformed_client_value(tmp_path):
     db_path = _built_catalog(tmp_path)
 

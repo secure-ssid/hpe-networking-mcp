@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -324,7 +324,7 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                 "coverage": str(seed.get("coverage") or "partial"),
                 "snapshot_at": str(seed.get("snapshot_at") or ""),
                 "source_count": str(len(seed.get("sources") or [])),
-                "built_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
+                "built_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             }
             conn.executemany("INSERT INTO catalog_meta(key, value) VALUES (?, ?)", metadata.items())
             conn.commit()
@@ -437,11 +437,7 @@ def _as_result(row: sqlite3.Row, *, include_specs: bool) -> dict[str, Any]:
 def _candidate_rows(
     conn: sqlite3.Connection, tokens: list[str], vendor: str | None
 ) -> list[sqlite3.Row]:
-    where = ""
-    params: list[Any] = []
-    if vendor:
-        where = " WHERE p.vendor = ?"
-        params.append(vendor)
+    params: list[Any] = [vendor] if vendor else []
     # An OR query protects model/port phrases from becoming an all-token FTS
     # miss. Ranking below remains deterministic and decides the final order.
     words = [token for token in tokens if len(token) > 1]
@@ -449,7 +445,10 @@ def _candidate_rows(
         match = " OR ".join(f'"{word}"' for word in words[:16])
         sql = (
             "SELECT p.* FROM product_fts f JOIN products p ON p.sku = f.sku"
-            f"{where}{' AND' if where else ' WHERE'} product_fts MATCH ? LIMIT 100"
+            " WHERE p.vendor = ? AND product_fts MATCH ? LIMIT 100"
+            if vendor
+            else "SELECT p.* FROM product_fts f JOIN products p ON p.sku = f.sku"
+            " WHERE product_fts MATCH ? LIMIT 100"
         )
         try:
             rows = conn.execute(sql, [*params, match]).fetchall()
@@ -458,8 +457,12 @@ def _candidate_rows(
         except sqlite3.OperationalError:
             # Malformed punctuation must never make a query endpoint fail.
             pass
-    fallback_where = " WHERE vendor = ?" if vendor else ""
-    return conn.execute(f"SELECT * FROM products{fallback_where} LIMIT 500", params).fetchall()
+    fallback_sql = (
+        "SELECT * FROM products WHERE vendor = ? LIMIT 500"
+        if vendor
+        else "SELECT * FROM products LIMIT 500"
+    )
+    return conn.execute(fallback_sql, params).fetchall()
 
 
 def _rank(row: sqlite3.Row, query: str, tokens: list[str], requested_port_count: int | None) -> int:

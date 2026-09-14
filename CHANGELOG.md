@@ -26,6 +26,10 @@ time. This file is the compact index into those pages. See
 
 ### Fixed
 
+- **Python 3.10 catalog compatibility.** Hardware and JVD index timestamps use
+  `timezone.utc`, preserving aware UTC timestamps on the supported minimum Python version.
+- **Catalog query auditability.** Full-text and fallback searches use fixed,
+  parameterized SQL statements, with vendor-isolation coverage for each query path.
 - **Strict positive integer quantity semantics in `pipeline/design_bundle.py`.**
   `_resolve_line_item` now explicitly rejects booleans (`True`/`False`), floats (`1.0`, `1.9`, `NaN`, `inf`),
   zero/negative numbers, and non-integer strings as unresolved line items rather than coercing them.
@@ -36,6 +40,9 @@ time. This file is the compact index into those pages. See
 
 ### Changed
 
+- **Patched runtime dependencies.** HTTPX2 and HTTPCore2 are locked to 2.12.0,
+  and both Python image stages share a refreshed official Bookworm digest.
+  The dependency, image, and SAST gates remain enforced without new exclusions.
 - **Request-local SKU lookup reuse in `pipeline/design_bundle.py`.**
   Repeated line items with identical SKUs within a single `build_design_bundle` call reuse hardware catalog
   search results, bounded by `MAX_LINE_ITEMS`, eliminating duplicate SQLite queries without cross-request or

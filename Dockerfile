@@ -55,7 +55,7 @@ FROM ghcr.io/astral-sh/uv:0.12.8@sha256:d1cbaeadc234fe19c0d93daabcf5e98738cd93c6
 # Builder and runtime MUST carry byte-identical references -- one interpreter
 # version, one CVE surface. The ARG used to guarantee that structurally; now
 # only a test does (test_docker_router_packaging.py).
-FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS builder
+FROM python:3.12-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS builder
 COPY --from=uv-bin /uv /uvx /usr/local/bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
@@ -116,7 +116,7 @@ RUN mkdir -p /spec-index /catalog-index \
     && /app/.venv/bin/python scripts/build_hardware_catalog.py /catalog-index/hardware_catalog.sqlite
 
 # Byte-identical to the builder FROM above, by test.
-FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS runtime
+FROM python:3.12-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS runtime
 
 # scripts/run_http_router.sh execs `uv run hpe-mcp-router`; keep the uv
 # binary in the runtime image too (UV_NO_SYNC below makes this a pure local

@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -153,7 +153,7 @@ def build(*, seed_path: Path = SEED_PATH, db_path: Path = DB_PATH) -> dict[str, 
                 "coverage": str(seed.get("coverage") or "partial"),
                 "coverage_note": str(seed.get("coverage_note") or ""),
                 "snapshot_at": str(seed.get("snapshot_at") or ""),
-                "built_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
+                "built_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             }
             conn.executemany("INSERT INTO index_meta(key, value) VALUES (?, ?)", metadata.items())
             conn.commit()
