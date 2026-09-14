@@ -13,6 +13,36 @@ time. This file is the compact index into those pages. See
 [MIGRATION.md](MIGRATION.md) for the step-by-step move from the legacy
 `secure-ssid/centralmcp` repository to this one.
 
+## [Unreleased]
+
+### Added
+
+- **Self-contained HTML/SVG topology viewer for NeXt UI exporter (`export_next_ui_topology`).**
+  Replaces the preview HTML stub with a portable, offline viewer that opens directly from `file://` URLs.
+  Includes static SVG rendering, spaced edge labels, responsive light/dark themes, accessible
+  `<title>`/`<desc>` tags, search filtering, zoom/reset view controls, node detail inspection, SVG download,
+  and static text/table fallback readable without JavaScript. Maintained full NeXt UI JSON compatibility
+  and response size budget enforcement. Added `scripts/demo_next_ui_topology.py` for offline verification.
+
+### Fixed
+
+- **Strict positive integer quantity semantics in `pipeline/design_bundle.py`.**
+  `_resolve_line_item` now explicitly rejects booleans (`True`/`False`), floats (`1.0`, `1.9`, `NaN`, `inf`),
+  zero/negative numbers, and non-integer strings as unresolved line items rather than coercing them.
+  Malformed Unicode and excessive digit strings do not abort valid neighboring rows;
+  integer strings such as `"+2"` and `"1_000"` remain compatible.
+- **Independent bundle records.** Reused catalog lookups no longer share mutable
+  candidate dictionaries, nested provenance, or resolved lifecycle records between line items.
+
+### Changed
+
+- **Request-local SKU lookup reuse in `pipeline/design_bundle.py`.**
+  Repeated line items with identical SKUs within a single `build_design_bundle` call reuse hardware catalog
+  search results, bounded by `MAX_LINE_ITEMS`, eliminating duplicate SQLite queries without cross-request or
+  global caching.
+- **Browser regression gate.** Dedicated Chromium CI checks cover bounded responsive layout,
+  keyboard controls, edge/group geometry, portable SVG presentation, and offline/text fallback.
+
 ## [0.11.0] - 2026-08-26
 
 Docker release. Full detail in [docs/release-notes-0.11.0.md](docs/release-notes-0.11.0.md).

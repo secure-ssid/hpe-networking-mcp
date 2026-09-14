@@ -544,6 +544,54 @@ class TestResponseEnvelope:
     @pytest.mark.parametrize(
         "message",
         [
+            (
+                "1 validation error for mist_list_sitesArguments\norg_id\n"
+                "  Field required [type=missing, input_value={}, input_type=dict]"
+            ),
+            (
+                "2 validation errors for mist_get_org_sle_overviewArguments\n"
+                "org_id\n  Field required\nduration\n  Field required"
+            ),
+        ],
+    )
+    def test_argument_validation_failure_is_a_caller_error_not_a_server_fault(self, message):
+        """A missing required argument must classify 400, never the 500 fallback.
+
+        Omitting ``org_id`` on a Mist tool produced a pydantic error carrying no
+        HTTP code, so it reached the generic 500 fallback and was reported as
+        "Server error ... retrying may help". Callers then retried the same
+        argument-less call indefinitely rather than supplying the field.
+        """
+        result = ResponseEnvelopeMiddleware().after_call("mist_list_sites", {}, {"error": message})
+
+        assert result is not None
+        assert result["ok"] is False
+        assert result["status"] == 400
+
+    def test_upstream_http_code_still_outranks_validation_text(self):
+        """A real upstream code is more specific than the validation heuristic."""
+        message = (
+            "Client error '422 Unprocessable Entity' for url 'https://x/y'; "
+            "1 validation error for Body"
+        )
+
+        result = ResponseEnvelopeMiddleware().after_call("read_tool", {}, {"error": message})
+
+        assert result is not None
+        assert result["status"] == 422
+
+    def test_unrelated_message_with_digits_still_falls_back_to_500(self):
+        """The validation regex must not swallow ordinary numeric prose."""
+        result = ResponseEnvelopeMiddleware().after_call(
+            "read_tool", {}, {"error": "upstream returned 3 records for site 12 before failing"}
+        )
+
+        assert result is not None
+        assert result["status"] == 500
+
+    @pytest.mark.parametrize(
+        "message",
+        [
             "connection refused",
             "returned 404 devices",
             "timed out after 30 seconds on port 443",

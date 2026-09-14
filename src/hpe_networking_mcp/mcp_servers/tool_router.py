@@ -16,9 +16,9 @@ Optional product backends can be enabled with:
 Toolsets can narrow loaded backends:
   HPE_MCP_TOOLSETS=central,rag
 
-The credential-free ``interop-core`` backend (Central <-> Mist concept
-translation + bounded trend normalization) is always loaded, on every
-profile, and also has its own ``HPE_MCP_TOOLSETS=interop`` value.
+The credential-free ``catalog-core`` (local hardware SKU lookup) and
+``interop-core`` (Central <-> Mist concept translation + bounded trend
+normalization) backends are always loaded on every profile.
 
 Point MCP clients at THIS server instead of individual backend servers to keep
 context cost low and let small local models pick tools reliably.
@@ -85,6 +85,7 @@ from hpe_networking_mcp.mcp_servers.shared import (
     ungated_backend_write_blocked,
     validate_access_profile_environment,
 )
+from hpe_networking_mcp.mcp_servers.skills import set_enabled_platforms
 from hpe_networking_mcp.optional_deps import MissingOptionalDependency
 from hpe_networking_mcp.pipeline import artifact_contracts as _artifact_contracts
 from hpe_networking_mcp.pipeline import compliance as _compliance
@@ -144,6 +145,7 @@ _GENERATED_BACKENDS = {
 #: Each also keeps an explicit toolset entry below for callers that want to
 #: load *only* it.
 _ALWAYS_ON_BACKENDS = {
+    "catalog-core": "hpe_networking_mcp.mcp_servers.catalog",
     "interop-core": "hpe_networking_mcp.mcp_servers.interop",
 }
 _OPTIONAL_BACKENDS = {
@@ -158,6 +160,7 @@ _OPTIONAL_BACKENDS = {
 }
 _OPTIONAL_SERVER_NAMES = {server_name for server_name, _ in _OPTIONAL_BACKENDS.values()}
 _SERVER_PLATFORMS = {
+    "catalog-core": "catalog",
     "interop-core": "interop",
     "central-config": "central",
     "central-monitoring": "central",
@@ -187,6 +190,7 @@ _TOOLSET_BACKENDS = {
     },
     "site-health": {"site-health"},
     "central-generated": {"central-generated"},
+    "catalog": {"catalog-core"},
     "interop": {"interop-core"},
     "clearpass": {"clearpass-core"},
     "mist": {"mist-core"},
@@ -621,6 +625,18 @@ _BACKENDS = _build_backends()
 # the model to call tools that are not in the tool list.
 register_router_prompts(mcp, enabled_backends=_BACKENDS)
 
+# Skills carry the same platform metadata prompts do, so gate them the same
+# way. Ungated, the whole directory was listed regardless of backend, so
+# `uxi-diagnostics` appeared on a deployment with no UXI tool at all -- a
+# runbook whose every step is uncallable.
+set_enabled_platforms(
+    {
+        _SERVER_PLATFORMS[server_name]
+        for server_name in _BACKENDS
+        if server_name in _SERVER_PLATFORMS
+    }
+)
+
 _tool_index: dict[str, Any] = {}  # name -> MCPServer Tool
 _tool_servers: dict[str, Any] = {}  # name -> owning MCPServer backend (for dispatch)
 _tool_backend_names: dict[str, str] = {}  # name -> owning server name
@@ -856,6 +872,12 @@ _STOPWORDS = {
 # whose schema actually accepts the same parameter — never as sole evidence.
 _SCOPE_QUERY_TERMS = {"serial", "site", "workspace", "scope", "region"}
 
+#: Keyword-score penalty applied to generated (one-per-REST-endpoint) tools so
+#: curated entry points win natural-language queries. Deliberately far smaller
+#: than the operationId/path boosts (+3 to +8) that fire when the caller is
+#: actually looking up a specific API operation.
+_GENERATED_KEYWORD_PENALTY = 1.0
+
 
 def _query_tokens(query: str) -> set[str]:
     """Tokenize a find_tool query for high-precision name overlap.
@@ -908,6 +930,13 @@ def _keyword_hits(query: str, limit: int, include_schema: bool = False) -> list[
     q_low = query.lower()
     scored: list[tuple[float, Any]] = []
     for name, tool in _tool_index.items():
+        if _tool_backend_names.get(name) not in _BACKENDS:
+            # ``_tool_index`` spans every backend so discovery can reason about
+            # the whole catalog, but this deployment can only invoke the
+            # enabled ones. The semantic pass has always dropped hits from
+            # disabled backends; the keyword pass did not, so a complete-catalog
+            # index let find_tool recommend tools the router cannot call.
+            continue
         if _optional_write_disabled(name, tool) or _readonly_blocks(tool):
             continue
         name_tokens = set(name.lower().split("_")) - _STOPWORDS
@@ -930,6 +959,15 @@ def _keyword_hits(query: str, limit: int, include_schema: bool = False) -> list[
             score += 0.15
         generated = generated_records.get(name)
         if generated:
+            # Curated tools are the intended entry points for natural-language
+            # questions; generated tools are one-per-REST-endpoint and there
+            # are thousands of them, so on a complete-catalog index they crowd
+            # out the curated tool a user actually wants ("what devices are on
+            # my network" ranked clearpass_network_device_get over
+            # list_devices). Penalise them for generic queries only -- the
+            # operationId and path boosts below are an order of magnitude
+            # larger, so an exact API lookup still wins comfortably.
+            score -= _GENERATED_KEYWORD_PENALTY
             op_id = str(generated.get("operation_id") or "").lower()
             op_key = str(generated.get("operation_key") or "").lower()
             if op_id and op_id == q_low:
@@ -1150,7 +1188,11 @@ def find_tool(
         else:
             vec = _embedder.embed_query(query)
             hits = _lance.search_tools(
-                _lance.connect(), query, vec, top_k=min(max(top_k * 4, 20), 50)
+                _lance.connect(),
+                query,
+                vec,
+                top_k=min(max(top_k * 4, 20), 50),
+                servers=_BACKENDS,
             )
         added = 0
         for h in hits:
@@ -2729,28 +2771,46 @@ if _ROUTER_MODE != "minimal" and "central-monitoring" in _BACKENDS:
         return await invoke_tool(ctx, "get_global_scope_id")
 
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def list_sites(ctx: Context, limit: int = 50, offset: int = 0) -> dict[str, Any]:
-        """List sites (paginated)."""
+    async def list_sites(
+        ctx: Context, limit: int = 50, offset: int = 0
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """List Central sites (paginated). For Mist sites use mist_get.
+
+        Mist equivalent: mist_get with /api/v1/orgs/{org_id}/sites.
+        Returns a bare list unless HPE_MCP_BOUND_LISTS wraps it with pagination.
+        """
         return await invoke_tool(ctx, "list_sites", {"limit": limit, "offset": offset})
 
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def list_devices(ctx: Context, limit: int = 50, offset: int = 0) -> dict[str, Any]:
-        """List devices (paginated)."""
+    async def list_devices(
+        ctx: Context, limit: int = 50, offset: int = 0
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """List Central devices (paginated). For Mist inventory use mist_devices instead.
+
+        Returns a bare list unless HPE_MCP_BOUND_LISTS wraps it with pagination.
+        """
         return await invoke_tool(ctx, "list_devices", {"limit": limit, "offset": offset})
 
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def find_device(ctx: Context, query: str) -> dict[str, Any]:
-        """Find a device by serial number."""
+    async def find_device(ctx: Context, query: str) -> dict[str, Any] | None:
+        """Find a Central device by serial number. Returns None if not found.
+
+        Covers Central-managed devices only. For Mist use mist_devices.
+        """
         return await invoke_tool(ctx, "find_device", {"serial_number": query})
 
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def find_client(ctx: Context, query: str) -> dict[str, Any]:
-        """Find a client by name / MAC / IP."""
+    async def find_client(ctx: Context, query: str) -> dict[str, Any] | None:
+        """Find a Central client by name / MAC / IP. Returns None if not found.
+
+        Covers Central-connected clients only. For Mist use mist_clients, or
+        mist_get_client for one MAC at a known site.
+        """
         return await invoke_tool(ctx, "find_client", {"mac_or_ip": query})
 
     @_dispatching_wrapper_tool(READ_ONLY)
-    async def get_site(ctx: Context, name: str) -> dict[str, Any]:
-        """Find a Central site by name (case-insensitive)."""
+    async def get_site(ctx: Context, name: str) -> dict[str, Any] | None:
+        """Find a Central site by name (case-insensitive). Returns None if not found."""
         return await invoke_tool(ctx, "get_site", {"name": name})
 
     @_dispatching_wrapper_tool(READ_ONLY)
@@ -2954,6 +3014,51 @@ if _ROUTER_MODE != "minimal":
         return await _cached_dispatch(ctx, "get_site_health", args)
 
 
+if _ROUTER_MODE != "minimal" and "catalog-core" in _BACKENDS:
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def search_hardware_catalog(
+        ctx: Context,
+        query: str,
+        vendor: str | None = None,
+        include_specs: bool = False,
+        include_taa: bool = False,
+        multigig_only: bool = False,
+        wifi_standard: str | None = None,
+        limit: int = 5,
+    ) -> Any:
+        """Find HPE Aruba or HPE Juniper SKU candidates from local SQLite.
+
+        Use an exact SKU/part number, or a model/configuration phrase such as
+        ``CX 6300 PoE 48 port``. This does not use RAG or call a vendor API.
+
+        TAA federal-procurement variants are withheld unless ``include_taa``
+        is set; the response reports how many were withheld. When the user
+        asks for a whole family, raise ``limit`` (max 50) and check
+        ``total_matches``.
+        """
+        args: dict[str, Any] = {
+            "query": query,
+            "include_specs": include_specs,
+            "include_taa": include_taa,
+            "multigig_only": multigig_only,
+            "wifi_standard": wifi_standard,
+            "limit": limit,
+        }
+        if vendor:
+            args["vendor"] = vendor
+        return await invoke_tool(ctx, "search_hardware_catalog", args)
+
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def compare_hardware(ctx: Context, devices: list[str]) -> Any:
+        """Compare two to five Aruba or Juniper SKUs from local SQLite.
+
+        This is read-only and available without RAG. Use exact SKUs when a
+        model family has variants; the tool returns choices instead of
+        selecting an arbitrary device.
+        """
+        return await invoke_tool(ctx, "compare_hardware", {"devices": devices})
 # ── AOS8 convenience wrappers (fast-path: skip find_tool for common asks) ──
 #
 # Unlike Mist, AOS8 needs no org/site default resolution -- config_path
@@ -3167,6 +3272,11 @@ if _ROUTER_MODE != "minimal" and "rag-core" in _BACKENDS:
             "list_skills",
             {"platform": platform, "tag": tag, "detail": detail},
         )
+
+    @_dispatching_wrapper_tool(READ_ONLY)
+    async def find_skill(ctx: Context, query: str, limit: int = 3) -> Any:
+        """Find the runbook (skill) matching a free-text request, from rag-core."""
+        return await invoke_tool(ctx, "find_skill", {"query": query, "limit": limit})
 
     @_dispatching_wrapper_tool(READ_ONLY)
     async def load_skill(ctx: Context, name: str) -> Any:

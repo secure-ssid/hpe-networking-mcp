@@ -704,7 +704,7 @@ class TestFindToolTopK:
         monkeypatch.setattr(
             router._lance,
             "search_tools",
-            lambda conn, query, vec, top_k: [
+            lambda conn, query, vec, top_k, servers=None: [
                 {
                     "name": name,
                     "server": "central-monitoring",

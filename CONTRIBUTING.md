@@ -44,16 +44,16 @@ For a complete release/index change, use:
 uv run python scripts/ingest_tools.py --complete-catalog
 uv run python scripts/package_indexes.py --write-local-manifests
 uv run python scripts/project_facts.py --write
-uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6712
+uv run python scripts/validate_release.py --catalog-products all --strict-tool-index --min-tools 6713
 uv run python scripts/check_openapi_drift.py
 uv run python scripts/check_mist_openapi_drift.py
 ```
 
 `--complete-catalog` pins every write gate and generated-tool flag before
 loading the backends, so stale shell or `.env` values cannot silently shrink
-the index. `--min-tools 6712` is the platform API compatibility floor (the
-6,712 vendor-facing platform API tools), not the complete registered backend
-total of 6,729 — validation passes at or above the floor; see
+the index. `--min-tools 6713` is the platform API compatibility floor (the
+6,713 vendor-facing platform API tools), not the complete registered backend
+total of 6,732 — validation passes at or above the floor; see
 [`docs/tool-catalog.md`](docs/tool-catalog.md) for both totals.
 After rebuilding an index, reconcile `data/SOURCE-MANIFEST.json` /
 `data/INDEX-MANIFEST.json` and regenerate
@@ -66,6 +66,19 @@ arguments) fails on drift and on a missing `data/specs.sqlite`. Pass
 
 Commits that change `.github/workflows/*` require a GitHub token with both
 repository write permission and the OAuth `workflow` scope.
+
+## Commit authorship
+
+New commits must not add bot or AI-agent contributor identities or co-author
+trailers. Apply dependency-bot changes as a reviewed human commit rather than
+merging the bot's authorship unchanged.
+
+Published history is not rewritten to remove past attribution. The three
+dependency updates `cef0f28`, `c97f1a0`, and `2c9560f` have explicitly approved,
+full-SHA legacy exceptions in `tests/unit/test_repo_authorship.py`. These pins
+do not exempt an identity, a date range, a short hash, or any future commit.
+The full-history and non-vacuity checks remain enforced; historical GitHub
+contributor entries are not erased by this policy exception.
 
 ## Dependency update pull requests
 

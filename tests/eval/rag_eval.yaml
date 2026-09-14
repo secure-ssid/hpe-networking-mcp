@@ -111,6 +111,18 @@ questions:
       - { match: "product_datasheets/switch-ex4100-f-ethernet-switch.md", gain: 3 }
       - { match: "juniper.net/us/en/products/switches/ex-series/ex4100-f", gain: 2 }
 
+  - id: hpe-cx6300-quickspecs-stacking
+    type: howto
+    query: "What stacking capabilities are documented for the HPE Aruba CX 6300 Switch Series?"
+    expect_sources: ["hpe_quickspecs"]
+    expect_keywords: ["stacking", "6300"]
+
+  - id: hpe-cx6300-quickspecs-poe
+    type: api-lookup
+    query: "What PoE options are documented for the HPE Aruba CX 6300 Switch Series?"
+    expect_sources: ["hpe_quickspecs"]
+    expect_keywords: ["PoE", "6300"]
+
   - id: central-msp-customer-firmware-upgrade-endpoint
     type: api-lookup
     query: "What endpoint upgrades firmware for an MSP customer in Central firmware APIs?"

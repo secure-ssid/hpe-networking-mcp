@@ -15,20 +15,27 @@ def _load_run_eval():
 
 def test_source_rank_matches_citation_url_inside_hit_text():
     run_eval = _load_run_eval()
-    hits = [{
-        "source": "product_datasheets",
-        "file_path": "product_datasheets/switch-ex4100-f-ethernet-switch.md",
-        "text": (
-            "<!-- source: https://www.juniper.net/us/en/products/switches/"
-            "ex-series/ex4100-f-ethernet-switch/specs.html -->"
-        ),
-    }]
+    hits = [
+        {
+            "source": "product_datasheets",
+            "file_path": "product_datasheets/switch-ex4100-f-ethernet-switch.md",
+            "text": (
+                "<!-- source: https://www.juniper.net/us/en/products/switches/"
+                "ex-series/ex4100-f-ethernet-switch/specs.html -->"
+            ),
+        }
+    ]
 
-    assert run_eval._source_rank(
-        hits,
-        ["https://www.juniper.net/us/en/products/switches/ex-series/ex4100-f-ethernet-switch/specs.html"],
-        k=5,
-    ) == 1
+    assert (
+        run_eval._source_rank(
+            hits,
+            [
+                "https://www.juniper.net/us/en/products/switches/ex-series/ex4100-f-ethernet-switch/specs.html"
+            ],
+            k=5,
+        )
+        == 1
+    )
 
 
 def test_rag_eval_catalog_tracks_expanded_vendor_coverage_and_deferred_blockers():
@@ -36,7 +43,7 @@ def test_rag_eval_catalog_tracks_expanded_vendor_coverage_and_deferred_blockers(
     active = {question["id"]: question for question in run_eval.load_questions()}
     deferred = {question["id"]: question for question in run_eval.load_deferred_questions()}
 
-    assert len(active) == 42
+    assert len(active) == 44
     assert {
         "glp-company-workspace",
         "passpoint-list-key",
@@ -48,6 +55,8 @@ def test_rag_eval_catalog_tracks_expanded_vendor_coverage_and_deferred_blockers(
         "junos-ex4100f-configure",
         "mist-edge-part-numbers",
         "hardware-ex4100f-specs",
+        "hpe-cx6300-quickspecs-stacking",
+        "hpe-cx6300-quickspecs-poe",
     } <= active.keys()
     assert {
         "mist-wlan-create-api",

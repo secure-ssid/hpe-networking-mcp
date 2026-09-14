@@ -1,4 +1,4 @@
-"""No bot or AI agent may appear as a contributor on this repository.
+"""Do not add new bot or AI-agent contributor identities to this repository.
 
 GitHub builds the contributor list from the *authors* of commits reachable
 from the default branch, and from ``Co-authored-by:`` trailers in their
@@ -83,6 +83,16 @@ _ESCAPED_COAUTHOR = re.compile(rb"(?i)\\n[ \t]*co-authored-by:[ \t]*" + _IDENTIT
 #: reviewable decision about one specific commit.
 _EXEMPT_TRAILER_SHAS = frozenset({"27f5373ca5654ba7b1d5619192de2a0297fb13fb"})
 
+# These dependency updates were already on main when the operator approved
+# exact legacy exceptions. Preserve published history, not a bot identity allowance.
+_LEGACY_AUTOMATED_COMMIT_SHAS = frozenset(
+    {
+        "cef0f288a41457ffefcd26355ac4288286d96e67",
+        "c97f1a0bb5715c21701e12e340f955781fdf3462",
+        "2c9560f2350570f5c4a6c2268955f7d641578c8e",
+    }
+)
+
 
 def _git_bytes(*args: str) -> bytes:
     return subprocess.run(
@@ -165,11 +175,16 @@ def _log_records(body_format: str) -> list[tuple[str, str]]:
     return records
 
 
+def _without_legacy_automation(records: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    return [(sha, body) for sha, body in records if sha not in _LEGACY_AUTOMATED_COMMIT_SHAS]
+
+
 @pytest.fixture(scope="module")
 def history() -> list[str]:
-    """Commit identities in this repository's history, as ``author\tcommitter`` rows."""
+    """Policy-checked identities, excluding only the approved historical commits."""
     try:
-        return [body for _sha, body in _log_records("%an <%ae>\t%cn <%ce>")]
+        records = _without_legacy_automation(_log_records("%an <%ae>\t%cn <%ce>"))
+        return [body for _sha, body in records]
     except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
         pytest.skip("not a git checkout")
 
@@ -244,12 +259,18 @@ def test_no_commit_message_co_credits_an_agent():
         "fetch-depth: 0 on the checkout step rather than weakening this test"
     )
     assert records, "no commits scanned — shallow checkout or wrong base"
-    assert _EXEMPT_TRAILER_SHAS <= {sha for sha, _ in records}, (
+    assert (_EXEMPT_TRAILER_SHAS | _LEGACY_AUTOMATED_COMMIT_SHAS) <= {
+        sha for sha, _ in records
+    }, (
         "exempted commit is not in the scanned history — wrong base or shallow "
         "checkout, so this guard would pass without checking anything"
     )
 
-    scanned = [(sha, body) for sha, body in records if sha not in _EXEMPT_TRAILER_SHAS]
+    scanned = [
+        (sha, body)
+        for sha, body in _without_legacy_automation(records)
+        if sha not in _EXEMPT_TRAILER_SHAS
+    ]
     raw = "\n".join(body for _sha, body in scanned).encode("utf-8", errors="replace")
     offenders = sorted(
         {
@@ -308,3 +329,34 @@ def test_prose_naming_the_trailer_is_not_an_offender(body):
     ]
 
     assert matches == []
+
+
+def test_legacy_dependency_exceptions_are_exact_published_commits():
+    assert _LEGACY_AUTOMATED_COMMIT_SHAS == {
+        "cef0f288a41457ffefcd26355ac4288286d96e67",
+        "c97f1a0bb5715c21701e12e340f955781fdf3462",
+        "2c9560f2350570f5c4a6c2268955f7d641578c8e",
+    }
+
+
+def test_legacy_exceptions_do_not_allow_future_bot_identities():
+    identity = (
+        "dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>"
+        "\tGitHub <noreply@github.com>"
+    )
+    future_sha = "f" * 40
+    records = [(sha, identity) for sha in _LEGACY_AUTOMATED_COMMIT_SHAS]
+    records.append((future_sha, identity))
+    checked = _without_legacy_automation(records)
+    assert checked == [(future_sha, identity)]
+    assert _offenders([body for _, body in checked], 0)
+    assert _offenders([body for _, body in checked], 1)
+
+
+def test_legacy_exceptions_do_not_allow_new_trailers_or_short_sha_matches():
+    body = "Co-authored-by: dependabot[bot] <bot@github.com>"
+    short_records = [(sha[:7], body) for sha in sorted(_LEGACY_AUTOMATED_COMMIT_SHAS)]
+    future = ("f" * 40, body)
+    checked = _without_legacy_automation(short_records + [future])
+    assert checked == short_records + [future]
+    assert all(_COAUTHOR.search(message.encode()) for _, message in checked)

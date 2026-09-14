@@ -59,6 +59,7 @@ node_modules/
 
 # Scraped doc sources (regenerate with ingestion scrapers)
 ingestion/sources/
+ingestion/quickspecs/
 ingestion/markdown/
 ingestion/markdown_techdocs/
 ingestion/markdown_vsg/

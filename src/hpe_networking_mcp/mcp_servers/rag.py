@@ -1,9 +1,10 @@
-"""MCP server — Aruba/HPE documentation RAG tools (16 tools).
+"""MCP server — Aruba/HPE documentation RAG tools (17 tools).
 
 Covers: hybrid (vector + BM25) search over ingested Aruba Central developer
-docs, tech docs, NAC docs, VSG docs, HTML tech docs, Junos CLI, Junos
-EX/MX/QFX/SRX hardware and release-note prose, and Mist docs/API-reference/
-product-update prose; exact API endpoint/schema/enum lookup via the SQLite
+docs, tech docs, NAC docs, VSG docs, HTML tech docs, manually staged HPE
+QuickSpecs, Junos CLI, Junos EX/MX/QFX/SRX hardware and release-note prose,
+and Mist docs/API-reference/product-update prose; exact API
+endpoint/schema/enum lookup via the SQLite
 specs index with generated-tool coverage; compact Central/GLP API-family
 summaries; exact structured security-advisory/lifecycle lookup, bounded
 list/filter/pagination, an exact-only advisory<->lifecycle correlation, an
@@ -30,11 +31,16 @@ from mcp.server.mcpserver import MCPServer
 
 from hpe_networking_mcp import optional_deps
 from hpe_networking_mcp.mcp_servers.shared import READ_ONLY, READ_ONLY_LOCAL, resolve_rag_backend
-from hpe_networking_mcp.mcp_servers.skills import list_skills_payload, load_skill_payload
+from hpe_networking_mcp.mcp_servers.skills import (
+    find_skill_payload,
+    list_skills_payload,
+    load_skill_payload,
+)
 from hpe_networking_mcp.pipeline import artifact_contracts as contracts
 from hpe_networking_mcp.pipeline.clients import (
     advisory_index,
     aoscx_release_index,
+    hardware_catalog,
     hardware_specs,
     rag_cache,
     specs_index,
@@ -177,6 +183,7 @@ _SOURCE_VENDOR: dict[str, str] = {
     "security_advisories": "aruba",
     "lifecycle_notices": "aruba",
     "product_specs": "aruba",
+    "hpe_quickspecs": "aruba",
     "mist_specs": "juniper",
     "mist_docs": "juniper",
     "mist_api_docs": "juniper",
@@ -291,6 +298,7 @@ _DOC_TYPE_TO_SOURCE: dict[str, str | tuple[str, ...]] = {
     "security-advisory": ("security_advisories", "juniper_security_advisories"),
     "lifecycle": ("lifecycle_notices", "juniper_lifecycle"),
     "product-datasheet": "product_datasheets",
+    "hpe-quickspecs": "hpe_quickspecs",
 }
 _API_QUERY_HINTS = {
     "api",
@@ -1665,14 +1673,18 @@ def _bounded_evidence_answer(
 def lookup_hardware_specs(
     model: str,
 ) -> dict[str, Any]:
-    """Look up authoritative hardware datasheet specifications for switches and APs.
+    """Look up series-level hardware specifications for switches and APs.
 
     Exact, curated catalog lookup (no RAG search) — use this INSTEAD of
-    ask_docs/search_docs for exact hardware datasheet questions. Returns switching
+    ask_docs/search_docs for hardware specification questions. Returns switching
     capacity, throughput, stacking (VSF/Virtual Chassis), port configurations,
     PoE wattage, uplinks, architecture, and routing/security features for
     Aruba CX (6000, 6100, 6200, 6300, 6400, 8325, 8360, 10000), Juniper EX
     (2300, 4000, 4100, 4400, 4650), Aruba APs (635), and Mist APs (45).
+
+    Entries describe a switch/AP *series* and carry no source URL, so they
+    cannot confirm an ordering part number; use search_hardware_catalog for a
+    SKU.
 
     Args:
         model: Hardware model identifier, e.g. "cx6300", "ex4000", "ex4400",
@@ -1686,8 +1698,19 @@ def lookup_hardware_specs(
     if not spec:
         return {
             "ok": False,
+            # "not_found" maps to HTTP 404 in ResponseEnvelopeMiddleware. Without
+            # it a resolved "this model isn't catalogued" answer fell through to
+            # the generic 500 fallback and was reported to clients as a server
+            # fault with "retrying may help" -- advice that can only waste calls,
+            # since the result is deterministic.
+            "status": "not_found",
             "error": f"Hardware model '{model}' not found in hardware specifications catalog.",
             "available_models": sorted(hardware_specs.HARDWARE_CATALOG.keys()),
+            "guidance": (
+                "This catalog is series-level (e.g. 'cx6300'), so it holds no "
+                "ordering part numbers. To resolve a SKU such as JL658A use "
+                "search_hardware_catalog."
+            ),
         }
     return {
         "ok": True,
@@ -1744,6 +1767,34 @@ def ask_docs(
     mode = "search_docs"
     hits: list[dict[str, Any]] = []
 
+    if source is None and hardware_catalog.is_catalog_query(question):
+        catalog_result = hardware_catalog.search(question, include_specs=False, limit=k)
+        if catalog_result.get("ok"):
+            catalog_hits = catalog_result.get("results") or []
+            return {
+                "answer": hardware_catalog.format_compact_answer(catalog_result),
+                "citations": [
+                    {
+                        "file_path": f"hardware_catalog:{item['sku']}",
+                        "source": "hardware_catalog",
+                        "doc_type": "hardware-catalog",
+                        "score": 1.0,
+                        "source_url": item["source"]["url"],
+                    }
+                    for item in catalog_hits
+                ],
+                "mode": "hardware_catalog",
+            }
+        # An index miss after a real SKU/configuration request should not be
+        # replaced with semantically similar prose. It needs more product
+        # traits, or its local catalog needs building/refreshing.
+        if catalog_result.get("match_type") == "no_match" or catalog_result.get("hint"):
+            return {
+                "answer": hardware_catalog.format_compact_answer(catalog_result),
+                "citations": [],
+                "mode": "hardware_catalog",
+            }
+
     if source is None:
         hw_model = hardware_specs.detect_hardware_query(question)
         if (
@@ -1763,10 +1814,16 @@ def ask_docs(
                             # the curated hardware_specs.py catalog. Do not
                             # format this as a real datasheet file path; no
                             # such file exists in the repo or ingestion corpus.
+                            # source/doc_type must not claim datasheet
+                            # provenance either: hardware_specs.py carries no
+                            # source URLs, and the entries are series-level,
+                            # so they cannot answer a per-SKU question.
                             "file_path": f"hardware_specs_catalog:{hw_model}",
-                            "source": "hardware_datasheets",
-                            "doc_type": "datasheet",
+                            "source": "hardware_specs_catalog",
+                            "doc_type": "curated-summary",
                             "score": 1.0,
+                            "coverage": "series-level",
+                            "source_url": None,
                         }
                     ],
                     "mode": "hardware_specs",
@@ -1868,6 +1925,18 @@ def list_skills(
     suggested tool lists. Load a full runbook with load_skill(name).
     """
     return list_skills_payload(platform=platform, tag=tag, detail=detail)
+
+
+@mcp.tool(annotations=READ_ONLY_LOCAL)
+def find_skill(query: str, limit: int = 3) -> dict[str, Any]:
+    """Find the runbook (skill) that fits a request, by free-text intent.
+
+    Use this instead of reading all of list_skills when the user describes a
+    goal in their own words ("clients keep dropping", "audit our SSIDs",
+    "is the network healthy this morning"). Returns ranked skill metadata;
+    load the winner with load_skill(name).
+    """
+    return find_skill_payload(query=query, limit=limit)
 
 
 @mcp.tool(annotations=READ_ONLY_LOCAL)

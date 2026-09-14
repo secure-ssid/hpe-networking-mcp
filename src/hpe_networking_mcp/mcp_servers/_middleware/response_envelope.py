@@ -57,6 +57,14 @@ def _status_code(value: Any) -> int | None:
 # message (counts, IDs, ports) from being mistaken for a status.
 _HTTPX_STATUS_RE = re.compile(r"\b(?:Client|Server) error '(\d{3})\b")
 
+# pydantic renders a rejected tool call as:
+#   "1 validation error for mist_list_sitesArguments\norg_id\n  Field required"
+# That is a caller mistake -- a required argument was omitted -- but it carries
+# no HTTP code, so it used to reach the generic 500 fallback and be reported as
+# "Server error -- retrying may help". Callers then retried the identical
+# argument-less call indefinitely instead of supplying the missing field.
+_VALIDATION_ERROR_RE = re.compile(r"\b\d+ validation errors? for\b")
+
 
 def _redact_envelope_error(text: str) -> str:
     """Mask credentials in a client-visible standalone-backend error string.
@@ -78,6 +86,13 @@ def _status_from_message(message: str | None) -> int | None:
         return None
     code = int(match.group(1))
     return code if 400 <= code <= 599 else None
+
+
+def _is_validation_error(message: str | None) -> bool:
+    """True when `message` is a pydantic argument-validation failure."""
+    if not message:
+        return False
+    return _VALIDATION_ERROR_RE.search(message) is not None
 
 
 def _is_already_enveloped(result: dict[str, Any]) -> bool:
@@ -115,9 +130,14 @@ def _blocked_status(result: dict[str, Any]) -> tuple[bool, int | None]:
     upstream = _status_code(result.get("status_code"))
     if upstream is not None and 400 <= upstream <= 599:
         return True, upstream
-    from_message = _status_from_message(_message_from(result))
+    message = _message_from(result)
+    from_message = _status_from_message(message)
     if from_message is not None:
         return True, from_message
+    # A rejected argument set is a caller error, not a server fault. Classify it
+    # 400 so the client fixes the call instead of retrying it unchanged.
+    if _is_validation_error(message):
+        return True, 400
     return True, 500
 
 
