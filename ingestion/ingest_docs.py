@@ -101,6 +101,7 @@ SOURCE_META = {
     "junos_srx_hardware": "junos-srx-hardware",
     "junos_srx_release_notes": "junos-srx-release-notes",
     "product_datasheets": "product-datasheet",
+    "hpe_quickspecs": "hpe-quickspecs",
 }
 
 # Source folders holding OpenAPI JSON rather than prose. `openapi_specs` is
@@ -231,7 +232,8 @@ _YEAR_MONTH_RE = re.compile(
     r"(?:[-_./](0?[1-9]|[12]\d|3[01]))?(?!\d)"
 )
 _MODEL_RE = re.compile(
-    r"(?<![a-z0-9])(ex\d{3,5}(?:-[a-z]{1,3})?|ap\d{2,4}(?:-[a-z]{1,3})?)(?![a-z0-9])",
+    r"(?<![a-z0-9])((?:ex|cx)[-_ ]?\d{3,5}(?:[-_ ]?[a-z]{1,3})?"
+    r"|ap\d{2,4}(?:-[a-z]{1,3})?)(?![a-z0-9])",
     re.IGNORECASE,
 )
 _MONTHS = {
@@ -270,7 +272,7 @@ def _file_source_url(path: Path, chunked_text: str) -> str | None:
 def _normalize_model(value: str | None) -> str | None:
     if not value:
         return None
-    return re.sub(r"[-_]+", "-", unquote(str(value)).strip()).upper() or None
+    return re.sub(r"[-_\s]+", "-", unquote(str(value)).strip()).upper() or None
 
 
 def _source_vendor(
@@ -297,6 +299,7 @@ def _source_vendor(
         "nac_docs",
         "product_specs",
         "product_datasheets",
+        "hpe_quickspecs",
         "security_advisories",
         "tech_docs",
         "techdocs_html",
@@ -339,6 +342,10 @@ def _source_product(
         return "aos-cx" if "wired" in haystack or "switch" in haystack else "aos10"
     if source == "product_datasheets":
         return "ex-series" if "/switches/ex-series/" in haystack else "mist"
+    if source == "hpe_quickspecs":
+        if "access point" in haystack or re.search(r"(?<![a-z])ap[-_]?\d", haystack):
+            return "aos10"
+        return "aos-cx"
     if "central" in haystack or source in {
         "devhub",
         "developer_docs",
@@ -368,6 +375,8 @@ def _source_platform(source: str, path: str, product: str | None) -> str | None:
         return "nac"
     if product in {"mist", "central", "edgeconnect", "fabric-composer", "apstra", "uxi"}:
         return "cloud"
+    if source == "hpe_quickspecs":
+        return "switch"
     if source == "product_datasheets":
         return "access-point" if "/ap-" in haystack or "access-point" in haystack else "switch"
     return None
@@ -400,7 +409,12 @@ def _release_and_version(
     return None, None
 
 
-def _source_model(path: str, product: str | None, platform: str | None) -> str | None:
+def _source_model(
+    path: str,
+    product: str | None,
+    platform: str | None,
+    content_hint: str | None = None,
+) -> str | None:
     normalized = path.replace("_", "-")
     if product == "aos-cx":
         match = re.search(
@@ -419,7 +433,13 @@ def _source_model(path: str, product: str | None, platform: str | None) -> str |
             if re.fullmatch(r"[0-9]{3,5}(?:l|i)?", part, re.I):
                 return _normalize_model(part)
     match = _MODEL_RE.search(normalized)
-    return _normalize_model(match.group(1)) if match else None
+    if match:
+        return _normalize_model(match.group(1))
+    if product == "aos-cx" and content_hint:
+        match = _MODEL_RE.search(content_hint)
+        if match:
+            return _normalize_model(match.group(1))
+    return None
 
 
 def _authority(
@@ -476,6 +496,7 @@ def derive_metadata(
     version_hint: str | None = None,
     record_type: str = "document",
     provenance: Mapping[str, object] | None = None,
+    content_hint: str | None = None,
 ) -> dict[str, str | None]:
     """Derive deterministic, conservative metadata from ingestion provenance."""
     source = str(source).strip().lower()
@@ -489,7 +510,7 @@ def derive_metadata(
     vendor = _source_vendor(source, source_url, file_path)
     product = _source_product(source, file_path, source_url, product_hint)
     platform = _source_platform(source, file_path, product)
-    model = _source_model(file_path, product, platform)
+    model = _source_model(file_path, product, platform, content_hint)
     release, version = _release_and_version(file_path, product, version_hint)
     return {
         "vendor": vendor,
@@ -679,7 +700,12 @@ def collect_points(source_dir: Path, doc_type: str) -> list[dict]:
             continue
         source_url = _file_source_url(path, file_text)
         chunks = chunk_text_with_breadcrumbs(file_text)
-        metadata = derive_metadata(source_dir.name, rel_path, source_url)
+        metadata = derive_metadata(
+            source_dir.name,
+            rel_path,
+            source_url,
+            content_hint=file_text,
+        )
         for i, (chunk, breadcrumb) in enumerate(chunks):
             records.append(
                 {
@@ -985,6 +1011,7 @@ _DEDUP_SOURCE_PRIORITY: dict[str, int] = {
     "vsg_docs": 60,
     "feature_navigator": 55,
     "product_datasheets": 50,
+    "hpe_quickspecs": 50,
     "mist_product_updates": 50,
     "junos_ex_hardware": 45,
     "junos_ex_release_notes": 45,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from hpe_networking_mcp.mcp_servers import design as design_mod
@@ -97,10 +98,138 @@ def test_next_ui_export():
     topo = result["export"]["content"]
     assert len(topo["nodes"]) == 3
     assert len(topo["links"]) == 2
-    assert (
-        "NeXt" in result["export"]["preview_html"]
-        or "next" in result["export"]["preview_html"].lower()
+    preview = result["export"]["preview_html"]
+    assert "<svg" in preview
+    assert "Branch lab" in preview
+    assert "Operator-supplied review artifact" in preview
+
+
+def test_next_ui_save_writes_complete_artifact(tmp_path, monkeypatch):
+    from hpe_networking_mcp.mcp_servers.design_lib import files as design_files
+
+    monkeypatch.setattr(design_files, "DIAGRAM_OUT", tmp_path)
+    monkeypatch.setattr(design_mod, "write_text_artifact", design_files.write_text_artifact)
+    monkeypatch.setattr(design_mod, "write_json_artifact", design_files.write_json_artifact)
+    monkeypatch.setattr(design_mod, "write_bytes_artifact", design_files.write_bytes_artifact)
+
+    result = _call(
+        design_mod.export_next_ui_topology,
+        model=SAMPLE_MODEL,
+        save=True,
+        filename_stem="unit_next",
     )
+    assert result["ok"] is True
+    assert result["saved"] is True
+    written_paths = [Path(w["path"]) for w in result["written"]]
+    assert len(written_paths) >= 2
+    exts = {p.suffix for p in written_paths}
+    assert ".json" in exts or ".next" in str(written_paths)
+    assert ".html" in exts
+    for p in written_paths:
+        assert p.exists()
+        assert p.parent == tmp_path
+        assert p.stat().st_size > 0
+
+
+def test_next_ui_hostile_labels_stay_inert():
+    hostile_model = {
+        "title": "Hostile <script>alert('xss1')</script>",
+        "nodes": [
+            {
+                "id": "n1",
+                "label": "<script>alert('xss2')</script>",
+                "role": "core_switch",
+                "vendor": "aruba",
+                "site": '"><img src=x onerror=alert(1)>',
+            },
+            {
+                "id": "n2",
+                "label": "</script><script>alert('xss3')",
+                "role": "access_switch",
+                "vendor": "hpe",
+            },
+        ],
+        "links": [
+            {
+                "source": "n1",
+                "target": "n2",
+                "label": "<iframe src=javascript:alert('xss4')>",
+            }
+        ],
+        "groups": [
+            {
+                "id": "g1",
+                "label": "<svg/onload=alert('xss5')>",
+                "members": ["n1", "n2"],
+            }
+        ],
+    }
+    result = _call(design_mod.export_next_ui_topology, model=hostile_model, save=False)
+    assert result["ok"] is True
+    html = result["export"]["preview_html"]
+
+    # Verify HTML/XML text is escaped and unescaped script tags don't appear in body HTML
+    assert "<script>alert('xss1')</script>" not in html
+    assert (
+        "&lt;script&gt;alert(&#27;xss1&#27;)&lt;/script&gt;" in html
+        or "&lt;script&gt;alert('xss1')&lt;/script&gt;" in html
+        or "&lt;script&gt;" in html
+    )
+    assert "<iframe" not in html
+    assert "<svg/onload" not in html
+
+    # Verify JSON inside <script> doesn't break script block boundaries
+    assert "</script><script>alert('xss3')" not in html
+
+
+def test_next_ui_deterministic_export():
+    res1 = _call(design_mod.export_next_ui_topology, model=SAMPLE_MODEL, save=False)
+    res2 = _call(design_mod.export_next_ui_topology, model=SAMPLE_MODEL, save=False)
+    assert res1["export"]["preview_html"] == res2["export"]["preview_html"]
+    assert res1["export"]["content"] == res2["export"]["content"]
+
+
+def test_next_ui_100_nodes_200_links_fixture_preserves_topology_within_response_contract():
+    nodes = [
+        {
+            "id": f"node_{i}",
+            "label": f"Switch-{i}",
+            "role": "access_switch" if i > 5 else "core_switch",
+            "vendor": "aruba" if i % 2 == 0 else "juniper",
+            "site": "Site-A" if i < 50 else "Site-B",
+        }
+        for i in range(100)
+    ]
+    links = [
+        {
+            "source": f"node_{i % 100}",
+            "target": f"node_{(i + 1) % 100}",
+            "link_type": "ethernet" if i % 2 == 0 else "trunk",
+            "label": f"10G-link-{i}",
+        }
+        for i in range(200)
+    ]
+    groups = [
+        {"id": "g_a", "label": "Group A", "members": [f"node_{i}" for i in range(50)]},
+        {"id": "g_b", "label": "Group B", "members": [f"node_{i}" for i in range(50, 100)]},
+    ]
+
+    fixture_model = {
+        "title": "100-Node Scale Test Topology",
+        "nodes": nodes,
+        "links": links,
+        "groups": groups,
+    }
+
+    result = _call(design_mod.export_next_ui_topology, model=fixture_model, save=False)
+    assert result["ok"] is True
+    assert result["export"]["node_count"] == 100
+    assert result["export"]["link_count"] == 200
+    assert len(result["export"]["content"]["nodes"]) == 100
+    assert len(result["export"]["content"]["links"]) == 200
+
+    encoded = json.dumps(result, ensure_ascii=False)
+    assert len(encoded) <= 180_000, f"response length {len(encoded)} exceeds budget 180_000"
 
 
 def test_topology_conversion():
@@ -199,3 +328,60 @@ def test_topology_export_is_unchanged_by_flow_mode():
 
     assert dot.startswith("digraph network")
     assert "rank=same" in dot
+
+
+def test_next_ui_skipped_layer_link_routing_and_group_header_spacing():
+    """Skipped-layer links get a route and groups reserve a separate header."""
+    model = {
+        "title": "Skipped Layer Network",
+        "nodes": [
+            {"id": "core", "label": "Core Switch", "role": "core_switch", "vendor": "aruba"},
+            {"id": "identity", "label": "ClearPass", "role": "clearpass", "vendor": "clearpass"},
+            {"id": "access", "label": "Access Switch", "role": "access_switch", "vendor": "aruba"},
+        ],
+        "links": [
+            {"source": "core", "target": "identity", "link_type": "logical"},
+            {"source": "core", "target": "access", "link_type": "ethernet"},
+        ],
+        "groups": [{"id": "site_g", "label": "Site Group", "members": ["identity", "access"]}],
+    }
+    result = _call(design_mod.export_next_ui_topology, model=model, save=False)
+    assert result["ok"] is True
+    html = result["export"]["preview_html"]
+    assert '<path d="M' in html
+    assert " Q " in html
+    assert "Site Group" in html
+    assert "group-box" in html
+
+
+def test_next_ui_standalone_svg_style_embedding():
+    """Generated SVG embeds CSS styles in <defs> for standalone portability."""
+    result = _call(design_mod.export_next_ui_topology, model=SAMPLE_MODEL, save=False)
+    assert result["ok"] is True
+    html = result["export"]["preview_html"]
+    svg = ET.fromstring(html[html.index("<svg") : html.index("</svg>") + 6])
+    style = svg.find("{*}defs/{*}style")
+    assert style is not None and style.text
+    assert ".group-box" in style.text
+    assert ".node-body" in style.text
+    assert ".topology-link" in style.text
+
+
+def test_next_ui_endpoint_metadata_and_keyboard_contract():
+    result = _call(design_mod.export_next_ui_topology, model=SAMPLE_MODEL, save=False)
+    html = result["export"]["preview_html"]
+    svg = ET.fromstring(html[html.index("<svg") : html.index("</svg>") + 6])
+    links = [
+        element for element in svg.iter() if "topology-link" in element.get("class", "").split()
+    ]
+    assert [(link.get("data-source"), link.get("data-target")) for link in links] == [
+        (link["source"], link["target"]) for link in SAMPLE_MODEL["links"]
+    ]
+    nodes = [
+        element for element in svg.iter() if "topology-node" in element.get("class", "").split()
+    ]
+    assert len(nodes) == len(SAMPLE_MODEL["nodes"])
+    for node in nodes:
+        assert node.get("tabindex") == "0"
+        assert node.get("role") == "button"
+        assert node.get("aria-label")

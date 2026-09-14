@@ -79,6 +79,26 @@ jobs:
       - name: Unit tests and tool catalog gate
         run: uv run python scripts/validate_release.py --skip-rag
 
+  browser-preview:
+    name: Offline topology preview (Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          prune-cache: true
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Install browser test dependencies
+        run: uv sync --group dev --extra ingestion --frozen
+      - name: Install Chromium
+        run: uv run python -m playwright install --with-deps chromium
+      - name: Browser acceptance
+        env:
+          RUN_TOPOLOGY_BROWSER_TESTS: "1"
+        run: uv run python -m pytest tests/browser -q
+
   typecheck:
     name: Type check (strict, scoped)
     runs-on: ubuntu-latest
@@ -120,7 +140,7 @@ jobs:
 
   package:
     name: Build and install package
-    needs: test
+    needs: [test, browser-preview]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

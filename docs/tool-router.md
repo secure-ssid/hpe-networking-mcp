@@ -469,10 +469,10 @@ MCP hop.
 | Profile | Client-visible / indexed tools |
 |---|---:|
 | Minimal router | 3 client-visible tools |
-| Default router | 32 client-visible tools[^compliance-tool] |
-| Platform API backend index | 6,712 tools |
-| Complete backend index (platform APIs plus the non-platform backends itemized in [`docs/project-facts.json`](project-facts.json)) | 6,729 tools |
-| Direct-all router | 6,748 client-visible tools |
+| Default router | 35 client-visible tools[^compliance-tool] |
+| Platform API backend index | 6,713 tools |
+| Complete backend index (platform APIs plus the non-platform backends itemized in [`docs/project-facts.json`](project-facts.json)) | 6,732 tools |
+| Direct-all router | 6,751 client-visible tools |
 
 </div>
 
@@ -483,12 +483,14 @@ MCP hop.
     wrappers `mist_clients`, `mist_devices`, `mist_ports`, and `mist_health`
     added afterward; `get_site` and `list_clients` (closing a gap where "get
     a site by name"/"list clients" had no direct wrapper) added after that,
-    raising the default-mode count to 25; the AOS8 fast-path wrappers
+    raising the default-mode count to 28. Local hardware SKU search and
+    comparison add the `search_hardware_catalog` and `compare_hardware`
+    wrappers without requiring RAG. The AOS8 fast-path wrappers
     `aos8_switches`, `aos8_ports`, `aos8_vlans`, `aos8_migration` and the
     ClearPass fast-path wrappers `clearpass_endpoint`,
     `clearpass_active_session`, `clearpass_sessions` (closing the gap where
     those two platforms had zero convenience wrappers) added after that,
-    raising the default-mode count to 32.
+    raising the default-mode count to 35.
     `minimal` mode remains the same three-tool surface. This count is
     identical whether every toolset/product is loaded or only the
     documented recommended profile (`HPE_MCP_TOOLSETS=central,glp,rag`) is
@@ -497,16 +499,16 @@ MCP hop.
     (`tools.default` and `tools.default_recommended_profile`).
 
 The complete catalog spans nine platform surfaces plus the non-platform
-backends itemized below. Nine generated manifests contain 6,144 reproducible
+backends itemized below. Nine generated manifests contain 6,145 reproducible
 operations, of which 6,128 register as active generated tools; 584 platform
-curated tools bring the REST/OpenAPI platform API backend total to 6,712.
+curated tools bring the REST/OpenAPI platform API backend total to 6,713.
 
 The remaining registered backends are not platform APIs. They are itemized
 per backend under `tools.protocol_only`, `tools.non_platform_aggregators`,
 `tools.non_api_local` and `tools.credential_free_local` in
 [`docs/project-facts.json`](project-facts.json), which is the generated
 source of truth for the split; together with the platform total they yield
-the complete 6,729-tool registered backend catalog. Minimal mode does not
+the complete 6,732-tool registered backend catalog. Minimal mode does not
 expose that schema surface to the MCP client -- it searches the catalog on
 demand.
 
@@ -528,6 +530,7 @@ early or blocking an MCP call for the full server window.
 |---|---|
 | `central` | Config, monitoring, NAC, ops |
 | `central-generated` | Complete generated Central API surface |
+| `catalog` | `catalog-core`: local SQLite HPE Aruba/HPE Juniper SKU/model lookup and verified side-by-side comparison. It is loaded on **every** profile, so name it only when you want these tools alone. |
 | `config` | Central configuration tools |
 | `monitoring` | Health, alerts, events, clients, devices |
 | `site-health` | Bounded cross-platform Central/Mist site health |

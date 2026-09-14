@@ -507,5 +507,15 @@
     "output_dir": "ingestion/sources/product_datasheets",
     "scraper": "ingestion/scrape_product_datasheets.py",
     "notes": "URLs are filtered directly out of juniper.net's flat product sitemap (2,130 <loc> entries; distinct from the documentation sitemap discover_mist_docs_urls.py reads) rather than cached to a seed file, because the whole corpus is ~50 pages fetched in well under a minute \u2014 not the multi-hour crawl that justifies mist_docs_urls.json. EX-series .../specs.html pages extract div.cmp-specifications (a stable Adobe Experience Manager component verified across EX2300-EX9250); AP .../*-datasheet.html pages have no such wrapper but always carry exactly 5 <table> elements with the real spec content, rendered generically (a table whose first row has >2 cells becomes a markdown comparison table, otherwise label/value bullets). Aruba/HPE-branded hardware pages (arubanetworks.com, arubanetworking.hpe.com, www.hpe.com) were probed from this environment and every one returned an Akamai 403 or a hard HTTP/2 stream reset \u2014 including via a genuine headless-Chromium Playwright request \u2014 so this source is Juniper-only by evidenced necessity, not by choice; Aruba CX/AP exact specs are served instead by hpe_networking_mcp.pipeline.clients.hardware_specs, which ask_docs consults before RAG."
+  },
+  {
+    "source": "hpe_quickspecs",
+    "doc_type": "hpe-quickspecs",
+    "purpose": "Manually refreshed Aruba/HPE QuickSpecs PDFs for hardware and product specification questions in the prose RAG corpus.",
+    "seed_urls": [
+      "https://www.hpe.com/us/en/resources/integrated-systems/quickspecs-library.html"
+    ],
+    "output_dir": "ingestion/sources/hpe_quickspecs",
+    "notes": "Manual-only source: the operator downloads official QuickSpecs PDFs outside the repository into ingestion/quickspecs/ and places a same-stem .url sidecar beside each PDF. Run ingestion/ingest_hpe_quickspecs.py to extract and stage Markdown, then pass --ingest to feed the existing ingest_docs.py/chunking.py pipeline. This source is not network-scraped or scheduled; it is additive to ask_docs/search_docs and does not modify hardware_catalog.sqlite or scripts/build_hardware_catalog.py."
   }
 ]

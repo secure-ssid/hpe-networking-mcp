@@ -13,6 +13,7 @@ Design notes for core system behavior, data stores, and retrieval strategy.
 |---|---|
 | [how-it-works.md](how-it-works.md) | Canonical MCP + RAG mental model: three router tools, index vs live APIs, dry-run/gates, and planners |
 | [system-overview.md](system-overview.md) | End-to-end MCP architecture, runtime flow, router dispatch, and file map |
+| [TOOL-ROUTING-ARCHITECTURE.md](TOOL-ROUTING-ARCHITECTURE.md) | High-level tool routing topology, find_tool discovery, fast-path wrappers, and backends |
 | [RAG-ARCHITECTURE.md](RAG-ARCHITECTURE.md) | Embedded LanceDB + SQLite RAG/API lookup design, migration rationale, and eval results |
 | [0.10.0 release notes](../release-notes-0.10.0.md) | Offline-first API lookup, deny-by-default writes, MCP host instead of standalone client, and gates that check what they claim |
 | [0.8.0 release notes](../release-notes-0.8.0.md) | Clean repository/package rename, MCP 2 transport repair, PII and interop additions, strict catalog/RAG facts, and classified drift gates |

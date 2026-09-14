@@ -47,6 +47,8 @@ Use the most authoritative path for the question:
 |---|---|---|
 | Exact endpoint, HTTP method, operation ID, field, schema, or enum | `lookup_api` | Structured OpenAPI data avoids semantic guessing |
 | Exact hardware model specification | `lookup_hardware_specs` | Curated records are distinct from prose chunks and datasheet availability |
+| SKU or model/configuration selection | `search_hardware_catalog` | Exact local SKU aliases and bounded SQLite candidates; includes official source, snapshot, and lifecycle status when available |
+| Side-by-side hardware comparison | `compare_hardware` | Resolves exact SKUs or returns model variants for selection; compares only verified local SQLite fields and labels unavailable data `unknown` |
 | Advisory or CVE | `lookup_advisory`, `list_advisories` | Exact identifiers and bounded filters |
 | Lifecycle event | `check_product_lifecycle`, `list_lifecycle_events` | Structured dates/SKUs with explicit source boundaries |
 | How-to or design concept | `ask_docs` | Compact cited answer over prose sources |

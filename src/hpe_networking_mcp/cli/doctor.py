@@ -110,6 +110,7 @@ VALID_TOOLSETS = {
     "uxi",
     "axis",
     "design",
+    "catalog",
     "all",
 }
 VALID_RAG_BACKENDS = {"lancedb", "redis"}

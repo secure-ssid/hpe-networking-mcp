@@ -496,7 +496,7 @@ def test_ask_docs_routes_hardware_specs_query():
     assert "880 Gbps" in out["answer"]
     assert "VSF" in out["answer"]
     assert len(out["citations"]) == 1
-    assert out["citations"][0]["source"] == "hardware_datasheets"
+    assert out["citations"][0]["source"] == "hardware_specs_catalog"
 
 
 def test_ask_docs_routes_juniper_hardware_query():
@@ -560,6 +560,35 @@ def test_lookup_hardware_specs_is_registered_as_an_mcp_tool():
     assert "lookup_hardware_specs" in names
 
 
+def test_ask_docs_routes_sku_request_to_local_hardware_catalog(monkeypatch):
+    catalog_result = {
+        "ok": True,
+        "match_type": "exact_sku",
+        "results": [
+            {
+                "sku": "JL665A",
+                "model": "CX 6300F 48G Class 4 PoE 4SFP56 Switch",
+                "port_count": 48,
+                "poe": "Class 4 PoE",
+                "source": {"url": "https://example.test/cx6300"},
+            }
+        ],
+    }
+    monkeypatch.setattr(rag.hardware_catalog, "is_catalog_query", lambda _question: True)
+    monkeypatch.setattr(rag.hardware_catalog, "search", lambda *args, **kwargs: catalog_result)
+    monkeypatch.setattr(
+        rag.hardware_catalog,
+        "format_compact_answer",
+        lambda _result: "Hardware catalog results:\n- JL665A",
+    )
+
+    out = rag.ask_docs("What SKU is a 48 port CX 6300 PoE switch?")
+
+    assert out["mode"] == "hardware_catalog"
+    assert "JL665A" in out["answer"]
+    assert out["citations"][0]["source_url"] == "https://example.test/cx6300"
+
+
 def test_lookup_hardware_specs_returns_full_spec_for_known_model():
     out = rag.lookup_hardware_specs("cx6300")
     assert out["ok"] is True
@@ -609,3 +638,60 @@ def test_search_docs_missing_index_hint_is_the_build_once_sources_exist(
     assert out[0]["degraded"] is True
     assert "ingest_docs.py" in out[0]["hint"]
     assert "refresh_rag_sources.py" not in out[0]["hint"]
+
+
+def test_hardware_specs_citation_does_not_claim_datasheet_provenance():
+    """hardware_specs.py holds no source URLs, so its citation must not present
+    itself as a datasheet. Claiming doc_type "datasheet" with score 1.0 and no
+    URL let a 20-entry in-repo dict outrank genuinely cited corpus evidence."""
+    out = rag.ask_docs("cx6300 specs")
+    citation = out["citations"][0]
+
+    assert citation["source"] == "hardware_specs_catalog"
+    assert citation["doc_type"] != "datasheet"
+    assert citation["source"] != "hardware_datasheets"
+    # The absence of provenance is stated, not left to be inferred.
+    assert citation["source_url"] is None
+    assert citation["coverage"] == "series-level"
+
+
+def test_hardware_specs_answer_discloses_it_cannot_confirm_a_sku():
+    """A series-level summary must not read as an orderable-part answer."""
+    out = rag.ask_docs("cx6300 specs")
+
+    answer = out["answer"].casefold()
+    assert "series-level" in answer
+    assert "search_hardware_catalog" in answer
+
+
+def test_uncatalogued_model_is_not_reported_as_a_retryable_server_error():
+    """A resolved "no such model" answer must not surface as HTTP 500.
+
+    ResponseEnvelopeMiddleware falls back to 500 for any result carrying an
+    `error` key, so a deterministic miss was returned to clients as a server
+    fault hinting that "retrying may help" - advice that can only waste calls.
+    The middleware already maps status "not_found" to 404; the tool just had
+    to say so.
+    """
+    from hpe_networking_mcp.mcp_servers._middleware.response_envelope import (
+        _blocked_status,
+    )
+
+    result = rag.lookup_hardware_specs("JL658A")
+
+    assert result["ok"] is False
+    assert result["status"] == "not_found"
+    assert _blocked_status(result) == (True, 404)
+    # A SKU question should be pointed at the tool that can actually answer it.
+    assert "search_hardware_catalog" in result["guidance"]
+
+
+def test_catalogued_model_still_resolves_without_an_error_envelope():
+    from hpe_networking_mcp.mcp_servers._middleware.response_envelope import (
+        _blocked_status,
+    )
+
+    result = rag.lookup_hardware_specs("cx6300")
+
+    assert result["ok"] is True
+    assert _blocked_status(result) == (False, None)

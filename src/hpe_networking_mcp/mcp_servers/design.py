@@ -72,20 +72,27 @@ def _bound_dict(body: dict[str, Any]) -> dict[str, Any]:
     encoded = json.dumps(body, ensure_ascii=False, default=str)
     if len(encoded) <= _MAX_RESPONSE_CHARS:
         return body
-    # Drop inline content first
+    # Drop inline content / preview first
     export = body.get("export")
-    if isinstance(export, dict) and isinstance(export.get("content"), str):
+    if isinstance(export, dict):
         body = dict(body)
         export = dict(export)
-        export["content"] = export["content"][: max(2000, _MAX_INLINE // 4)]
-        export["content_truncated"] = True
+        if isinstance(export.get("content"), str):
+            export["content"] = export["content"][: max(2000, _MAX_INLINE // 4)]
+            export["content_truncated"] = True
+        if isinstance(export.get("preview_html"), str) and len(export["preview_html"]) > 500:
+            export["preview_html"] = (
+                "<!-- Inline preview HTML omitted due to size budget. "
+                "Use save=True to write the complete artifact under outputs/diagrams/. -->"
+            )
+            export["preview_html_omitted"] = True
         body["export"] = export
         body["response_truncated"] = True
         encoded = json.dumps(body, ensure_ascii=False, default=str)
         if len(encoded) <= _MAX_RESPONSE_CHARS:
             return body
     return {
-        "ok": body.get("ok", True),
+        "ok": False,
         "error": "response exceeded size budget; call again with save=True and omit inline needs",
         "saved": body.get("saved"),
         "written": body.get("written"),
@@ -318,11 +325,11 @@ def export_next_ui_topology(
     save: bool = False,
     filename_stem: str = "network_next",
 ) -> dict[str, Any]:
-    """Export interactive NeXt UI network topology JSON (+ HTML preview stub).
+    """Export interactive NeXt UI network topology JSON (+ HTML preview artifact).
 
     Use for web dashboards and clickable topology maps. For editable drawings
     use ``drawio_network_design_diagram``; for Graphviz images use
-    ``export_graphviz_topology``.
+    ```export_graphviz_topology``.
 
     Args:
         model: Canonical design model.
@@ -336,6 +343,23 @@ def export_next_ui_topology(
         parsed = _resolve_model(model=model, topology=topology, title=title, site_id=site_id)
         export = export_next_ui(parsed)
         save_info = _save_export(export, stem=filename_stem, save=save)
+
+        # Check inline size budget for preview_html
+        preview = export.get("preview_html")
+        if isinstance(preview, str) and len(preview) > _MAX_INLINE:
+            export = dict(export)
+            export["preview_html_omitted"] = True
+            export["preview_html"] = (
+                "<!-- Inline preview HTML omitted due to size budget. "
+                "Re-run export_next_ui_topology with save=True to write complete .html file. -->"
+            )
+            notes = list(export.get("notes", []))
+            notes.append(
+                "Inline preview HTML omitted due to size budget; "
+                "re-run with save=True to write complete artifact."
+            )
+            export["notes"] = notes
+
         body = {
             "ok": True,
             "approach": "export_next_ui_topology",

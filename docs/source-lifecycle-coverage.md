@@ -20,6 +20,36 @@ match — given the coverage gap below, most current advisories correlate to
 no lifecycle record at all, and that is reported as `unresolved`, not
 guessed at or silently omitted.
 
+## Manual QuickSpecs input
+
+QuickSpecs are a separate, manually refreshed RAG source because the HPE and
+Aruba product-document endpoints block automated retrieval from this
+environment. The operator downloads each official PDF outside the repository
+and places it under the ignored `ingestion/quickspecs/` drop folder. Every
+PDF must have a same-stem `.url` sidecar containing the single HTTPS URL from
+which it was obtained:
+
+```text
+ingestion/quickspecs/
+  cx6300.pdf
+  cx6300.url
+```
+
+Stage and optionally ingest the files with:
+
+```bash
+uv run python ingestion/ingest_hpe_quickspecs.py --ingest
+```
+
+The script extracts PDF text, preserves the sidecar URL in generated
+provenance comments, and writes Markdown under
+`ingestion/sources/hpe_quickspecs/`. The existing `ingest_docs.py` pipeline
+then applies the shared `ingestion/chunking.py` splitter and indexes the
+`hpe_quickspecs` source. The refresh scheduler does not fetch or delete these
+files; removing a QuickSpecs document is an explicit local corpus-maintenance
+operation. This source is additive to `ask_docs`/`search_docs` and does not
+populate the exact-match hardware catalog.
+
 ## Authoritative sources and their boundaries
 
 Only official HPE Aruba Networking, HPE, Juniper, or product-vendor sources

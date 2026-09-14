@@ -188,6 +188,7 @@ VALID_TOOLSETS = (
     "all",
     "apstra",
     "axis",
+    "catalog",
     "central",
     "central-generated",
     "clearpass",

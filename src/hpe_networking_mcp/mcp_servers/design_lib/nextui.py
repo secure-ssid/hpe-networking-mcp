@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from hpe_networking_mcp.mcp_servers.design_lib.model import DiagramModel, layout_positions
+from hpe_networking_mcp.mcp_servers.design_lib.preview_renderer import render_topology_html
 
 # NeXt built-in device icons (when using next-ui defaults)
 _ROLE_ICON: dict[str, str] = {
@@ -63,8 +64,8 @@ def export_next_ui(model: DiagramModel) -> dict[str, Any]:
         "links": links,
         "groups": [g.to_dict() for g in model.groups],
     }
-    # Minimal HTML shell for local preview (no external CDN fetch at runtime by default)
-    html = _preview_html(model.title)
+    # Render self-contained HTML/SVG preview
+    html = render_topology_html(model)
 
     return {
         "format": "next_ui",
@@ -78,8 +79,10 @@ def export_next_ui(model: DiagramModel) -> dict[str, Any]:
         "preview_html_ext": ".html",
         "notes": [
             "JSON matches a NeXt UI topology data shape (nodes/links with device_type).",
-            "preview_html is a stub shell — load NeXt UI assets yourself or paste JSON into an "
-            "existing dashboard.",
+            "preview_html is a self-contained HTML/SVG topology viewer — "
+            "open directly in a browser (file:// URL).",
+            "Includes responsive light/dark themes, search filter, zoom/reset, "
+            "node details, and text/table fallback.",
             "Cisco/generic device_type icons; supply custom icons in your NeXt app for "
             "Aruba/HPE/Mist.",
         ],
@@ -88,10 +91,7 @@ def export_next_ui(model: DiagramModel) -> dict[str, Any]:
 
 def _preview_html(title: str) -> str:
     safe = (
-        title.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
+        title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
     )
     return f"""<!DOCTYPE html>
 <html lang="en">

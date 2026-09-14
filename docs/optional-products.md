@@ -225,7 +225,51 @@ invoke_read_tool("drawio_network_design_diagram", {
 ```
 
 Outputs editable `.drawio` under `outputs/diagrams/`. Also:
-`export_graphviz_topology` (Graphviz), `export_next_ui_topology` (NeXt JSON).
+`export_graphviz_topology` (Graphviz DOT/PNG/SVG) and `export_next_ui_topology`
+(NeXt JSON + self-contained HTML/SVG preview viewer). `export_next_ui_topology`
+maintains full NeXt UI JSON compatibility while generating a portable HTML/SVG
+artifact that opens locally (`file://`) without external CDNs, network calls, or
+font dependencies. Includes responsive light/dark styling, accessible SVG
+labels, search filtering, zoom/reset, node detail inspection, SVG download, and
+static text/table fallback. Nodes support Tab and Enter/Space selection; data
+tables scroll within their own labeled regions on narrow screens. The canvas
+height is bounded independently of diagram aspect ratio, and downloaded SVGs
+include their own light/dark presentation styles.
+
+Exports embed supplied labels, management IPs, serial numbers, topology, and
+notes. Keep real-network artifacts private or sanitize them before sharing.
+They describe an operator-authored review model, not verified live state or
+a vendor-certified design.
+
+Generate a synthetic example without contacting a device:
+
+```bash
+uv run python scripts/demo_next_ui_topology.py
+```
+
+The dedicated browser CI job runs real Chromium checks for viewport bounds,
+link/group geometry, keyboard/search/zoom behavior, standalone SVG fidelity,
+no-JavaScript fallback, and hostile text. These new checks are opt-in locally
+so ordinary unit tests do not require an installed browser binary:
+
+```bash
+uv sync --group dev --extra ingestion --frozen
+uv run python -m playwright install chromium
+RUN_TOPOLOGY_BROWSER_TESTS=1 uv run python -m pytest tests/browser -q
+```
+
+The renderer stays on the existing canonical model and introduces no new
+production dependency. Upstream research considered the
+[official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk),
+[Mermaid's SVG accessibility implementation](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.0.0/packages/mermaid/src/accessibility.ts),
+and [MCP Apps](https://github.com/modelcontextprotocol/ext-apps).
+Apps is a future, host-capability-gated wrapper option, not functionality
+advertised by this offline viewer; no parallel JavaScript rendering stack was added.
+
+For design bundle composition (`pipeline/design_bundle.py`), strict quantity
+semantics require positive integers (including strings such as `"+2"` and
+`"1_000"`, but rejecting booleans, floats, and invalid strings),
+and line item SKU lookups reuse request-local cached results within a single call.
 Vendor logos are not shipped — see `resources/diagram_icons/README.md`
 (Juniper image library link for Mist packs you host locally).
 
@@ -280,7 +324,7 @@ the secret files. See [Docker deployment](production-deployment.md).
 </div>
 
 Combined with the Central/GLP/RAG surfaces, the REST/OpenAPI platform API
-backend catalog contains 3,160 read-only-annotated tools and 6,712 registered
+backend catalog contains 3,161 read-only-annotated tools and 6,713 registered
 tools, matching [`docs/capability-gap-matrix.md`](capability-gap-matrix.md)'s
 Total row. It excludes the non-platform backends, which are itemized with
 their counts in [`docs/tool-catalog.md`](tool-catalog.md) alongside the

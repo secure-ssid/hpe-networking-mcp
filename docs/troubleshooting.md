@@ -31,6 +31,7 @@ the matching section below.</figcaption>
 - [Setup and doctor](#setup-and-doctor) — local setup fails
 - [Credentials and auth](#credentials-and-auth) — 401 / 403
 - [HTTP transport](#http-transport) — connection, 406, or port problems
+- [Chatbot session loop](#chatbot-session-loop) — repeated 404s for an old MCP session
 - [Router and catalog](#router-and-catalog) — expected tool is missing
 - [RAG and indexes](#rag-and-indexes) — docs or API answer looks stale
 - [Vendor compatibility](#vendor-compatibility) — backend-specific auth/API quirks
@@ -99,6 +100,15 @@ Only enable non-loopback HTTP with explicit `MCP_ALLOWED_HOSTS`,
 start otherwise.
 </div>
 
+## Chatbot session loop
+
+If a client repeatedly receives `GET /mcp` 404 responses with
+`unknown or expired session ID`, first check whether the router process was
+recreated. Streamable-HTTP sessions are process-local; a client must discard
+its cached `Mcp-Session-Id` after a session-not-found response and send a new
+`initialize` request. The server-side investigation is recorded in
+[Chatbot session 404 loop diagnosis](diagnostics/chatbot-session-404-loop.md).
+
 ## Docker
 
 Every symptom below is a container that starts (or refuses to) with a
@@ -130,7 +140,7 @@ HPE_MCP_TOOLSETS=central,glp,rag
 | Need to rebuild the tool catalog | — | `uv run python scripts/ingest_tools.py` | Router catalog reflects the currently enabled toolsets/products |
 | Need optional products in the catalog | `HPE_MCP_PRODUCTS` | `uv run python scripts/ingest_tools.py --products clearpass,mist` | `find_tool` can locate the selected optional product tools |
 | `find_tool` cannot locate an expected optional product tool | `HPE_MCP_PRODUCTS` matches the products the catalog was built with | Rebuild the catalog with the same `--products` list | `find_tool` returns the expected tool |
-| Release validation expects the full read-write catalog (6,729 tools) | Stale access-profile, write-gate, product, or generated-tool environment values | `uv run python scripts/ingest_tools.py --complete-catalog` | Catalog rebuilds under the canonical pinned environment at the full read-write tool count (the validate-release tool-catalog floor is a REST/OpenAPI platform API compatibility floor of 6,712, not the exact complete-catalog count) |
+| Release validation expects the full read-write catalog (6,732 tools) | Stale access-profile, write-gate, product, or generated-tool environment values | `uv run python scripts/ingest_tools.py --complete-catalog` | Catalog rebuilds under the canonical pinned environment at the full read-write tool count (the validate-release tool-catalog floor is a REST/OpenAPI platform API compatibility floor of 6,713, not the exact complete-catalog count) |
 
 First useful call, once the catalog is built:
 

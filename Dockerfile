@@ -16,12 +16,12 @@
 #     content are ever COPYed into the image — see .dockerignore. Real
 #     secrets are supplied at *runtime* via Docker secrets / env files
 #     (docker-compose.router.yml, secrets/README.md).
-#   * The OpenAPI spec index (data/specs.sqlite) is BUILT during the image
-#     build, in a throwaway stage, from the digest-pinned OpenAPI corpus
-#     committed under vendor/openapi/ — offline, no network, no scrape. Only
-#     the finished database is copied into the runtime image; the ~23 MB
-#     corpus never reaches a layer the final image keeps. `lookup_api`
-#     therefore answers on first start with nothing to download.
+#   * The OpenAPI and hardware SKU SQLite indexes (`data/specs.sqlite` and
+#     `data/hardware_catalog.sqlite`) are BUILT during the image build in a
+#     throwaway stage, from committed inputs — offline, no network, no scrape.
+#     Only the finished databases reach the runtime image. `lookup_api` and
+#     `search_hardware_catalog` therefore answer on first start with nothing
+#     to download.
 #   * The RAG prose corpus (data/docs.lance) is NOT built here and is never
 #     downloaded during the build or at container start. It is scraped
 #     third-party vendor documentation this project has no licence to
@@ -55,7 +55,7 @@ FROM ghcr.io/astral-sh/uv:0.12.8@sha256:d1cbaeadc234fe19c0d93daabcf5e98738cd93c6
 # Builder and runtime MUST carry byte-identical references -- one interpreter
 # version, one CVE surface. The ARG used to guarantee that structurally; now
 # only a test does (test_docker_router_packaging.py).
-FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS builder
+FROM python:3.12-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS builder
 COPY --from=uv-bin /uv /uvx /usr/local/bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
@@ -94,8 +94,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable \
     $(for extra in ${INSTALL_EXTRAS}; do printf -- '--extra %s ' "$extra"; done)
 
-# The spec index is built FROM builder rather than from a bare python image:
-# scripts/build_spec_index.py imports
+# The structured indexes are built FROM builder rather than from a bare python image:
+# scripts/build_spec_index.py and scripts/build_hardware_catalog.py import
 # hpe_networking_mcp.pipeline.clients.specs_index, so it needs both the
 # project source and the installed environment that `builder` already has.
 # Nothing added here survives into `runtime` except the database itself.
@@ -105,16 +105,18 @@ FROM builder AS specindex
 # version; without it the endpoints table carries thinner `version` values
 # than a local `python scripts/build_spec_index.py` produces.
 COPY ingestion/openapi_registry_manifest.json ./ingestion/
+COPY ingestion/hardware_catalog_seed.json ./ingestion/
 COPY vendor/ ./vendor/
 
 # Written outside /app so that runtime's `COPY --from=builder /app /app`
 # cannot pick it up implicitly: the database enters the final image through
 # exactly one explicit COPY, and vendor/ enters through none.
-RUN mkdir -p /spec-index \
-    && /app/.venv/bin/python scripts/build_spec_index.py /spec-index/specs.sqlite
+RUN mkdir -p /spec-index /catalog-index \
+    && /app/.venv/bin/python scripts/build_spec_index.py /spec-index/specs.sqlite \
+    && /app/.venv/bin/python scripts/build_hardware_catalog.py /catalog-index/hardware_catalog.sqlite
 
 # Byte-identical to the builder FROM above, by test.
-FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS runtime
+FROM python:3.12-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS runtime
 
 # scripts/run_http_router.sh execs `uv run hpe-mcp-router`; keep the uv
 # binary in the runtime image too (UV_NO_SYNC below makes this a pure local
@@ -124,8 +126,9 @@ COPY --from=uv-bin /uv /usr/local/bin/uv
 # ca-certificates: outbound HTTPS to Aruba Central/GLP and (only when the
 # operator explicitly opts in) scripts/download_indexes.py.
 # libgomp1: required by fastembed's onnxruntime backend used by rag.py.
+# libpcre2-8-0: refresh Debian's security fix when the Python base predates it.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates libgomp1 \
+    && apt-get install -y --no-install-recommends ca-certificates libgomp1 libpcre2-8-0 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --gid 10001 mcp \
@@ -165,6 +168,7 @@ RUN mkdir -p /app/state /app/outputs /app/data \
 # Rebuilding the index inside the container therefore needs a writable mount
 # over /app/data or a different user -- see docs/production-deployment.md.
 COPY --from=specindex --chmod=444 /spec-index/specs.sqlite /app/data/specs.sqlite
+COPY --from=specindex --chmod=444 /catalog-index/hardware_catalog.sqlite /app/data/hardware_catalog.sqlite
 
 COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "purpose": "Reviewed source registry for the local Juniper Validated Designs (JVD) structured index. Mirrors the official Juniper/jvd GitHub repository's portal catalog at a pinned commit; retains the last verified snapshot and marks it stale if the source becomes unavailable. Never substitutes an unofficial mirror.",
+  "snapshot": "ingestion/jvd_seed.json",
+  "sources": [
+    {
+      "id": "juniper-jvd-portal-catalog",
+      "vendor": "juniper",
+      "repo": "https://github.com/Juniper/jvd",
+      "path": "portal/src/data/jvds.json",
+      "license": "Apache-2.0",
+      "status": "verified",
+      "refresh_policy": "pin the exact commit SHA; retain last verified snapshot and mark stale if the source is unavailable or the schema changes"
+    }
+  ]
+}
