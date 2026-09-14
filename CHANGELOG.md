@@ -42,6 +42,7 @@ time. This file is the compact index into those pages. See
 
 - **Patched runtime dependencies.** HTTPX2 and HTTPCore2 are locked to 2.12.0,
   and both Python image stages share a refreshed official Bookworm digest.
+  Runtime PCRE2 receives Debian's security update even when that base image predates it.
   The dependency, image, and SAST gates remain enforced without new exclusions.
 - **Request-local SKU lookup reuse in `pipeline/design_bundle.py`.**
   Repeated line items with identical SKUs within a single `build_design_bundle` call reuse hardware catalog

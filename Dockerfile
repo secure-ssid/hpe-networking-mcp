@@ -126,8 +126,9 @@ COPY --from=uv-bin /uv /usr/local/bin/uv
 # ca-certificates: outbound HTTPS to Aruba Central/GLP and (only when the
 # operator explicitly opts in) scripts/download_indexes.py.
 # libgomp1: required by fastembed's onnxruntime backend used by rag.py.
+# libpcre2-8-0: refresh Debian's security fix when the Python base predates it.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates libgomp1 \
+    && apt-get install -y --no-install-recommends ca-certificates libgomp1 libpcre2-8-0 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --gid 10001 mcp \
