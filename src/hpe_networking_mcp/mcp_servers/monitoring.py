@@ -3374,6 +3374,8 @@ def get_site_health_summary(
     or site_name must be provided.
     """
     client = get_mcp_client()
+    if hasattr(client, "last_errors"):
+        client.last_errors.clear()
 
     if not site_id and site_name:
         site = client.get_site_by_name(site_name)
@@ -3389,6 +3391,7 @@ def get_site_health_summary(
     devices = client.get_devices(filters={"siteId": site_id} if site_id else {}, limit=200)
     clients = client.get_clients(site_id=site_id, limit=200)
     alerts = client.get_alerts(site_id=site_id, limit=200)
+    collection_errors = list(getattr(client, "last_errors", []))
 
     device_status: dict[str, int] = {}
     device_type_counts: dict[str, int] = {}
@@ -3447,6 +3450,11 @@ def get_site_health_summary(
             "by_severity": alert_severity,
         },
         "recent_notable_events": recent_events[:20],
+        "errors": collection_errors[:10],
+        "coverage": {
+            "complete": not collection_errors,
+            "limitations": collection_errors[:10],
+        },
     }
 
 

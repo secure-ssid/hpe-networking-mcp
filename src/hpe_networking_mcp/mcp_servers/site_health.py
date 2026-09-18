@@ -15,6 +15,7 @@ would turn an unavailable metric into fabricated health.
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -126,6 +127,44 @@ def _overall_status(platforms: dict[str, dict[str, Any]]) -> str:
     return "available"
 
 
+def _configured(value: str | None, *names: str) -> str:
+    """Use an explicit identifier first, then a narrowly-scoped env default."""
+    if value and value.strip():
+        return value.strip()
+    for name in names:
+        candidate = os.getenv(name, "").strip()
+        if candidate:
+            return candidate
+    return ""
+
+
+def _scope_question() -> dict[str, Any]:
+    return {
+        # Keep the stable unavailable status while adding a machine-readable
+        # question for hosts that can continue the conversation.
+        "status": "unavailable",
+        "reason_code": "needs_scope",
+        "platforms": {
+            "central": _not_requested("Central", "site identifier"),
+            "mist": _not_requested("Mist", "site ID"),
+        },
+        "errors": [
+            "No scoped Central or Mist identifier is configured or supplied.",
+        ],
+        "question": (
+            "Which organization or site should I review? Provide a Central site ID/name "
+            "or Mist site ID, or configure a scoped default."
+        ),
+        "choices": [],
+        "next_actions": [
+            {
+                "tool": "find_tool",
+                "arguments": {"query": "list sites organizations permissions", "top_k": 5},
+            }
+        ],
+    }
+
+
 @mcp.tool(annotations=READ_ONLY)
 async def get_site_health(
     central_site_id: str | None = None,
@@ -152,20 +191,19 @@ async def get_site_health(
         unavailable or was not requested; inspect errors and status before
         treating any platform as usable.
     """
-    central_id = central_site_id.strip() if central_site_id else ""
-    central_name = central_site_name.strip() if central_site_name else ""
-    mist_id = mist_site_id.strip() if mist_site_id else ""
+    central_id = _configured(
+        central_site_id,
+        "HPE_MCP_CENTRAL_SITE_ID",
+        "CENTRAL_SITE_ID",
+    )
+    central_name = _configured(
+        central_site_name,
+        "HPE_MCP_CENTRAL_SITE_NAME",
+        "CENTRAL_SITE_NAME",
+    )
+    mist_id = _configured(mist_site_id, "HPE_MCP_MIST_SITE_ID", "MIST_SITE_ID")
     if not central_id and not central_name and not mist_id:
-        return {
-            "status": "unavailable",
-            "platforms": {
-                "central": _not_requested("Central", "site identifier"),
-                "mist": _not_requested("Mist", "site ID"),
-            },
-            "errors": [
-                "Provide central_site_id, central_site_name, or mist_site_id."
-            ],
-        }
+        return _scope_question()
 
     platforms: dict[str, dict[str, Any]] = {}
     warnings: list[str] = []
@@ -218,11 +256,29 @@ async def get_site_health(
         for platform in platforms.values()
         for error in platform.get("errors", [])
     ]
+    next_actions = []
+    if central_id or central_name:
+        next_actions.append({
+            "tool": "get_site_health",
+            "arguments": {"central_site_id": central_id} if central_id else {"central_site_name": central_name},
+        })
+    if mist_id:
+        next_actions.append({
+            "tool": "mist_get_site_assurance_snapshot",
+            "arguments": {"site_id": mist_id, "limit": clamp_limit(limit)},
+        })
     return {
         "status": _overall_status(platforms),
         "platforms": platforms,
         "errors": errors,
         "warnings": warnings,
+        "coverage": {
+            "requested": [name for name, value in (("central", central_id or central_name), ("mist", mist_id)) if value],
+            "available": [name for name, value in platforms.items() if value.get("status") in {"available", "degraded"}],
+            "complete": not errors and bool(platforms),
+            "limitations": errors[:10],
+        },
+        "next_actions": next_actions,
     }
 
 

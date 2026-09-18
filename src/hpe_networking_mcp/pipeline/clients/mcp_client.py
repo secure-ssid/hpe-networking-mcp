@@ -61,6 +61,9 @@ class MCPClient:
 
     def __init__(self, central_client: CentralClient):
         self._client = central_client
+        # Aggregate readers inspect this bounded context to distinguish an
+        # empty collection from a failed collection.
+        self.last_errors: list[str] = []
 
     # ------------------------------------------------------------------
     # Devices
@@ -167,6 +170,7 @@ class MCPClient:
             return items, result.get("next")
         except Exception as exc:
             logger.warning("MCPClient.get_devices_page failed: %s", exc)
+            self.last_errors.append(f"devices: {type(exc).__name__}: {exc}")
             return [], None
 
     def get_devices(
@@ -284,6 +288,7 @@ class MCPClient:
             return result.get("alerts", result.get("items", []))
         except Exception as exc:
             logger.warning("MCPClient.get_alerts failed: %s", exc)
+            self.last_errors.append(f"alerts: {type(exc).__name__}: {exc}")
             return []
 
     # ------------------------------------------------------------------
@@ -374,6 +379,7 @@ class MCPClient:
             return items, result.get("next")
         except Exception as exc:
             logger.warning("MCPClient.get_clients_page failed: %s", exc)
+            self.last_errors.append(f"clients: {type(exc).__name__}: {exc}")
             return [], None
 
     def get_clients(
