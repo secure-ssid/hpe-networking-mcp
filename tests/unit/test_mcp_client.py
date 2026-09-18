@@ -120,6 +120,18 @@ def test_get_devices_translates_legacy_offset_to_next_cursor():
     )
 
 
+def test_get_devices_translates_site_id_to_odata_filter():
+    central = MagicMock()
+    central.get.return_value = {"devices": []}
+
+    MCPClient(central).get_devices(filters={"siteId": "site-1"}, limit=200)
+
+    central.get.assert_called_once_with(
+        "/network-monitoring/v1/device-inventory",
+        params={"filter": "siteId eq 'site-1'", "limit": 200},
+    )
+
+
 def test_get_site_by_name_searches_full_site_list():
     central = MagicMock()
     central.get.return_value = {
@@ -222,7 +234,7 @@ def test_get_alerts_uses_cursor_not_offset():
         "/network-notifications/v1/alerts",
         params={
             "filter": "status eq 'Active' and severity eq 'Critical'",
-            "limit": 200,
+            "limit": 100,
             "next": "26",
         },
     )

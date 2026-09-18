@@ -18,6 +18,10 @@ from hpe_networking_mcp.pipeline.clients.central_client import CentralClient
 logger = logging.getLogger(__name__)
 _DEFAULT_LIST_LIMIT = 50
 _MAX_LIST_LIMIT = 200
+# Central's alerts endpoint accepts at most 100 records per request.  Keep
+# the general client bound at 200 for endpoints that support it, but clamp
+# alert pages to the endpoint's documented maximum.
+_MAX_ALERT_LIMIT = 100
 # Client-side search sweeps (get_device_by_serial / find_client) stop after
 # this many 100-item pages. The loop breaks early on a short page, so a
 # higher cap costs nothing on small fleets — it only bounds the worst case.
@@ -162,6 +166,14 @@ class MCPClient:
         """
         try:
             params = dict(filters or {})
+            # Device inventory uses one OData `filter` query parameter.  A
+            # legacy caller may still pass siteId as a bare query parameter;
+            # Central rejects that shape with HTTP 400.
+            site_id = params.pop("siteId", None)
+            if site_id:
+                clause = f"siteId eq '{_odata_string(str(site_id))}'"
+                existing = params.get("filter")
+                params["filter"] = f"{existing} and {clause}" if existing else clause
             params["limit"] = _bounded_limit(limit)
             if next_cursor:
                 params["next"] = next_cursor
@@ -278,7 +290,7 @@ class MCPClient:
             filters.append(f"severity eq '{severity.capitalize()}'")
         params: dict[str, Any] = {
             "filter": " and ".join(filters),
-            "limit": _bounded_limit(limit),
+            "limit": max(1, min(limit, _MAX_ALERT_LIMIT)),
         }
         cursor = next_cursor or (str(offset + 1) if offset > 0 else None)
         if cursor:
