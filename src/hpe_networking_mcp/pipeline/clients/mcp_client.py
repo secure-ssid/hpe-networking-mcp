@@ -286,8 +286,6 @@ class MCPClient:
         filters = ["status eq 'Active'"]
         if site_id:
             filters.append(f"siteId eq '{site_id}'")
-        if severity:
-            filters.append(f"severity eq '{severity.capitalize()}'")
         params: dict[str, Any] = {
             "filter": " and ".join(filters),
             "limit": max(1, min(limit, _MAX_ALERT_LIMIT)),
@@ -297,7 +295,17 @@ class MCPClient:
             params["next"] = cursor
         try:
             result = self._client.get("/network-notifications/v1/alerts", params=params)
-            return result.get("alerts", result.get("items", []))
+            alerts = result.get("alerts", result.get("items", []))
+            # Central documents severity as a sortable field, but does not
+            # support it in the alerts OData filter. Apply the optional
+            # severity constraint after retrieval to avoid a 400.
+            if severity:
+                wanted = severity.casefold()
+                alerts = [
+                    alert for alert in alerts
+                    if str(alert.get("severity", "")).casefold() == wanted
+                ]
+            return alerts
         except Exception as exc:
             logger.warning("MCPClient.get_alerts failed: %s", exc)
             self.last_errors.append(f"alerts: {type(exc).__name__}: {exc}")

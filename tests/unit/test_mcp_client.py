@@ -227,13 +227,20 @@ def test_find_client_sweeps_pages_via_server_issued_cursor():
 
 def test_get_alerts_uses_cursor_not_offset():
     central = MagicMock()
-    central.get.return_value = {"items": []}
+    central.get.return_value = {
+        "items": [
+            {"severity": "Critical", "id": "keep"},
+            {"severity": "Warning", "id": "drop"},
+        ]
+    }
 
-    assert MCPClient(central).get_alerts(severity="critical", limit=999, offset=25) == []
+    assert MCPClient(central).get_alerts(severity="critical", limit=999, offset=25) == [
+        {"severity": "Critical", "id": "keep"}
+    ]
     central.get.assert_called_once_with(
         "/network-notifications/v1/alerts",
         params={
-            "filter": "status eq 'Active' and severity eq 'Critical'",
+            "filter": "status eq 'Active'",
             "limit": 100,
             "next": "26",
         },
