@@ -86,6 +86,14 @@ def _mist_config() -> tuple[str | None, str | None]:
 
     host = os.getenv("MIST_HOST", "https://api.mist.com").strip().rstrip("/")
     token = os.getenv("MIST_API_TOKEN", "").strip()
+    if not token:
+        token_file = os.getenv("MIST_API_TOKEN_FILE", "").strip()
+        if token_file:
+            try:
+                with open(token_file, encoding="utf-8") as secret:
+                    token = secret.read().strip()
+            except OSError:
+                token = ""
     return (host or None, token or None)
 
 
