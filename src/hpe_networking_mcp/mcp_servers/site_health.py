@@ -138,7 +138,38 @@ def _configured(value: str | None, *names: str) -> str:
     return ""
 
 
-def _scope_question() -> dict[str, Any]:
+async def _discover_mist_scopes(limit: int = 25) -> list[dict[str, str]]:
+    """Discover small, authorized Mist scope candidates from ``/self``.
+
+    Mist privilege payloads vary by tenant, so this intentionally extracts
+    only paired org/site identifiers and never guesses a Central-to-Mist
+    mapping. A bounded recursive walk keeps the response and request cost low.
+    """
+    if not mist.mist_status().get("configured"):
+        return []
+    out = await mist.mist_get("/api/v1/self", limit=limit)
+    data = out.get("data") if isinstance(out, dict) else None
+    found: set[tuple[str, str]] = set()
+
+    def walk(value: Any) -> None:
+        if len(found) >= 25:
+            return
+        if isinstance(value, dict):
+            org = value.get("org_id") or value.get("orgId")
+            site = value.get("site_id") or value.get("siteId")
+            if isinstance(org, str) and isinstance(site, str) and org and site:
+                found.add((org, site))
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, list):
+            for child in value:
+                walk(child)
+
+    walk(data)
+    return [{"org_id": org, "site_id": site} for org, site in sorted(found)]
+
+
+def _scope_question(choices: list[dict[str, str]] | None = None) -> dict[str, Any]:
     return {
         # Keep the stable unavailable status while adding a machine-readable
         # question for hosts that can continue the conversation.
@@ -155,7 +186,7 @@ def _scope_question() -> dict[str, Any]:
             "Which organization or site should I review? Provide a Central site ID/name "
             "or Mist site ID, or configure a scoped default."
         ),
-        "choices": [],
+        "choices": choices or [],
         "next_actions": [
             {
                 "tool": "find_tool",
@@ -203,7 +234,20 @@ async def get_site_health(
     )
     mist_id = _configured(mist_site_id, "HPE_MCP_MIST_SITE_ID", "MIST_SITE_ID")
     if not central_id and not central_name and not mist_id:
-        return _scope_question()
+        try:
+            mist_choices = await _discover_mist_scopes(limit=clamp_limit(limit))
+        except Exception as exc:
+            mist_choices = []
+            discovery_error = _error_text("Mist scope discovery failed", exc)
+        else:
+            discovery_error = ""
+        if len(mist_choices) == 1:
+            mist_id = mist_choices[0]["site_id"]
+        else:
+            response = _scope_question(mist_choices)
+            if discovery_error:
+                response["errors"].append(discovery_error)
+            return response
 
     platforms: dict[str, dict[str, Any]] = {}
     warnings: list[str] = []
